@@ -33,13 +33,13 @@ dockers:
   - id: forklift-amd64
     ids:
       - forklift
-    dockerfile: "Dockerfile.forklift"
+    dockerfile: "Dockerfile"
     use: buildx
     image_templates:
-    - "ghcr.io/PlanktoScope/forklift:latest-amd64"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}-amd64"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}-amd64"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+    - "ghcr.io/planktoscope/forklift:latest-amd64"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}-amd64"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-amd64"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
     build_flag_templates:
     - "--pull"
     - "--platform=linux/amd64"
@@ -52,14 +52,14 @@ dockers:
   - id: forklift-arm64v8
     ids:
       - forklift
-    dockerfile: "Dockerfile.forklift"
+    dockerfile: "Dockerfile"
     use: buildx
     goarch: arm64
     image_templates:
-    - "ghcr.io/PlanktoScope/forklift:latest-arm64v8"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}-arm64v8"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}-arm64v8"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64v8"
+    - "ghcr.io/planktoscope/forklift:latest-arm64v8"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}-arm64v8"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-arm64v8"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64v8"
     build_flag_templates:
     - "--pull"
     - "--platform=linux/arm64/v8"
@@ -72,15 +72,15 @@ dockers:
   - id: forklift-armv7
     ids:
       - forklift
-    dockerfile: "Dockerfile.forklift"
+    dockerfile: "Dockerfile"
     use: buildx
     goarch: arm
     goarm: 7
     image_templates:
-    - "ghcr.io/PlanktoScope/forklift:latest-armv7"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}-armv7"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}-armv7"
-    - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"
+    - "ghcr.io/planktoscope/forklift:latest-armv7"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}-armv7"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-armv7"
+    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"
     build_flag_templates:
     - "--pull"
     - "--platform=linux/arm/v7"
@@ -93,23 +93,23 @@ dockers:
 
 docker_manifests:
   # forklift
-  - name_template: "ghcr.io/PlanktoScope/forklift:latest"
+  - name_template: "ghcr.io/planktoscope/forklift:latest"
     image_templates:
-      - "ghcr.io/PlanktoScope/forklift:latest-amd64"
-      - "ghcr.io/PlanktoScope/forklift:latest-arm64v8"
-      - "ghcr.io/PlanktoScope/forklift:latest-armv7"
-  - name_template: "ghcr.io/PlanktoScope/forklift:{{ .Major }}"
+      - "ghcr.io/planktoscope/forklift:latest-amd64"
+      - "ghcr.io/planktoscope/forklift:latest-arm64v8"
+      - "ghcr.io/planktoscope/forklift:latest-armv7"
+  - name_template: "ghcr.io/planktoscope/forklift:{{ .Major }}"
     image_templates:
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}-amd64"
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}-arm64v8"
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}-armv7"
-  - name_template: "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}-amd64"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}-arm64v8"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}-armv7"
+  - name_template: "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}"
     image_templates:
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}-amd64"
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}-arm64v8"
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}-armv7"
-  - name_template: "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-amd64"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-arm64v8"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-armv7"
+  - name_template: "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
     image_templates:
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64v8"
-      - "ghcr.io/PlanktoScope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64v8"
+      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"

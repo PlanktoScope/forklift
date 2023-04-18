@@ -2,7 +2,7 @@
 
 .PHONY: dev
 dev: ## dev build
-dev: clean install generate buildweb vet fmt lint test mod-tidy
+dev: clean install generate vet fmt lint test mod-tidy
 
 .PHONY: ci
 ci: ## CI build
@@ -59,13 +59,13 @@ diff: ## git diff
 
 .PHONY: build
 build: ## goreleaser --snapshot --skip-publish --clean
-build: install buildweb
+build: install
 	$(call print-target)
 	goreleaser --snapshot --skip-publish --clean
 
 .PHONY: release
 release: ## goreleaser --clean
-release: install buildweb
+release: install
 	$(call print-target)
 	goreleaser --clean
 
