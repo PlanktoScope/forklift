@@ -33,7 +33,7 @@ dockers:
   - id: forklift-amd64
     ids:
       - forklift
-    dockerfile: "Dockerfile.forklift"
+    dockerfile: "Dockerfile"
     use: buildx
     image_templates:
     - "ghcr.io/PlanktoScope/forklift:latest-amd64"
@@ -52,7 +52,7 @@ dockers:
   - id: forklift-arm64v8
     ids:
       - forklift
-    dockerfile: "Dockerfile.forklift"
+    dockerfile: "Dockerfile"
     use: buildx
     goarch: arm64
     image_templates:
@@ -72,7 +72,7 @@ dockers:
   - id: forklift-armv7
     ids:
       - forklift
-    dockerfile: "Dockerfile.forklift"
+    dockerfile: "Dockerfile"
     use: buildx
     goarch: arm
     goarm: 7
