@@ -59,13 +59,13 @@ diff: ## git diff
 
 .PHONY: build
 build: ## goreleaser --snapshot --skip-publish --clean
-build: install buildweb
+build: install
 	$(call print-target)
 	goreleaser --snapshot --skip-publish --clean
 
 .PHONY: release
 release: ## goreleaser --clean
-release: install buildweb
+release: install
 	$(call print-target)
 	goreleaser --clean
 
