@@ -6,7 +6,7 @@ A forklift is a tool for moving pallets of packages:
 
 ![Photograph of a forklift being used to move stacks of cardboard boxes on a pallet](https://images.rawpixel.com/image_1000/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTExL2ZsNDk3OTgwOTA2MjctaW1hZ2UuanBn.jpg)
 
-This repository provides `forklift-cli`, a command-line tool for installing, uninstalling, upgrading, and downgrading Pallet packages on a Docker Swarm Mode environment.
+This repository provides `forklift`, a command-line tool for installing, uninstalling, upgrading, and downgrading Pallet packages on a Docker Swarm Mode environment.
 
 ## Usage
 TBD
