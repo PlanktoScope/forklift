@@ -15,7 +15,7 @@ import (
 func makeCheckoutOptions(repo *git.Repository, release string) git.CheckoutOptions {
 	if plumbing.IsHash(release) {
 		return git.CheckoutOptions{
-			Hash: plumbing.Hash([]byte(release)),
+			Hash: plumbing.NewHash(release),
 		}
 	}
 	if hash, err := repo.ResolveRevision(plumbing.Revision(release)); err != nil {

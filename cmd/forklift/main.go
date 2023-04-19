@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/PlanktoScope/forklift/internal/app/forklift/env"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
@@ -45,6 +46,34 @@ var app = &cli.App{
 
 // Env
 
+func downloadRepo(palletsPath string, repo env.Repo) error {
+	path := filepath.Join(palletsPath, repo.VCSRepoRelease())
+	if workspace.Exists(path) {
+		// TODO: perform a disk checksum
+		return nil
+	}
+
+	fmt.Printf("Downloading %s...\n", repo.VCSRepoRelease())
+	gitRepo, err := git.Clone(repo.VCSRepoPath, path)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't clone repo %s to %s", repo.VCSRepoPath, path,
+		)
+	}
+	if repo.Lock.Commit == "" {
+		return errors.Errorf("pallet repository %s is not locked at a commit!", repo.Path())
+	}
+	if err = git.Checkout(gitRepo, repo.Lock.Commit); err != nil {
+		return errors.Wrapf(
+			err, "couldn't check out commit %s", repo.Lock.Commit,
+		)
+	}
+	if err = os.RemoveAll(filepath.Join(path, ".git")); err != nil {
+		return errors.Wrap(err, "couldn't detach from git")
+	}
+	return nil
+}
+
 var envCmd = &cli.Command{
 	Name:    "env",
 	Aliases: []string{"environment"},
@@ -53,7 +82,14 @@ var envCmd = &cli.Command{
 		{
 			Name:      "clone",
 			Usage:     "Initializes the local environment from a remote release",
-			ArgsUsage: "[git_repository_path@release]",
+			ArgsUsage: "[github_repository_path@release]",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "force",
+					Aliases: []string{"f"},
+					Usage:   "Deletes the local environment if it already exists",
+				},
+			},
 			Action: func(c *cli.Context) error {
 				wpath := c.String("workspace")
 				if !workspace.Exists(wpath) {
@@ -71,16 +107,32 @@ var envCmd = &cli.Command{
 				fmt.Printf("Cloning environment %s to %s...\n", remote, local)
 				repo, err := git.Clone(remote, local)
 				if err != nil {
-					if errors.Is(err, git.ErrRepositoryAlreadyExists) {
+					if !errors.Is(err, git.ErrRepositoryAlreadyExists) {
+						return errors.Wrapf(
+							err, "couldn't clone environment %s at release %s to %s", remote, release, local,
+						)
+					}
+					if !c.Bool("force") {
 						return errors.Wrap(
 							err,
 							"you need to first delete your local environment with `forklift env rm` before "+
 								"cloning another remote release to it",
 						)
 					}
-					return errors.Wrapf(
-						err, "couldn't clone environment %s at release %s to %s", remote, release, local,
+					fmt.Printf(
+						"Removing local environment from workspace %s, because it already exists and the "+
+							"command's --force flag was enabled...\n",
+						wpath,
 					)
+					if err = workspace.RemoveLocalEnv(wpath); err != nil {
+						return errors.Wrap(err, "couldn't remove local environment")
+					}
+					fmt.Printf("Cloning environment %s to %s...\n", remote, local)
+					if repo, err = git.Clone(remote, local); err != nil {
+						return errors.Wrapf(
+							err, "couldn't clone environment %s at release %s to %s", remote, release, local,
+						)
+					}
 				}
 				fmt.Printf("Checking out release %s...\n", release)
 				if err = git.Checkout(repo, release); err != nil {
@@ -121,7 +173,7 @@ var envCmd = &cli.Command{
 			Usage:   "Removes the local environment",
 			Action: func(c *cli.Context) error {
 				wpath := c.String("workspace")
-				fmt.Printf("removing local environment from workspace %s...\n", wpath)
+				fmt.Printf("Removing local environment from workspace %s...\n", wpath)
 				return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
 			},
 		},
@@ -154,6 +206,10 @@ var envRemoteCmd = &cli.Command{
 
 // Repo
 
+var errMissingEnv = errors.Errorf(
+	"you first need to set up a local environment with `forklift env clone`",
+)
+
 var repoCmd = &cli.Command{
 	Name:    "repo",
 	Aliases: []string{"repository"},
@@ -162,7 +218,7 @@ var repoCmd = &cli.Command{
 		{
 			Name:      "add",
 			Usage:     "Adds repositories to the environment, tracking specified versions or branches",
-			ArgsUsage: "[repository_path@release]...",
+			ArgsUsage: "[pallet_repository_path@release]...",
 			Action: func(c *cli.Context) error {
 				fmt.Println("adding repositories", c.Args())
 				return nil
@@ -173,7 +229,43 @@ var repoCmd = &cli.Command{
 			Aliases: []string{"list"},
 			Usage:   "Lists repositories which have been added to the environment",
 			Action: func(c *cli.Context) error {
-				fmt.Println("repositories:")
+				wpath := c.String("workspace")
+				if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+					return errMissingEnv
+				}
+				repos, err := env.ListRepos(workspace.LocalEnvFS(wpath))
+				if err != nil {
+					return errors.Wrapf(err, "couldn't identify pallet repositories")
+				}
+				for _, repo := range repos {
+					fmt.Printf(
+						"%s@%s locked at %s\n", repo.Path(), repo.Config.Release, repo.Lock.Commit,
+					)
+				}
+				return nil
+			},
+		},
+		{
+			Name:  "get",
+			Usage: "Downloads the repositories specified by the environment",
+			Action: func(c *cli.Context) error {
+				wpath := c.String("workspace")
+				if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+					return errMissingEnv
+				}
+				fmt.Printf("Getting pallet repositories...\n")
+				repos, err := env.ListRepos(workspace.LocalEnvFS(wpath))
+				if err != nil {
+					return errors.Wrapf(err, "couldn't identify pallet repositories")
+				}
+				palletsPath := workspace.LocalPalletsPath(wpath)
+				for _, repo := range repos {
+					if err = downloadRepo(palletsPath, repo); err != nil {
+						return errors.Wrapf(
+							err, "couldn't download %s at commit %s", repo.Path(), repo.Lock.Commit,
+						)
+					}
+				}
 				return nil
 			},
 		},

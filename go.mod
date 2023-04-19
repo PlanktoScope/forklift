@@ -3,10 +3,12 @@ module github.com/PlanktoScope/forklift
 go 1.20
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.6.0
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.25.1
 	golang.org/x/mod v0.10.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
