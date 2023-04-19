@@ -2,14 +2,19 @@
 Experimental prototype of tooling to manage local installations of Pallet packages
 
 ## Introduction
+
 A forklift is a tool for moving pallets of packages:
 
 ![Photograph of a forklift being used to move stacks of cardboard boxes on a pallet](https://images.rawpixel.com/image_1000/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTExL2ZsNDk3OTgwOTA2MjctaW1hZ2UuanBn.jpg)
 
-This repository provides `forklift`, a command-line tool for installing, uninstalling, upgrading, and downgrading Pallet packages on a Docker Swarm Mode environment.
+This repository provides `forklift`, a Git-based command-line tool for installing, uninstalling, upgrading, and downgrading [Pallet](https://github.com/PlanktoScope/pallets) packages on a Docker Swarm Mode environment.
 
 ## Usage
-TBD
+
+First, you will need to clone a Pallet environment to your local environment. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallets-env`](https://github.com/PlanktoScope/pallets-env) environment using the command:
+```
+forklift env clone github.com/PlanktoScope/pallets-env@edge
+```
 
 ## Licensing
 
