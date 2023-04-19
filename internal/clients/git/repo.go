@@ -86,3 +86,40 @@ func Checkout(repo *git.Repository, release string) error {
 	}
 	return nil
 }
+
+func Fetch(local string) (updated bool, err error) {
+	repo, err := git.PlainOpen(local)
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't open %s as git repo", local)
+	}
+	if err = repo.Fetch(&git.FetchOptions{
+		Progress: os.Stdout,
+		Tags:     git.AllTags,
+	}); err != nil {
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return false, nil
+		}
+		return false, errors.Wrapf(err, "couldn't fetch changes")
+	}
+	return true, nil
+}
+
+func Pull(local string) (updated bool, err error) {
+	repo, err := git.PlainOpen(local)
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't open %s as git repo", local)
+	}
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return false, err
+	}
+	if err = worktree.Pull(&git.PullOptions{
+		Progress: os.Stdout,
+	}); err != nil {
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return false, nil
+		}
+		return false, errors.Wrapf(err, "couldn't fast-forward to remote")
+	}
+	return true, nil
+}

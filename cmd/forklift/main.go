@@ -28,7 +28,7 @@ var app = &cli.App{
 	Usage:   "Manages Pallet repositories and package deployments",
 	Commands: []*cli.Command{
 		envCmd,
-		repoCmd,
+		reposCmd,
 		pkgCmd,
 		deplCmd,
 	},
@@ -46,33 +46,37 @@ var app = &cli.App{
 
 // Env
 
-func downloadRepo(palletsPath string, repo env.Repo) error {
+func downloadRepo(palletsPath string, repo env.Repo) (downloaded bool, err error) {
 	path := filepath.Join(palletsPath, repo.VCSRepoRelease())
 	if workspace.Exists(path) {
 		// TODO: perform a disk checksum
-		return nil
+		return false, nil
 	}
 
 	fmt.Printf("Downloading %s...\n", repo.VCSRepoRelease())
 	gitRepo, err := git.Clone(repo.VCSRepoPath, path)
 	if err != nil {
-		return errors.Wrapf(
+		return false, errors.Wrapf(
 			err, "couldn't clone repo %s to %s", repo.VCSRepoPath, path,
 		)
 	}
 	if repo.Lock.Commit == "" {
-		return errors.Errorf("pallet repository %s is not locked at a commit!", repo.Path())
+		return false, errors.Errorf("pallet repository %s is not locked at a commit!", repo.Path())
 	}
 	if err = git.Checkout(gitRepo, repo.Lock.Commit); err != nil {
-		return errors.Wrapf(
+		return false, errors.Wrapf(
 			err, "couldn't check out commit %s", repo.Lock.Commit,
 		)
 	}
 	if err = os.RemoveAll(filepath.Join(path, ".git")); err != nil {
-		return errors.Wrap(err, "couldn't detach from git")
+		return false, errors.Wrap(err, "couldn't detach from git")
 	}
-	return nil
+	return true, nil
 }
+
+var errMissingEnv = errors.Errorf(
+	"you first need to set up a local environment with `forklift env clone`",
+)
 
 var envCmd = &cli.Command{
 	Name:    "env",
@@ -140,6 +144,7 @@ var envCmd = &cli.Command{
 						err, "couldn't check out release %s at %s", release, local,
 					)
 				}
+				fmt.Println("Done! Next, you'll probably want to run `forklift repos checkout`.")
 				return nil
 			},
 		},
@@ -147,26 +152,52 @@ var envCmd = &cli.Command{
 			Name:  "fetch",
 			Usage: "Updates information about the remote release",
 			Action: func(c *cli.Context) error {
-				fmt.Println("fetching")
+				wpath := c.String("workspace")
+				envPath := workspace.LocalEnvPath(wpath)
+				if !workspace.Exists(envPath) {
+					return errMissingEnv
+				}
+				fmt.Println("Fetching updates...")
+				updated, err := git.Fetch(envPath)
+				if err != nil {
+					return errors.Wrap(err, "couldn't fetch changes from the remote release")
+				}
+				if !updated {
+					fmt.Print("No updates from the remote release.")
+				}
+				// TODO: display changes
 				return nil
 			},
 		},
 		{
 			Name:  "pull",
-			Usage: "Updates the local environment from the remote release",
+			Usage: "Fast-forwards the local environment to match the remote release",
 			Action: func(c *cli.Context) error {
-				fmt.Println("pulling to environment")
+				wpath := c.String("workspace")
+				envPath := workspace.LocalEnvPath(wpath)
+				if !workspace.Exists(envPath) {
+					return errMissingEnv
+				}
+				fmt.Println("Attempting to fast-forward the local environment...")
+				updated, err := git.Pull(envPath)
+				if err != nil {
+					return errors.Wrap(err, "couldn't fast-forward the local environment")
+				}
+				if !updated {
+					fmt.Println("No changes from the remote release.")
+				}
+				// TODO: display changes
 				return nil
 			},
 		},
-		{
-			Name:  "push",
-			Usage: "Updates the remote release from the local environment",
-			Action: func(c *cli.Context) error {
-				fmt.Println("pushing to remote origin")
-				return nil
-			},
-		},
+		// {
+		// 	Name:  "push",
+		// 	Usage: "Updates the remote release from the local environment",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("pushing to remote origin")
+		// 		return nil
+		// 	},
+		// },
 		{
 			Name:    "rm",
 			Aliases: []string{"remove"},
@@ -177,53 +208,32 @@ var envCmd = &cli.Command{
 				return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
 			},
 		},
-		{
-			Name:  "apply",
-			Usage: "Updates the Docker Swarm to exactly match the local environment",
-			Action: func(c *cli.Context) error {
-				fmt.Println("applying local environment")
-				return nil
-			},
-		},
-		envRemoteCmd,
+		// envRemoteCmd,
 	},
 }
 
-var envRemoteCmd = &cli.Command{
-	Name:  "remote",
-	Usage: "Manages the local environment's relationship to the remote source",
-	Subcommands: []*cli.Command{
-		{
-			Name:  "set",
-			Usage: "Sets the remote source for the local environment",
-			Action: func(c *cli.Context) error {
-				fmt.Println("setting remote source to", c.Args().First())
-				return nil
-			},
-		},
-	},
-}
+// var envRemoteCmd = &cli.Command{
+// 	Name:  "remote",
+// 	Usage: "Manages the local environment's relationship to the remote source",
+// 	Subcommands: []*cli.Command{
+// 		{
+// 			Name:  "set",
+// 			Usage: "Sets the remote source for the local environment",
+// 			Action: func(c *cli.Context) error {
+// 				fmt.Println("setting remote source to", c.Args().First())
+// 				return nil
+// 			},
+// 		},
+// 	},
+// }
 
 // Repo
 
-var errMissingEnv = errors.Errorf(
-	"you first need to set up a local environment with `forklift env clone`",
-)
-
-var repoCmd = &cli.Command{
-	Name:    "repo",
+var reposCmd = &cli.Command{
+	Name:    "repos",
 	Aliases: []string{"repository"},
 	Usage:   "Manages Pallet repositories in the local environment",
 	Subcommands: []*cli.Command{
-		{
-			Name:      "add",
-			Usage:     "Adds repositories to the environment, tracking specified versions or branches",
-			ArgsUsage: "[pallet_repository_path@release]...",
-			Action: func(c *cli.Context) error {
-				fmt.Println("adding repositories", c.Args())
-				return nil
-			},
-		},
 		{
 			Name:    "ls",
 			Aliases: []string{"list"},
@@ -246,39 +256,56 @@ var repoCmd = &cli.Command{
 			},
 		},
 		{
-			Name:  "get",
+			Name:  "checkout",
 			Usage: "Downloads the repositories specified by the environment",
 			Action: func(c *cli.Context) error {
 				wpath := c.String("workspace")
 				if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 					return errMissingEnv
 				}
-				fmt.Printf("Getting pallet repositories...\n")
+				fmt.Printf("Downloading pallet repositories...\n")
 				repos, err := env.ListRepos(workspace.LocalEnvFS(wpath))
 				if err != nil {
 					return errors.Wrapf(err, "couldn't identify pallet repositories")
 				}
 				palletsPath := workspace.LocalPalletsPath(wpath)
+				changed := false
 				for _, repo := range repos {
-					if err = downloadRepo(palletsPath, repo); err != nil {
+					downloaded, err := downloadRepo(palletsPath, repo)
+					changed = changed || downloaded
+					if err != nil {
 						return errors.Wrapf(
 							err, "couldn't download %s at commit %s", repo.Path(), repo.Lock.Commit,
 						)
 					}
 				}
+				if !changed {
+					fmt.Printf("Done! No further actions are needed at this time.\n")
+					return nil
+				}
+				fmt.Printf("Done! Next, you'll probably want to run `forklift depl apply`.\n")
 				return nil
 			},
 		},
-		{
-			Name:      "rm",
-			Aliases:   []string{"remove"},
-			Usage:     "Removes a repository from the environment",
-			ArgsUsage: "repository_path",
-			Action: func(c *cli.Context) error {
-				fmt.Println("removing repository", c.Args().First())
-				return nil
-			},
-		},
+		// {
+		// 	Name:      "add",
+		// 	Usage:     "Adds repositories to the environment, tracking specified versions or branches",
+		// 	ArgsUsage: "[pallet_repository_path@release]...",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("adding repositories", c.Args())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:      "rm",
+		// 	Aliases:   []string{"remove"},
+		// 	Usage:     "Removes a repository from the environment",
+		// 	ArgsUsage: "repository_path",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("removing repository", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
 	},
 }
 
@@ -318,19 +345,27 @@ var deplCmd = &cli.Command{
 	Usage:   "Manages Pallet package deployments in the local environment",
 	Subcommands: []*cli.Command{
 		{
-			Name:  "add",
-			Usage: "Adds a package deployment to the environment",
-			Action: func(c *cli.Context) error {
-				fmt.Println("adding package deployment", c.Args().First())
-				return nil
-			},
-		},
-		{
 			Name:    "ls",
 			Aliases: []string{"list"},
 			Usage:   "Lists package deployments in the environment",
 			Action: func(c *cli.Context) error {
 				fmt.Println("package deployments:")
+				return nil
+			},
+		},
+		{
+			Name:  "apply",
+			Usage: "Updates the Docker Swarm to exactly match the local environment",
+			Action: func(c *cli.Context) error {
+				fmt.Println("applying local environment")
+				return nil
+			},
+		},
+		{
+			Name:  "add",
+			Usage: "Adds a package deployment to the environment",
+			Action: func(c *cli.Context) error {
+				fmt.Println("adding package deployment", c.Args().First())
 				return nil
 			},
 		},
