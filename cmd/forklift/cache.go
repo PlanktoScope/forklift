@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
-	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
 
 // ls-repo
@@ -21,6 +19,7 @@ func cacheLsRepoAction(c *cli.Context) error {
 		fmt.Printf("The cache is empty.")
 		return nil
 	}
+
 	repos, err := forklift.ListCachedRepos(workspace.CacheFS(wpath))
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
@@ -28,6 +27,33 @@ func cacheLsRepoAction(c *cli.Context) error {
 	for _, repo := range repos {
 		fmt.Printf("%s@%s\n", repo.Config.Path, repo.Version)
 	}
+	return nil
+}
+
+// info-repo
+
+func cacheInfoRepoAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Printf("The cache is empty.")
+		return nil
+	}
+
+	versionedRepoPath := c.Args().First()
+	repoPath, version, ok := strings.Cut(versionedRepoPath, "@")
+	if !ok {
+		return errors.Errorf(
+			"Couldn't parse Pallet repo path %s as repo_path@version", versionedRepoPath,
+		)
+	}
+	repo, err := forklift.FindCachedRepo(workspace.CacheFS(wpath), repoPath, version)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't find Pallet repository %s@%s", repoPath, version)
+	}
+	fmt.Printf("Repo path: %s\n", repo.Config.Path)
+	fmt.Printf("Repo version: %s\n", repo.Version)
+	fmt.Printf("Provided by Git repository: %s\n", repo.VCSRepoPath)
+	fmt.Printf("File path in cache: %s\n", repo.ConfigPath)
 	return nil
 }
 
@@ -39,6 +65,7 @@ func cacheLsPkgAction(c *cli.Context) error {
 		fmt.Printf("The cache is empty.")
 		return nil
 	}
+
 	pkgs, err := forklift.ListCachedPkgs(workspace.CacheFS(wpath))
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
@@ -52,82 +79,7 @@ func cacheLsPkgAction(c *cli.Context) error {
 	return nil
 }
 
-// up
-
-func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
-	// Check commit time
-	commitTime, err := gitRepo.GetCommitTime(versionedRepo.Lock.Commit)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't check time of commit %s", versionedRepo.Lock.ShortCommit())
-	}
-	commitTimestamp := forklift.ToTimestamp(commitTime)
-	versionedTimestamp := versionedRepo.Lock.Timestamp
-	if commitTimestamp != versionedTimestamp {
-		return errors.Errorf(
-			"commit %s was made at %s, while the Pallet repository lock file expects it to have been "+
-				"made at %s",
-			versionedRepo.Lock.ShortCommit(), commitTimestamp, versionedTimestamp,
-		)
-	}
-
-	// TODO: implement remaining checks specified in https://go.dev/ref/mod#pseudo-versions
-	// (if base version is specified, there must be a corresponding semantic version tag that is an
-	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
-	// of one of the module repository's branches or tags)
-	return nil
-}
-
-func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded bool, err error) {
-	if !repo.Lock.IsCommitLocked() {
-		return false, errors.Errorf(
-			"the local environment's version lock for repository %s has no commit lock", repo.Path(),
-		)
-	}
-	vcsRepoPath := repo.VCSRepoPath
-	vcsRepoVersion, err := repo.VCSRepoVersion()
-	if err != nil {
-		return false, errors.Wrapf(
-			err, "couldn't determine version-locked github repo path for %s", vcsRepoPath,
-		)
-	}
-	path := filepath.Join(palletsPath, vcsRepoVersion)
-	if workspace.Exists(path) {
-		// TODO: perform a disk checksum
-		return false, nil
-	}
-
-	fmt.Printf("Downloading %s...\n", vcsRepoVersion)
-	gitRepo, err := git.Clone(vcsRepoPath, path)
-	if err != nil {
-		return false, errors.Wrapf(err, "couldn't clone repo %s to %s", vcsRepoPath, path)
-	}
-
-	// Validate commit
-	shortCommit := repo.Lock.ShortCommit()
-	if err = validateCommit(repo, gitRepo); err != nil {
-		if cerr := os.RemoveAll(path); cerr != nil {
-			fmt.Printf(
-				"Error: couldn't clean up %s after failed validation! You'll need to delete it yourself.\n",
-				path,
-			)
-		}
-		return false, errors.Wrapf(
-			err, "commit %s for github repo %s failed repo lock validation", shortCommit, vcsRepoPath,
-		)
-	}
-
-	// Checkout commit
-	if err = gitRepo.Checkout(repo.Lock.Commit); err != nil {
-		if cerr := os.RemoveAll(path); cerr != nil {
-			fmt.Printf("Error: couldn't clean up %s! You will need to delete it yourself.\n", path)
-		}
-		return false, errors.Wrapf(err, "couldn't check out commit %s", shortCommit)
-	}
-	if err = os.RemoveAll(filepath.Join(path, ".git")); err != nil {
-		return false, errors.Wrap(err, "couldn't detach from git")
-	}
-	return true, nil
-}
+// rm
 
 func cacheRmAction(c *cli.Context) error {
 	wpath := c.String("workspace")

@@ -25,14 +25,14 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 			repoPath,
 		)
 	}
-	vcsRepoName, release, ok := strings.Cut(pathParts[2], "@")
+	vcsRepoName, version, ok := strings.Cut(pathParts[2], "@")
 	if !ok {
 		return "", "", errors.Errorf(
-			"Couldn't parse Github repository name %s as name@release", pathParts[2],
+			"Couldn't parse Github repository name %s as name@version", pathParts[2],
 		)
 	}
 	vcsRepoPath = strings.Join([]string{pathParts[0], pathParts[1], vcsRepoName}, sep)
-	return vcsRepoPath, release, nil
+	return vcsRepoPath, version, nil
 }
 
 func loadRepoConfig(cacheFS fs.FS, filePath string) (RepoConfig, error) {
@@ -111,4 +111,54 @@ func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 		orderedRepos = append(orderedRepos, repoMap[path])
 	}
 	return orderedRepos, nil
+}
+
+func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo, error) {
+	vcsRepoPath, _, err := splitRepoPathSubdir(repoPath)
+	if err != nil {
+		return CachedRepo{}, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
+	}
+	// The filesystem subdirectory might not exactly match the directory containing the
+	// pallet-repository.yml file, so we must check every pallet-repository.yml file to find the
+	// actual repo path
+	searchPattern := fmt.Sprintf("%s@%s/**/pallet-repository.yml", vcsRepoPath, version)
+	candidateRepoConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
+	if err != nil {
+		return CachedRepo{}, errors.Wrapf(
+			err, "couldn't search for cached Pallet repo configs matching pattern %s", searchPattern,
+		)
+	}
+	if len(candidateRepoConfigFiles) == 0 {
+		return CachedRepo{}, errors.Errorf(
+			"no Pallet repo configs were found in %s@%s", vcsRepoPath, version,
+		)
+	}
+	candidateRepos := make([]CachedRepo, 0)
+	for _, repoConfigFilePath := range candidateRepoConfigFiles {
+		filename := filepath.Base(repoConfigFilePath)
+		if filename != "pallet-repository.yml" {
+			continue
+		}
+		repo, err := LoadCachedRepo(cacheFS, repoConfigFilePath)
+		if err != nil {
+			return CachedRepo{}, errors.Wrapf(
+				err, "couldn't check cached repo defined at %s", repoConfigFilePath,
+			)
+		}
+		if repo.Config.Path == repoPath {
+			if len(candidateRepos) > 0 {
+				return CachedRepo{}, errors.Errorf(
+					"repository %s repeatedly defined in the same version of the same Github repo: %s, %s",
+					repoPath, candidateRepos[0].ConfigPath, repo.ConfigPath,
+				)
+			}
+			candidateRepos = append(candidateRepos, repo)
+		}
+	}
+	if len(candidateRepos) == 0 {
+		return CachedRepo{}, errors.Errorf(
+			"no cached repos were found matching %s@%s", repoPath, version,
+		)
+	}
+	return candidateRepos[0], nil
 }

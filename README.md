@@ -16,6 +16,11 @@ First, you will need to clone a Pallet environment to your local environment. Fo
 forklift env clone github.com/PlanktoScope/pallets-env@edge
 ```
 
+Then you will need to download the Pallet repositories specified by your local environment into your local cache, so that you can deploy packages provided by those repositories. You can do download the necessary repositories using the command:
+```
+forklift env cache
+```
+
 ## Licensing
 
 Except where otherwise indicated, source code provided here is covered by the following information:

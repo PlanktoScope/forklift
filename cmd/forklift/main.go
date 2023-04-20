@@ -143,11 +143,8 @@ var cacheCmd = &cli.Command{
 			Name:      "info-repo",
 			Aliases:   []string{"info-r"},
 			Usage:     "Describes a cached repository",
-			ArgsUsage: "package_path",
-			Action: func(c *cli.Context) error {
-				fmt.Println("repo", c.Args().First())
-				return nil
-			},
+			ArgsUsage: "repository_path@version",
+			Action:    cacheInfoRepoAction,
 		},
 		{
 			Name:    "ls-pkg",
