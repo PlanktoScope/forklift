@@ -31,6 +31,27 @@ func cacheLsRepoAction(c *cli.Context) error {
 	return nil
 }
 
+// ls-pkg
+
+func cacheLsPkgAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Printf("The cache is empty.")
+		return nil
+	}
+	pkgs, err := forklift.ListCachedPkgs(workspace.CacheFS(wpath))
+	if err != nil {
+		return errors.Wrapf(err, "couldn't identify Pallet packages")
+	}
+	for _, pkg := range pkgs {
+		fmt.Printf(
+			"%s@%s: %s (version %s)\n",
+			pkg.Repo.Config.Path, pkg.Repo.Version, pkg.Path, pkg.Config.Package.Version,
+		)
+	}
+	return nil
+}
+
 // up
 
 func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
@@ -106,38 +127,6 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 		return false, errors.Wrap(err, "couldn't detach from git")
 	}
 	return true, nil
-}
-
-func cacheUpdateAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
-		return errMissingEnv
-	}
-	fmt.Printf("Downloading Pallet repositories...\n")
-	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
-	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet repositories")
-	}
-	cachePath := workspace.CachePath(wpath)
-	changed := false
-	for _, repo := range repos {
-		downloaded, err := downloadRepo(cachePath, repo)
-		changed = changed || downloaded
-		if err != nil {
-			return errors.Wrapf(
-				err, "couldn't download %s at commit %s", repo.Path(), repo.Lock.ShortCommit(),
-			)
-		}
-	}
-	if !changed {
-		fmt.Printf("Done! No further actions are needed at this time.\n")
-		return nil
-	}
-
-	// TODO: download all Docker images used by packages in the repo - either by inspecting the
-	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Printf("Done! Next, you'll probably want to run `forklift depl apply`.\n")
-	return nil
 }
 
 func cacheRmAction(c *cli.Context) error {

@@ -59,6 +59,11 @@ var envCmd = &cli.Command{
 			Action: envCloneAction,
 		},
 		{
+			Name:   "cache",
+			Usage:  "Updates the cache with the repositories specified by the local environment",
+			Action: envCacheAction,
+		},
+		{
 			Name:   "fetch",
 			Usage:  "Updates information about the remote release",
 			Action: envFetchAction,
@@ -135,29 +140,30 @@ var cacheCmd = &cli.Command{
 			Action:  cacheLsRepoAction,
 		},
 		{
-			Name:    "ls-pkg",
-			Aliases: []string{"ls-p", "list-package"},
-			Usage:   "Lists packages offered by repositories in the local environment",
+			Name:      "info-repo",
+			Aliases:   []string{"info-r"},
+			Usage:     "Describes a cached repository",
+			ArgsUsage: "package_path",
 			Action: func(c *cli.Context) error {
-				fmt.Println("packages:")
+				fmt.Println("repo", c.Args().First())
 				return nil
 			},
 		},
 		{
+			Name:    "ls-pkg",
+			Aliases: []string{"ls-p", "list-package"},
+			Usage:   "Lists packages offered by cached repositories",
+			Action:  cacheLsPkgAction,
+		},
+		{
 			Name:      "info-pkg",
 			Aliases:   []string{"info-p", "info-package"},
-			Usage:     "Describes a package",
+			Usage:     "Describes a cached package",
 			ArgsUsage: "package_path",
 			Action: func(c *cli.Context) error {
 				fmt.Println("package", c.Args().First())
 				return nil
 			},
-		},
-		{
-			Name:    "update",
-			Aliases: []string{"up"},
-			Usage:   "Updates the cache with the repositories specified by the local environment",
-			Action:  cacheUpdateAction,
 		},
 		{
 			Name:    "rm",

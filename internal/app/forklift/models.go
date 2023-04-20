@@ -37,7 +37,8 @@ type CachedRepo struct {
 // Package caching
 
 type PkgSpec struct {
-	Version string `yaml:"version"`
+	Version     string `yaml:"version"`
+	Description string `yaml:"description"`
 }
 
 type PkgConfig struct {
@@ -47,7 +48,9 @@ type PkgConfig struct {
 }
 
 type CachedPkg struct {
-	Repo   CachedRepo
-	Path   string
-	Config PkgConfig
+	Repo       CachedRepo
+	Path       string
+	PkgSubdir  string
+	ConfigPath string
+	Config     PkgConfig
 }

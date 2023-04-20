@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
@@ -66,7 +67,41 @@ func envCloneAction(c *cli.Context) error {
 			err, "couldn't check out release %s at %s", release, local,
 		)
 	}
-	fmt.Println("Done! Next, you'll probably want to run `forklift cache update`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift env cache`.")
+	return nil
+}
+
+// cache
+
+func envCacheAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		return errMissingEnv
+	}
+	fmt.Printf("Downloading Pallet repositories...\n")
+	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
+	if err != nil {
+		return errors.Wrapf(err, "couldn't identify Pallet repositories")
+	}
+	cachePath := workspace.CachePath(wpath)
+	changed := false
+	for _, repo := range repos {
+		downloaded, err := downloadRepo(cachePath, repo)
+		changed = changed || downloaded
+		if err != nil {
+			return errors.Wrapf(
+				err, "couldn't download %s at commit %s", repo.Path(), repo.Lock.ShortCommit(),
+			)
+		}
+	}
+	if !changed {
+		fmt.Printf("Done! No further actions are needed at this time.\n")
+		return nil
+	}
+
+	// TODO: download all Docker images used by packages in the repo - either by inspecting the
+	// Docker stack definitions or by allowing packages to list Docker images used.
+	fmt.Printf("Done! Next, you'll probably want to run `forklift depl apply`.\n")
 	return nil
 }
 

@@ -35,8 +35,8 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 	return vcsRepoPath, release, nil
 }
 
-func loadRepoConfig(reposFS fs.FS, filePath string) (RepoConfig, error) {
-	file, err := reposFS.Open(filePath)
+func loadRepoConfig(cacheFS fs.FS, filePath string) (RepoConfig, error) {
+	file, err := cacheFS.Open(filePath)
 	if err != nil {
 		return RepoConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
 	}
@@ -47,6 +47,9 @@ func loadRepoConfig(reposFS fs.FS, filePath string) (RepoConfig, error) {
 	config := RepoConfig{}
 	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
 		return RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
+	}
+	if config.Path == "" {
+		return RepoConfig{}, errors.Errorf("repo config at %s is missing `path` parameter", filePath)
 	}
 	return config, nil
 }
@@ -75,7 +78,7 @@ func LoadCachedRepo(cacheFS fs.FS, repoConfigFilePath string) (CachedRepo, error
 func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 	repoConfigFiles, err := doublestar.Glob(cacheFS, "**/pallet-repository.yml")
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't search for cached package repo configs")
+		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
 
 	versionedRepoPaths := make([]string, 0, len(repoConfigFiles))
@@ -94,7 +97,8 @@ func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 		if prevRepo, ok := repoMap[versionedRepoPath]; ok {
 			if prevRepo.FromSameVCSRepo(repo) && prevRepo.ConfigPath != repo.ConfigPath {
 				return nil, errors.Errorf(
-					"repository defined in multiple places: %s, %s", prevRepo.ConfigPath, repo.ConfigPath,
+					"repository repeatedly defined in the same version of the same Github repo: %s, %s",
+					prevRepo.ConfigPath, repo.ConfigPath,
 				)
 			}
 		}
