@@ -19,14 +19,14 @@ type RepoConfig struct {
 
 type Repo struct {
 	VCSRepoPath string
-	Commit      string
+	Version     string
 	RepoSubdir  string
 	Config      RepoConfig
 }
 
 const sep = "/"
 
-func getVCSRepoPathCommit(repoPath string) (vcsRepoPath, release string, err error) {
+func getVCSRepoPathVersion(repoPath string) (vcsRepoPath, release string, err error) {
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
 		return "", "", errors.Errorf(
@@ -35,7 +35,6 @@ func getVCSRepoPathCommit(repoPath string) (vcsRepoPath, release string, err err
 			repoPath,
 		)
 	}
-	const splitIndex = 3
 	vcsRepoName, release, ok := strings.Cut(pathParts[2], "@")
 	if !ok {
 		return "", "", errors.Errorf(
@@ -77,7 +76,7 @@ func ListRepos(cacheFS fs.FS) ([]Repo, error) {
 	repoMap := make(map[string]Repo)
 	for _, filePath := range files {
 		repoPath := filepath.Dir(filePath)
-		vcsRepoPath, commit, err := getVCSRepoPathCommit(repoPath)
+		vcsRepoPath, version, err := getVCSRepoPathVersion(repoPath)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine Github repo path of pallet repo %s", repoPath,
@@ -88,21 +87,21 @@ func ListRepos(cacheFS fs.FS) ([]Repo, error) {
 			repoPaths = append(repoPaths, repoPath)
 			repoMap[repoPath] = Repo{
 				VCSRepoPath: vcsRepoPath,
-				Commit:      commit,
+				Version:     version,
 				RepoSubdir:  repoSubdir,
 			}
 		}
 		filename := filepath.Base(filePath)
-		switch filename {
-		case "pallet-repository.yml":
-			config, err := loadRepoConfig(cacheFS, filePath)
-			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't load repo config for %s", repoPath)
-			}
-			repo := repoMap[repoPath]
-			repo.Config = config
-			repoMap[repoPath] = repo
+		if filename != "pallet-repository.yml" {
+			continue
 		}
+		config, err := loadRepoConfig(cacheFS, filePath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't load repo config for %s", repoPath)
+		}
+		repo := repoMap[repoPath]
+		repo.Config = config
+		repoMap[repoPath] = repo
 	}
 
 	orderedRepos := make([]Repo, 0, len(repoPaths))

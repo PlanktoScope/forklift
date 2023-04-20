@@ -89,6 +89,7 @@ var envCmd = &cli.Command{
 		// 	ArgsUsage: "[pallet_repository_path@version_query]...",
 		// 	Action: func(c *cli.Context) error {
 		// 		fmt.Println("adding repositories", c.Args())
+		// 		// TODO: implement version queries - see https://go.dev/ref/mod#vcs-branch
 		// 		return nil
 		// 	},
 		// },

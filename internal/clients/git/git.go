@@ -13,8 +13,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func resolveCommit(repo *git.Repository, commit string) (*plumbing.Hash, error) {
-	hash, err := repo.ResolveRevision(plumbing.Revision(commit))
+type Repo struct {
+	repository *git.Repository
+}
+
+func (r *Repo) resolveCommit(commit string) (*plumbing.Hash, error) {
+	hash, err := r.repository.ResolveRevision(plumbing.Revision(commit))
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't resolve %s as a commit in the repo", commit)
 	}
@@ -24,13 +28,13 @@ func resolveCommit(repo *git.Repository, commit string) (*plumbing.Hash, error) 
 	return nil, errors.Errorf("%s appears to be a non-commit revision name", commit)
 }
 
-func makeCheckoutOptions(repo *git.Repository, release string) git.CheckoutOptions {
+func (r *Repo) makeCheckoutOptions(release string) git.CheckoutOptions {
 	if plumbing.IsHash(release) {
 		return git.CheckoutOptions{
 			Hash: plumbing.NewHash(release),
 		}
 	}
-	if hash, err := resolveCommit(repo, release); err == nil {
+	if hash, err := r.resolveCommit(release); err == nil {
 		return git.CheckoutOptions{
 			Hash: *hash,
 		}
@@ -47,14 +51,26 @@ func makeCheckoutOptions(repo *git.Repository, release string) git.CheckoutOptio
 	}
 }
 
-func GetCommitTime(repo *git.Repository, commit string) (time.Time, error) {
-	hash, err := resolveCommit(repo, commit)
+func (r *Repo) Checkout(release string) error {
+	worktree, err := r.repository.Worktree()
+	if err != nil {
+		return err
+	}
+	checkoutOptions := r.makeCheckoutOptions(release)
+	if err = worktree.Checkout(&checkoutOptions); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repo) GetCommitTime(commit string) (time.Time, error) {
+	hash, err := r.resolveCommit(commit)
 	if err != nil {
 		return time.Time{}, errors.Wrapf(
 			err, "couldn't resolve %s to a commit hash in the repo", commit,
 		)
 	}
-	object, err := repo.CommitObject(*hash)
+	object, err := r.repository.CommitObject(*hash)
 	if err != nil {
 		return time.Time{}, errors.Wrapf(
 			err, "couldn't find commit object with hash %s", hash.String(),
@@ -87,7 +103,7 @@ func ParseRemoteRelease(remoteRelease string) (remote, release string, err error
 	return remote, release, nil
 }
 
-func Clone(remote, local string) (*git.Repository, error) {
+func Clone(remote, local string) (*Repo, error) {
 	u, err := url.Parse(remote)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse %s as a url", remote)
@@ -100,19 +116,9 @@ func Clone(remote, local string) (*git.Repository, error) {
 		URL:      remote,
 		Progress: os.Stdout,
 	})
-	return repo, errors.Wrapf(err, "couldn't clone git repo %s to %s", remote, local)
-}
-
-func Checkout(repo *git.Repository, release string) (*git.Worktree, error) {
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return nil, err
-	}
-	checkoutOptions := makeCheckoutOptions(repo, release)
-	if err = worktree.Checkout(&checkoutOptions); err != nil {
-		return nil, err
-	}
-	return worktree, nil
+	return &Repo{
+		repository: repo,
+	}, errors.Wrapf(err, "couldn't clone git repo %s to %s", remote, local)
 }
 
 func Fetch(local string) (updated bool, err error) {

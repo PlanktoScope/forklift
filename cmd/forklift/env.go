@@ -31,7 +31,7 @@ func envCloneAction(c *cli.Context) error {
 	}
 	local := workspace.LocalEnvPath(wpath)
 	fmt.Printf("Cloning environment %s to %s...\n", remote, local)
-	repo, err := git.Clone(remote, local)
+	gitRepo, err := git.Clone(remote, local)
 	if err != nil {
 		if !errors.Is(err, git.ErrRepositoryAlreadyExists) {
 			return errors.Wrapf(
@@ -54,14 +54,14 @@ func envCloneAction(c *cli.Context) error {
 			return errors.Wrap(err, "couldn't remove local environment")
 		}
 		fmt.Printf("Cloning environment %s to %s...\n", remote, local)
-		if repo, err = git.Clone(remote, local); err != nil {
+		if gitRepo, err = git.Clone(remote, local); err != nil {
 			return errors.Wrapf(
 				err, "couldn't clone environment %s at release %s to %s", remote, release, local,
 			)
 		}
 	}
 	fmt.Printf("Checking out release %s...\n", release)
-	if _, err = git.Checkout(repo, release); err != nil {
+	if err = gitRepo.Checkout(release); err != nil {
 		return errors.Wrapf(
 			err, "couldn't check out release %s at %s", release, local,
 		)

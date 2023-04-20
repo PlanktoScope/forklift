@@ -27,14 +27,34 @@ func cacheLsRepoAction(c *cli.Context) error {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	for _, repo := range repos {
-		fmt.Printf(
-			"%s locked at %s\n", repo.Config.Path, repo.Commit,
-		)
+		fmt.Printf("%s@%s\n", repo.Config.Path, repo.Version)
 	}
 	return nil
 }
 
 // up
+
+func validateCommit(envRepo env.Repo, gitRepo *git.Repo) error {
+	// Check commit time
+	commitTime, err := gitRepo.GetCommitTime(envRepo.Lock.Commit)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't check time of commit %s", envRepo.Lock.Commit)
+	}
+	commitTimestamp := env.ToTimestamp(commitTime)
+	if commitTimestamp != envRepo.Lock.Timestamp {
+		return errors.Errorf(
+			"commit %s was made at %s, while the Pallet repository lock file expects it to have been "+
+				"made at %s",
+			env.ShortCommit(envRepo.Lock.Commit), commitTimestamp, envRepo.Lock.Timestamp,
+		)
+	}
+
+	// TODO: implement remaining checks specified in https://go.dev/ref/mod#pseudo-versions
+	// (if base version is specified, there must be a corresponding semantic version tag that is an
+	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
+	// of one of the module repository's branches or tags)
+	return nil
+}
 
 func downloadRepo(palletsPath string, repo env.Repo) (downloaded bool, err error) {
 	if !repo.Lock.IsCommitLocked() {
@@ -55,31 +75,27 @@ func downloadRepo(palletsPath string, repo env.Repo) (downloaded bool, err error
 	fmt.Printf("Downloading %s...\n", vcsRepoVersion)
 	gitRepo, err := git.Clone(repo.VCSRepoPath, path)
 	if err != nil {
+		return false, errors.Wrapf(err, "couldn't clone repo %s to %s", repo.VCSRepoPath, path)
+	}
+
+	// Validate commit
+	if err = validateCommit(repo, gitRepo); err != nil {
+		if cerr := os.RemoveAll(path); cerr != nil {
+			fmt.Printf(
+				"Error: couldn't clean up %s after failed validation! You'll need to delete it yourself.\n",
+				path,
+			)
+		}
 		return false, errors.Wrapf(
-			err, "couldn't clone repo %s to %s", repo.VCSRepoPath, path,
+			err, "lock commit %s for github repo %s failed validation",
+			repo.Lock.Commit, repo.VCSRepoPath,
 		)
 	}
-	commitTime, err := git.GetCommitTime(gitRepo, repo.Lock.Commit)
-	if err != nil {
-		if cerr := os.RemoveAll(filepath.Join(path)); cerr != nil {
-			fmt.Printf("Error: couldn't delete %s! You will need to delete it yourself.\n", path)
-		}
-		return false, errors.Wrapf(err, "couldn't check time of commit %s", repo.Lock.Commit)
-	}
-	commitTimestamp := env.ToTimestamp(commitTime)
-	if commitTimestamp != repo.Lock.Timestamp {
-		if cerr := os.RemoveAll(filepath.Join(path)); cerr != nil {
-			fmt.Printf("Error: couldn't delete %s! You will need to delete it yourself.\n", path)
-		}
-		return false, errors.Errorf(
-			"commit %s was made at %s, while the Pallet repository lock file expects it to have been "+
-				"made at %s",
-			env.ShortCommit(repo.Lock.Commit), commitTimestamp, repo.Lock.Timestamp,
-		)
-	}
-	if _, err = git.Checkout(gitRepo, repo.Lock.Commit); err != nil {
-		if cerr := os.RemoveAll(filepath.Join(path)); cerr != nil {
-			fmt.Printf("Error: couldn't delete %s! You will need to delete it yourself.\n", path)
+
+	// Checkout commit
+	if err = gitRepo.Checkout(repo.Lock.Commit); err != nil {
+		if cerr := os.RemoveAll(path); cerr != nil {
+			fmt.Printf("Error: couldn't clean up %s! You will need to delete it yourself.\n", path)
 		}
 		return false, errors.Wrapf(
 			err, "couldn't check out commit %s", repo.Lock.Commit,
@@ -88,6 +104,9 @@ func downloadRepo(palletsPath string, repo env.Repo) (downloaded bool, err error
 	if err = os.RemoveAll(filepath.Join(path, ".git")); err != nil {
 		return false, errors.Wrap(err, "couldn't detach from git")
 	}
+
+	// TODO: download all Docker images used by packages in the repo - either by inspecting the
+	// Docker stack definitions or by allowing packages to list Docker images used.
 	return true, nil
 }
 
