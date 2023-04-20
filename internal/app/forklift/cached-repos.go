@@ -8,11 +8,46 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
+	gosemver "golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
 func (r CachedRepo) FromSameVCSRepo(cr CachedRepo) bool {
 	return r.VCSRepoPath == cr.VCSRepoPath && r.Version == cr.Version
+}
+
+const (
+	compareLT = -1
+	compareEQ = 0
+	compareGT = 1
+)
+
+func CompareCachedRepoPaths(r, s CachedRepo) int {
+	if r.VCSRepoPath != s.VCSRepoPath {
+		if r.VCSRepoPath < s.VCSRepoPath {
+			return compareLT
+		}
+		return compareGT
+	}
+	if r.RepoSubdir != s.RepoSubdir {
+		if r.RepoSubdir < s.RepoSubdir {
+			return compareLT
+		}
+		return compareGT
+	}
+	return compareEQ
+}
+
+func CompareCachedRepos(r, s CachedRepo) int {
+	pathComparison := CompareCachedRepoPaths(r, s)
+	if pathComparison != compareEQ {
+		return pathComparison
+	}
+	versionComparison := gosemver.Compare(r.Version, s.Version)
+	if versionComparison != compareEQ {
+		return versionComparison
+	}
+	return compareEQ
 }
 
 func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err error) {

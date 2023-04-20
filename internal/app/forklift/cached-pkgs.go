@@ -8,8 +8,31 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
+	gosemver "golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
+
+func CompareCachedPkgs(p, q CachedPkg) int {
+	repoPathComparison := CompareCachedRepoPaths(p.Repo, q.Repo)
+	if repoPathComparison != compareEQ {
+		return repoPathComparison
+	}
+	if p.PkgSubdir != q.PkgSubdir {
+		if p.PkgSubdir < q.PkgSubdir {
+			return compareLT
+		}
+		return compareGT
+	}
+	repoVersionComparison := gosemver.Compare(p.Repo.Version, q.Repo.Version)
+	if repoVersionComparison != compareEQ {
+		return repoVersionComparison
+	}
+	pkgVersionComparison := gosemver.Compare(p.Config.Package.Version, q.Config.Package.Version)
+	if pkgVersionComparison != compareEQ {
+		return pkgVersionComparison
+	}
+	return compareEQ
+}
 
 func loadPkgConfig(cacheFS fs.FS, filePath string) (PkgConfig, error) {
 	file, err := cacheFS.Open(filePath)
