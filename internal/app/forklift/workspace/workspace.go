@@ -36,10 +36,18 @@ func LocalEnvFS(workspacePath string) fs.FS {
 	return os.DirFS(LocalEnvPath(workspacePath))
 }
 
-// Pallets
+// Cache
 
-const palletsDirName = "pallets"
+const cacheDirName = "cache"
 
-func LocalPalletsPath(workspacePath string) string {
-	return filepath.Join(workspacePath, palletsDirName)
+func CachePath(workspacePath string) string {
+	return filepath.Join(workspacePath, cacheDirName)
+}
+
+func RemoveCache(workspacePath string) error {
+	return os.RemoveAll(CachePath(workspacePath))
+}
+
+func CacheFS(workspacePath string) fs.FS {
+	return os.DirFS(CachePath(workspacePath))
 }

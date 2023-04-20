@@ -5,12 +5,24 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
-	"golang.org/x/mod/semver"
 )
+
+func resolveCommit(repo *git.Repository, commit string) (*plumbing.Hash, error) {
+	hash, err := repo.ResolveRevision(plumbing.Revision(commit))
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't resolve %s as a commit in the repo", commit)
+	}
+	if strings.HasPrefix(hash.String(), commit) {
+		return hash, nil
+	}
+	return nil, errors.Errorf("%s appears to be a non-commit revision name", commit)
+}
 
 func makeCheckoutOptions(repo *git.Repository, release string) git.CheckoutOptions {
 	if plumbing.IsHash(release) {
@@ -18,14 +30,14 @@ func makeCheckoutOptions(repo *git.Repository, release string) git.CheckoutOptio
 			Hash: plumbing.NewHash(release),
 		}
 	}
-	if hash, err := repo.ResolveRevision(plumbing.Revision(release)); err != nil {
-		if strings.HasPrefix(hash.String(), release) {
-			return git.CheckoutOptions{
-				Hash: *hash,
-			}
+	if hash, err := resolveCommit(repo, release); err == nil {
+		return git.CheckoutOptions{
+			Hash: *hash,
 		}
 	}
-	if semver.IsValid(release) {
+	if _, err := semver.Parse(
+		strings.TrimPrefix(release, "v"),
+	); strings.HasPrefix(release, "v") && err == nil {
 		return git.CheckoutOptions{
 			Branch: plumbing.NewTagReferenceName(release),
 		}
@@ -33,6 +45,22 @@ func makeCheckoutOptions(repo *git.Repository, release string) git.CheckoutOptio
 	return git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(release),
 	}
+}
+
+func GetCommitTime(repo *git.Repository, commit string) (time.Time, error) {
+	hash, err := resolveCommit(repo, commit)
+	if err != nil {
+		return time.Time{}, errors.Wrapf(
+			err, "couldn't resolve %s to a commit hash in the repo", commit,
+		)
+	}
+	object, err := repo.CommitObject(*hash)
+	if err != nil {
+		return time.Time{}, errors.Wrapf(
+			err, "couldn't find commit object with hash %s", hash.String(),
+		)
+	}
+	return object.Committer.When, nil
 }
 
 var ErrRepositoryAlreadyExists = git.ErrRepositoryAlreadyExists
@@ -75,16 +103,16 @@ func Clone(remote, local string) (*git.Repository, error) {
 	return repo, errors.Wrapf(err, "couldn't clone git repo %s to %s", remote, local)
 }
 
-func Checkout(repo *git.Repository, release string) error {
+func Checkout(repo *git.Repository, release string) (*git.Worktree, error) {
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	checkoutOptions := makeCheckoutOptions(repo, release)
 	if err = worktree.Checkout(&checkoutOptions); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return worktree, nil
 }
 
 func Fetch(local string) (updated bool, err error) {

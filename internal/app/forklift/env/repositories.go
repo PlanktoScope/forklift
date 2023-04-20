@@ -7,7 +7,9 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -17,8 +19,70 @@ type RepoConfig struct {
 	Release string `yaml:"release"`
 }
 
+const Timestamp = "20060102150405"
+
+func ToTimestamp(t time.Time) string {
+	return t.UTC().Format(Timestamp)
+}
+
+const shortCommitLength = 12
+
+func ShortCommit(commit string) string {
+	return commit[:shortCommitLength]
+}
+
 type RepoLock struct {
-	Commit string `yaml:"commit"`
+	Version   string `yaml:"version"`
+	Timestamp string `yaml:"timestamp"`
+	Commit    string `yaml:"commit"`
+}
+
+func (l RepoLock) IsCommitLocked() bool {
+	return l.Commit != ""
+}
+
+func (l RepoLock) IsVersion() bool {
+	return l.Version != "" && l.Timestamp != ""
+}
+
+func (l RepoLock) ParseVersion() (semver.Version, error) {
+	if !strings.HasPrefix(l.Version, "v") {
+		return semver.Version{}, errors.Errorf(
+			"invalid repo version `%s` doesn't start with `v`", l.Version,
+		)
+	}
+	version, err := semver.Parse(strings.TrimPrefix(l.Version, "v"))
+	if err != nil {
+		return semver.Version{}, errors.Errorf(
+			"repo version `%s` couldn't be parsed as a semantic version", l.Version,
+		)
+	}
+	return version, nil
+}
+
+func (l RepoLock) PseudoVersion() (string, error) {
+	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
+	if l.Commit == "" {
+		return "", errors.Errorf("missing commit hash")
+	}
+	if l.Timestamp == "" {
+		return "", errors.Errorf("missing commit timestamp")
+	}
+	revisionID := ShortCommit(l.Commit)
+	if l.Version == "" {
+		return fmt.Sprintf("v0.0.0-%s-%s", l.Timestamp, revisionID), nil
+	}
+	version, err := l.ParseVersion()
+	if err != nil {
+		return "", errors.Wrap(err, "couldn't build pseudoversion with base version")
+	}
+	version.Build = nil
+	if len(version.Pre) > 0 {
+		return fmt.Sprintf("%s.0.%s-%s", version.String(), l.Timestamp, revisionID), nil
+	}
+	return fmt.Sprintf(
+		"v%d.%d.%d-0.%s-%s", version.Major, version.Minor, version.Patch+1, l.Timestamp, revisionID,
+	), nil
 }
 
 type Repo struct {
@@ -34,8 +98,19 @@ func (r Repo) Path() string {
 	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
 }
 
-func (r Repo) VCSRepoRelease() string {
-	return fmt.Sprintf("%s@%s", r.VCSRepoPath, r.Lock.Commit)
+func (r Repo) VCSRepoVersion() (string, error) {
+	if r.Lock.IsVersion() {
+		version, err := r.Lock.ParseVersion()
+		if err != nil {
+			return "", errors.Wrap(err, "invalid lock version")
+		}
+		return fmt.Sprintf("%s@%s", r.VCSRepoPath, version.String()), nil
+	}
+	pseudoversion, err := r.Lock.PseudoVersion()
+	if err != nil {
+		return "", errors.Wrap(err, "couldn't determine pseudo-version")
+	}
+	return fmt.Sprintf("%s@%s", r.VCSRepoPath, pseudoversion), nil
 }
 
 const reposDirName = "repos"
@@ -44,7 +119,7 @@ func ReposFS(envFS fs.FS) (fs.FS, error) {
 	return fs.Sub(envFS, reposDirName)
 }
 
-func GetVCSRepoPath(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
+func getVCSRepoPath(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
 		return "", "", errors.Errorf(
@@ -108,7 +183,7 @@ func ListRepos(envFS fs.FS) ([]Repo, error) {
 	repoMap := make(map[string]Repo)
 	for _, filePath := range files {
 		repoPath := filepath.Dir(filePath)
-		vcsRepoPath, repoSubdir, err := GetVCSRepoPath(repoPath)
+		vcsRepoPath, repoSubdir, err := getVCSRepoPath(repoPath)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine Github repo path of pallet repo %s", repoPath,
