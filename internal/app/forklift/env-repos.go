@@ -1,8 +1,6 @@
-// Package env provides an interface to the local environment
-package env
+package forklift
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -15,9 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type RepoConfig struct {
-	Release string `yaml:"release"`
-}
+// Pseudo-versions
 
 const Timestamp = "20060102150405"
 
@@ -31,42 +27,42 @@ func ShortCommit(commit string) string {
 	return commit[:shortCommitLength]
 }
 
-type RepoLock struct {
-	Version   string `yaml:"version"`
-	Timestamp string `yaml:"timestamp"`
-	Commit    string `yaml:"commit"`
-}
+// Repository versioning
 
-func (l RepoLock) IsCommitLocked() bool {
+func (l RepoVersionLock) IsCommitLocked() bool {
 	return l.Commit != ""
 }
 
-func (l RepoLock) IsVersion() bool {
+func (l RepoVersionLock) ShortCommit() string {
+	return ShortCommit(l.Commit)
+}
+
+func (l RepoVersionLock) IsVersion() bool {
 	return l.Version != "" && l.Timestamp != ""
 }
 
-func (l RepoLock) ParseVersion() (semver.Version, error) {
+func (l RepoVersionLock) ParseVersion() (semver.Version, error) {
 	if !strings.HasPrefix(l.Version, "v") {
 		return semver.Version{}, errors.Errorf(
-			"invalid repo version `%s` doesn't start with `v`", l.Version,
+			"invalid repo lock version `%s` doesn't start with `v`", l.Version,
 		)
 	}
 	version, err := semver.Parse(strings.TrimPrefix(l.Version, "v"))
 	if err != nil {
 		return semver.Version{}, errors.Errorf(
-			"repo version `%s` couldn't be parsed as a semantic version", l.Version,
+			"repo lock version `%s` couldn't be parsed as a semantic version", l.Version,
 		)
 	}
 	return version, nil
 }
 
-func (l RepoLock) PseudoVersion() (string, error) {
+func (l RepoVersionLock) PseudoVersion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
 	if l.Commit == "" {
-		return "", errors.Errorf("missing commit hash")
+		return "", errors.Errorf("repo lock missing commit hash")
 	}
 	if l.Timestamp == "" {
-		return "", errors.Errorf("missing commit timestamp")
+		return "", errors.Errorf("repo lock missing commit timestamp")
 	}
 	revisionID := ShortCommit(l.Commit)
 	if l.Version == "" {
@@ -74,7 +70,7 @@ func (l RepoLock) PseudoVersion() (string, error) {
 	}
 	version, err := l.ParseVersion()
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't build pseudoversion with base version")
+		return "", err
 	}
 	version.Build = nil
 	if len(version.Pre) > 0 {
@@ -85,20 +81,11 @@ func (l RepoLock) PseudoVersion() (string, error) {
 	), nil
 }
 
-type Repo struct {
-	VCSRepoPath string
-	RepoSubdir  string
-	Config      RepoConfig
-	Lock        RepoLock
-}
-
-const sep = "/"
-
-func (r Repo) Path() string {
+func (r VersionedRepo) Path() string {
 	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
 }
 
-func (r Repo) VCSRepoVersion() (string, error) {
+func (r VersionedRepo) VCSRepoVersion() (string, error) {
 	if r.Lock.IsVersion() {
 		version, err := r.Lock.ParseVersion()
 		if err != nil {
@@ -113,18 +100,19 @@ func (r Repo) VCSRepoVersion() (string, error) {
 	return fmt.Sprintf("%s@%s", r.VCSRepoPath, pseudoversion), nil
 }
 
-const reposDirName = "repos"
+const versionedReposDirName = "repos"
 
-func ReposFS(envFS fs.FS) (fs.FS, error) {
-	return fs.Sub(envFS, reposDirName)
+func VersionedReposFS(envFS fs.FS) (fs.FS, error) {
+	return fs.Sub(envFS, versionedReposDirName)
 }
 
-func getVCSRepoPath(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
+func splitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
+	const sep = "/"
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
 		return "", "", errors.Errorf(
-			"pallet repo %s does not begin with github.com, and handling of non-Github repositories is "+
-				"not yet implemented",
+			"pallet repository %s does not begin with github.com, but support for non-Github "+
+				"repositories is not yet implemented",
 			repoPath,
 		)
 	}
@@ -132,46 +120,40 @@ func getVCSRepoPath(repoPath string) (vcsRepoPath, repoSubdir string, err error)
 	return strings.Join(pathParts[0:splitIndex], sep), strings.Join(pathParts[splitIndex:], sep), nil
 }
 
-func loadFile(file fs.File) (bytes.Buffer, error) {
-	buf := bytes.Buffer{}
-	_, err := buf.ReadFrom(file)
-	return buf, errors.Wrap(err, "couldn't load file")
-}
-
-func loadRepoConfig(reposFS fs.FS, filePath string) (RepoConfig, error) {
+func loadRepoVersionConfig(reposFS fs.FS, filePath string) (RepoVersionConfig, error) {
 	file, err := reposFS.Open(filePath)
 	if err != nil {
-		return RepoConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
+		return RepoVersionConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
 	}
 	buf, err := loadFile(file)
 	if err != nil {
-		return RepoConfig{}, errors.Wrap(err, "couldn't read repo config")
+		return RepoVersionConfig{}, errors.Wrap(err, "couldn't read repo version config file")
 	}
-	config := RepoConfig{}
+	config := RepoVersionConfig{}
 	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
-		return RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
+		return RepoVersionConfig{}, errors.Wrap(err, "couldn't parse repo version config")
 	}
 	return config, nil
 }
 
-func loadRepoLock(reposFS fs.FS, filePath string) (RepoLock, error) {
+func loadRepoVersionLock(reposFS fs.FS, filePath string) (RepoVersionLock, error) {
 	file, err := reposFS.Open(filePath)
 	if err != nil {
-		return RepoLock{}, errors.Wrapf(err, "couldn't open file %s", filePath)
+		return RepoVersionLock{}, errors.Wrapf(err, "couldn't open file %s", filePath)
 	}
 	buf, err := loadFile(file)
 	if err != nil {
-		return RepoLock{}, errors.Wrap(err, "couldn't load repo lock")
+		return RepoVersionLock{}, errors.Wrap(err, "couldn't read repo version lock file")
 	}
-	lock := RepoLock{}
+	lock := RepoVersionLock{}
 	if err = yaml.Unmarshal(buf.Bytes(), &lock); err != nil {
-		return RepoLock{}, errors.Wrap(err, "couldn't parse repo lock")
+		return RepoVersionLock{}, errors.Wrap(err, "couldn't parse repo version lock")
 	}
 	return lock, nil
 }
 
-func ListRepos(envFS fs.FS) ([]Repo, error) {
-	reposFS, err := ReposFS(envFS)
+func ListVersionedRepos(envFS fs.FS) ([]VersionedRepo, error) {
+	reposFS, err := VersionedReposFS(envFS)
 	if err != nil {
 		return nil, err
 	}
@@ -180,18 +162,18 @@ func ListRepos(envFS fs.FS) ([]Repo, error) {
 		return nil, err
 	}
 	repoPaths := make([]string, 0, len(files))
-	repoMap := make(map[string]Repo)
+	repoMap := make(map[string]VersionedRepo)
 	for _, filePath := range files {
 		repoPath := filepath.Dir(filePath)
-		vcsRepoPath, repoSubdir, err := getVCSRepoPath(repoPath)
+		vcsRepoPath, repoSubdir, err := splitRepoPathSubdir(repoPath)
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't determine Github repo path of pallet repo %s", repoPath,
+				err, "couldn't parse path of version-locked Pallet repo %s", repoPath,
 			)
 		}
 		if _, ok := repoMap[repoPath]; !ok {
 			repoPaths = append(repoPaths, repoPath)
-			repoMap[repoPath] = Repo{
+			repoMap[repoPath] = VersionedRepo{
 				VCSRepoPath: vcsRepoPath,
 				RepoSubdir:  repoSubdir,
 			}
@@ -199,17 +181,17 @@ func ListRepos(envFS fs.FS) ([]Repo, error) {
 		filename := filepath.Base(filePath)
 		switch filename {
 		case "forklift-repo.yml":
-			config, err := loadRepoConfig(reposFS, filePath)
+			config, err := loadRepoVersionConfig(reposFS, filePath)
 			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't load repo config for %s", repoPath)
+				return nil, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
 			}
 			repo := repoMap[repoPath]
 			repo.Config = config
 			repoMap[repoPath] = repo
 		case "forklift-repo-lock.yml":
-			lock, err := loadRepoLock(reposFS, filePath)
+			lock, err := loadRepoVersionLock(reposFS, filePath)
 			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't load repo lock for %s", repoPath)
+				return nil, errors.Wrapf(err, "couldn't load repo version lock for %s", repoPath)
 			}
 			repo := repoMap[repoPath]
 			repo.Lock = lock
@@ -217,7 +199,7 @@ func ListRepos(envFS fs.FS) ([]Repo, error) {
 		}
 	}
 
-	orderedRepos := make([]Repo, 0, len(repoPaths))
+	orderedRepos := make([]VersionedRepo, 0, len(repoPaths))
 	for _, repoPath := range repoPaths {
 		orderedRepos = append(orderedRepos, repoMap[repoPath])
 	}

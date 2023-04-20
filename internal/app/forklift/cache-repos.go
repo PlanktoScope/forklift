@@ -1,8 +1,6 @@
-// Package cache manages the downloaded cache of Pallet repositories and packages
-package cache
+package forklift
 
 import (
-	"bytes"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -13,20 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type RepoConfig struct {
-	Path string `yaml:"path"`
-}
-
-type Repo struct {
-	VCSRepoPath string
-	Version     string
-	RepoSubdir  string
-	Config      RepoConfig
-}
-
-const sep = "/"
-
-func getVCSRepoPathVersion(repoPath string) (vcsRepoPath, release string, err error) {
+func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err error) {
+	const sep = "/"
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
 		return "", "", errors.Errorf(
@@ -45,12 +31,6 @@ func getVCSRepoPathVersion(repoPath string) (vcsRepoPath, release string, err er
 	return vcsRepoPath, release, nil
 }
 
-func loadFile(file fs.File) (bytes.Buffer, error) {
-	buf := bytes.Buffer{}
-	_, err := buf.ReadFrom(file)
-	return buf, errors.Wrap(err, "couldn't load file")
-}
-
 func loadRepoConfig(reposFS fs.FS, filePath string) (RepoConfig, error) {
 	file, err := reposFS.Open(filePath)
 	if err != nil {
@@ -67,25 +47,23 @@ func loadRepoConfig(reposFS fs.FS, filePath string) (RepoConfig, error) {
 	return config, nil
 }
 
-func ListRepos(cacheFS fs.FS) ([]Repo, error) {
+func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 	files, err := doublestar.Glob(cacheFS, "**/pallet-repository.yml")
 	if err != nil {
 		return nil, err
 	}
 	repoPaths := make([]string, 0, len(files))
-	repoMap := make(map[string]Repo)
+	repoMap := make(map[string]CachedRepo)
 	for _, filePath := range files {
 		repoPath := filepath.Dir(filePath)
-		vcsRepoPath, version, err := getVCSRepoPathVersion(repoPath)
+		vcsRepoPath, version, err := splitRepoPathVersion(repoPath)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't determine Github repo path of pallet repo %s", repoPath,
-			)
+			return nil, errors.Wrapf(err, "couldn't parse path of cached Pallet repo %s", repoPath)
 		}
 		repoSubdir := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", vcsRepoPath))
 		if _, ok := repoMap[repoPath]; !ok {
 			repoPaths = append(repoPaths, repoPath)
-			repoMap[repoPath] = Repo{
+			repoMap[repoPath] = CachedRepo{
 				VCSRepoPath: vcsRepoPath,
 				Version:     version,
 				RepoSubdir:  repoSubdir,
@@ -97,14 +75,14 @@ func ListRepos(cacheFS fs.FS) ([]Repo, error) {
 		}
 		config, err := loadRepoConfig(cacheFS, filePath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load repo config for %s", repoPath)
+			return nil, errors.Wrapf(err, "couldn't load cached repo config for %s", repoPath)
 		}
 		repo := repoMap[repoPath]
 		repo.Config = config
 		repoMap[repoPath] = repo
 	}
 
-	orderedRepos := make([]Repo, 0, len(repoPaths))
+	orderedRepos := make([]CachedRepo, 0, len(repoPaths))
 	for _, repoPath := range repoPaths {
 		orderedRepos = append(orderedRepos, repoMap[repoPath])
 	}
