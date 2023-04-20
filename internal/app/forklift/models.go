@@ -30,5 +30,24 @@ type CachedRepo struct {
 	VCSRepoPath string
 	Version     string
 	RepoSubdir  string
+	ConfigPath  string
 	Config      RepoConfig
+}
+
+// Package caching
+
+type PkgSpec struct {
+	Version string `yaml:"version"`
+}
+
+type PkgConfig struct {
+	Package PkgSpec `yaml:"package"`
+	// Host       HostSpec `yaml:"host"`
+	// Deployment DeplSpec `yaml:"deployment"`
+}
+
+type CachedPkg struct {
+	Repo   CachedRepo
+	Path   string
+	Config PkgConfig
 }
