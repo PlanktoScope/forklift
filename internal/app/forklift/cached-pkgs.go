@@ -27,10 +27,6 @@ func CompareCachedPkgs(p, q CachedPkg) int {
 	if repoVersionComparison != compareEQ {
 		return repoVersionComparison
 	}
-	pkgVersionComparison := gosemver.Compare(p.Config.Package.Version, q.Config.Package.Version)
-	if pkgVersionComparison != compareEQ {
-		return pkgVersionComparison
-	}
 	return compareEQ
 }
 
@@ -126,4 +122,57 @@ func ListCachedPkgs(cacheFS fs.FS) ([]CachedPkg, error) {
 		orderedPkgs = append(orderedPkgs, pkgMap[path])
 	}
 	return orderedPkgs, nil
+}
+
+func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, error) {
+	vcsRepoPath, _, err := splitRepoPathSubdir(pkgPath)
+	if err != nil {
+		return CachedPkg{}, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", pkgPath)
+	}
+	pkgInnermostDir := filepath.Base(pkgPath)
+	// The package subdirectory path in the package path (under the VCS repo path) might not match the
+	// filesystem directory path with the pallet-package.yml file, so we must check every
+	// directory whose name matches the last part of the package path to look for the package
+	searchPattern := fmt.Sprintf(
+		"%s@%s/**/%s/pallet-package.yml", vcsRepoPath, version, pkgInnermostDir,
+	)
+	candidatePkgConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
+	if err != nil {
+		return CachedPkg{}, errors.Wrapf(
+			err, "couldn't search for cached Pallet package configs matching pattern %s", searchPattern,
+		)
+	}
+	if len(candidatePkgConfigFiles) == 0 {
+		return CachedPkg{}, errors.Errorf(
+			"no matching Pallet package configs were found in %s@%s", vcsRepoPath, version,
+		)
+	}
+	candidatePkgs := make([]CachedPkg, 0)
+	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
+		filename := filepath.Base(pkgConfigFilePath)
+		if filename != "pallet-package.yml" {
+			continue
+		}
+		pkg, err := LoadCachedPkg(cacheFS, pkgConfigFilePath)
+		if err != nil {
+			return CachedPkg{}, errors.Wrapf(
+				err, "couldn't check cached pkg defined at %s", pkgConfigFilePath,
+			)
+		}
+		if pkg.Path == pkgPath {
+			if len(candidatePkgs) > 0 {
+				return CachedPkg{}, errors.Errorf(
+					"package %s repeatedly defined in the same version of the same Github repo: %s, %s",
+					pkgPath, candidatePkgs[0].ConfigPath, pkg.ConfigPath,
+				)
+			}
+			candidatePkgs = append(candidatePkgs, pkg)
+		}
+	}
+	if len(candidatePkgs) == 0 {
+		return CachedPkg{}, errors.Errorf(
+			"no cached repos were found matching %s@%s", pkgPath, version,
+		)
+	}
+	return candidatePkgs[0], nil
 }

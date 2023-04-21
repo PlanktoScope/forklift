@@ -153,9 +153,9 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo,
 	if err != nil {
 		return CachedRepo{}, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
 	}
-	// The filesystem subdirectory might not exactly match the directory containing the
-	// pallet-repository.yml file, so we must check every pallet-repository.yml file to find the
-	// actual repo path
+	// The repo subdirectory path in the repo path (under the VCS repo path) might not match the
+	// filesystem directory path with the pallet-repository.yml file, so we must check every
+	// pallet-repository.yml file to find the actual repo path
 	searchPattern := fmt.Sprintf("%s@%s/**/pallet-repository.yml", vcsRepoPath, version)
 	candidateRepoConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
 	if err != nil {

@@ -1,7 +1,89 @@
 // Package forklift provides the core functionality of the forklift tool
 package forklift
 
-// Versioned repository specification
+// Pallet repository specifications
+
+type RepoConfig struct {
+	Path string `yaml:"path"`
+}
+
+// Pallet package specifications
+
+type PkgConfig struct {
+	Package    PkgSpec                `yaml:"package"`
+	Host       HostSpec               `yaml:"host"`
+	Deployment DeplSpec               `yaml:"deployment"`
+	Features   map[string]FeatureSpec `yaml:"features"`
+}
+
+type PkgMaintainer struct {
+	Name  string `yaml:"name"`
+	Email string `yaml:"email"`
+}
+
+type PkgSpec struct {
+	Description string          `yaml:"description"`
+	Maintainers []PkgMaintainer `yaml:"maintainers"`
+	License     string          `yaml:"license"`
+	LicenseFile string          `yaml:"license-file"`
+	Sources     []string        `yaml:"sources"`
+}
+
+type ProvidedResources struct {
+	Listeners []ListenerResource `yaml:"listeners"`
+	Networks  []NetworkResource  `yaml:"networks"`
+	Services  []ServiceResource  `yaml:"services"`
+}
+
+type RequiredResources struct {
+	Networks []NetworkResource `yaml:"networks"`
+	Services []ServiceResource `yaml:"services"`
+}
+
+type ListenerResource struct {
+	Description string `yaml:"description"`
+	Port        int    `yaml:"port"`
+	Protocol    string `yaml:"protocol"`
+}
+
+type NetworkResource struct {
+	Description string `yaml:"description"`
+	Name        string `yaml:"name"`
+}
+
+type ServiceResource struct {
+	Description string   `yaml:"description"`
+	Tags        []string `yaml:"tags"`
+	Port        int      `yaml:"port"`
+	Protocol    string   `yaml:"protocol"`
+	Paths       []string `yaml:"paths"`
+}
+
+type HostSpec struct {
+	Provides ProvidedResources `yaml:"provides"`
+}
+
+type DeplSpec struct {
+	Name       string            `yaml:"name"`
+	Definition string            `yaml:"definition"`
+	Requires   RequiredResources `yaml:"requires"`
+	Provides   ProvidedResources `yaml:"provides"`
+}
+
+type FeatureSpec struct {
+	Description string            `yaml:"description"`
+	Requires    RequiredResources `yaml:"requires"`
+	Provides    ProvidedResources `yaml:"provides"`
+}
+
+// Repository versioning
+
+type VersionedRepo struct {
+	VCSRepoPath string
+	RepoSubdir  string
+	Config      RepoVersionConfig
+	Lock        RepoVersionLock
+}
 
 type RepoVersionConfig struct {
 	Release string `yaml:"release"`
@@ -13,18 +95,7 @@ type RepoVersionLock struct {
 	Commit    string `yaml:"commit"`
 }
 
-type VersionedRepo struct {
-	VCSRepoPath string
-	RepoSubdir  string
-	Config      RepoVersionConfig
-	Lock        RepoVersionLock
-}
-
 // Repository caching
-
-type RepoConfig struct {
-	Path string `yaml:"path"`
-}
 
 type CachedRepo struct {
 	VCSRepoPath string
@@ -35,17 +106,6 @@ type CachedRepo struct {
 }
 
 // Package caching
-
-type PkgSpec struct {
-	Version     string `yaml:"version"`
-	Description string `yaml:"description"`
-}
-
-type PkgConfig struct {
-	Package PkgSpec `yaml:"package"`
-	// Host       HostSpec `yaml:"host"`
-	// Deployment DeplSpec `yaml:"deployment"`
-}
 
 type CachedPkg struct {
 	Repo       CachedRepo

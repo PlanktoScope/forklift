@@ -87,6 +87,7 @@ var envCmd = &cli.Command{
 			Usage:   "Removes the local environment",
 			Action:  envRmAction,
 		},
+		// TODO: add a ls-repo action
 		// TODO: move these into a repos subcommand
 		// {
 		// 	Name:      "add",
@@ -157,10 +158,7 @@ var cacheCmd = &cli.Command{
 			Aliases:   []string{"info-p", "info-package"},
 			Usage:     "Describes a cached package",
 			ArgsUsage: "package_path",
-			Action: func(c *cli.Context) error {
-				fmt.Println("package", c.Args().First())
-				return nil
-			},
+			Action:    cacheInfoPkgAction,
 		},
 		{
 			Name:    "rm",
