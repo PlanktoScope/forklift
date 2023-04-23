@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -27,6 +28,7 @@ func envCloneAction(c *cli.Context) error {
 	if err := workspace.EnsureExists(wpath); err != nil {
 		return errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 	}
+
 	remoteRelease := c.Args().First()
 	remote, release, err := git.ParseRemoteRelease(remoteRelease)
 	if err != nil {
@@ -73,6 +75,56 @@ func envCloneAction(c *cli.Context) error {
 	return nil
 }
 
+// fetch
+
+func envFetchAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	envPath := workspace.LocalEnvPath(wpath)
+	if !workspace.Exists(envPath) {
+		return errMissingEnv
+	}
+
+	fmt.Println("Fetching updates...")
+	updated, err := git.Fetch(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't fetch changes from the remote release")
+	}
+	if !updated {
+		fmt.Print("No updates from the remote release.")
+	}
+	// TODO: display changes
+	return nil
+}
+
+// pull
+
+func envPullAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	envPath := workspace.LocalEnvPath(wpath)
+	if !workspace.Exists(envPath) {
+		return errMissingEnv
+	}
+
+	fmt.Println("Attempting to fast-forward the local environment...")
+	updated, err := git.Pull(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't fast-forward the local environment")
+	}
+	if !updated {
+		fmt.Println("No changes from the remote release.")
+	}
+	// TODO: display changes
+	return nil
+}
+
+// rm
+
+func envRmAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	fmt.Printf("Removing local environment from workspace %s...\n", wpath)
+	return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
+}
+
 // cache
 
 func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
@@ -105,19 +157,17 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 		)
 	}
 	vcsRepoPath := repo.VCSRepoPath
-	vcsRepoVersion, err := repo.VCSRepoVersion()
+	version, err := repo.Version()
 	if err != nil {
-		return false, errors.Wrapf(
-			err, "couldn't determine version-locked github repo path for %s", vcsRepoPath,
-		)
+		return false, errors.Wrapf(err, "couldn't determine version for %s", vcsRepoPath)
 	}
-	path := filepath.Join(palletsPath, vcsRepoVersion)
+	path := filepath.Join(palletsPath, fmt.Sprintf("%s@%s", repo.VCSRepoPath, version))
 	if workspace.Exists(path) {
 		// TODO: perform a disk checksum
 		return false, nil
 	}
 
-	fmt.Printf("Downloading %s...\n", vcsRepoVersion)
+	fmt.Printf("Downloading %s@%s...\n", repo.VCSRepoPath, version)
 	gitRepo, err := git.Clone(vcsRepoPath, path)
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't clone repo %s to %s", vcsRepoPath, path)
@@ -155,6 +205,7 @@ func envCacheAction(c *cli.Context) error {
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		return errMissingEnv
 	}
+
 	fmt.Printf("Downloading Pallet repositories...\n")
 	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
 	if err != nil {
@@ -182,50 +233,132 @@ func envCacheAction(c *cli.Context) error {
 	return nil
 }
 
-// fetch
+// ls-repo
 
-func envFetchAction(c *cli.Context) error {
+func envLsRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
-	envPath := workspace.LocalEnvPath(wpath)
-	if !workspace.Exists(envPath) {
-		return errMissingEnv
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
 	}
-	fmt.Println("Fetching updates...")
-	updated, err := git.Fetch(envPath)
+
+	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
 	if err != nil {
-		return errors.Wrap(err, "couldn't fetch changes from the remote release")
+		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
-	if !updated {
-		fmt.Print("No updates from the remote release.")
+	sort.Slice(repos, func(i, j int) bool {
+		return forklift.CompareVersionedRepos(repos[i], repos[j]) < 0
+	})
+	for _, repo := range repos {
+		fmt.Printf("%s\n", repo.Path())
 	}
-	// TODO: display changes
 	return nil
 }
 
-// pull
+// info-repo
 
-func envPullAction(c *cli.Context) error {
+func printVersionedRepo(repo forklift.VersionedRepo) {
+	fmt.Printf("Pallet repository: %s\n", repo.Path())
+	fmt.Printf("  Release: %s\n", repo.Config.Release)
+	version, _ := repo.Version() // assume that the validity of the version was already checked
+	fmt.Printf("  Locked version: %s\n", version)
+	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
+}
+
+func envInfoRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
-	envPath := workspace.LocalEnvPath(wpath)
-	if !workspace.Exists(envPath) {
-		return errMissingEnv
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
 	}
-	fmt.Println("Attempting to fast-forward the local environment...")
-	updated, err := git.Pull(envPath)
+	reposFS, err := forklift.VersionedReposFS(workspace.LocalEnvFS(wpath))
 	if err != nil {
-		return errors.Wrap(err, "couldn't fast-forward the local environment")
+		return errors.Wrap(err, "couldn't open directory for Pallet repositories in local environment")
 	}
-	if !updated {
-		fmt.Println("No changes from the remote release.")
+
+	repoPath := c.Args().First()
+	versionedRepo, err := forklift.LoadVersionedRepo(reposFS, repoPath)
+	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
+	// we don't need error-checking for every subsequent access of the version
+	version, err := versionedRepo.Version()
+	if err != nil {
+		return errors.Wrapf(err, "couldn't determine locked version of %s", repoPath)
 	}
-	// TODO: display changes
+	printVersionedRepo(versionedRepo)
+	fmt.Println()
+
+	cachedRepo, err := forklift.FindCachedRepo(workspace.CacheFS(wpath), repoPath, version)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find Pallet repository %s@%s in cache, please run `forklift env cache` again",
+			repoPath, version,
+		)
+	}
+	fmt.Printf("  Path in cache: %s\n", cachedRepo.ConfigPath)
+	fmt.Printf("  Description: %s\n", cachedRepo.Config.Repository.Description)
 	return nil
 }
 
-// rm
+// ls-pkg
 
-func envRmAction(c *cli.Context) error {
+func envLsPkgAction(c *cli.Context) error {
 	wpath := c.String("workspace")
-	fmt.Printf("Removing local environment from workspace %s...\n", wpath)
-	return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` again")
+		return nil
+	}
+
+	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
+	if err != nil {
+		return errors.Wrapf(err, "couldn't identify Pallet repositories in local environment")
+	}
+	pkgs, err := forklift.ListVersionedPkgs(workspace.CacheFS(wpath), repos)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't identify Pallet packages")
+	}
+	sort.Slice(pkgs, func(i, j int) bool {
+		return forklift.CompareCachedPkgs(pkgs[i], pkgs[j]) < 0
+	})
+	for _, pkg := range pkgs {
+		fmt.Printf("%s\n", pkg.Path)
+	}
+	return nil
+}
+
+// info-pkg
+
+func envInfoPkgAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` again")
+		return nil
+	}
+
+	pkgPath := c.Args().First()
+	repo, err := forklift.FindVersionedRepoOfPkg(workspace.LocalEnvFS(wpath), pkgPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find repo providing package %s in local environment", pkgPath,
+		)
+	}
+	version, err := repo.Version()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine version of repo %s in local environment", repo.Path(),
+		)
+	}
+	pkg, err := forklift.FindCachedPkg(workspace.CacheFS(wpath), pkgPath, version)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't find package %s@%s in cache", pkgPath, version)
+	}
+	printCachedPkg(pkg)
+	return nil
 }

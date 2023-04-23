@@ -3,8 +3,13 @@ package forklift
 
 // Pallet repository specifications
 
+type RepoSpec struct {
+	Path        string `yaml:"path"`
+	Description string `yaml:"description"`
+}
+
 type RepoConfig struct {
-	Path string `yaml:"path"`
+	Repository RepoSpec `yaml:"repository"`
 }
 
 // Pallet package specifications

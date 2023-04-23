@@ -56,7 +56,7 @@ func (l RepoVersionLock) ParseVersion() (semver.Version, error) {
 	return version, nil
 }
 
-func (l RepoVersionLock) PseudoVersion() (string, error) {
+func (l RepoVersionLock) Pseudoversion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
 	if l.Commit == "" {
 		return "", errors.Errorf("repo lock missing commit hash")
@@ -85,19 +85,35 @@ func (r VersionedRepo) Path() string {
 	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
 }
 
-func (r VersionedRepo) VCSRepoVersion() (string, error) {
+func (r VersionedRepo) Version() (string, error) {
 	if r.Lock.IsVersion() {
 		version, err := r.Lock.ParseVersion()
 		if err != nil {
 			return "", errors.Wrap(err, "invalid lock version")
 		}
-		return fmt.Sprintf("%s@%s", r.VCSRepoPath, version.String()), nil
+		return version.String(), nil
 	}
-	pseudoversion, err := r.Lock.PseudoVersion()
+	pseudoversion, err := r.Lock.Pseudoversion()
 	if err != nil {
 		return "", errors.Wrap(err, "couldn't determine pseudo-version")
 	}
-	return fmt.Sprintf("%s@%s", r.VCSRepoPath, pseudoversion), nil
+	return fmt.Sprintf("%s", pseudoversion), nil
+}
+
+func CompareVersionedRepos(r, s VersionedRepo) int {
+	if r.VCSRepoPath != s.VCSRepoPath {
+		if r.VCSRepoPath < s.VCSRepoPath {
+			return compareLT
+		}
+		return compareGT
+	}
+	if r.RepoSubdir != s.RepoSubdir {
+		if r.RepoSubdir < s.RepoSubdir {
+			return compareLT
+		}
+		return compareGT
+	}
+	return compareEQ
 }
 
 const versionedReposDirName = "repos"
@@ -117,6 +133,11 @@ func splitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err e
 		)
 	}
 	const splitIndex = 3
+	if len(pathParts) < splitIndex {
+		return "", "", errors.Errorf(
+			"pallet repository %s does not appear to be within a Github Git repository", repoPath,
+		)
+	}
 	return strings.Join(pathParts[0:splitIndex], sep), strings.Join(pathParts[splitIndex:], sep), nil
 }
 
@@ -152,50 +173,57 @@ func loadRepoVersionLock(reposFS fs.FS, filePath string) (RepoVersionLock, error
 	return lock, nil
 }
 
+func LoadVersionedRepo(reposFS fs.FS, repoPath string) (VersionedRepo, error) {
+	vcsRepoPath, repoSubdir, err := splitRepoPathSubdir(repoPath)
+	if err != nil {
+		return VersionedRepo{}, errors.Wrapf(
+			err, "couldn't parse path of version-locked Pallet repo %s", repoPath,
+		)
+	}
+	repo := VersionedRepo{
+		VCSRepoPath: vcsRepoPath,
+		RepoSubdir:  repoSubdir,
+	}
+
+	repo.Config, err = loadRepoVersionConfig(reposFS, filepath.Join(repoPath, "forklift-repo.yml"))
+	if err != nil {
+		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
+	}
+	repo.Lock, err = loadRepoVersionLock(
+		reposFS, filepath.Join(repoPath, "forklift-repo-lock.yml"),
+	)
+	if err != nil {
+		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version lock for %s", repoPath)
+	}
+
+	return repo, nil
+}
+
 func ListVersionedRepos(envFS fs.FS) ([]VersionedRepo, error) {
 	reposFS, err := VersionedReposFS(envFS)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(
+			err, "couldn't open directory for Pallet repositories in local environment",
+		)
 	}
-	files, err := doublestar.Glob(reposFS, "**/forklift-repo*.yml")
+	files, err := doublestar.Glob(reposFS, "**/forklift-repo.yml")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't search for Pallet repo versioning configs")
 	}
+
 	repoPaths := make([]string, 0, len(files))
 	repoMap := make(map[string]VersionedRepo)
 	for _, filePath := range files {
 		repoPath := filepath.Dir(filePath)
-		vcsRepoPath, repoSubdir, err := splitRepoPathSubdir(repoPath)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't parse path of version-locked Pallet repo %s", repoPath,
+		if _, ok := repoMap[repoPath]; ok {
+			return nil, errors.Errorf(
+				"versioned repository %s repeatedly defined in the local environment", repoPath,
 			)
 		}
-		if _, ok := repoMap[repoPath]; !ok {
-			repoPaths = append(repoPaths, repoPath)
-			repoMap[repoPath] = VersionedRepo{
-				VCSRepoPath: vcsRepoPath,
-				RepoSubdir:  repoSubdir,
-			}
-		}
-		filename := filepath.Base(filePath)
-		switch filename {
-		case "forklift-repo.yml":
-			config, err := loadRepoVersionConfig(reposFS, filePath)
-			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
-			}
-			repo := repoMap[repoPath]
-			repo.Config = config
-			repoMap[repoPath] = repo
-		case "forklift-repo-lock.yml":
-			lock, err := loadRepoVersionLock(reposFS, filePath)
-			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't load repo version lock for %s", repoPath)
-			}
-			repo := repoMap[repoPath]
-			repo.Lock = lock
-			repoMap[repoPath] = repo
+		repoPaths = append(repoPaths, repoPath)
+		repoMap[repoPath], err = LoadVersionedRepo(reposFS, repoPath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't load versioned repo from %s", repoPath)
 		}
 	}
 

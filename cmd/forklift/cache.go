@@ -29,7 +29,7 @@ func cacheLsRepoAction(c *cli.Context) error {
 		return forklift.CompareCachedRepos(repos[i], repos[j]) < 0
 	})
 	for _, repo := range repos {
-		fmt.Printf("%s@%s\n", repo.Config.Path, repo.Version)
+		fmt.Printf("%s@%s\n", repo.Config.Repository.Path, repo.Version)
 	}
 	return nil
 }
@@ -37,10 +37,11 @@ func cacheLsRepoAction(c *cli.Context) error {
 // info-repo
 
 func printCachedRepo(repo forklift.CachedRepo) {
-	fmt.Printf("Pallet repository: %s\n", repo.Config.Path)
+	fmt.Printf("Cached Pallet repository: %s\n", repo.Config.Repository.Path)
 	fmt.Printf("  Version: %s\n", repo.Version)
 	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
 	fmt.Printf("  Path in cache: %s\n", repo.ConfigPath)
+	fmt.Printf("  Description: %s\n", repo.Config.Repository.Description)
 }
 
 func cacheInfoRepoAction(c *cli.Context) error {
@@ -74,7 +75,7 @@ func cacheLsPkgAction(c *cli.Context) error {
 		return nil
 	}
 
-	pkgs, err := forklift.ListCachedPkgs(workspace.CacheFS(wpath))
+	pkgs, err := forklift.ListCachedPkgs(workspace.CacheFS(wpath), "")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
@@ -125,16 +126,21 @@ func printFeaturesSpecs(features map[string]forklift.FeatureSpec) {
 	for name := range features {
 		names = append(names, name)
 	}
-	names = sort.StringSlice(names)
+	sort.Strings(names)
 	for _, name := range names {
+		if description := features[name].Description; description != "" {
+			fmt.Printf("    %s: %s\n", name, description)
+			continue
+		}
 		fmt.Printf("    %s\n", name)
 	}
 }
 
 func printCachedPkg(pkg forklift.CachedPkg) {
 	fmt.Printf("Pallet package: %s\n", pkg.Path)
-	fmt.Printf("  Provided by Pallet repository: %s\n", pkg.Repo.Config.Path)
+	fmt.Printf("  Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path)
 	fmt.Printf("    Version: %s\n", pkg.Repo.Version)
+	fmt.Printf("    Description: %s\n", pkg.Repo.Config.Repository.Description)
 	fmt.Printf("    Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
 	fmt.Printf("  Path in cache: %s\n", pkg.ConfigPath)
 	fmt.Println()

@@ -59,11 +59,6 @@ var envCmd = &cli.Command{
 			Action: envCloneAction,
 		},
 		{
-			Name:   "cache",
-			Usage:  "Updates the cache with the repositories specified by the local environment",
-			Action: envCacheAction,
-		},
-		{
 			Name:   "fetch",
 			Usage:  "Updates information about the remote release",
 			Action: envFetchAction,
@@ -87,10 +82,43 @@ var envCmd = &cli.Command{
 			Usage:   "Removes the local environment",
 			Action:  envRmAction,
 		},
-		// TODO: add a ls-repo action
+		{
+			Name:   "cache",
+			Usage:  "Updates the cache with the repositories available in the local environment",
+			Action: envCacheAction,
+		},
+		// TODO: add a "info" command which prints a description of the local environment and indicates
+		// whether it has diverged
+		{
+			Name:    "ls-repo",
+			Aliases: []string{"ls-r", "list-repo"},
+			Usage:   "Lists repositories available in the local environment",
+			Action:  envLsRepoAction,
+		},
+		{
+			Name:      "info-repo",
+			Aliases:   []string{"info-r"},
+			Usage:     "Describes a repository available in the local environment",
+			ArgsUsage: "repository_path",
+			Action:    envInfoRepoAction,
+		},
+		{
+			Name:    "ls-pkg",
+			Aliases: []string{"ls-p", "list-package"},
+			Usage:   "Lists packages available in the local environment",
+			Action:  envLsPkgAction,
+		},
+		{
+			Name:      "info-pkg",
+			Aliases:   []string{"info-p", "info-package"},
+			Usage:     "Describes a package available in the local environment",
+			ArgsUsage: "package_path",
+			Action:    envInfoPkgAction,
+		},
 		// TODO: move these into a repos subcommand
 		// {
-		// 	Name:      "add",
+		// 	Name:      "add-repo",
+		// 	Aliases:   []string{"add-r"},
 		// 	Usage:     "Adds repositories to the environment, tracking specified versions or branches",
 		// 	ArgsUsage: "[pallet_repository_path@version_query]...",
 		// 	Action: func(c *cli.Context) error {
@@ -100,12 +128,39 @@ var envCmd = &cli.Command{
 		// 	},
 		// },
 		// {
-		// 	Name:      "rm",
-		// 	Aliases:   []string{"remove"},
+		// 	Name:      "rm-repo",
+		// 	Aliases:   []string{"rm-r", "remove-repo"},
 		// 	Usage:     "Removes a repository from the environment",
 		// 	ArgsUsage: "repository_path",
 		// 	Action: func(c *cli.Context) error {
 		// 		fmt.Println("removing repository", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:  "add-pkg",
+		// 	Aliases:   []string{"add-p"},
+		// 	Usage: "Adds a package deployment to the environment",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("adding package deployment", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:      "rm-pkg",
+		// 	Aliases:   []string{"rm-p", "remove-package"},
+		// 	Usage:     "Removes a package deployment from the environment",
+		// 	ArgsUsage: "package_path",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("removing package deployment", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:  "deploy",
+		// 	Usage: "Updates the Docker Swarm to match the deployments specified by the local environment",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("applying local environment")
 		// 		return nil
 		// 	},
 		// },
@@ -157,7 +212,7 @@ var cacheCmd = &cli.Command{
 			Name:      "info-pkg",
 			Aliases:   []string{"info-p", "info-package"},
 			Usage:     "Describes a cached package",
-			ArgsUsage: "package_path",
+			ArgsUsage: "package_path@version",
 			Action:    cacheInfoPkgAction,
 		},
 		{
@@ -179,35 +234,9 @@ var deplCmd = &cli.Command{
 		{
 			Name:    "ls",
 			Aliases: []string{"list"},
-			Usage:   "Lists package deployments in the environment",
+			Usage:   "Lists Docker Swarms",
 			Action: func(c *cli.Context) error {
 				fmt.Println("package deployments:")
-				return nil
-			},
-		},
-		{
-			Name:  "apply",
-			Usage: "Updates the Docker Swarm to exactly match the local environment",
-			Action: func(c *cli.Context) error {
-				fmt.Println("applying local environment")
-				return nil
-			},
-		},
-		{
-			Name:  "add",
-			Usage: "Adds a package deployment to the environment",
-			Action: func(c *cli.Context) error {
-				fmt.Println("adding package deployment", c.Args().First())
-				return nil
-			},
-		},
-		{
-			Name:      "rm",
-			Aliases:   []string{"remove"},
-			Usage:     "Removes a package deployment from the environment",
-			ArgsUsage: "package_path",
-			Action: func(c *cli.Context) error {
-				fmt.Println("removing package deployment", c.Args().First())
 				return nil
 			},
 		},

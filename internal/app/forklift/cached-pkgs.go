@@ -61,7 +61,7 @@ func findRepoOfPkg(cacheFS fs.FS, pkgConfigFilePath string) (CachedRepo, error) 
 	)
 }
 
-func LoadCachedPkg(cacheFS fs.FS, pkgConfigFilePath string) (CachedPkg, error) {
+func loadCachedPkg(cacheFS fs.FS, pkgConfigFilePath string) (CachedPkg, error) {
 	config, err := loadPkgConfig(cacheFS, pkgConfigFilePath)
 	if err != nil {
 		return CachedPkg{}, errors.Wrapf(
@@ -80,12 +80,16 @@ func LoadCachedPkg(cacheFS fs.FS, pkgConfigFilePath string) (CachedPkg, error) {
 		)
 	}
 	pkg.PkgSubdir = strings.TrimPrefix(pkg.ConfigPath, fmt.Sprintf("%s/", pkg.Repo.ConfigPath))
-	pkg.Path = fmt.Sprintf("%s/%s", pkg.Repo.Config.Path, pkg.PkgSubdir)
+	pkg.Path = fmt.Sprintf("%s/%s", pkg.Repo.Config.Repository.Path, pkg.PkgSubdir)
 	return pkg, nil
 }
 
-func ListCachedPkgs(cacheFS fs.FS) ([]CachedPkg, error) {
-	pkgConfigFiles, err := doublestar.Glob(cacheFS, "**/pallet-package.yml")
+func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
+	searchPattern := "**/pallet-package.yml"
+	if cachedPrefix != "" {
+		searchPattern = filepath.Join(cachedPrefix, searchPattern)
+	}
+	pkgConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached package configs")
 	}
@@ -97,13 +101,13 @@ func ListCachedPkgs(cacheFS fs.FS) ([]CachedPkg, error) {
 		if filename != "pallet-package.yml" {
 			continue
 		}
-		pkg, err := LoadCachedPkg(cacheFS, pkgConfigFilePath)
+		pkg, err := loadCachedPkg(cacheFS, pkgConfigFilePath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load cached package from %s", pkgConfigFilePath)
 		}
 
 		versionedPkgPath := fmt.Sprintf(
-			"%s@%s/%s", pkg.Repo.Config.Path, pkg.Repo.Version, pkg.PkgSubdir,
+			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.PkgSubdir,
 		)
 		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
 			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo) && prevPkg.ConfigPath != pkg.ConfigPath {
@@ -153,7 +157,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 		if filename != "pallet-package.yml" {
 			continue
 		}
-		pkg, err := LoadCachedPkg(cacheFS, pkgConfigFilePath)
+		pkg, err := loadCachedPkg(cacheFS, pkgConfigFilePath)
 		if err != nil {
 			return CachedPkg{}, errors.Wrapf(
 				err, "couldn't check cached pkg defined at %s", pkgConfigFilePath,

@@ -83,7 +83,7 @@ func loadRepoConfig(cacheFS fs.FS, filePath string) (RepoConfig, error) {
 	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
 		return RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
 	}
-	if config.Path == "" {
+	if config.Repository.Path == "" {
 		return RepoConfig{}, errors.Errorf("repo config at %s is missing `path` parameter", filePath)
 	}
 	return config, nil
@@ -106,7 +106,7 @@ func LoadCachedRepo(cacheFS fs.FS, repoConfigFilePath string) (CachedRepo, error
 			err, "couldn't parse path of cached repo configured at %s", repo.ConfigPath,
 		)
 	}
-	repo.RepoSubdir = strings.TrimPrefix(config.Path, fmt.Sprintf("%s/", repo.VCSRepoPath))
+	repo.RepoSubdir = strings.TrimPrefix(config.Repository.Path, fmt.Sprintf("%s/", repo.VCSRepoPath))
 	return repo, nil
 }
 
@@ -128,7 +128,7 @@ func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 			return nil, errors.Wrapf(err, "couldn't load cached repo from %s", repoConfigFilePath)
 		}
 
-		versionedRepoPath := fmt.Sprintf("%s@%s", repo.Config.Path, repo.Version)
+		versionedRepoPath := fmt.Sprintf("%s@%s", repo.Config.Repository.Path, repo.Version)
 		if prevRepo, ok := repoMap[versionedRepoPath]; ok {
 			if prevRepo.FromSameVCSRepo(repo) && prevRepo.ConfigPath != repo.ConfigPath {
 				return nil, errors.Errorf(
@@ -180,7 +180,7 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo,
 				err, "couldn't check cached repo defined at %s", repoConfigFilePath,
 			)
 		}
-		if repo.Config.Path == repoPath {
+		if repo.Config.Repository.Path == repoPath {
 			if len(candidateRepos) > 0 {
 				return CachedRepo{}, errors.Errorf(
 					"repository %s repeatedly defined in the same version of the same Github repo: %s, %s",
