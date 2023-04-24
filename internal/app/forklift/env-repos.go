@@ -116,7 +116,7 @@ func CompareVersionedRepos(r, s VersionedRepo) int {
 	return compareEQ
 }
 
-const versionedReposDirName = "repos"
+const versionedReposDirName = "repositories"
 
 func VersionedReposFS(envFS fs.FS) (fs.FS, error) {
 	return fs.Sub(envFS, versionedReposDirName)
