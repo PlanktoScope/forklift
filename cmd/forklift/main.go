@@ -82,6 +82,7 @@ var envCmd = &cli.Command{
 			Usage:   "Removes the local environment",
 			Action:  envRmAction,
 		},
+		// envRemoteCmd,
 		{
 			Name:   "cache",
 			Usage:  "Updates the cache with the repositories available in the local environment",
@@ -115,7 +116,19 @@ var envCmd = &cli.Command{
 			ArgsUsage: "package_path",
 			Action:    envInfoPkgAction,
 		},
-		// TODO: move these into a repos subcommand
+		{
+			Name:    "ls-depl",
+			Aliases: []string{"ls-d", "list-deploy"},
+			Usage:   "Lists package deployments specified by the local environment",
+			Action:  envLsDeplAction,
+		},
+		{
+			Name:      "info-depl",
+			Aliases:   []string{"info-d", "info-deploy"},
+			Usage:     "Describes a package deployment specified by the local environment",
+			ArgsUsage: "package_path",
+			Action:    envInfoDeplAction,
+		},
 		// {
 		// 	Name:      "add-repo",
 		// 	Aliases:   []string{"add-r"},
@@ -127,6 +140,7 @@ var envCmd = &cli.Command{
 		// 		return nil
 		// 	},
 		// },
+		// TODO: add an upgrade-repo action
 		// {
 		// 	Name:      "rm-repo",
 		// 	Aliases:   []string{"rm-r", "remove-repo"},
@@ -164,7 +178,6 @@ var envCmd = &cli.Command{
 		// 		return nil
 		// 	},
 		// },
-		// envRemoteCmd,
 	},
 }
 

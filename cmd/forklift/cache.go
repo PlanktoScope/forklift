@@ -115,12 +115,12 @@ func printPkgSpec(spec forklift.PkgSpec) {
 	}
 }
 
-func printDeplSpec(spec forklift.DeplSpec) {
+func printDeplSpec(spec forklift.PkgDeplSpec) {
 	fmt.Printf("  Deployment:\n")
 	fmt.Printf("    Deploys as: %s\n", spec.Name)
 }
 
-func printFeaturesSpecs(features map[string]forklift.FeatureSpec) {
+func printFeatureSpecs(features map[string]forklift.PkgFeatureSpec) {
 	fmt.Printf("  Optional features:\n")
 	names := make([]string, 0, len(features))
 	for name := range features {
@@ -148,7 +148,7 @@ func printCachedPkg(pkg forklift.CachedPkg) {
 	fmt.Println()
 	printDeplSpec(pkg.Config.Deployment)
 	fmt.Println()
-	printFeaturesSpecs(pkg.Config.Features)
+	printFeatureSpecs(pkg.Config.Features)
 }
 
 func cacheInfoPkgAction(c *cli.Context) error {

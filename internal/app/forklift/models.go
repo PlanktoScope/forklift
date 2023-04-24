@@ -15,10 +15,10 @@ type RepoConfig struct {
 // Pallet package specifications
 
 type PkgConfig struct {
-	Package    PkgSpec                `yaml:"package"`
-	Host       HostSpec               `yaml:"host"`
-	Deployment DeplSpec               `yaml:"deployment"`
-	Features   map[string]FeatureSpec `yaml:"features"`
+	Package    PkgSpec                   `yaml:"package"`
+	Host       PkgHostSpec               `yaml:"host"`
+	Deployment PkgDeplSpec               `yaml:"deployment"`
+	Features   map[string]PkgFeatureSpec `yaml:"features"`
 }
 
 type PkgMaintainer struct {
@@ -64,18 +64,18 @@ type ServiceResource struct {
 	Paths       []string `yaml:"paths"`
 }
 
-type HostSpec struct {
+type PkgHostSpec struct {
 	Provides ProvidedResources `yaml:"provides"`
 }
 
-type DeplSpec struct {
+type PkgDeplSpec struct {
 	Name       string            `yaml:"name"`
 	Definition string            `yaml:"definition"`
 	Requires   RequiredResources `yaml:"requires"`
 	Provides   ProvidedResources `yaml:"provides"`
 }
 
-type FeatureSpec struct {
+type PkgFeatureSpec struct {
 	Description string            `yaml:"description"`
 	Requires    RequiredResources `yaml:"requires"`
 	Provides    ProvidedResources `yaml:"provides"`
@@ -110,6 +110,14 @@ type CachedRepo struct {
 	Config      RepoConfig
 }
 
+// Package versioning
+
+type VersionedPkg struct {
+	Path   string
+	Repo   VersionedRepo
+	Cached CachedPkg
+}
+
 // Package caching
 
 type CachedPkg struct {
@@ -118,4 +126,17 @@ type CachedPkg struct {
 	PkgSubdir  string
 	ConfigPath string
 	Config     PkgConfig
+}
+
+// Deployments
+
+type DeplConfig struct {
+	Package  string   `yaml:"package"`
+	Features []string `yaml:"features"`
+}
+
+type Depl struct {
+	Name   string
+	Config DeplConfig
+	Pkg    VersionedPkg
 }

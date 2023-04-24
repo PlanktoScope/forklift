@@ -51,14 +51,7 @@ func ListVersionedPkgs(cacheFS fs.FS, repos []VersionedRepo) ([]CachedPkg, error
 	return orderedPkgs, nil
 }
 
-func FindVersionedRepoOfPkg(envFS fs.FS, pkgPath string) (VersionedRepo, error) {
-	reposFS, err := VersionedReposFS(envFS)
-	if err != nil {
-		return VersionedRepo{}, errors.Wrap(
-			err, "couldn't open directory for Pallet repositories in local environment",
-		)
-	}
-
+func findVersionedRepoOfPkg(reposFS fs.FS, pkgPath string) (VersionedRepo, error) {
 	repoCandidatePath := filepath.Dir(pkgPath)
 	for repoCandidatePath != "." {
 		repo, err := LoadVersionedRepo(reposFS, repoCandidatePath)
@@ -71,4 +64,31 @@ func FindVersionedRepoOfPkg(envFS fs.FS, pkgPath string) (VersionedRepo, error) 
 		"no repository config file found in %s or any parent directory in local environment",
 		filepath.Dir(pkgPath),
 	)
+}
+
+func LoadVersionedPkg(reposFS, cacheFS fs.FS, pkgPath string) (VersionedPkg, error) {
+	repo, err := findVersionedRepoOfPkg(reposFS, pkgPath)
+	if err != nil {
+		return VersionedPkg{}, errors.Wrapf(
+			err, "couldn't find repo providing package %s in local environment", pkgPath,
+		)
+	}
+	version, err := repo.Version()
+	if err != nil {
+		return VersionedPkg{}, errors.Wrapf(
+			err, "couldn't determine version of repo %s in local environment", repo.Path(),
+		)
+	}
+	pkg, err := FindCachedPkg(cacheFS, pkgPath, version)
+	if err != nil {
+		return VersionedPkg{}, errors.Wrapf(
+			err, "couldn't find package %s@%s in cache", pkgPath, version,
+		)
+	}
+
+	return VersionedPkg{
+		Path:   pkgPath,
+		Repo:   repo,
+		Cached: pkg,
+	}, nil
 }

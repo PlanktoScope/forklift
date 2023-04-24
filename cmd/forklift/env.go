@@ -331,6 +331,22 @@ func envLsPkgAction(c *cli.Context) error {
 
 // info-pkg
 
+func printVersionedPkg(pkg forklift.VersionedPkg) {
+	fmt.Printf("Pallet package: %s\n", pkg.Path)
+	fmt.Printf("  Provided by Pallet repository: %s\n", pkg.Repo.Path())
+	fmt.Printf("    Release: %s\n", pkg.Repo.Config.Release)
+	fmt.Printf("    Version: %s\n", pkg.Cached.Repo.Version)
+	fmt.Printf("    Description: %s\n", pkg.Cached.Repo.Config.Repository.Description)
+	fmt.Printf("    Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+	fmt.Printf("  Path in cache: %s\n", pkg.Cached.ConfigPath)
+	fmt.Println()
+	printPkgSpec(pkg.Cached.Config.Package)
+	fmt.Println()
+	printDeplSpec(pkg.Cached.Config.Deployment)
+	fmt.Println()
+	printFeatureSpecs(pkg.Cached.Config.Features)
+}
+
 func envInfoPkgAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
@@ -341,24 +357,118 @@ func envInfoPkgAction(c *cli.Context) error {
 		fmt.Println("The cache is empty, please run `forklift env cache` again")
 		return nil
 	}
+	reposFS, err := forklift.VersionedReposFS(workspace.LocalEnvFS(wpath))
+	if err != nil {
+		return errors.Wrap(
+			err, "couldn't open directory for Pallet repositories in local environment",
+		)
+	}
 
 	pkgPath := c.Args().First()
-	repo, err := forklift.FindVersionedRepoOfPkg(workspace.LocalEnvFS(wpath), pkgPath)
+	pkg, err := forklift.LoadVersionedPkg(reposFS, workspace.CacheFS(wpath), pkgPath)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't find repo providing package %s in local environment", pkgPath,
+			err, "couldn't look up information about package %s in local environment", pkgPath,
 		)
 	}
-	version, err := repo.Version()
+	printVersionedPkg(pkg)
+	return nil
+}
+
+// ls-depl
+
+func envLsDeplAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+
+	depls, err := forklift.ListDepls(workspace.LocalEnvFS(wpath), workspace.CacheFS(wpath))
+	if err != nil {
+		return errors.Wrapf(err, "couldn't identify Pallet deployments specified by local environment")
+	}
+	for _, depl := range depls {
+		fmt.Printf("%s\n", depl.Name)
+	}
+	return nil
+}
+
+// info-depl
+
+func printFeatures(features map[string]forklift.PkgFeatureSpec) {
+	orderedNames := make([]string, 0, len(features))
+	for name := range features {
+		orderedNames = append(orderedNames, name)
+	}
+	sort.Strings(orderedNames)
+	for _, name := range orderedNames {
+		if description := features[name].Description; description != "" {
+			fmt.Printf("    %s: %s\n", name, description)
+			continue
+		}
+		fmt.Printf("    %s\n", name)
+	}
+}
+
+func printDepl(depl forklift.Depl) {
+	fmt.Printf("Pallet package deployment: %s\n", depl.Name)
+	fmt.Printf("  Deploys Pallet package: %s\n", depl.Config.Package)
+	fmt.Printf("    Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
+	fmt.Printf("    Provided by Pallet repository: %s\n", depl.Pkg.Repo.Path())
+	fmt.Printf("      Release: %s\n", depl.Pkg.Repo.Config.Release)
+	fmt.Printf("      Version: %s\n", depl.Pkg.Cached.Repo.Version)
+	fmt.Printf("      Description: %s\n", depl.Pkg.Cached.Repo.Config.Repository.Description)
+	fmt.Printf("      Provided by Git repository: %s\n", depl.Pkg.Repo.VCSRepoPath)
+
+	enabledFeatures, err := depl.EnabledFeatures(depl.Pkg.Cached.Config.Features)
+	if err != nil {
+		fmt.Printf("Warning: couldn't determine enabled features: %s\n", err.Error())
+	}
+	if len(enabledFeatures) == 0 {
+		return
+	}
+	fmt.Println()
+	fmt.Println("  Enabled features:")
+	printFeatures(enabledFeatures)
+
+	disabledFeatures, err := depl.DisabledFeatures(depl.Pkg.Cached.Config.Features)
+	if err != nil {
+		fmt.Printf("Warning: couldn't determine disabled features: %s\n", err.Error())
+	}
+	if len(disabledFeatures) == 0 {
+		return
+	}
+	fmt.Println()
+	fmt.Println("  Disabled features:")
+	printFeatures(disabledFeatures)
+}
+
+func envInfoDeplAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` again")
+		return nil
+	}
+
+	deplName := c.Args().First()
+	depl, err := forklift.LoadDepl(workspace.LocalEnvFS(wpath), workspace.CacheFS(wpath), deplName)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't determine version of repo %s in local environment", repo.Path(),
+			err, "couldn't find package deployment specification %s in local environment", deplName,
 		)
 	}
-	pkg, err := forklift.FindCachedPkg(workspace.CacheFS(wpath), pkgPath, version)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't find package %s@%s in cache", pkgPath, version)
+	if depl.Pkg.Cached.Config.Deployment.Name != deplName {
+		return errors.Errorf(
+			"package deployment name %s specified by local environment doesn't match name %s specified "+
+				"by package %s from repo %s",
+			deplName, depl.Pkg.Cached.Config.Deployment.Name, depl.Pkg.Path, depl.Pkg.Repo.Path(),
+		)
 	}
-	printCachedPkg(pkg)
+	printDepl(depl)
 	return nil
 }
