@@ -69,10 +69,10 @@ type PkgHostSpec struct {
 }
 
 type PkgDeplSpec struct {
-	Name       string            `yaml:"name"`
-	Definition string            `yaml:"definition"`
-	Requires   RequiredResources `yaml:"requires"`
-	Provides   ProvidedResources `yaml:"provides"`
+	Name           string            `yaml:"name"`
+	DefinitionFile string            `yaml:"definition-file"`
+	Requires       RequiredResources `yaml:"requires"`
+	Provides       ProvidedResources `yaml:"provides"`
 }
 
 type PkgFeatureSpec struct {

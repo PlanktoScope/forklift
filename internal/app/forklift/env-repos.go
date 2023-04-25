@@ -97,7 +97,7 @@ func (r VersionedRepo) Version() (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "couldn't determine pseudo-version")
 	}
-	return fmt.Sprintf("%s", pseudoversion), nil
+	return pseudoversion, nil
 }
 
 func CompareVersionedRepos(r, s VersionedRepo) int {

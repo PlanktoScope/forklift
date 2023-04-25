@@ -1,16 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
+	dct "github.com/docker/cli/cli/compose/types"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
+	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
 
@@ -122,6 +127,8 @@ func envPullAction(c *cli.Context) error {
 func envRmAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	fmt.Printf("Removing local environment from workspace %s...\n", wpath)
+	// TODO: return an error if there are uncommitted or unpushed changes to be removed - in which
+	// case require a --force flag
 	return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
 }
 
@@ -223,13 +230,154 @@ func envCacheAction(c *cli.Context) error {
 		}
 	}
 	if !changed {
-		fmt.Printf("Done! No further actions are needed at this time.\n")
+		fmt.Println("Done! No further actions are needed at this time.")
 		return nil
 	}
 
 	// TODO: download all Docker images used by packages in the repo - either by inspecting the
 	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Printf("Done! Next, you'll probably want to run `forklift depl apply`.\n")
+	fmt.Print("Done! Next, you'll probably want to run `forklift env deploy`.")
+	return nil
+}
+
+// deploy
+
+const (
+	addReconciliationChange    = "Add"
+	removeReconciliationChange = "Remove"
+	updateReconciliationChange = "Update"
+)
+
+type reconciliationChange struct {
+	Name  string
+	Type  string
+	Depl  forklift.Depl
+	Stack docker.Stack
+}
+
+func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconciliationChange {
+	deplSet := make(map[string]forklift.Depl)
+	for _, depl := range depls {
+		deplSet[depl.Name] = depl
+	}
+	stackSet := make(map[string]docker.Stack)
+	for _, stack := range stacks {
+		stackSet[stack.Name] = stack
+	}
+
+	changes := make([]reconciliationChange, 0, len(deplSet)+len(stackSet))
+	for name, depl := range deplSet {
+		definesStack := depl.Pkg.Cached.Config.Deployment.DefinesStack()
+		stack, ok := stackSet[name]
+		if !ok {
+			if definesStack {
+				changes = append(changes, reconciliationChange{
+					Name: name,
+					Type: addReconciliationChange,
+					Depl: depl,
+				})
+			}
+			continue
+		}
+		if definesStack {
+			changes = append(changes, reconciliationChange{
+				Name:  name,
+				Type:  updateReconciliationChange,
+				Depl:  depl,
+				Stack: stack,
+			})
+		}
+	}
+	for name, stack := range stackSet {
+		if depl, ok := deplSet[name]; ok && depl.Pkg.Cached.Config.Deployment.DefinesStack() {
+			continue
+		}
+		changes = append(changes, reconciliationChange{
+			Name:  name,
+			Type:  removeReconciliationChange,
+			Stack: stack,
+		})
+	}
+
+	// TODO: reorder reconciliation actions based on dependencies
+	return changes
+}
+
+func applyReconciliationChange(
+	cacheFS fs.FS, change reconciliationChange, dc *docker.Client,
+) error {
+	switch change.Type {
+	default:
+		return errors.Errorf("unknown change type '%s'", change.Type)
+	case addReconciliationChange:
+		fmt.Printf("Adding %s...\n", change.Name)
+		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
+			return errors.Wrapf(err, "couldn't add %s", change.Name)
+		}
+		fmt.Println("  Done!")
+		return nil
+	case removeReconciliationChange:
+		fmt.Printf("Removing %s...\n", change.Name)
+		return errors.New("unimplemented")
+	case updateReconciliationChange:
+		fmt.Printf("Updating %s...\n", change.Name)
+		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
+			return errors.Wrapf(err, "couldn't add %s", change.Name)
+		}
+		fmt.Println("  Done!")
+		return nil
+	}
+}
+
+func envDeployAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
+		return nil
+	}
+	cacheFS := workspace.CacheFS(wpath)
+
+	depls, err := forklift.ListDepls(workspace.LocalEnvFS(wpath), cacheFS)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't identify Pallet package deployments specified by local environment",
+		)
+	}
+	dc, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	stacks, err := dc.ListStacks(context.Background())
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list active Docker stacks")
+	}
+
+	fmt.Println("Determining package deployment changes...")
+	changes := planReconciliation(depls, stacks)
+	sort.Slice(changes, func(i, j int) bool {
+		return changes[i].Name < changes[j].Name
+	})
+	for _, change := range changes {
+		fmt.Printf("Will %s %s\n", strings.ToLower(change.Type), change.Name)
+	}
+
+	fmt.Println()
+	fmt.Println("Applying package deployment changes...")
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker swarm client")
+	}
+	for _, change := range changes {
+		if err := applyReconciliationChange(cacheFS, change, dc); err != nil {
+			return errors.Wrapf(err, "couldn't apply %s change to stack %s", change.Type, change.Name)
+		}
+	}
+	// TODO: apply changes
+
+	fmt.Println("Done!")
 	return nil
 }
 
@@ -278,11 +426,16 @@ func envInfoRepoAction(c *cli.Context) error {
 
 	repoPath := c.Args().First()
 	versionedRepo, err := forklift.LoadVersionedRepo(reposFS, repoPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load Pallet repo versioning config %s from local environment", repoPath,
+		)
+	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
 	// we don't need error-checking for every subsequent access of the version
 	version, err := versionedRepo.Version()
 	if err != nil {
-		return errors.Wrapf(err, "couldn't determine locked version of %s", repoPath)
+		return errors.Wrapf(err, "couldn't determine configured version of Pallet repo %s", repoPath)
 	}
 	printVersionedRepo(versionedRepo)
 	fmt.Println()
@@ -308,7 +461,7 @@ func envLsPkgAction(c *cli.Context) error {
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` again")
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
 		return nil
 	}
 
@@ -354,7 +507,7 @@ func envInfoPkgAction(c *cli.Context) error {
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` again")
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
 		return nil
 	}
 	reposFS, err := forklift.VersionedReposFS(workspace.LocalEnvFS(wpath))
@@ -386,7 +539,9 @@ func envLsDeplAction(c *cli.Context) error {
 
 	depls, err := forklift.ListDepls(workspace.LocalEnvFS(wpath), workspace.CacheFS(wpath))
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet deployments specified by local environment")
+		return errors.Wrapf(
+			err, "couldn't identify Pallet package deployments specified by local environment",
+		)
 	}
 	for _, depl := range depls {
 		fmt.Printf("%s\n", depl.Name)
@@ -395,6 +550,37 @@ func envLsDeplAction(c *cli.Context) error {
 }
 
 // info-depl
+
+func printDepl(depl forklift.Depl) {
+	fmt.Printf("Pallet package deployment: %s\n", depl.Name)
+	fmt.Printf("  Deploys Pallet package: %s\n", depl.Config.Package)
+	fmt.Printf("    Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
+	fmt.Printf("    Provided by Pallet repository: %s\n", depl.Pkg.Repo.Path())
+	fmt.Printf("      Release: %s\n", depl.Pkg.Repo.Config.Release)
+	fmt.Printf("      Version: %s\n", depl.Pkg.Cached.Repo.Version)
+	fmt.Printf("      Description: %s\n", depl.Pkg.Cached.Repo.Config.Repository.Description)
+	fmt.Printf("      Provided by Git repository: %s\n", depl.Pkg.Repo.VCSRepoPath)
+
+	enabledFeatures, err := depl.EnabledFeatures(depl.Pkg.Cached.Config.Features)
+	if err != nil {
+		fmt.Printf("Warning: couldn't determine enabled features: %s\n", err.Error())
+	}
+	if len(enabledFeatures) > 0 {
+		fmt.Println()
+		fmt.Println("  Enabled features:")
+		printFeatures(enabledFeatures)
+	}
+
+	disabledFeatures, err := depl.DisabledFeatures(depl.Pkg.Cached.Config.Features)
+	if err != nil {
+		fmt.Printf("Warning: couldn't determine disabled features: %s\n", err.Error())
+	}
+	if len(disabledFeatures) > 0 {
+		fmt.Println()
+		fmt.Println("  Disabled features:")
+		printFeatures(disabledFeatures)
+	}
+}
 
 func printFeatures(features map[string]forklift.PkgFeatureSpec) {
 	orderedNames := make([]string, 0, len(features))
@@ -411,37 +597,42 @@ func printFeatures(features map[string]forklift.PkgFeatureSpec) {
 	}
 }
 
-func printDepl(depl forklift.Depl) {
-	fmt.Printf("Pallet package deployment: %s\n", depl.Name)
-	fmt.Printf("  Deploys Pallet package: %s\n", depl.Config.Package)
-	fmt.Printf("    Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
-	fmt.Printf("    Provided by Pallet repository: %s\n", depl.Pkg.Repo.Path())
-	fmt.Printf("      Release: %s\n", depl.Pkg.Repo.Config.Release)
-	fmt.Printf("      Version: %s\n", depl.Pkg.Cached.Repo.Version)
-	fmt.Printf("      Description: %s\n", depl.Pkg.Cached.Repo.Config.Repository.Description)
-	fmt.Printf("      Provided by Git repository: %s\n", depl.Pkg.Repo.VCSRepoPath)
-
-	enabledFeatures, err := depl.EnabledFeatures(depl.Pkg.Cached.Config.Features)
-	if err != nil {
-		fmt.Printf("Warning: couldn't determine enabled features: %s\n", err.Error())
-	}
-	if len(enabledFeatures) == 0 {
+func printDockerStackServices(services []dct.ServiceConfig) {
+	if len(services) == 0 {
 		return
 	}
-	fmt.Println()
-	fmt.Println("  Enabled features:")
-	printFeatures(enabledFeatures)
+	fmt.Println("    Services:")
+	sort.Slice(services, func(i, j int) bool {
+		return services[i].Name < services[j].Name
+	})
+	for _, service := range services {
+		fmt.Printf("      %s: %s\n", service.Name, service.Image)
+	}
+}
 
-	disabledFeatures, err := depl.DisabledFeatures(depl.Pkg.Cached.Config.Features)
+func printDockerStackConfig(stackConfig dct.Config) {
+	printDockerStackServices(stackConfig.Services)
+}
+
+func deployStack(
+	cacheFS fs.FS, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
+) error {
+	pkgDeplSpec := cachedPkg.Config.Deployment
+	if !pkgDeplSpec.DefinesStack() {
+		fmt.Println("  No Docker stack to deploy!")
+		return nil
+	}
+	definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
+	stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
 	if err != nil {
-		fmt.Printf("Warning: couldn't determine disabled features: %s\n", err.Error())
+		return errors.Wrapf(
+			err, "couldn't load Docker stack definition from %s", definitionFilePath,
+		)
 	}
-	if len(disabledFeatures) == 0 {
-		return
+	if err = dc.DeployStack(context.Background(), name, stackConfig); err != nil {
+		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
 	}
-	fmt.Println()
-	fmt.Println("  Disabled features:")
-	printFeatures(disabledFeatures)
+	return nil
 }
 
 func envInfoDeplAction(c *cli.Context) error {
@@ -451,7 +642,7 @@ func envInfoDeplAction(c *cli.Context) error {
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` again")
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
 		return nil
 	}
 
@@ -470,5 +661,20 @@ func envInfoDeplAction(c *cli.Context) error {
 		)
 	}
 	printDepl(depl)
+
+	cachedPkg := depl.Pkg.Cached
+	pkgDeplSpec := cachedPkg.Config.Deployment
+	if pkgDeplSpec.DefinesStack() {
+		fmt.Println()
+		fmt.Println("  Deploys with Docker stack:")
+		definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
+		stackConfig, err := docker.LoadStackDefinition(workspace.CacheFS(wpath), definitionFilePath)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load Docker stack definition from %s", definitionFilePath)
+		}
+		printDockerStackConfig(*stackConfig)
+	}
+
+	// TODO: print the state of the Docker stack associated with deplName
 	return nil
 }

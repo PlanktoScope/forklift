@@ -12,6 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func (s PkgDeplSpec) DefinesStack() bool {
+	return s.DefinitionFile != ""
+}
+
 func CompareCachedPkgs(p, q CachedPkg) int {
 	repoPathComparison := CompareCachedRepoPaths(p.Repo, q.Repo)
 	if repoPathComparison != compareEQ {

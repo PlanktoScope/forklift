@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -88,6 +87,11 @@ var envCmd = &cli.Command{
 			Usage:  "Updates the cache with the repositories available in the local environment",
 			Action: envCacheAction,
 		},
+		{
+			Name:   "deploy",
+			Usage:  "Updates the Docker Swarm to match the deployments specified by the local environment",
+			Action: envDeployAction,
+		},
 		// TODO: add a "info" command which prints a description of the local environment and indicates
 		// whether it has diverged
 		{
@@ -170,14 +174,6 @@ var envCmd = &cli.Command{
 		// 		return nil
 		// 	},
 		// },
-		// {
-		// 	Name:  "deploy",
-		// 	Usage: "Updates the Docker Swarm to match the deployments specified by the local environment",
-		// 	Action: func(c *cli.Context) error {
-		// 		fmt.Println("applying local environment")
-		// 		return nil
-		// 	},
-		// },
 	},
 }
 
@@ -245,13 +241,16 @@ var deplCmd = &cli.Command{
 	Usage:   "Manages Pallet package deployments in the local environment",
 	Subcommands: []*cli.Command{
 		{
-			Name:    "ls",
-			Aliases: []string{"list"},
-			Usage:   "Lists Docker Swarms",
-			Action: func(c *cli.Context) error {
-				fmt.Println("package deployments:")
-				return nil
-			},
+			Name:    "ls-stack",
+			Aliases: []string{"ls-s", "list-stack"},
+			Usage:   "Lists running Docker stacks",
+			Action:  deplLsStackAction,
+		},
+		{
+			Name:    "rm",
+			Aliases: []string{"remove"},
+			Usage:   "Removes all Docker stacks",
+			Action:  deplRmAction,
 		},
 	},
 }
