@@ -11,14 +11,26 @@ This repository provides `forklift`, a Git-based command-line tool for installin
 
 ## Usage
 
-First, you will need to clone a Pallet environment to your local environment. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallets-env`](https://github.com/PlanktoScope/pallets-env) environment using the command:
+First, you will need to download forklift, which is available as a single self-contained executable file. You should visit this repository's [releases page](https://github.com/PlanktoScope/forklift/releases/latest) and download an archive file for your platform and CPU architecture; for example, on a Raspberry Pi 4, you should download the archive named `forklift_{version number}_linux_arm.tar.gz` (where the version number should be substituted). You can extract the forklift binary from the archive using a command like:
+```
+tar -xzf forklift_{version number}_{os}_{cpu architecture}.tar.gz forklift
+```
+
+Then you may need to move the forklift binary into a directory in your system path, or you can just run the forklift binary in your current directory (in which case you should replace `forklift` with `./forklift` in the commands listed below).
+
+Once you have forklift, you will need to clone a Pallet environment to your local environment. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallets-env`](https://github.com/PlanktoScope/pallets-env) environment using the command:
 ```
 forklift env clone github.com/PlanktoScope/pallets-env@edge
 ```
 
-Then you will need to download the Pallet repositories specified by your local environment into your local cache, so that you can deploy packages provided by those repositories. You can do download the necessary repositories using the command:
+Then you will need to download the Pallet repositories specified by your local environment into your local cache, so that you can deploy packages provided by those repositories. You can download the necessary repositories using the command:
 ```
 forklift env cache
+```
+
+Then you will need to apply the package deployments as configured by your local environment, into your Docker Swarm. You can apply the deployments using the command:
+```
+forklift env deploy
 ```
 
 ## Licensing

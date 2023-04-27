@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.2 - 2023-04-26
+
+### Fixed
+
+- Set correct file permission flags when making the forklift workspace if it doesn't already exist
+
 ## 0.1.1 - 2023-04-26
 
 ### Added

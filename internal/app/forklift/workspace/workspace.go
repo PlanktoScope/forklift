@@ -16,7 +16,7 @@ func Exists(path string) bool {
 }
 
 func EnsureExists(path string) error {
-	const perm = 755 // owner rwx, group rx, public rx
+	const perm = 0o755 // owner rwx, group rx, public rx
 	return os.MkdirAll(path, perm)
 }
 
