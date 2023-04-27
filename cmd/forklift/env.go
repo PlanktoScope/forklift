@@ -236,7 +236,7 @@ func envCacheAction(c *cli.Context) error {
 
 	// TODO: download all Docker images used by packages in the repo - either by inspecting the
 	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Print("Done! Next, you'll probably want to run `forklift env deploy`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift env deploy`.")
 	return nil
 }
 
@@ -318,7 +318,10 @@ func applyReconciliationChange(
 		return nil
 	case removeReconciliationChange:
 		fmt.Printf("Removing %s...\n", change.Name)
-		return errors.New("unimplemented")
+		if err := dc.RemoveStacks(context.Background(), []string{change.Name}); err != nil {
+			return errors.Wrapf(err, "couldn't remove %s", change.Name)
+		}
+		return nil
 	case updateReconciliationChange:
 		fmt.Printf("Updating %s...\n", change.Name)
 		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {

@@ -110,56 +110,80 @@ func (c *Client) pruneServices(
 	return pruned, errors.Wrap(err, "couldn't fully prune services")
 }
 
-func (c *Client) RemoveStack(ctx context.Context, name string) error {
+func (c *Client) identifyStackResources(
+	ctx context.Context, name string,
+) (
+	services []swarm.Service, secrets []swarm.Secret,
+	configs []swarm.Config, networks []dt.NetworkResource, err error,
+) {
+	if services, err = c.getStackServices(ctx, name); err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if versions.GreaterThanOrEqualTo(c.Client.ClientVersion(), "1.25") {
+		if secrets, err = c.getStackSecrets(ctx, name); err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+	if versions.GreaterThanOrEqualTo(c.Client.ClientVersion(), "1.30") {
+		if configs, err = c.getStackConfigs(ctx, name); err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+	if networks, err = c.getStackNetworks(ctx, name); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if len(services)+len(secrets)+len(configs)+len(networks) == 0 {
+		return nil, nil, nil, nil, errors.Errorf("no resources found in stack %s", name)
+	}
+	return services, secrets, configs, networks, nil
+}
+
+func (c *Client) RemoveStacks(ctx context.Context, names []string) error {
 	// This function is adapted from the github.com/docker/cli/cli/command/stack/swarm
 	// package's RunRemove function, which is licensed under Apache-2.0. This function was changed by
-	// removing the need to pass in a command.Cli parameter, and by only removing a single stack.
-	services, err := c.getStackServices(ctx, name)
-	if err != nil {
-		return err
-	}
-	networks, err := c.getStackNetworks(ctx, name)
-	if err != nil {
-		return err
-	}
-	var secrets []swarm.Secret
-	if versions.GreaterThanOrEqualTo(c.Client.ClientVersion(), "1.25") {
-		secrets, err = c.getStackSecrets(ctx, name)
-		if err != nil {
-			return err
-		}
-	}
-	var configs []swarm.Config
-	if versions.GreaterThanOrEqualTo(c.Client.ClientVersion(), "1.30") {
-		configs, err = c.getStackConfigs(ctx, name)
-		if err != nil {
-			return err
+	// removing the need to pass in command.Cli and options.Remove parameters.
+	allServices := make(map[string][]swarm.Service)
+	allSecrets := make(map[string][]swarm.Secret)
+	allConfigs := make(map[string][]swarm.Config)
+	allNetworks := make(map[string][]dt.NetworkResource)
+	for _, name := range names {
+		var err error
+		if allServices[name], allSecrets[name],
+			allConfigs[name], allNetworks[name], err = c.identifyStackResources(ctx, name); err != nil {
+			return errors.Wrapf(err, "couldn't identify resources in stack %s", name)
 		}
 	}
 
-	if len(services)+len(networks)+len(secrets)+len(configs) == 0 {
-		return errors.Errorf("nothing found in stack %s", name)
+	// First remove all services, as some services may depend on secrets/configs/networks provided by
+	// other stacks
+	for _, name := range names {
+		if removed, err := c.removeServices(ctx, allServices[name]); err != nil {
+			return errors.Wrapf(
+				err, "only partially removed services from stack %s (removed services %+v)", name, removed,
+			)
+		}
 	}
-
-	if removed, err := c.removeSecrets(ctx, secrets); err != nil {
-		return errors.Wrapf(
-			err, "only partially removed secrets from stack %s (removed secrets %+v)", name, removed,
-		)
+	for _, name := range names {
+		if removed, err := c.removeSecrets(ctx, allSecrets[name]); err != nil {
+			return errors.Wrapf(
+				err, "only partially removed secrets from stack %s (removed secrets %+v)", name, removed,
+			)
+		}
 	}
-	if removed, err := c.removeConfigs(ctx, configs); err != nil {
-		return errors.Wrapf(
-			err, "only partially removed configs from stack %s (removed configs %+v)", name, removed,
-		)
+	for _, name := range names {
+		if removed, err := c.removeConfigs(ctx, allConfigs[name]); err != nil {
+			return errors.Wrapf(
+				err, "only partially removed configs from stack %s (removed configs %+v)", name, removed,
+			)
+		}
 	}
-	if removed, err := c.removeNetworks(ctx, networks); err != nil {
-		return errors.Wrapf(
-			err, "only partially removed networks from stack %s (removed networks %+v)", name, removed,
-		)
-	}
-	if removed, err := c.removeServices(ctx, services); err != nil {
-		return errors.Wrapf(
-			err, "only partially removed services from stack %s (removed services %+v)", name, removed,
-		)
+	for _, name := range names {
+		if removed, err := c.removeNetworks(ctx, allNetworks[name]); err != nil {
+			return errors.Wrapf(
+				err, "only partially removed networks from stack %s (removed networks %+v)", name, removed,
+			)
+		}
 	}
 
 	return nil

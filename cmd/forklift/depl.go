@@ -48,11 +48,15 @@ func deplRmAction(c *cli.Context) error {
 		return stacks[i].Name < stacks[j].Name
 	})
 
+	stackNames := make([]string, 0, len(stacks))
 	for _, stack := range stacks {
-		fmt.Printf("Removing %s...\n", stack.Name)
-		if err := client.RemoveStack(context.Background(), stack.Name); err != nil {
-			return errors.Wrapf(err, "couldn't fully remove stack %s", stack.Name)
-		}
+		stackNames = append(stackNames, stack.Name)
 	}
+	if err := client.RemoveStacks(context.Background(), stackNames); err != nil {
+		return errors.Wrap(
+			err, "couldn't fully remove all stacks (remaining resources must be manually removed)",
+		)
+	}
+	fmt.Println("Done!")
 	return nil
 }
