@@ -9,7 +9,7 @@ require (
 	github.com/docker/docker v23.0.4+incompatible
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/pkg/errors v0.9.1
-	github.com/urfave/cli/v2 v2.25.1
+	github.com/urfave/cli/v2 v2.25.3
 	golang.org/x/mod v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
