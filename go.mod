@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bmatcuk/doublestar/v4 v4.6.0
-	github.com/docker/cli v23.0.4+incompatible
+	github.com/docker/cli v23.0.5+incompatible
 	github.com/docker/docker v23.0.4+incompatible
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/pkg/errors v0.9.1
