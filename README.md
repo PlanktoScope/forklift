@@ -11,6 +11,8 @@ This repository provides `forklift`, a Git-based command-line tool for installin
 
 ## Usage
 
+### Deploy a published environment
+
 First, you will need to download forklift, which is available as a single self-contained executable file. You should visit this repository's [releases page](https://github.com/PlanktoScope/forklift/releases/latest) and download an archive file for your platform and CPU architecture; for example, on a Raspberry Pi 4, you should download the archive named `forklift_{version number}_linux_arm.tar.gz` (where the version number should be substituted). You can extract the forklift binary from the archive using a command like:
 ```
 tar -xzf forklift_{version number}_{os}_{cpu architecture}.tar.gz forklift
