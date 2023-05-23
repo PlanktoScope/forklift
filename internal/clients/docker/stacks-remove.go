@@ -3,7 +3,10 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/docker/cli/cli/compose/convert"
 	dt "github.com/docker/docker/api/types"
@@ -86,6 +89,53 @@ func (c *Client) removeNetworks(
 		}
 	}
 	return removed, nil
+}
+
+func (c *Client) waitForNetworkRemoval(ctx context.Context, networks []dt.NetworkResource) error {
+	waitingNetworks := make(map[string]struct{})
+	for _, network := range networks {
+		waitingNetworks[network.Name] = struct{}{}
+	}
+	for {
+		existingNetworks, err := c.Client.NetworkList(ctx, dt.NetworkListOptions{})
+		if err != nil {
+			return err
+		}
+		existingNetworkMap := make(map[string]struct{})
+		for _, network := range existingNetworks {
+			existingNetworkMap[network.Name] = struct{}{}
+		}
+
+		for name := range waitingNetworks {
+			if _, ok := existingNetworkMap[name]; !ok {
+				delete(waitingNetworks, name)
+			}
+		}
+		if len(waitingNetworks) == 0 {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if err := ctx.Err(); err != nil {
+				// Context was also canceled and it should have priority
+				return err
+			}
+			names := make([]string, 0, len(waitingNetworks))
+			for name := range waitingNetworks {
+				names = append(names, name)
+			}
+			// TODO: emit this message to somewhere instead of printing it directly to stdout
+			fmt.Printf(
+				"Waiting for some networks (%s) to disappear after removal...\n", strings.Join(names, ", "),
+			)
+			// TODO: maybe the polling interval should be configurable?
+			const pollInterval = 5
+			time.Sleep(pollInterval * time.Second)
+		}
+	}
 }
 
 // pruneServices removes services which are no longer referenced in the source for a stack.
@@ -178,13 +228,15 @@ func (c *Client) RemoveStacks(ctx context.Context, names []string) error {
 			)
 		}
 	}
+	removedNetworks := make([]dt.NetworkResource, 0)
 	for _, name := range names {
-		if removed, err := c.removeNetworks(ctx, allNetworks[name]); err != nil {
+		removed, err := c.removeNetworks(ctx, allNetworks[name])
+		if err != nil {
 			return errors.Wrapf(
 				err, "only partially removed networks from stack %s (removed networks %+v)", name, removed,
 			)
 		}
+		removedNetworks = append(removedNetworks, allNetworks[name]...)
 	}
-
-	return nil
+	return c.waitForNetworkRemoval(ctx, removedNetworks)
 }
