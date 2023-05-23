@@ -64,9 +64,7 @@ func devEnvDeployAction(c *cli.Context) error {
 	}
 
 	if err := deployEnv(envPath, workspace.CachePath(wpath)); err != nil {
-		return errors.Wrap(
-			err, "couldn't deploy development environment (have you run `forklift env cache` recently?)",
-		)
+		return err
 	}
 	fmt.Println("Done!")
 	return nil
@@ -83,6 +81,23 @@ func devEnvLsRepoAction(c *cli.Context) error {
 	return printEnvRepos(envPath)
 }
 
+// info-repo
+
+func devEnvInfoRepoAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
+		return nil
+	}
+
+	repoPath := c.Args().First()
+	return printRepoInfo(envPath, workspace.CachePath(wpath), repoPath)
+}
+
 // ls-depl
 
 func devEnvLsDeplAction(c *cli.Context) error {
@@ -96,10 +111,22 @@ func devEnvLsDeplAction(c *cli.Context) error {
 		return nil
 	}
 
-	if err = printEnvDepls(envPath, workspace.CachePath(wpath)); err != nil {
-		return errors.Wrap(
-			err, "couldn't list deployments (have you run `forklift dev env cache` recently?)",
-		)
+	return printEnvDepls(envPath, workspace.CachePath(wpath))
+}
+
+// info-depl
+
+func devEnvInfoDeplAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	return nil
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
+		return nil
+	}
+
+	deplName := c.Args().First()
+	return printDeplInfo(envPath, workspace.CachePath(wpath), deplName)
 }

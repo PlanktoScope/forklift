@@ -522,6 +522,27 @@ func applyReconciliationChange(
 	}
 }
 
+func deployStack(
+	cacheFS fs.FS, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
+) error {
+	pkgDeplSpec := cachedPkg.Config.Deployment
+	if !pkgDeplSpec.DefinesStack() {
+		fmt.Println("  No Docker stack to deploy!")
+		return nil
+	}
+	definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
+	stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load Docker stack definition from %s", definitionFilePath,
+		)
+	}
+	if err = dc.DeployStack(context.Background(), name, stackConfig); err != nil {
+		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
+	}
+	return nil
+}
+
 // ls-repo
 
 func envLsRepoAction(c *cli.Context) error {
@@ -550,25 +571,22 @@ func printEnvRepos(envPath string) error {
 
 // info-repo
 
-func printVersionedRepo(repo forklift.VersionedRepo) {
-	fmt.Printf("Pallet repository: %s\n", repo.Path())
-	version, _ := repo.Version() // assume that the validity of the version was already checked
-	fmt.Printf("  Locked version: %s\n", version)
-	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
-}
-
 func envInfoRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
 		return nil
 	}
-	reposFS, err := forklift.VersionedReposFS(workspace.LocalEnvFS(wpath))
-	if err != nil {
-		return errors.Wrap(err, "couldn't open directory for Pallet repositories in local environment")
-	}
 
 	repoPath := c.Args().First()
+	return printRepoInfo(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), repoPath)
+}
+
+func printRepoInfo(envPath, cachePath, repoPath string) error {
+	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
+	if err != nil {
+		return errors.Wrap(err, "couldn't open directory for Pallet repositories in environment")
+	}
 	versionedRepo, err := forklift.LoadVersionedRepo(reposFS, repoPath)
 	if err != nil {
 		return errors.Wrapf(
@@ -584,7 +602,7 @@ func envInfoRepoAction(c *cli.Context) error {
 	printVersionedRepo(versionedRepo)
 	fmt.Println()
 
-	cachedRepo, err := forklift.FindCachedRepo(workspace.CacheFS(wpath), repoPath, version)
+	cachedRepo, err := forklift.FindCachedRepo(os.DirFS(cachePath), repoPath, version)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find Pallet repository %s@%s in cache, please run `forklift env cache` again",
@@ -594,6 +612,13 @@ func envInfoRepoAction(c *cli.Context) error {
 	fmt.Printf("  Path in cache: %s\n", cachedRepo.ConfigPath)
 	fmt.Printf("  Description: %s\n", cachedRepo.Config.Repository.Description)
 	return nil
+}
+
+func printVersionedRepo(repo forklift.VersionedRepo) {
+	fmt.Printf("Pallet repository: %s\n", repo.Path())
+	version, _ := repo.Version() // assume that the validity of the version was already checked
+	fmt.Printf("  Locked version: %s\n", version)
+	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
 }
 
 // ls-pkg
@@ -697,6 +722,56 @@ func printEnvDepls(envPath, cachePath string) error {
 
 // info-depl
 
+func envInfoDeplAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
+		return nil
+	}
+
+	deplName := c.Args().First()
+	return printDeplInfo(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), deplName)
+}
+
+func printDeplInfo(envPath, cachePath, deplName string) error {
+	cacheFS := os.DirFS(cachePath)
+	depl, err := forklift.LoadDepl(os.DirFS(envPath), cacheFS, deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find package deployment specification %s in local environment", deplName,
+		)
+	}
+	if depl.Pkg.Cached.Config.Deployment.Name != deplName {
+		return errors.Errorf(
+			"package deployment name %s specified by local environment doesn't match name %s specified "+
+				"by package %s from repo %s",
+			deplName, depl.Pkg.Cached.Config.Deployment.Name, depl.Pkg.Path, depl.Pkg.Repo.Path(),
+		)
+	}
+	printDepl(depl)
+
+	cachedPkg := depl.Pkg.Cached
+	pkgDeplSpec := cachedPkg.Config.Deployment
+	if pkgDeplSpec.DefinesStack() {
+		fmt.Println()
+		fmt.Println("  Deploys with Docker stack:")
+		definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
+		stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load Docker stack definition from %s", definitionFilePath)
+		}
+		printDockerStackConfig(*stackConfig)
+	}
+
+	// TODO: print the state of the Docker stack associated with deplName - or maybe that should be
+	// a `forklift depl info-d deplName` command instead?
+	return nil
+}
+
 func printDepl(depl forklift.Depl) {
 	fmt.Printf("Pallet package deployment: %s\n", depl.Name)
 	fmt.Printf("  Deploys Pallet package: %s\n", depl.Config.Package)
@@ -742,6 +817,11 @@ func printFeatures(features map[string]forklift.PkgFeatureSpec) {
 	}
 }
 
+func printDockerStackConfig(stackConfig dct.Config) {
+	printDockerStackServices(stackConfig.Services)
+	// TODO: also print networks, volumes, etc.
+}
+
 func printDockerStackServices(services []dct.ServiceConfig) {
 	if len(services) == 0 {
 		return
@@ -753,73 +833,4 @@ func printDockerStackServices(services []dct.ServiceConfig) {
 	for _, service := range services {
 		fmt.Printf("      %s: %s\n", service.Name, service.Image)
 	}
-}
-
-func printDockerStackConfig(stackConfig dct.Config) {
-	printDockerStackServices(stackConfig.Services)
-}
-
-func deployStack(
-	cacheFS fs.FS, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
-) error {
-	pkgDeplSpec := cachedPkg.Config.Deployment
-	if !pkgDeplSpec.DefinesStack() {
-		fmt.Println("  No Docker stack to deploy!")
-		return nil
-	}
-	definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
-	stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load Docker stack definition from %s", definitionFilePath,
-		)
-	}
-	if err = dc.DeployStack(context.Background(), name, stackConfig); err != nil {
-		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
-	}
-	return nil
-}
-
-func envInfoDeplAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
-		fmt.Println("The local environment is empty.")
-		return nil
-	}
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
-	}
-
-	deplName := c.Args().First()
-	depl, err := forklift.LoadDepl(workspace.LocalEnvFS(wpath), workspace.CacheFS(wpath), deplName)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't find package deployment specification %s in local environment", deplName,
-		)
-	}
-	if depl.Pkg.Cached.Config.Deployment.Name != deplName {
-		return errors.Errorf(
-			"package deployment name %s specified by local environment doesn't match name %s specified "+
-				"by package %s from repo %s",
-			deplName, depl.Pkg.Cached.Config.Deployment.Name, depl.Pkg.Path, depl.Pkg.Repo.Path(),
-		)
-	}
-	printDepl(depl)
-
-	cachedPkg := depl.Pkg.Cached
-	pkgDeplSpec := cachedPkg.Config.Deployment
-	if pkgDeplSpec.DefinesStack() {
-		fmt.Println()
-		fmt.Println("  Deploys with Docker stack:")
-		definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
-		stackConfig, err := docker.LoadStackDefinition(workspace.CacheFS(wpath), definitionFilePath)
-		if err != nil {
-			return errors.Wrapf(err, "couldn't load Docker stack definition from %s", definitionFilePath)
-		}
-		printDockerStackConfig(*stackConfig)
-	}
-
-	// TODO: print the state of the Docker stack associated with deplName
-	return nil
 }

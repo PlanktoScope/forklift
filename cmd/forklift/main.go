@@ -309,14 +309,14 @@ var devEnvCmd = &cli.Command{
 			Usage:   "Lists repositories specified by the environment",
 			Action:  devEnvLsRepoAction,
 		},
-		/*{
+		{
 			Name:      "info-repo",
 			Aliases:   []string{"info-r"},
 			Usage:     "Describes a repository available in the development environment",
 			ArgsUsage: "repository_path",
 			Action:    devEnvInfoRepoAction,
 		},
-		{
+		/*{
 			Name:    "ls-pkg",
 			Aliases: []string{"ls-p", "list-package"},
 			Usage:   "Lists packages available in the development environment",
@@ -335,13 +335,13 @@ var devEnvCmd = &cli.Command{
 			Usage:   "Lists package deployments specified by the local environment",
 			Action:  devEnvLsDeplAction,
 		},
-		/*{
+		{
 			Name:      "info-depl",
 			Aliases:   []string{"info-d", "info-deploy"},
 			Usage:     "Describes a package deployment specified by the development environment",
 			ArgsUsage: "package_path",
 			Action:    devEnvInfoDeplAction,
-		},*/
+		},
 		// {
 		// 	Name:      "add-repo",
 		// 	Aliases:   []string{"add-r"},
