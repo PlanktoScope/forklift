@@ -13,6 +13,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+func AbbreviateHash(h plumbing.Hash) string {
+	const shortHashLength = 7
+	return h.String()[:shortHashLength]
+}
+
 type Repo struct {
 	repository *git.Repository
 }
@@ -121,6 +126,18 @@ func Clone(remote, local string) (*Repo, error) {
 	}, errors.Wrapf(err, "couldn't clone git repo %s to %s", remote, local)
 }
 
+func Status(local string) (status git.Status, err error) {
+	repo, err := git.PlainOpen(local)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't open %s as git repo", local)
+	}
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	return worktree.Status()
+}
+
 func Fetch(local string) (updated bool, err error) {
 	repo, err := git.PlainOpen(local)
 	if err != nil {
@@ -156,4 +173,13 @@ func Pull(local string) (updated bool, err error) {
 		return false, errors.Wrapf(err, "couldn't fast-forward to remote")
 	}
 	return true, nil
+}
+
+const (
+	StatusUnmodified = git.Unmodified
+	StatusRenamed    = git.Renamed
+)
+
+func EmptyListOptions() *git.ListOptions {
+	return &git.ListOptions{}
 }

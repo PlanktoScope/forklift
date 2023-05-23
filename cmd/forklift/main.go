@@ -85,6 +85,11 @@ var envCmd = &cli.Command{
 		},
 		// envRemoteCmd,
 		{
+			Name:   "info",
+			Usage:  "Describes the local environment",
+			Action: envInfoAction,
+		},
+		{
 			Name:   "cache",
 			Usage:  "Updates the cache with the repositories available in the local environment",
 			Action: envCacheAction,

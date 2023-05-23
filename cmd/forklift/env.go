@@ -95,7 +95,7 @@ func envFetchAction(c *cli.Context) error {
 		return errors.Wrap(err, "couldn't fetch changes from the remote release")
 	}
 	if !updated {
-		fmt.Print("No updates from the remote release.")
+		fmt.Println("No updates from the remote release.")
 	}
 	// TODO: display changes
 	return nil
@@ -130,6 +130,119 @@ func envRmAction(c *cli.Context) error {
 	// TODO: return an error if there are uncommitted or unpushed changes to be removed - in which
 	// case require a --force flag
 	return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
+}
+
+// info
+
+func envInfoAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	envPath := workspace.LocalEnvPath(wpath)
+	if !workspace.Exists(envPath) {
+		return errMissingEnv
+	}
+	fmt.Printf("Local environment path: %s\n", envPath)
+	ref, err := git.Head(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't query the local environment for its HEAD")
+	}
+	fmt.Printf("Currently on: %s\n", git.StringifyRef(ref))
+	if err := printUncommittedChanges(envPath); err != nil {
+		return err
+	}
+
+	fmt.Println()
+	if err := printLocalRefsInfo(envPath); err != nil {
+		return err
+	}
+	fmt.Println()
+	if err := printRemotesInfo(envPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func printRemotesInfo(envPath string) error {
+	remotes, err := git.Remotes(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't query the local environment for its remotes")
+	}
+
+	fmt.Printf("Remotes:")
+	if len(remotes) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, remote := range remotes {
+		config := remote.Config()
+		fmt.Printf("  %s:\n", config.Name)
+		fmt.Printf("    URLs:")
+		if len(config.URLs) == 0 {
+			fmt.Print(" (none)")
+		}
+		fmt.Println()
+		for i, url := range config.URLs {
+			fmt.Printf("      %s: ", url)
+			if i == 0 {
+				fmt.Print("fetch, ")
+			}
+			fmt.Println("push")
+		}
+
+		fmt.Printf("    Up-to-date references:")
+		refs, err := remote.List(git.EmptyListOptions())
+		if err != nil {
+			fmt.Printf(" (couldn't retrieve references: %s)\n", err)
+			continue
+		}
+		if len(refs) == 0 {
+			fmt.Print(" (none)")
+		}
+		fmt.Println()
+		for _, ref := range refs {
+			fmt.Printf("      %s\n", git.StringifyRef(ref))
+		}
+	}
+	return nil
+}
+
+func printLocalRefsInfo(envPath string) error {
+	refs, err := git.Refs(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't query the local environment for its refs")
+	}
+
+	fmt.Printf("References:")
+	if len(refs) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, ref := range refs {
+		fmt.Printf("  %s\n", git.StringifyRef(ref))
+	}
+
+	return nil
+}
+
+func printUncommittedChanges(envPath string) error {
+	status, err := git.Status(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't query the local environment for its status")
+	}
+	fmt.Print("Uncommitted changes:")
+	if len(status) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for file, status := range status {
+		if status.Staging == git.StatusUnmodified && status.Worktree == git.StatusUnmodified {
+			continue
+		}
+		if status.Staging == git.StatusRenamed {
+			file = fmt.Sprintf("%s -> %s", file, status.Extra)
+		}
+		fmt.Printf("  %c%c %s\n", status.Staging, status.Worktree, file)
+	}
+	return nil
 }
 
 // cache
