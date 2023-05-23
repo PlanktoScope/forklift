@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- An `env info` subcommand to display info about the local environment as a Git repository
+- A `dev env` command with subcommands to display info about a development environment (at a user-set path), with the same subcommand structure as the `env` command.
+
+### Changed
+
+- Changed the "info" verb in subcommands to "show".
+- Standardized abbreviations and expansions of verbs for subcommands (e.g. "d"/"deploy", "ls"/"list", or "s"/"show")
+- Standardized abbreviations and expansions of nouns for subcommands (e.g. "d"/"depl"/"deployment"/"deployments" or "r"/"repo"/"repository"/"repositories"). Now the longest alias of a noun-verb subcommand always makes grammatical sense (e.g. "list-repositories" instead of "list-repository", "show-repository" instead of "information-repository"), and the shortest alias of a subcommand always has a one-to-three-letter verb and a one-to-three-letter noun, and the main name of a subcommand is of intermediate length (e.g. "ls-repo", "show-pkg", "show-depl")
+
+### Removed
+
+- Release channels are no longer tracked for each Pallet repository within a Forklift environment, for simplicity
+- (Breaking change) the `forklift-repo-lock.yml` file has been renamed to `forklift-repo.yml`, for simplicity
+
+### Fixed
+
+- The `depl rm` subcommand now waits until all deleted networks actually disappear before it finishes. This is to help prevent the `env deploy` and `dev env deploy` subcommands from being run while the state of the Docker Swarm is still changing as a result of a previous `depl rm` subcommand.
+
 ## 0.1.2 - 2023-04-26
 
 ### Fixed

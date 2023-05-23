@@ -44,7 +44,7 @@ func printCachedRepo(repo forklift.CachedRepo) {
 	fmt.Printf("  Description: %s\n", repo.Config.Repository.Description)
 }
 
-func cacheInfoRepoAction(c *cli.Context) error {
+func cacheShowRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
 		fmt.Printf("The cache is empty.")
@@ -92,26 +92,33 @@ func cacheLsPkgAction(c *cli.Context) error {
 
 func printPkgSpec(spec forklift.PkgSpec) {
 	fmt.Printf("  Description: %s\n", spec.Description)
-	if len(spec.Maintainers) > 0 {
-		fmt.Printf("  Maintainers:\n")
-		for _, maintainer := range spec.Maintainers {
-			if maintainer.Email != "" {
-				fmt.Printf("    %s <%s>\n", maintainer.Name, maintainer.Email)
-			} else {
-				fmt.Printf("    %s\n", maintainer.Name)
-			}
+
+	fmt.Print("  Maintainers:")
+	if len(spec.Maintainers) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, maintainer := range spec.Maintainers {
+		if maintainer.Email != "" {
+			fmt.Printf("    %s <%s>\n", maintainer.Name, maintainer.Email)
+		} else {
+			fmt.Printf("    %s\n", maintainer.Name)
 		}
 	}
+
 	if spec.License != "" {
 		fmt.Printf("  License: %s\n", spec.License)
 	} else {
 		fmt.Printf("  License: (custom license)\n")
 	}
-	if len(spec.Maintainers) > 0 {
-		fmt.Printf("  Sources:\n")
-		for _, source := range spec.Sources {
-			fmt.Printf("    %s\n", source)
-		}
+
+	fmt.Print("  Sources:")
+	if len(spec.Sources) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, source := range spec.Sources {
+		fmt.Printf("    %s\n", source)
 	}
 }
 
@@ -121,12 +128,16 @@ func printDeplSpec(spec forklift.PkgDeplSpec) {
 }
 
 func printFeatureSpecs(features map[string]forklift.PkgFeatureSpec) {
-	fmt.Printf("  Optional features:\n")
+	fmt.Print("  Optional features:")
 	names := make([]string, 0, len(features))
 	for name := range features {
 		names = append(names, name)
 	}
 	sort.Strings(names)
+	if len(names) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
 	for _, name := range names {
 		if description := features[name].Description; description != "" {
 			fmt.Printf("    %s: %s\n", name, description)
@@ -151,7 +162,7 @@ func printCachedPkg(pkg forklift.CachedPkg) {
 	printFeatureSpecs(pkg.Config.Features)
 }
 
-func cacheInfoPkgAction(c *cli.Context) error {
+func cacheShowPkgAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
 		fmt.Println("The cache is empty.")

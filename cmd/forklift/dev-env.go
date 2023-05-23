@@ -12,12 +12,11 @@ import (
 
 // info
 
-func devEnvInfoAction(c *cli.Context) error {
+func devEnvShowAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	fmt.Printf("Development environment: %s\n", envPath)
 	return printEnvInfo(envPath)
 }
 
@@ -83,7 +82,7 @@ func devEnvLsRepoAction(c *cli.Context) error {
 
 // info-repo
 
-func devEnvInfoRepoAction(c *cli.Context) error {
+func devEnvShowRepoAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
@@ -96,6 +95,39 @@ func devEnvInfoRepoAction(c *cli.Context) error {
 
 	repoPath := c.Args().First()
 	return printRepoInfo(envPath, workspace.CachePath(wpath), repoPath)
+}
+
+// ls-pkg
+
+func devEnvLsPkgAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
+		return nil
+	}
+
+	return printEnvPkgs(envPath, workspace.CachePath(wpath))
+}
+
+// info-pkg
+
+func devEnvShowPkgAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
+		return nil
+	}
+
+	pkgPath := c.Args().First()
+	return printPkgInfo(envPath, workspace.CachePath(wpath), pkgPath)
 }
 
 // ls-depl
@@ -116,7 +148,7 @@ func devEnvLsDeplAction(c *cli.Context) error {
 
 // info-depl
 
-func devEnvInfoDeplAction(c *cli.Context) error {
+func devEnvShowDeplAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")

@@ -134,17 +134,17 @@ func envRmAction(c *cli.Context) error {
 
 // info
 
-func envInfoAction(c *cli.Context) error {
+func envShowAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	envPath := workspace.LocalEnvPath(wpath)
 	if !workspace.Exists(envPath) {
 		return errMissingEnv
 	}
-	fmt.Printf("Local environment: %s\n", envPath)
 	return printEnvInfo(envPath)
 }
 
 func printEnvInfo(envPath string) error {
+	fmt.Printf("Environment: %s\n", envPath)
 	config, err := forklift.LoadEnvConfig(envPath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load the environment config")
@@ -153,7 +153,7 @@ func printEnvInfo(envPath string) error {
 
 	ref, err := git.Head(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the environment for its HEAD")
+		return errors.Wrapf(err, "couldn't query environment %s for its HEAD", envPath)
 	}
 	fmt.Printf("  Currently on: %s\n", git.StringifyRef(ref))
 	// TODO: report any divergence between head and remotes
@@ -175,7 +175,7 @@ func printEnvInfo(envPath string) error {
 func printRemotesInfo(envPath string) error {
 	remotes, err := git.Remotes(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the environment for its remotes")
+		return errors.Wrapf(err, "couldn't query environment %s for its remotes", envPath)
 	}
 
 	fmt.Printf("  Remotes:")
@@ -219,7 +219,7 @@ func printRemotesInfo(envPath string) error {
 func printLocalRefsInfo(envPath string) error {
 	refs, err := git.Refs(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the environment for its refs")
+		return errors.Wrapf(err, "couldn't query environment %s for its refs", envPath)
 	}
 
 	fmt.Printf("  References:")
@@ -237,7 +237,7 @@ func printLocalRefsInfo(envPath string) error {
 func printUncommittedChanges(envPath string) error {
 	status, err := git.Status(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the environment for its status")
+		return errors.Wrapf(err, "couldn't query the environment %s for its status", envPath)
 	}
 	fmt.Print("  Uncommitted changes:")
 	if len(status) == 0 {
@@ -398,7 +398,7 @@ func deployEnv(envPath, cachePath string) error {
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by local environment",
+			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
 		)
 	}
 	dc, err := docker.NewClient()
@@ -571,7 +571,7 @@ func printEnvRepos(envPath string) error {
 
 // info-repo
 
-func envInfoRepoAction(c *cli.Context) error {
+func envShowRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
@@ -585,12 +585,14 @@ func envInfoRepoAction(c *cli.Context) error {
 func printRepoInfo(envPath, cachePath, repoPath string) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
 	if err != nil {
-		return errors.Wrap(err, "couldn't open directory for Pallet repositories in environment")
+		return errors.Wrapf(
+			err, "couldn't open directory for Pallet repositories in environment %s", envPath,
+		)
 	}
 	versionedRepo, err := forklift.LoadVersionedRepo(reposFS, repoPath)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't load Pallet repo versioning config %s from local environment", repoPath,
+			err, "couldn't load Pallet repo versioning config %s from environment %s", repoPath, envPath,
 		)
 	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
@@ -634,11 +636,15 @@ func envLsPkgAction(c *cli.Context) error {
 		return nil
 	}
 
-	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
+	return printEnvPkgs(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
+}
+
+func printEnvPkgs(envPath, cachePath string) error {
+	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet repositories in local environment")
+		return errors.Wrapf(err, "couldn't identify Pallet repositories in environment %s", envPath)
 	}
-	pkgs, err := forklift.ListVersionedPkgs(workspace.CacheFS(wpath), repos)
+	pkgs, err := forklift.ListVersionedPkgs(os.DirFS(cachePath), repos)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
@@ -653,6 +659,38 @@ func envLsPkgAction(c *cli.Context) error {
 
 // info-pkg
 
+func envShowPkgAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
+		return nil
+	}
+
+	pkgPath := c.Args().First()
+	return printPkgInfo(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), pkgPath)
+}
+
+func printPkgInfo(envPath, cachePath, pkgPath string) error {
+	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't open directory for Pallet repositories in environment %s", envPath,
+		)
+	}
+	pkg, err := forklift.LoadVersionedPkg(reposFS, os.DirFS(cachePath), pkgPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't look up information about package %s in environment %s", pkgPath, envPath,
+		)
+	}
+	printVersionedPkg(pkg)
+	return nil
+}
+
 func printVersionedPkg(pkg forklift.VersionedPkg) {
 	fmt.Printf("Pallet package: %s\n", pkg.Path)
 	fmt.Printf("  Provided by Pallet repository: %s\n", pkg.Repo.Path())
@@ -666,34 +704,6 @@ func printVersionedPkg(pkg forklift.VersionedPkg) {
 	printDeplSpec(pkg.Cached.Config.Deployment)
 	fmt.Println()
 	printFeatureSpecs(pkg.Cached.Config.Features)
-}
-
-func envInfoPkgAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
-		fmt.Println("The local environment is empty.")
-		return nil
-	}
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
-	}
-	reposFS, err := forklift.VersionedReposFS(workspace.LocalEnvFS(wpath))
-	if err != nil {
-		return errors.Wrap(
-			err, "couldn't open directory for Pallet repositories in local environment",
-		)
-	}
-
-	pkgPath := c.Args().First()
-	pkg, err := forklift.LoadVersionedPkg(reposFS, workspace.CacheFS(wpath), pkgPath)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't look up information about package %s in local environment", pkgPath,
-		)
-	}
-	printVersionedPkg(pkg)
-	return nil
 }
 
 // ls-depl
@@ -711,7 +721,7 @@ func printEnvDepls(envPath, cachePath string) error {
 	depls, err := forklift.ListDepls(os.DirFS(envPath), os.DirFS(cachePath))
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by the environment",
+			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
 		)
 	}
 	for _, depl := range depls {
@@ -722,7 +732,7 @@ func printEnvDepls(envPath, cachePath string) error {
 
 // info-depl
 
-func envInfoDeplAction(c *cli.Context) error {
+func envShowDeplAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
@@ -742,14 +752,15 @@ func printDeplInfo(envPath, cachePath, deplName string) error {
 	depl, err := forklift.LoadDepl(os.DirFS(envPath), cacheFS, deplName)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't find package deployment specification %s in local environment", deplName,
+			err, "couldn't find package deployment specification %s in environment %s", deplName, envPath,
 		)
 	}
 	if depl.Pkg.Cached.Config.Deployment.Name != deplName {
 		return errors.Errorf(
-			"package deployment name %s specified by local environment doesn't match name %s specified "+
+			"package deployment name %s specified by environment %s doesn't match name %s specified "+
 				"by package %s from repo %s",
-			deplName, depl.Pkg.Cached.Config.Deployment.Name, depl.Pkg.Path, depl.Pkg.Repo.Path(),
+			deplName, envPath, depl.Pkg.Cached.Config.Deployment.Name,
+			depl.Pkg.Path, depl.Pkg.Repo.Path(),
 		)
 	}
 	printDepl(depl)
@@ -785,21 +796,23 @@ func printDepl(depl forklift.Depl) {
 	if err != nil {
 		fmt.Printf("Warning: couldn't determine enabled features: %s\n", err.Error())
 	}
-	if len(enabledFeatures) > 0 {
-		fmt.Println()
-		fmt.Println("  Enabled features:")
-		printFeatures(enabledFeatures)
+	fmt.Print("  Enabled features:")
+	if len(enabledFeatures) == 0 {
+		fmt.Print(" (none)")
 	}
+	fmt.Println()
+	printFeatures(enabledFeatures)
 
 	disabledFeatures, err := depl.DisabledFeatures(depl.Pkg.Cached.Config.Features)
 	if err != nil {
 		fmt.Printf("Warning: couldn't determine disabled features: %s\n", err.Error())
 	}
-	if len(disabledFeatures) > 0 {
-		fmt.Println()
-		fmt.Println("  Disabled features:")
-		printFeatures(disabledFeatures)
+	fmt.Print("  Disabled features:")
+	if len(disabledFeatures) == 0 {
+		fmt.Print(" (none)")
 	}
+	fmt.Println()
+	printFeatures(disabledFeatures)
 }
 
 func printFeatures(features map[string]forklift.PkgFeatureSpec) {
@@ -826,10 +839,14 @@ func printDockerStackServices(services []dct.ServiceConfig) {
 	if len(services) == 0 {
 		return
 	}
-	fmt.Println("    Services:")
+	fmt.Print("    Services:")
 	sort.Slice(services, func(i, j int) bool {
 		return services[i].Name < services[j].Name
 	})
+	if len(services) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
 	for _, service := range services {
 		fmt.Printf("      %s: %s\n", service.Name, service.Image)
 	}
