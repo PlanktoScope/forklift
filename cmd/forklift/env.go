@@ -136,17 +136,17 @@ func envRmAction(c *cli.Context) error {
 
 func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
 	// Check commit time
-	commitTime, err := gitRepo.GetCommitTime(versionedRepo.Lock.Commit)
+	commitTime, err := gitRepo.GetCommitTime(versionedRepo.Config.Commit)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't check time of commit %s", versionedRepo.Lock.ShortCommit())
+		return errors.Wrapf(err, "couldn't check time of commit %s", versionedRepo.Config.ShortCommit())
 	}
 	commitTimestamp := forklift.ToTimestamp(commitTime)
-	versionedTimestamp := versionedRepo.Lock.Timestamp
+	versionedTimestamp := versionedRepo.Config.Timestamp
 	if commitTimestamp != versionedTimestamp {
 		return errors.Errorf(
-			"commit %s was made at %s, while the Pallet repository lock file expects it to have been "+
-				"made at %s",
-			versionedRepo.Lock.ShortCommit(), commitTimestamp, versionedTimestamp,
+			"commit %s was made at %s, while the repository versioning config file expects it to have "+
+				"been made at %s",
+			versionedRepo.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
 		)
 	}
 
@@ -158,9 +158,9 @@ func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) err
 }
 
 func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded bool, err error) {
-	if !repo.Lock.IsCommitLocked() {
+	if !repo.Config.IsCommitLocked() {
 		return false, errors.Errorf(
-			"the local environment's version lock for repository %s has no commit lock", repo.Path(),
+			"the local environment's versioning config for repository %s has no commit lock", repo.Path(),
 		)
 	}
 	vcsRepoPath := repo.VCSRepoPath
@@ -181,7 +181,7 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 	}
 
 	// Validate commit
-	shortCommit := repo.Lock.ShortCommit()
+	shortCommit := repo.Config.ShortCommit()
 	if err = validateCommit(repo, gitRepo); err != nil {
 		if cerr := os.RemoveAll(path); cerr != nil {
 			fmt.Printf(
@@ -190,12 +190,12 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 			)
 		}
 		return false, errors.Wrapf(
-			err, "commit %s for github repo %s failed repo lock validation", shortCommit, vcsRepoPath,
+			err, "commit %s for github repo %s failed repo version validation", shortCommit, vcsRepoPath,
 		)
 	}
 
 	// Checkout commit
-	if err = gitRepo.Checkout(repo.Lock.Commit); err != nil {
+	if err = gitRepo.Checkout(repo.Config.Commit); err != nil {
 		if cerr := os.RemoveAll(path); cerr != nil {
 			fmt.Printf("Error: couldn't clean up %s! You will need to delete it yourself.\n", path)
 		}
@@ -225,7 +225,7 @@ func envCacheAction(c *cli.Context) error {
 		changed = changed || downloaded
 		if err != nil {
 			return errors.Wrapf(
-				err, "couldn't download %s at commit %s", repo.Path(), repo.Lock.ShortCommit(),
+				err, "couldn't download %s at commit %s", repo.Path(), repo.Config.ShortCommit(),
 			)
 		}
 	}
@@ -410,7 +410,6 @@ func envLsRepoAction(c *cli.Context) error {
 
 func printVersionedRepo(repo forklift.VersionedRepo) {
 	fmt.Printf("Pallet repository: %s\n", repo.Path())
-	fmt.Printf("  Release: %s\n", repo.Config.Release)
 	version, _ := repo.Version() // assume that the validity of the version was already checked
 	fmt.Printf("  Locked version: %s\n", version)
 	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
@@ -490,7 +489,6 @@ func envLsPkgAction(c *cli.Context) error {
 func printVersionedPkg(pkg forklift.VersionedPkg) {
 	fmt.Printf("Pallet package: %s\n", pkg.Path)
 	fmt.Printf("  Provided by Pallet repository: %s\n", pkg.Repo.Path())
-	fmt.Printf("    Release: %s\n", pkg.Repo.Config.Release)
 	fmt.Printf("    Version: %s\n", pkg.Cached.Repo.Version)
 	fmt.Printf("    Description: %s\n", pkg.Cached.Repo.Config.Repository.Description)
 	fmt.Printf("    Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
@@ -559,7 +557,6 @@ func printDepl(depl forklift.Depl) {
 	fmt.Printf("  Deploys Pallet package: %s\n", depl.Config.Package)
 	fmt.Printf("    Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
 	fmt.Printf("    Provided by Pallet repository: %s\n", depl.Pkg.Repo.Path())
-	fmt.Printf("      Release: %s\n", depl.Pkg.Repo.Config.Release)
 	fmt.Printf("      Version: %s\n", depl.Pkg.Cached.Repo.Version)
 	fmt.Printf("      Description: %s\n", depl.Pkg.Cached.Repo.Config.Repository.Description)
 	fmt.Printf("      Provided by Git repository: %s\n", depl.Pkg.Repo.VCSRepoPath)

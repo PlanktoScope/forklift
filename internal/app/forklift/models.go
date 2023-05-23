@@ -87,14 +87,9 @@ type VersionedRepo struct {
 	VCSRepoPath string
 	RepoSubdir  string
 	Config      RepoVersionConfig
-	Lock        RepoVersionLock
 }
 
 type RepoVersionConfig struct {
-	Release string `yaml:"release"`
-}
-
-type RepoVersionLock struct {
 	Version   string `yaml:"version"`
 	Timestamp string `yaml:"timestamp"`
 	Commit    string `yaml:"commit"`

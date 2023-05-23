@@ -71,16 +71,12 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 }
 
 func loadRepoConfig(cacheFS fs.FS, filePath string) (RepoConfig, error) {
-	file, err := cacheFS.Open(filePath)
+	bytes, err := fs.ReadFile(cacheFS, filePath)
 	if err != nil {
-		return RepoConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
-	}
-	buf, err := loadFile(file)
-	if err != nil {
-		return RepoConfig{}, errors.Wrap(err, "couldn't read repo config")
+		return RepoConfig{}, errors.Wrapf(err, "couldn't read repo config file %s", filePath)
 	}
 	config := RepoConfig{}
-	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
 	}
 	if config.Repository.Path == "" {

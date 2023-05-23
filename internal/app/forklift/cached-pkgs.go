@@ -35,16 +35,12 @@ func CompareCachedPkgs(p, q CachedPkg) int {
 }
 
 func loadPkgConfig(cacheFS fs.FS, filePath string) (PkgConfig, error) {
-	file, err := cacheFS.Open(filePath)
+	bytes, err := fs.ReadFile(cacheFS, filePath)
 	if err != nil {
-		return PkgConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
-	}
-	buf, err := loadFile(file)
-	if err != nil {
-		return PkgConfig{}, errors.Wrap(err, "couldn't read package config")
+		return PkgConfig{}, errors.Wrapf(err, "couldn't read package config file %s", filePath)
 	}
 	config := PkgConfig{}
-	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return PkgConfig{}, errors.Wrap(err, "couldn't parse package config")
 	}
 	return config, nil

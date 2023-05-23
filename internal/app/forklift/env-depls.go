@@ -48,16 +48,12 @@ func (d *Depl) DisabledFeatures(
 }
 
 func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
-	file, err := deplsFS.Open(filePath)
+	bytes, err := fs.ReadFile(deplsFS, filePath)
 	if err != nil {
-		return DeplConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
-	}
-	buf, err := loadFile(file)
-	if err != nil {
-		return DeplConfig{}, errors.Wrap(err, "couldn't read deployment config file")
+		return DeplConfig{}, errors.Wrapf(err, "couldn't read deployment config file %s", filePath)
 	}
 	config := DeplConfig{}
-	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return DeplConfig{}, errors.Wrap(err, "couldn't parse deployment config")
 	}
 	return config, nil

@@ -29,40 +29,40 @@ func ShortCommit(commit string) string {
 
 // Repository versioning
 
-func (l RepoVersionLock) IsCommitLocked() bool {
+func (l RepoVersionConfig) IsCommitLocked() bool {
 	return l.Commit != ""
 }
 
-func (l RepoVersionLock) ShortCommit() string {
+func (l RepoVersionConfig) ShortCommit() string {
 	return ShortCommit(l.Commit)
 }
 
-func (l RepoVersionLock) IsVersion() bool {
+func (l RepoVersionConfig) IsVersion() bool {
 	return l.Version != "" && l.Timestamp != ""
 }
 
-func (l RepoVersionLock) ParseVersion() (semver.Version, error) {
+func (l RepoVersionConfig) ParseVersion() (semver.Version, error) {
 	if !strings.HasPrefix(l.Version, "v") {
 		return semver.Version{}, errors.Errorf(
-			"invalid repo lock version `%s` doesn't start with `v`", l.Version,
+			"invalid repo version `%s` doesn't start with `v`", l.Version,
 		)
 	}
 	version, err := semver.Parse(strings.TrimPrefix(l.Version, "v"))
 	if err != nil {
 		return semver.Version{}, errors.Errorf(
-			"repo lock version `%s` couldn't be parsed as a semantic version", l.Version,
+			"repo version `%s` couldn't be parsed as a semantic version", l.Version,
 		)
 	}
 	return version, nil
 }
 
-func (l RepoVersionLock) Pseudoversion() (string, error) {
+func (l RepoVersionConfig) Pseudoversion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
 	if l.Commit == "" {
-		return "", errors.Errorf("repo lock missing commit hash")
+		return "", errors.Errorf("repo version missing commit hash")
 	}
 	if l.Timestamp == "" {
-		return "", errors.Errorf("repo lock missing commit timestamp")
+		return "", errors.Errorf("repo version missing commit timestamp")
 	}
 	revisionID := ShortCommit(l.Commit)
 	if l.Version == "" {
@@ -86,14 +86,14 @@ func (r VersionedRepo) Path() string {
 }
 
 func (r VersionedRepo) Version() (string, error) {
-	if r.Lock.IsVersion() {
-		version, err := r.Lock.ParseVersion()
+	if r.Config.IsVersion() {
+		version, err := r.Config.ParseVersion()
 		if err != nil {
-			return "", errors.Wrap(err, "invalid lock version")
+			return "", errors.Wrap(err, "invalid repo version")
 		}
 		return version.String(), nil
 	}
-	pseudoversion, err := r.Lock.Pseudoversion()
+	pseudoversion, err := r.Config.Pseudoversion()
 	if err != nil {
 		return "", errors.Wrap(err, "couldn't determine pseudo-version")
 	}
@@ -142,35 +142,17 @@ func splitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err e
 }
 
 func loadRepoVersionConfig(reposFS fs.FS, filePath string) (RepoVersionConfig, error) {
-	file, err := reposFS.Open(filePath)
+	bytes, err := fs.ReadFile(reposFS, filePath)
 	if err != nil {
-		return RepoVersionConfig{}, errors.Wrapf(err, "couldn't open file %s", filePath)
-	}
-	buf, err := loadFile(file)
-	if err != nil {
-		return RepoVersionConfig{}, errors.Wrap(err, "couldn't read repo version config file")
+		return RepoVersionConfig{}, errors.Wrapf(
+			err, "couldn't read repo version config file %s", filePath,
+		)
 	}
 	config := RepoVersionConfig{}
-	if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return RepoVersionConfig{}, errors.Wrap(err, "couldn't parse repo version config")
 	}
 	return config, nil
-}
-
-func loadRepoVersionLock(reposFS fs.FS, filePath string) (RepoVersionLock, error) {
-	file, err := reposFS.Open(filePath)
-	if err != nil {
-		return RepoVersionLock{}, errors.Wrapf(err, "couldn't open file %s", filePath)
-	}
-	buf, err := loadFile(file)
-	if err != nil {
-		return RepoVersionLock{}, errors.Wrap(err, "couldn't read repo version lock file")
-	}
-	lock := RepoVersionLock{}
-	if err = yaml.Unmarshal(buf.Bytes(), &lock); err != nil {
-		return RepoVersionLock{}, errors.Wrap(err, "couldn't parse repo version lock")
-	}
-	return lock, nil
 }
 
 func LoadVersionedRepo(reposFS fs.FS, repoPath string) (VersionedRepo, error) {
@@ -185,15 +167,11 @@ func LoadVersionedRepo(reposFS fs.FS, repoPath string) (VersionedRepo, error) {
 		RepoSubdir:  repoSubdir,
 	}
 
-	repo.Config, err = loadRepoVersionConfig(reposFS, filepath.Join(repoPath, "forklift-repo.yml"))
-	if err != nil {
-		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
-	}
-	repo.Lock, err = loadRepoVersionLock(
-		reposFS, filepath.Join(repoPath, "forklift-repo-lock.yml"),
+	repo.Config, err = loadRepoVersionConfig(
+		reposFS, filepath.Join(repoPath, "forklift-repo.yml"),
 	)
 	if err != nil {
-		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version lock for %s", repoPath)
+		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
 	}
 
 	return repo, nil
