@@ -156,6 +156,7 @@ func printEnvInfo(envPath string) error {
 		return errors.Wrap(err, "couldn't query the environment for its HEAD")
 	}
 	fmt.Printf("  Currently on: %s\n", git.StringifyRef(ref))
+	// TODO: report any divergence between head and remotes
 	if err := printUncommittedChanges(envPath); err != nil {
 		return err
 	}
@@ -257,27 +258,44 @@ func printUncommittedChanges(envPath string) error {
 
 // cache
 
-func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
-	// Check commit time
-	commitTime, err := gitRepo.GetCommitTime(versionedRepo.Config.Commit)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't check time of commit %s", versionedRepo.Config.ShortCommit())
-	}
-	commitTimestamp := forklift.ToTimestamp(commitTime)
-	versionedTimestamp := versionedRepo.Config.Timestamp
-	if commitTimestamp != versionedTimestamp {
-		return errors.Errorf(
-			"commit %s was made at %s, while the repository versioning config file expects it to have "+
-				"been made at %s",
-			versionedRepo.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
-		)
+func envCacheAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		return errMissingEnv
 	}
 
-	// TODO: implement remaining checks specified in https://go.dev/ref/mod#pseudo-versions
-	// (if base version is specified, there must be a corresponding semantic version tag that is an
-	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
-	// of one of the module repository's branches or tags)
+	fmt.Printf("Downloading Pallet repositories specified by the local environment...\n")
+	changed, err := downloadRepos(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
+	if err != nil {
+		return err
+	}
+	if !changed {
+		fmt.Println("Done! No further actions are needed at this time.")
+		return nil
+	}
+
+	// TODO: download all Docker images used by packages in the repo - either by inspecting the
+	// Docker stack definitions or by allowing packages to list Docker images used.
+	fmt.Println("Done! Next, you'll probably want to run `forklift env deploy`.")
 	return nil
+}
+
+func downloadRepos(envPath, cachePath string) (changed bool, err error) {
+	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't identify Pallet repositories")
+	}
+	changed = false
+	for _, repo := range repos {
+		downloaded, err := downloadRepo(cachePath, repo)
+		changed = changed || downloaded
+		if err != nil {
+			return false, errors.Wrapf(
+				err, "couldn't download %s at commit %s", repo.Path(), repo.Config.ShortCommit(),
+			)
+		}
+	}
+	return changed, nil
 }
 
 func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded bool, err error) {
@@ -330,40 +348,89 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 	return true, nil
 }
 
-func envCacheAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
-		return errMissingEnv
-	}
-
-	fmt.Printf("Downloading Pallet repositories...\n")
-	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
+func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
+	// Check commit time
+	commitTime, err := gitRepo.GetCommitTime(versionedRepo.Config.Commit)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet repositories")
+		return errors.Wrapf(err, "couldn't check time of commit %s", versionedRepo.Config.ShortCommit())
 	}
-	cachePath := workspace.CachePath(wpath)
-	changed := false
-	for _, repo := range repos {
-		downloaded, err := downloadRepo(cachePath, repo)
-		changed = changed || downloaded
-		if err != nil {
-			return errors.Wrapf(
-				err, "couldn't download %s at commit %s", repo.Path(), repo.Config.ShortCommit(),
-			)
-		}
-	}
-	if !changed {
-		fmt.Println("Done! No further actions are needed at this time.")
-		return nil
+	commitTimestamp := forklift.ToTimestamp(commitTime)
+	versionedTimestamp := versionedRepo.Config.Timestamp
+	if commitTimestamp != versionedTimestamp {
+		return errors.Errorf(
+			"commit %s was made at %s, while the repository versioning config file expects it to have "+
+				"been made at %s",
+			versionedRepo.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
+		)
 	}
 
-	// TODO: download all Docker images used by packages in the repo - either by inspecting the
-	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Println("Done! Next, you'll probably want to run `forklift env deploy`.")
+	// TODO: implement remaining checks specified in https://go.dev/ref/mod#pseudo-versions
+	// (if base version is specified, there must be a corresponding semantic version tag that is an
+	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
+	// of one of the module repository's branches or tags)
 	return nil
 }
 
 // deploy
+
+func envDeployAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		fmt.Println("The cache is empty, please run `forklift env cache` first")
+		return nil
+	}
+
+	if err := deployEnv(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+		return errors.Wrap(
+			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
+		)
+	}
+	fmt.Println("Done!")
+	return nil
+}
+
+func deployEnv(envPath, cachePath string) error {
+	cacheFS := os.DirFS(cachePath)
+	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't identify Pallet package deployments specified by local environment",
+		)
+	}
+	dc, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	stacks, err := dc.ListStacks(context.Background())
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list active Docker stacks")
+	}
+
+	fmt.Println("Determining package deployment changes...")
+	changes := planReconciliation(depls, stacks)
+	sort.Slice(changes, func(i, j int) bool {
+		return changes[i].Name < changes[j].Name
+	})
+	for _, change := range changes {
+		fmt.Printf("Will %s %s\n", strings.ToLower(change.Type), change.Name)
+	}
+
+	fmt.Println()
+	fmt.Println("Applying package deployment changes...")
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker swarm client")
+	}
+	for _, change := range changes {
+		if err := applyReconciliationChange(cacheFS, change, dc); err != nil {
+			return errors.Wrapf(err, "couldn't apply '%s' change to stack %s", change.Type, change.Name)
+		}
+	}
+	return nil
+}
 
 const (
 	addReconciliationChange    = "Add"
@@ -453,58 +520,6 @@ func applyReconciliationChange(
 		fmt.Println("  Done!")
 		return nil
 	}
-}
-
-func envDeployAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
-		fmt.Println("The local environment is empty.")
-		return nil
-	}
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
-	}
-	cacheFS := workspace.CacheFS(wpath)
-
-	depls, err := forklift.ListDepls(workspace.LocalEnvFS(wpath), cacheFS)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by local environment",
-		)
-	}
-	dc, err := docker.NewClient()
-	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker API client")
-	}
-	stacks, err := dc.ListStacks(context.Background())
-	if err != nil {
-		return errors.Wrapf(err, "couldn't list active Docker stacks")
-	}
-
-	fmt.Println("Determining package deployment changes...")
-	changes := planReconciliation(depls, stacks)
-	sort.Slice(changes, func(i, j int) bool {
-		return changes[i].Name < changes[j].Name
-	})
-	for _, change := range changes {
-		fmt.Printf("Will %s %s\n", strings.ToLower(change.Type), change.Name)
-	}
-
-	fmt.Println()
-	fmt.Println("Applying package deployment changes...")
-	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker swarm client")
-	}
-	for _, change := range changes {
-		if err := applyReconciliationChange(cacheFS, change, dc); err != nil {
-			return errors.Wrapf(err, "couldn't apply %s change to stack %s", change.Type, change.Name)
-		}
-	}
-	// TODO: apply changes
-
-	fmt.Println("Done!")
-	return nil
 }
 
 // ls-repo
@@ -664,11 +679,14 @@ func envLsDeplAction(c *cli.Context) error {
 		fmt.Println("The local environment is empty.")
 		return nil
 	}
+	return printEnvDepls(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
+}
 
-	depls, err := forklift.ListDepls(workspace.LocalEnvFS(wpath), workspace.CacheFS(wpath))
+func printEnvDepls(envPath, cachePath string) error {
+	depls, err := forklift.ListDepls(os.DirFS(envPath), os.DirFS(cachePath))
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by local environment",
+			err, "couldn't identify Pallet package deployments specified by the environment",
 		)
 	}
 	for _, depl := range depls {

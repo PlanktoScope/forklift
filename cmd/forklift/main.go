@@ -100,8 +100,6 @@ var envCmd = &cli.Command{
 			Usage:  "Updates the Docker Swarm to match the deployments specified by the local environment",
 			Action: envDeployAction,
 		},
-		// TODO: add a "info" command which prints a description of the local environment and indicates
-		// whether it has diverged
 		{
 			Name:    "ls-repo",
 			Aliases: []string{"ls-r", "list-repo"},
@@ -295,11 +293,55 @@ var devEnvCmd = &cli.Command{
 			Action: devEnvInfoAction,
 		},
 		{
+			Name:   "cache",
+			Usage:  "Updates the cache with the repositories available in the development environment",
+			Action: devEnvCacheAction,
+		},
+		{
+			Name: "deploy",
+			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
+				"development environment",
+			Action: devEnvDeployAction,
+		},
+		{
 			Name:    "ls-repo",
 			Aliases: []string{"ls-r", "list-repo"},
 			Usage:   "Lists repositories specified by the environment",
 			Action:  devEnvLsRepoAction,
 		},
+		/*{
+			Name:      "info-repo",
+			Aliases:   []string{"info-r"},
+			Usage:     "Describes a repository available in the development environment",
+			ArgsUsage: "repository_path",
+			Action:    devEnvInfoRepoAction,
+		},
+		{
+			Name:    "ls-pkg",
+			Aliases: []string{"ls-p", "list-package"},
+			Usage:   "Lists packages available in the development environment",
+			Action:  devEnvLsPkgAction,
+		},
+		{
+			Name:      "info-pkg",
+			Aliases:   []string{"info-p", "info-package"},
+			Usage:     "Describes a package available in the development environment",
+			ArgsUsage: "package_path",
+			Action:    devEnvInfoPkgAction,
+		},*/
+		{
+			Name:    "ls-depl",
+			Aliases: []string{"ls-d", "list-deploy"},
+			Usage:   "Lists package deployments specified by the local environment",
+			Action:  devEnvLsDeplAction,
+		},
+		/*{
+			Name:      "info-depl",
+			Aliases:   []string{"info-d", "info-deploy"},
+			Usage:     "Describes a package deployment specified by the development environment",
+			ArgsUsage: "package_path",
+			Action:    devEnvInfoDeplAction,
+		},*/
 		// {
 		// 	Name:      "add-repo",
 		// 	Aliases:   []string{"add-r"},
