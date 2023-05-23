@@ -140,12 +140,22 @@ func envInfoAction(c *cli.Context) error {
 	if !workspace.Exists(envPath) {
 		return errMissingEnv
 	}
-	fmt.Printf("Local environment path: %s\n", envPath)
+	fmt.Printf("Local environment: %s\n", envPath)
+	return printEnvInfo(envPath)
+}
+
+func printEnvInfo(envPath string) error {
+	config, err := forklift.LoadEnvConfig(envPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't load the environment config")
+	}
+	fmt.Printf("  Description: %s\n", config.Environment.Description)
+
 	ref, err := git.Head(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the local environment for its HEAD")
+		return errors.Wrap(err, "couldn't query the environment for its HEAD")
 	}
-	fmt.Printf("Currently on: %s\n", git.StringifyRef(ref))
+	fmt.Printf("  Currently on: %s\n", git.StringifyRef(ref))
 	if err := printUncommittedChanges(envPath); err != nil {
 		return err
 	}
@@ -164,31 +174,31 @@ func envInfoAction(c *cli.Context) error {
 func printRemotesInfo(envPath string) error {
 	remotes, err := git.Remotes(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the local environment for its remotes")
+		return errors.Wrap(err, "couldn't query the environment for its remotes")
 	}
 
-	fmt.Printf("Remotes:")
+	fmt.Printf("  Remotes:")
 	if len(remotes) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
 	for _, remote := range remotes {
 		config := remote.Config()
-		fmt.Printf("  %s:\n", config.Name)
-		fmt.Printf("    URLs:")
+		fmt.Printf("    %s:\n", config.Name)
+		fmt.Printf("      URLs:")
 		if len(config.URLs) == 0 {
 			fmt.Print(" (none)")
 		}
 		fmt.Println()
 		for i, url := range config.URLs {
-			fmt.Printf("      %s: ", url)
+			fmt.Printf("        %s: ", url)
 			if i == 0 {
 				fmt.Print("fetch, ")
 			}
 			fmt.Println("push")
 		}
 
-		fmt.Printf("    Up-to-date references:")
+		fmt.Printf("      Up-to-date references:")
 		refs, err := remote.List(git.EmptyListOptions())
 		if err != nil {
 			fmt.Printf(" (couldn't retrieve references: %s)\n", err)
@@ -199,7 +209,7 @@ func printRemotesInfo(envPath string) error {
 		}
 		fmt.Println()
 		for _, ref := range refs {
-			fmt.Printf("      %s\n", git.StringifyRef(ref))
+			fmt.Printf("        %s\n", git.StringifyRef(ref))
 		}
 	}
 	return nil
@@ -208,16 +218,16 @@ func printRemotesInfo(envPath string) error {
 func printLocalRefsInfo(envPath string) error {
 	refs, err := git.Refs(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the local environment for its refs")
+		return errors.Wrap(err, "couldn't query the environment for its refs")
 	}
 
-	fmt.Printf("References:")
+	fmt.Printf("  References:")
 	if len(refs) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
 	for _, ref := range refs {
-		fmt.Printf("  %s\n", git.StringifyRef(ref))
+		fmt.Printf("    %s\n", git.StringifyRef(ref))
 	}
 
 	return nil
@@ -226,9 +236,9 @@ func printLocalRefsInfo(envPath string) error {
 func printUncommittedChanges(envPath string) error {
 	status, err := git.Status(envPath)
 	if err != nil {
-		return errors.Wrap(err, "couldn't query the local environment for its status")
+		return errors.Wrap(err, "couldn't query the environment for its status")
 	}
-	fmt.Print("Uncommitted changes:")
+	fmt.Print("  Uncommitted changes:")
 	if len(status) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -240,7 +250,7 @@ func printUncommittedChanges(envPath string) error {
 		if status.Staging == git.StatusRenamed {
 			file = fmt.Sprintf("%s -> %s", file, status.Extra)
 		}
-		fmt.Printf("  %c%c %s\n", status.Staging, status.Worktree, file)
+		fmt.Printf("    %c%c %s\n", status.Staging, status.Worktree, file)
 	}
 	return nil
 }
@@ -506,7 +516,11 @@ func envLsRepoAction(c *cli.Context) error {
 		return nil
 	}
 
-	repos, err := forklift.ListVersionedRepos(workspace.LocalEnvFS(wpath))
+	return printEnvRepos(workspace.LocalEnvPath(wpath))
+}
+
+func printEnvRepos(envPath string) error {
+	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}

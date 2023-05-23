@@ -1,6 +1,16 @@
 // Package forklift provides the core functionality of the forklift tool
 package forklift
 
+// Forklift environment specifications
+
+type EnvSpec struct {
+	Description string `yaml:"description"`
+}
+
+type EnvConfig struct {
+	Environment EnvSpec `yaml:"environment"`
+}
+
 // Pallet repository specifications
 
 type RepoSpec struct {

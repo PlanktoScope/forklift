@@ -26,6 +26,7 @@ var app = &cli.App{
 		envCmd,
 		cacheCmd,
 		deplCmd,
+		devCmd,
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -163,8 +164,8 @@ var envCmd = &cli.Command{
 		// 	},
 		// },
 		// {
-		// 	Name:  "add-pkg",
-		// 	Aliases:   []string{"add-p"},
+		// 	Name:  "add-depl",
+		// 	Aliases:   []string{"add-d", "add-deploy"},
 		// 	Usage: "Adds a package deployment to the environment",
 		// 	Action: func(c *cli.Context) error {
 		// 		fmt.Println("adding package deployment", c.Args().First())
@@ -172,8 +173,8 @@ var envCmd = &cli.Command{
 		// 	},
 		// },
 		// {
-		// 	Name:      "rm-pkg",
-		// 	Aliases:   []string{"rm-p", "remove-package"},
+		// 	Name:      "rm-depl",
+		// 	Aliases:   []string{"rm-d", "remove-deploy"},
 		// 	Usage:     "Removes a package deployment from the environment",
 		// 	ArgsUsage: "package_path",
 		// 	Action: func(c *cli.Context) error {
@@ -244,7 +245,7 @@ var cacheCmd = &cli.Command{
 
 var deplCmd = &cli.Command{
 	Name:    "depl",
-	Aliases: []string{"deployment"},
+	Aliases: []string{"deploy"},
 	Usage:   "Manages Pallet package deployments in the local environment",
 	Subcommands: []*cli.Command{
 		{
@@ -259,5 +260,86 @@ var deplCmd = &cli.Command{
 			Usage:   "Removes all Docker stacks",
 			Action:  deplRmAction,
 		},
+	},
+}
+
+// Dev
+
+var defaultWorkingDir, _ = os.Getwd()
+
+var devCmd = &cli.Command{
+	Name:    "dev",
+	Aliases: []string{"development"},
+	Usage:   "Facilitates development and maintenance in the current working directory",
+	Subcommands: []*cli.Command{
+		devEnvCmd,
+	},
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:    "cwd",
+			Value:   defaultWorkingDir,
+			Usage:   "Path of the current working directory",
+			EnvVars: []string{"FORKLIFT_CWD"},
+		},
+	},
+}
+
+var devEnvCmd = &cli.Command{
+	Name:    "env",
+	Aliases: []string{"environment"},
+	Usage:   "Facilitates development and maintenance of a Forklift environment",
+	Subcommands: []*cli.Command{
+		{
+			Name:   "info",
+			Usage:  "Describes the development environment",
+			Action: devEnvInfoAction,
+		},
+		{
+			Name:    "ls-repo",
+			Aliases: []string{"ls-r", "list-repo"},
+			Usage:   "Lists repositories specified by the environment",
+			Action:  devEnvLsRepoAction,
+		},
+		// {
+		// 	Name:      "add-repo",
+		// 	Aliases:   []string{"add-r"},
+		// 	Usage:     "Adds repositories to the environment, tracking specified versions or branches",
+		// 	ArgsUsage: "[pallet_repository_path@version_query]...",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("adding repositories", c.Args())
+		// 		// TODO: implement version queries - see https://go.dev/ref/mod#vcs-branch
+		// 		return nil
+		// 	},
+		// },
+		// TODO: add an upgrade-repo action
+		// {
+		// 	Name:      "rm-repo",
+		// 	Aliases:   []string{"rm-r", "remove-repo"},
+		// 	Usage:     "Removes a repository from the environment",
+		// 	ArgsUsage: "repository_path",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("removing repository", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:  "add-depl",
+		// 	Aliases:   []string{"add-d", "add-deploy},
+		// 	Usage: "Adds a package deployment to the environment",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("adding package deployment", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:      "rm-depl",
+		// 	Aliases:   []string{"rm-deploy", "remove-deploy"},
+		// 	Usage:     "Removes a package deployment from the environment",
+		// 	ArgsUsage: "package_path",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("removing package deployment", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
 	},
 }
