@@ -20,7 +20,7 @@ var app = &cli.App{
 	Name: "forklift",
 	// TODO: see if there's a way to get the version from a build tag, so that we don't have to update
 	// this manually
-	Version: "v0.1.3",
+	Version: "v0.1.4",
 	Usage:   "Manages Pallet repositories and package deployments",
 	Commands: []*cli.Command{
 		envCmd,
@@ -346,18 +346,14 @@ var devEnvCmd = &cli.Command{
 			ArgsUsage: "package_path",
 			Action:    devEnvShowDeplAction,
 		},
-		// {
-		// 	Name:      "add-repo",
-		// 	Aliases:   []string{"add-r, "add-repositories"},
-		// 	Usage:     "Adds repositories to the environment, tracking specified versions or branches",
-		// 	ArgsUsage: "[pallet_repository_path@version_query]...",
-		// 	Action: func(c *cli.Context) error {
-		// 		fmt.Println("adding repositories", c.Args())
-		// 		// TODO: implement version queries - see https://go.dev/ref/mod#vcs-branch
-		// 		return nil
-		// 	},
-		// },
-		// TODO: add an upgrade-repo action
+		{
+			Name:      "add-repo",
+			Aliases:   []string{"add-r", "add-repositories"},
+			Usage:     "Adds repositories to the environment, tracking specified versions or branches",
+			ArgsUsage: "[pallet_repository_path@version_query]...",
+			Action:    devEnvAddRepoAction,
+		},
+		// TODO: add an upgrade-repo action?
 		// {
 		// 	Name:      "rm-repo",
 		// 	Aliases:   []string{"rm-r", "remove-repositories},

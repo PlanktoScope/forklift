@@ -1,17 +1,6 @@
-// Package forklift provides the core functionality of the forklift tool
 package forklift
 
-// Forklift environment specifications
-
-type EnvSpec struct {
-	Description string `yaml:"description"`
-}
-
-type EnvConfig struct {
-	Environment EnvSpec `yaml:"environment"`
-}
-
-// Pallet repository specifications
+// Repository specifications
 
 type RepoSpec struct {
 	Path        string `yaml:"path"`
@@ -22,7 +11,7 @@ type RepoConfig struct {
 	Repository RepoSpec `yaml:"repository"`
 }
 
-// Pallet package specifications
+// Package specifications
 
 type PkgConfig struct {
 	Package    PkgSpec                   `yaml:"package"`
@@ -89,59 +78,4 @@ type PkgFeatureSpec struct {
 	Description string            `yaml:"description"`
 	Requires    RequiredResources `yaml:"requires"`
 	Provides    ProvidedResources `yaml:"provides"`
-}
-
-// Repository versioning
-
-type VersionedRepo struct {
-	VCSRepoPath string
-	RepoSubdir  string
-	Config      RepoVersionConfig
-}
-
-type RepoVersionConfig struct {
-	Version   string `yaml:"version"`
-	Timestamp string `yaml:"timestamp"`
-	Commit    string `yaml:"commit"`
-}
-
-// Repository caching
-
-type CachedRepo struct {
-	VCSRepoPath string
-	Version     string
-	RepoSubdir  string
-	ConfigPath  string
-	Config      RepoConfig
-}
-
-// Package versioning
-
-type VersionedPkg struct {
-	Path   string
-	Repo   VersionedRepo
-	Cached CachedPkg
-}
-
-// Package caching
-
-type CachedPkg struct {
-	Repo       CachedRepo
-	Path       string
-	PkgSubdir  string
-	ConfigPath string
-	Config     PkgConfig
-}
-
-// Deployments
-
-type DeplConfig struct {
-	Package  string   `yaml:"package"`
-	Features []string `yaml:"features"`
-}
-
-type Depl struct {
-	Name   string
-	Config DeplConfig
-	Pkg    VersionedPkg
 }

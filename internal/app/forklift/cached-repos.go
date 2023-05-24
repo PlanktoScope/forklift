@@ -50,6 +50,8 @@ func CompareCachedRepos(r, s CachedRepo) int {
 	return compareEQ
 }
 
+// splitRepoPathVersion splits paths of form github.com/user-name/git-repo-name@version into
+// github.com/user-name/git-repo-name and version.
 func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err error) {
 	const sep = "/"
 	pathParts := strings.Split(repoPath, sep)
@@ -145,7 +147,7 @@ func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 }
 
 func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo, error) {
-	vcsRepoPath, _, err := splitRepoPathSubdir(repoPath)
+	vcsRepoPath, _, err := SplitRepoPathSubdir(repoPath)
 	if err != nil {
 		return CachedRepo{}, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
 	}

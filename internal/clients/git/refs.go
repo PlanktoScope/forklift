@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const HashReference = plumbing.HashReference
+
 func Remotes(local string) (remotes []*git.Remote, err error) {
 	repo, err := git.PlainOpen(local)
 	if err != nil {
@@ -25,22 +27,11 @@ func Head(local string) (ref *plumbing.Reference, err error) {
 }
 
 func Refs(local string) (refs []*plumbing.Reference, err error) {
-	repo, err := git.PlainOpen(local)
+	repo, err := Open(local)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't open %s as git repo", local)
 	}
-	refsIter, err := repo.References()
-	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't list refs of %s", local)
-	}
-	defer refsIter.Close()
-
-	refs = make([]*plumbing.Reference, 0)
-	err = refsIter.ForEach(func(ref *plumbing.Reference) error {
-		refs = append(refs, ref)
-		return nil
-	})
-	return refs, err
+	return repo.Refs()
 }
 
 func FilterBranches(refs []*plumbing.Reference) []*plumbing.Reference {

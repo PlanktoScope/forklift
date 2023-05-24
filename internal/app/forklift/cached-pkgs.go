@@ -129,7 +129,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 }
 
 func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, error) {
-	vcsRepoPath, _, err := splitRepoPathSubdir(pkgPath)
+	vcsRepoPath, _, err := SplitRepoPathSubdir(pkgPath)
 	if err != nil {
 		return CachedPkg{}, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", pkgPath)
 	}

@@ -38,19 +38,19 @@ func (l RepoVersionConfig) ShortCommit() string {
 }
 
 func (l RepoVersionConfig) IsVersion() bool {
-	return l.Version != "" && l.Timestamp != ""
+	return l.BaseVersion != "" && l.Commit != ""
 }
 
 func (l RepoVersionConfig) ParseVersion() (semver.Version, error) {
-	if !strings.HasPrefix(l.Version, "v") {
+	if !strings.HasPrefix(l.BaseVersion, "v") {
 		return semver.Version{}, errors.Errorf(
-			"invalid repo version `%s` doesn't start with `v`", l.Version,
+			"invalid repo version `%s` doesn't start with `v`", l.BaseVersion,
 		)
 	}
-	version, err := semver.Parse(strings.TrimPrefix(l.Version, "v"))
+	version, err := semver.Parse(strings.TrimPrefix(l.BaseVersion, "v"))
 	if err != nil {
 		return semver.Version{}, errors.Errorf(
-			"repo version `%s` couldn't be parsed as a semantic version", l.Version,
+			"repo version `%s` couldn't be parsed as a semantic version", l.BaseVersion,
 		)
 	}
 	return version, nil
@@ -65,7 +65,7 @@ func (l RepoVersionConfig) Pseudoversion() (string, error) {
 		return "", errors.Errorf("repo version missing commit timestamp")
 	}
 	revisionID := ShortCommit(l.Commit)
-	if l.Version == "" {
+	if l.BaseVersion == "" {
 		return fmt.Sprintf("v0.0.0-%s-%s", l.Timestamp, revisionID), nil
 	}
 	version, err := l.ParseVersion()
@@ -81,23 +81,23 @@ func (l RepoVersionConfig) Pseudoversion() (string, error) {
 	), nil
 }
 
-func (r VersionedRepo) Path() string {
-	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
-}
-
-func (r VersionedRepo) Version() (string, error) {
-	if r.Config.IsVersion() {
-		version, err := r.Config.ParseVersion()
+func (l RepoVersionConfig) Version() (string, error) {
+	if l.IsVersion() {
+		version, err := l.ParseVersion()
 		if err != nil {
 			return "", errors.Wrap(err, "invalid repo version")
 		}
 		return version.String(), nil
 	}
-	pseudoversion, err := r.Config.Pseudoversion()
+	pseudoversion, err := l.Pseudoversion()
 	if err != nil {
 		return "", errors.Wrap(err, "couldn't determine pseudo-version")
 	}
 	return pseudoversion, nil
+}
+
+func (r VersionedRepo) Path() string {
+	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
 }
 
 func CompareVersionedRepos(r, s VersionedRepo) int {
@@ -122,7 +122,9 @@ func VersionedReposFS(envFS fs.FS) (fs.FS, error) {
 	return fs.Sub(envFS, versionedReposDirName)
 }
 
-func splitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
+// SplitRepoPathSubdir splits paths of form github.com/user-name/git-repo-name/pallets-repo-subdir
+// into github.com/user-name/git-repo-name and pallets-repo-subdir.
+func SplitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
 	const sep = "/"
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
@@ -156,7 +158,7 @@ func loadRepoVersionConfig(reposFS fs.FS, filePath string) (RepoVersionConfig, e
 }
 
 func LoadVersionedRepo(reposFS fs.FS, repoPath string) (VersionedRepo, error) {
-	vcsRepoPath, repoSubdir, err := splitRepoPathSubdir(repoPath)
+	vcsRepoPath, repoSubdir, err := SplitRepoPathSubdir(repoPath)
 	if err != nil {
 		return VersionedRepo{}, errors.Wrapf(
 			err, "couldn't parse path of version-locked Pallet repo %s", repoPath,

@@ -68,6 +68,31 @@ func (r *Repo) Checkout(release string) error {
 	return nil
 }
 
+func (r *Repo) Refs() (refs []*plumbing.Reference, err error) {
+	refsIter, err := r.repository.References()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't list refs")
+	}
+	defer refsIter.Close()
+
+	refs = make([]*plumbing.Reference, 0)
+	err = refsIter.ForEach(func(ref *plumbing.Reference) error {
+		refs = append(refs, ref)
+		return nil
+	})
+	return refs, err
+}
+
+func (r *Repo) GetCommitFullHash(commit string) (string, error) {
+	hash, err := r.resolveCommit(commit)
+	if err != nil {
+		return "", errors.Wrapf(
+			err, "couldn't resolve %s to a commit hash in the repo", commit,
+		)
+	}
+	return hash.String(), nil
+}
+
 func (r *Repo) GetCommitTime(commit string) (time.Time, error) {
 	hash, err := r.resolveCommit(commit)
 	if err != nil {
@@ -108,6 +133,13 @@ func ParseRemoteRelease(remoteRelease string) (remote, release string, err error
 	return remote, release, nil
 }
 
+func Open(local string) (*Repo, error) {
+	repo, err := git.PlainOpen(local)
+	return &Repo{
+		repository: repo,
+	}, errors.Wrapf(err, "couldn't pen git repo at %s", local)
+}
+
 func Clone(remote, local string) (*Repo, error) {
 	u, err := url.Parse(remote)
 	if err != nil {
@@ -126,6 +158,25 @@ func Clone(remote, local string) (*Repo, error) {
 	}, errors.Wrapf(err, "couldn't clone git repo %s to %s", remote, local)
 }
 
+func CloneMirrored(remote, local string) (*Repo, error) {
+	u, err := url.Parse(remote)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't parse %s as a url", remote)
+	}
+	if u.Scheme == "" {
+		u.Scheme = "https"
+	}
+	remote = u.String()
+	repo, err := git.PlainClone(local, false, &git.CloneOptions{
+		URL:      remote,
+		Progress: os.Stdout,
+		Mirror:   true,
+	})
+	return &Repo{
+		repository: repo,
+	}, errors.Wrapf(err, "couldn't clone git repo %s to %s as a mirror", remote, local)
+}
+
 func Status(local string) (status git.Status, err error) {
 	repo, err := git.PlainOpen(local)
 	if err != nil {
@@ -136,6 +187,20 @@ func Status(local string) (status git.Status, err error) {
 		return nil, err
 	}
 	return worktree.Status()
+}
+
+func Prune(local string) (updated bool, err error) {
+	repo, err := git.PlainOpen(local)
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't open %s as git repo", local)
+	}
+	if err = repo.Prune(git.PruneOptions{}); err != nil {
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return false, nil
+		}
+		return false, errors.Wrapf(err, "couldn't prune repo")
+	}
+	return true, nil
 }
 
 func Fetch(local string) (updated bool, err error) {

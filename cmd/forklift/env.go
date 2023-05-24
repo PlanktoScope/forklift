@@ -305,7 +305,7 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 		)
 	}
 	vcsRepoPath := repo.VCSRepoPath
-	version, err := repo.Version()
+	version, err := repo.Config.Version()
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't determine version for %s", vcsRepoPath)
 	}
@@ -350,11 +350,10 @@ func downloadRepo(palletsPath string, repo forklift.VersionedRepo) (downloaded b
 
 func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
 	// Check commit time
-	commitTime, err := gitRepo.GetCommitTime(versionedRepo.Config.Commit)
+	commitTimestamp, err := getCommitTimestamp(gitRepo, versionedRepo.Config.Commit)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't check time of commit %s", versionedRepo.Config.ShortCommit())
+		return err
 	}
-	commitTimestamp := forklift.ToTimestamp(commitTime)
 	versionedTimestamp := versionedRepo.Config.Timestamp
 	if commitTimestamp != versionedTimestamp {
 		return errors.Errorf(
@@ -369,6 +368,14 @@ func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) err
 	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
 	// of one of the module repository's branches or tags)
 	return nil
+}
+
+func getCommitTimestamp(gitRepo *git.Repo, hash string) (string, error) {
+	commitTime, err := gitRepo.GetCommitTime(hash)
+	if err != nil {
+		return "", errors.Wrapf(err, "couldn't check time of commit %s", forklift.ShortCommit(hash))
+	}
+	return forklift.ToTimestamp(commitTime), nil
 }
 
 // deploy
@@ -597,7 +604,7 @@ func printRepoInfo(envPath, cachePath, repoPath string) error {
 	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
 	// we don't need error-checking for every subsequent access of the version
-	version, err := versionedRepo.Version()
+	version, err := versionedRepo.Config.Version()
 	if err != nil {
 		return errors.Wrapf(err, "couldn't determine configured version of Pallet repo %s", repoPath)
 	}
@@ -618,7 +625,7 @@ func printRepoInfo(envPath, cachePath, repoPath string) error {
 
 func printVersionedRepo(repo forklift.VersionedRepo) {
 	fmt.Printf("Pallet repository: %s\n", repo.Path())
-	version, _ := repo.Version() // assume that the validity of the version was already checked
+	version, _ := repo.Config.Version() // assume that the validity of the version was already checked
 	fmt.Printf("  Locked version: %s\n", version)
 	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
 }

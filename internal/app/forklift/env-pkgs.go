@@ -12,7 +12,7 @@ func ListVersionedPkgs(cacheFS fs.FS, repos []VersionedRepo) ([]CachedPkg, error
 	versionedPkgPaths := make([]string, 0)
 	pkgMap := make(map[string]CachedPkg)
 	for _, repo := range repos {
-		repoVersion, err := repo.Version()
+		repoVersion, err := repo.Config.Version()
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't determine version of repo %s", repo.Path())
 		}
@@ -73,7 +73,7 @@ func LoadVersionedPkg(reposFS, cacheFS fs.FS, pkgPath string) (VersionedPkg, err
 			err, "couldn't find repo providing package %s in local environment", pkgPath,
 		)
 	}
-	version, err := repo.Version()
+	version, err := repo.Config.Version()
 	if err != nil {
 		return VersionedPkg{}, errors.Wrapf(
 			err, "couldn't determine version of repo %s in local environment", repo.Path(),
