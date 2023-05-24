@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.4 - 2023-05-24
+
 ### Added
 
 - A `dev env add` subcommand to add one or more Pallet repositories to the development environment, and/or to update their configured versions in the development environment
