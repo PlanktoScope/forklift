@@ -271,7 +271,7 @@ func updateLocalRepoMirrors(remoteReleases []string, cachePath string) error {
 func updateLocalRepoMirror(remote, cachedPath string) error {
 	if _, err := os.Stat(cachedPath); err == nil {
 		fmt.Printf("Fetching updates for %s...\n", cachedPath)
-		if _, err = git.Prune(cachedPath); err == nil {
+		if _, err = git.Fetch(cachedPath); err == nil {
 			return err
 		}
 		fmt.Printf(

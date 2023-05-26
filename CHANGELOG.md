@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.5 - 2023-05-26
+
+### Fixed
+
+- Previously, the `dev env add` command did not correctly update the local cache's mirrors of remote Git repositories. Now it should (probably) update them correctly.
+
 ## 0.1.4 - 2023-05-24
 
 ### Added

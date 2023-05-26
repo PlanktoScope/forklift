@@ -276,7 +276,7 @@ func envCacheAction(c *cli.Context) error {
 
 	// TODO: download all Docker images used by packages in the repo - either by inspecting the
 	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Println("Done! Next, you'll probably want to run `forklift env deploy`.")
+	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift env deploy`.")
 	return nil
 }
 

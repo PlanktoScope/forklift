@@ -68,6 +68,16 @@ You can also use the `forklift dev env add-repo` command to add additional Palle
 
 You can also run commands like `forklift dev env cache` and `sudo -E forklift dev env deploy` (with appropriate values in the `--cwd` flag if necessary) to download the Pallet repositories specified by your development environment into your local cache and deploy the packages provided by those repositories according to the configuration in your development environment. This is useful if, for example, you want to make some experimental changes to your development environment and test them on your local machine before committing and pushing those changes onto GitHub.
 
+## Similar projects
+
+The following projects solve related problems with containers, though they make different trade-offs compared to Forklift and Pallets:
+
+- Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Swarms from a Terraform configuration: https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs
+- swarm-pack (an inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages: https://github.com/swarm-pack/swarm-pack
+- SwarmManagement uses a single YAML file for declarative configuration of an entire Docker Swarm: https://github.com/hansehe/SwarmManagement
+- Podman Quadlets enable management of containers, volumes, and networks using declarative systemd units: https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html
+- Projects developing GitOps tools such as ArgoCD, Flux, etc., store container environment configurations as Git repositories but are generally designed for Kubernetes: https://www.gitops.tech/
+
 ## Licensing
 
 Except where otherwise indicated, source code provided here is covered by the following information:
