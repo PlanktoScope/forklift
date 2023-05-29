@@ -6,7 +6,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bmatcuk/doublestar/v4 v4.6.0
 	github.com/docker/cli v24.0.1+incompatible
-	github.com/docker/docker v24.0.1+incompatible
+	github.com/docker/docker v24.0.2+incompatible
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.25.3
