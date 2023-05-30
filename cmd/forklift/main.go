@@ -97,10 +97,11 @@ var envCmd = &cli.Command{
 			Action: envCacheAction,
 		},
 		{
-			Name:    "deploy",
-			Aliases: []string{"d"},
-			Usage:   "Updates the Docker Swarm to match the deployments specified by the local environment",
-			Action:  envDeployAction,
+			Name:    "apply",
+			Aliases: []string{"a"},
+			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
+				"local environment",
+			Action: envApplyAction,
 		},
 		{
 			Name:    "ls-repo",
@@ -301,11 +302,11 @@ var devEnvCmd = &cli.Command{
 			Action: devEnvCacheAction,
 		},
 		{
-			Name:    "deploy",
-			Aliases: []string{"d"},
+			Name:    "apply",
+			Aliases: []string{"a"},
 			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
 				"development environment",
-			Action: devEnvDeployAction,
+			Action: devEnvApplyAction,
 		},
 		{
 			Name:    "ls-repo",

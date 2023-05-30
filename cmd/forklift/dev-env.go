@@ -56,7 +56,7 @@ func devEnvCacheAction(c *cli.Context) error {
 
 // deploy
 
-func devEnvDeployAction(c *cli.Context) error {
+func devEnvApplyAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
@@ -67,7 +67,7 @@ func devEnvDeployAction(c *cli.Context) error {
 		return nil
 	}
 
-	if err := deployEnv(envPath, workspace.CachePath(wpath)); err != nil {
+	if err := applyEnv(envPath, workspace.CachePath(wpath)); err != nil {
 		return err
 	}
 	fmt.Println("Done!")

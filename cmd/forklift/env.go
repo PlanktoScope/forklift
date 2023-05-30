@@ -380,7 +380,7 @@ func getCommitTimestamp(gitRepo *git.Repo, hash string) (string, error) {
 
 // deploy
 
-func envDeployAction(c *cli.Context) error {
+func envApplyAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
@@ -391,7 +391,7 @@ func envDeployAction(c *cli.Context) error {
 		return nil
 	}
 
-	if err := deployEnv(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+	if err := applyEnv(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
@@ -400,7 +400,7 @@ func envDeployAction(c *cli.Context) error {
 	return nil
 }
 
-func deployEnv(envPath, cachePath string) error {
+func applyEnv(envPath, cachePath string) error {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
 	if err != nil {
