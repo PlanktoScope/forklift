@@ -92,9 +92,10 @@ var envCmd = &cli.Command{
 			Action:  envShowAction,
 		},
 		{
-			Name:   "cache",
-			Usage:  "Updates the cache with the repositories available in the local environment",
-			Action: envCacheAction,
+			Name:    "cache-repo",
+			Aliases: []string{"c-r", "cache-repositories"},
+			Usage:   "Updates the cache with the repositories available in the local environment",
+			Action:  envCacheRepoAction,
 		},
 		{
 			Name:    "apply",
@@ -310,9 +311,10 @@ var devEnvCmd = &cli.Command{
 			Action:  devEnvShowAction,
 		},
 		{
-			Name:   "cache",
-			Usage:  "Updates the cache with the repositories available in the development environment",
-			Action: devEnvCacheAction,
+			Name:    "cache-repo",
+			Aliases: []string{"c-r", "cache-repositories"},
+			Usage:   "Updates the cache with the repositories available in the development environment",
+			Action:  devEnvCacheRepoAction,
 		},
 		{
 			Name:    "apply",

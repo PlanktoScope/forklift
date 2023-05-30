@@ -76,7 +76,7 @@ func envCloneAction(c *cli.Context) error {
 			err, "couldn't check out release %s at %s", release, local,
 		)
 	}
-	fmt.Println("Done! Next, you'll probably want to run `forklift env cache`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift env cache-repo`.")
 	return nil
 }
 
@@ -258,7 +258,7 @@ func printUncommittedChanges(envPath string) error {
 
 // cache
 
-func envCacheAction(c *cli.Context) error {
+func envCacheRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		return errMissingEnv

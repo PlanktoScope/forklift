@@ -27,7 +27,7 @@ func devEnvShowAction(c *cli.Context) error {
 
 // cache
 
-func devEnvCacheAction(c *cli.Context) error {
+func devEnvCacheRepoAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
