@@ -234,6 +234,19 @@ var cacheCmd = &cli.Command{
 			Action:    cacheShowPkgAction,
 		},
 		{
+			Name:    "ls-img",
+			Aliases: []string{"ls-i", "list-images"},
+			Usage:   "Lists Docker container images in the local cache",
+			Action:  cacheLsImgAction,
+		},
+		{
+			Name:      "show-img",
+			Aliases:   []string{"s-i", "show-image"},
+			Usage:     "Describes a cached Docker container image",
+			ArgsUsage: "image_sha",
+			Action:    cacheShowImgAction,
+		},
+		{
 			Name:    "rm",
 			Aliases: []string{"remove"},
 			Usage:   "Removes the local cache",

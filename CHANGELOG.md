@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `cache ls-img` and `cache show-img` commands to show information about the Docker container images available in the Docker environment.
+
 ### Changed
 
 - (Breaking change) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used HashiCorp Terraform.
