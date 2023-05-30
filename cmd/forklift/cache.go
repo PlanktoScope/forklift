@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	units "github.com/docker/go-units"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
@@ -253,8 +254,7 @@ func printImg(img docker.Image) {
 	}
 
 	fmt.Printf("  Created: %s\n", img.Inspect.Created)
-	const mbConversion = 1024 * 1024
-	fmt.Printf("  Size: %.1f MiB\n", float32(img.Inspect.Size)/mbConversion)
+	fmt.Printf("  Size: %s\n", units.HumanSize(float64(img.Inspect.Size)))
 }
 
 // rm
@@ -262,5 +262,30 @@ func printImg(img docker.Image) {
 func cacheRmAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	fmt.Printf("Removing cache from workspace %s...\n", wpath)
-	return errors.Wrap(workspace.RemoveCache(wpath), "couldn't remove cache")
+	if err := workspace.RemoveCache(wpath); err != nil {
+		return errors.Wrap(err, "couldn't remove forklift cache of repositories")
+	}
+
+	fmt.Println("Removing unused Docker container images...")
+	client, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	report, err := client.PruneUnusedImages(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "couldn't prune unused Docker container images")
+	}
+	sort.Slice(report.ImagesDeleted, func(i, j int) bool {
+		return docker.CompareDeletedImages(report.ImagesDeleted[i], report.ImagesDeleted[j]) < 0
+	})
+	for _, deleted := range report.ImagesDeleted {
+		if deleted.Untagged != "" {
+			fmt.Printf("Untagged %s\n", deleted.Untagged)
+		}
+		if deleted.Deleted != "" {
+			fmt.Printf("Deleted %s\n", deleted.Deleted)
+		}
+	}
+	fmt.Printf("Total reclaimed space: %s\n", units.HumanSize(float64(report.SpaceReclaimed)))
+	return nil
 }

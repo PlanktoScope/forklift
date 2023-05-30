@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `cache ls-img` and `cache show-img` commands to show information about the Docker container images available in the Docker environment.
+- `cache ls-img` and `cache show-img` commands are now provided to show information about the Docker container images available in the Docker environment.
+- `cache rm` now also removes all unused Docker container images which had been locally downloaded.
 
 ### Changed
 

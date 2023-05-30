@@ -48,8 +48,8 @@ func devEnvCacheAction(c *cli.Context) error {
 	// Docker stack definitions or by allowing packages to list Docker images used.
 	fmt.Println(
 		// TODO: add a command to check if resource constraints are all satisfied
-		// "Done! Next, you might want to run `forklift dev env check` or `forklift dev env deploy`.",
-		"Done! Next, you might want to run `forklift dev env deploy`.",
+		// "Done! Next, you might want to run `forklift dev env check` or `forklift dev env apply`.",
+		"Done! Next, you might want to run `forklift dev env apply`.",
 	)
 	return nil
 }

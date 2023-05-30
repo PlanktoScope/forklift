@@ -8,6 +8,7 @@ import (
 
 	"github.com/docker/cli/cli/command/inspect"
 	dt "github.com/docker/docker/api/types"
+	dtf "github.com/docker/docker/api/types/filters"
 	"github.com/pkg/errors"
 )
 
@@ -76,4 +77,27 @@ func (c *Client) InspectImage(ctx context.Context, imageHash string) (Image, err
 		}
 	}
 	return image, nil
+}
+
+func (c *Client) PruneUnusedImages(ctx context.Context) (dt.ImagesPruneReport, error) {
+	return c.Client.ImagesPrune(ctx, dtf.Args{})
+}
+
+func CompareDeletedImages(i, j dt.ImageDeleteResponseItem) int {
+	switch {
+	default:
+		return 0
+	case i.Untagged != "" && j.Untagged == "":
+		return -1
+	case i.Untagged == "" && j.Untagged != "":
+		return 1
+	case i.Untagged < j.Untagged:
+		return -1
+	case i.Untagged > j.Untagged:
+		return 1
+	case i.Deleted < j.Deleted:
+		return -1
+	case i.Deleted > j.Deleted:
+		return 1
+	}
 }

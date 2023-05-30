@@ -249,7 +249,7 @@ var cacheCmd = &cli.Command{
 		{
 			Name:    "rm",
 			Aliases: []string{"remove"},
-			Usage:   "Removes the local cache",
+			Usage:   "Removes the locally-cached repositories and Docker container images",
 			Action:  cacheRmAction,
 		},
 	},
