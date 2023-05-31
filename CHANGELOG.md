@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `env cache-img` and `dev env cache-img` commands are now provided to download all Docker container images ahead-of-time before applying the specified environment.
 - `cache ls-img` and `cache show-img` commands are now provided to show information about the Docker container images available in the Docker environment.
 - `cache rm` now also removes all unused Docker container images which had been locally downloaded.
 

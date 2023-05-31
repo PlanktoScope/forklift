@@ -98,6 +98,12 @@ var envCmd = &cli.Command{
 			Action:  envCacheRepoAction,
 		},
 		{
+			Name:    "cache-img",
+			Aliases: []string{"c-i", "cache-images"},
+			Usage:   "Pre-downloads the Docker container images required by the local environment",
+			Action:  envCacheImgAction,
+		},
+		{
 			Name:    "apply",
 			Aliases: []string{"a"},
 			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
@@ -315,6 +321,12 @@ var devEnvCmd = &cli.Command{
 			Aliases: []string{"c-r", "cache-repositories"},
 			Usage:   "Updates the cache with the repositories available in the development environment",
 			Action:  devEnvCacheRepoAction,
+		},
+		{
+			Name:    "cache-img",
+			Aliases: []string{"c-i", "cache-images"},
+			Usage:   "Pre-downloads the Docker container images required by the development environment",
+			Action:  devEnvCacheImgAction,
 		},
 		{
 			Name:    "apply",
