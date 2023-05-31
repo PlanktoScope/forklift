@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.6 - 2023-05-31
+
 ### Added
 
 - `env cache-img` and `dev env cache-img` commands are now provided to download all Docker container images ahead-of-time before applying the specified environment.
