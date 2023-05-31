@@ -1,6 +1,6 @@
 module github.com/PlanktoScope/forklift/tools
 
-go 1.19
+go 1.20
 
 require (
 	github.com/golangci/golangci-lint v1.52.2

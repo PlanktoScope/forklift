@@ -23,6 +23,11 @@ var errMissingEnv = errors.Errorf(
 	"you first need to set up a local environment with `forklift env clone`",
 )
 
+var errMissingCache = errors.Errorf(
+	"you first need to cache the repos specified by your environment with " +
+		"`forklift env cache-repo` or `forklift dev env cache-repo`",
+)
+
 // clone
 
 func envCloneAction(c *cli.Context) error {
@@ -76,7 +81,7 @@ func envCloneAction(c *cli.Context) error {
 			err, "couldn't check out release %s at %s", release, local,
 		)
 	}
-	fmt.Println("Done! Next, you'll probably want to run `forklift env cache`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift env cache-repo`.")
 	return nil
 }
 
@@ -256,15 +261,15 @@ func printUncommittedChanges(envPath string) error {
 	return nil
 }
 
-// cache
+// cache-repo
 
-func envCacheAction(c *cli.Context) error {
+func envCacheRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		return errMissingEnv
 	}
 
-	fmt.Printf("Downloading Pallet repositories specified by the local environment...\n")
+	fmt.Println("Downloading Pallet repositories specified by the local environment...")
 	changed, err := downloadRepos(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
 	if err != nil {
 		return err
@@ -273,10 +278,7 @@ func envCacheAction(c *cli.Context) error {
 		fmt.Println("Done! No further actions are needed at this time.")
 		return nil
 	}
-
-	// TODO: download all Docker images used by packages in the repo - either by inspecting the
-	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift env deploy`.")
+	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift env apply`.")
 	return nil
 }
 
@@ -378,29 +380,106 @@ func getCommitTimestamp(gitRepo *git.Repo, hash string) (string, error) {
 	return forklift.ToTimestamp(commitTime), nil
 }
 
-// deploy
+// cache-img
 
-func envDeployAction(c *cli.Context) error {
+func envCacheImgAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		return errMissingEnv
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
+
+	fmt.Println("Downloading Docker container images specified by the local environment...")
+	if err := downloadImages(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift env apply`.")
+	return nil
+}
+
+func downloadImages(envPath, cachePath string) error {
+	orderedImages, err := listRequiredImages(envPath, cachePath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't determine images required by package deployments")
+	}
+
+	dc, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	for _, image := range orderedImages {
+		fmt.Println()
+		fmt.Printf("Downloading %s...\n", image)
+		pulled, err := dc.PullImage(context.Background(), image, docker.NewOutStream(os.Stdout))
+		if err != nil {
+			return errors.Wrapf(err, "couldn't download %s", image)
+		}
+		fmt.Printf("Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
+	}
+	return nil
+}
+
+func listRequiredImages(envPath, cachePath string) ([]string, error) {
+	cacheFS := os.DirFS(cachePath)
+	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+		)
+	}
+	orderedImages := make([]string, 0, len(depls))
+	images := make(map[string]struct{})
+	for _, depl := range depls {
+		fmt.Printf("Checking Docker container images used by package deployment %s...\n", depl.Name)
+		if depl.Pkg.Cached.Config.Deployment.DefinitionFile == "" {
+			continue
+		}
+		definitionFilePath := filepath.Join(
+			depl.Pkg.Cached.ConfigPath, depl.Pkg.Cached.Config.Deployment.DefinitionFile,
+		)
+		stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't load Docker stack definition from %s", definitionFilePath,
+			)
+		}
+		for _, service := range stackConfig.Services {
+			fmt.Printf("  %s: %s\n", service.Name, service.Image)
+			if _, ok := images[service.Image]; !ok {
+				images[service.Image] = struct{}{}
+				orderedImages = append(orderedImages, service.Image)
+			}
+		}
+	}
+	return orderedImages, nil
+}
+
+// apply
+
+func envApplyAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
+		return errMissingCache
 	}
 
-	if err := deployEnv(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+	if err := applyEnv(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
 	}
+	fmt.Println()
 	fmt.Println("Done!")
 	return nil
 }
 
-func deployEnv(envPath, cachePath string) error {
+func applyEnv(envPath, cachePath string) error {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
 	if err != nil {
@@ -426,8 +505,6 @@ func deployEnv(envPath, cachePath string) error {
 		fmt.Printf("Will %s %s\n", strings.ToLower(change.Type), change.Name)
 	}
 
-	fmt.Println()
-	fmt.Println("Applying package deployment changes...")
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker swarm client")
 	}
@@ -503,28 +580,27 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 func applyReconciliationChange(
 	cacheFS fs.FS, change reconciliationChange, dc *docker.Client,
 ) error {
+	fmt.Println()
 	switch change.Type {
 	default:
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
-		fmt.Printf("Adding %s...\n", change.Name)
+		fmt.Printf("Adding package deployment %s...\n", change.Name)
 		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
-		fmt.Println("  Done!")
 		return nil
 	case removeReconciliationChange:
-		fmt.Printf("Removing %s...\n", change.Name)
+		fmt.Printf("Removing package deployment %s...\n", change.Name)
 		if err := dc.RemoveStacks(context.Background(), []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
 	case updateReconciliationChange:
-		fmt.Printf("Updating %s...\n", change.Name)
+		fmt.Printf("Updating package deployment %s...\n", change.Name)
 		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
-		fmt.Println("  Done!")
 		return nil
 	}
 }
@@ -544,7 +620,9 @@ func deployStack(
 			err, "couldn't load Docker stack definition from %s", definitionFilePath,
 		)
 	}
-	if err = dc.DeployStack(context.Background(), name, stackConfig); err != nil {
+	if err = dc.DeployStack(
+		context.Background(), name, stackConfig, docker.NewOutStream(os.Stdout),
+	); err != nil {
 		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
 	}
 	return nil
@@ -583,6 +661,9 @@ func envShowRepoAction(c *cli.Context) error {
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
 		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
 	}
 
 	repoPath := c.Args().First()
@@ -639,8 +720,7 @@ func envLsPkgAction(c *cli.Context) error {
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	return printEnvPkgs(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
@@ -673,8 +753,7 @@ func envShowPkgAction(c *cli.Context) error {
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	pkgPath := c.Args().First()
@@ -721,6 +800,9 @@ func envLsDeplAction(c *cli.Context) error {
 		fmt.Println("The local environment is empty.")
 		return nil
 	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
 	return printEnvDepls(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
 }
 
@@ -746,8 +828,7 @@ func envShowDeplAction(c *cli.Context) error {
 		return nil
 	}
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	deplName := c.Args().First()

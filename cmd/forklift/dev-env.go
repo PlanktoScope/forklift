@@ -25,9 +25,9 @@ func devEnvShowAction(c *cli.Context) error {
 	return printEnvInfo(envPath)
 }
 
-// cache
+// cache-repo
 
-func devEnvCacheAction(c *cli.Context) error {
+func devEnvCacheRepoAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
@@ -47,29 +47,50 @@ func devEnvCacheAction(c *cli.Context) error {
 	// TODO: download all Docker images used by packages in the repo - either by inspecting the
 	// Docker stack definitions or by allowing packages to list Docker images used.
 	fmt.Println(
-		// TODO: add a command to check if resource constraints are all satisfied
-		// "Done! Next, you might want to run `forklift dev env check` or `forklift dev env deploy`.",
-		"Done! Next, you might want to run `forklift dev env deploy`.",
+		// TODO: add a command to check if resource constraints are all satisfied, and show the command
+		// to run for that (`forklift dev env check`)
+		"Done! Next, you might want to run `sudo -E forklift dev env apply`.",
 	)
 	return nil
 }
 
-// deploy
+// cache-img
 
-func devEnvDeployAction(c *cli.Context) error {
+func devEnvCacheImgAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
-		return nil
+		return errMissingCache
 	}
 
-	if err := deployEnv(envPath, workspace.CachePath(wpath)); err != nil {
+	fmt.Println("Downloading Docker container images specified by the development environment...")
+	if err := downloadImages(envPath, workspace.CachePath(wpath)); err != nil {
 		return err
 	}
+	fmt.Println()
+	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift dev env apply`.")
+	return nil
+}
+
+// apply
+
+func devEnvApplyAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
+
+	if err := applyEnv(envPath, workspace.CachePath(wpath)); err != nil {
+		return err
+	}
+	fmt.Println()
 	fmt.Println("Done!")
 	return nil
 }
@@ -94,8 +115,7 @@ func devEnvShowRepoAction(c *cli.Context) error {
 	}
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	repoPath := c.Args().First()
@@ -111,8 +131,7 @@ func devEnvLsPkgAction(c *cli.Context) error {
 	}
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	return printEnvPkgs(envPath, workspace.CachePath(wpath))
@@ -127,8 +146,7 @@ func devEnvShowPkgAction(c *cli.Context) error {
 	}
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	pkgPath := c.Args().First()
@@ -144,8 +162,7 @@ func devEnvLsDeplAction(c *cli.Context) error {
 	}
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	return printEnvDepls(envPath, workspace.CachePath(wpath))
@@ -160,8 +177,7 @@ func devEnvShowDeplAction(c *cli.Context) error {
 	}
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty, please run `forklift dev env cache` first")
-		return nil
+		return errMissingCache
 	}
 
 	deplName := c.Args().First()

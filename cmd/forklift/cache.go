@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 
+	units "github.com/docker/go-units"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
+	"github.com/PlanktoScope/forklift/internal/clients/docker"
 )
 
 // ls-repo
@@ -184,10 +187,105 @@ func cacheShowPkgAction(c *cli.Context) error {
 	return nil
 }
 
+// ls-img
+
+func cacheLsImgAction(c *cli.Context) error {
+	client, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+
+	imgs, err := client.ListImages(context.Background())
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list local Docker images")
+	}
+	sort.Slice(imgs, func(i, j int) bool {
+		return imgs[i].Repository < imgs[j].Repository
+	})
+	for _, img := range imgs {
+		fmt.Printf("%s: %s\n", img.ID, img.Repository)
+	}
+	return nil
+}
+
+// show-img
+
+func cacheShowImgAction(c *cli.Context) error {
+	client, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+
+	imageHash := c.Args().First()
+	image, err := client.InspectImage(context.Background(), imageHash)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't inspect image %s", imageHash)
+	}
+	printImg(image)
+	return nil
+}
+
+func printImg(img docker.Image) {
+	fmt.Printf("Docker container image: %s\n", img.ID)
+	fmt.Print("  Provided by container image repository: ")
+	if img.Repository == "" {
+		fmt.Print("(none)")
+	} else {
+		fmt.Print(img.Repository)
+	}
+	fmt.Println()
+
+	fmt.Print("    Repo tags:")
+	if len(img.Inspect.RepoTags) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, tag := range img.Inspect.RepoTags {
+		fmt.Printf("      %s\n", tag)
+	}
+
+	fmt.Print("    Repo digests:")
+	if len(img.Inspect.RepoDigests) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, digest := range img.Inspect.RepoDigests {
+		fmt.Printf("      %s\n", digest)
+	}
+
+	fmt.Printf("  Created: %s\n", img.Inspect.Created)
+	fmt.Printf("  Size: %s\n", units.HumanSize(float64(img.Inspect.Size)))
+}
+
 // rm
 
 func cacheRmAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	fmt.Printf("Removing cache from workspace %s...\n", wpath)
-	return errors.Wrap(workspace.RemoveCache(wpath), "couldn't remove cache")
+	if err := workspace.RemoveCache(wpath); err != nil {
+		return errors.Wrap(err, "couldn't remove forklift cache of repositories")
+	}
+
+	fmt.Println("Removing unused Docker container images...")
+	client, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	report, err := client.PruneUnusedImages(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "couldn't prune unused Docker container images")
+	}
+	sort.Slice(report.ImagesDeleted, func(i, j int) bool {
+		return docker.CompareDeletedImages(report.ImagesDeleted[i], report.ImagesDeleted[j]) < 0
+	})
+	for _, deleted := range report.ImagesDeleted {
+		if deleted.Untagged != "" {
+			fmt.Printf("Untagged %s\n", deleted.Untagged)
+		}
+		if deleted.Deleted != "" {
+			fmt.Printf("Deleted %s\n", deleted.Deleted)
+		}
+	}
+	fmt.Printf("Total reclaimed space: %s\n", units.HumanSize(float64(report.SpaceReclaimed)))
+	return nil
 }

@@ -20,7 +20,7 @@ var app = &cli.App{
 	Name: "forklift",
 	// TODO: see if there's a way to get the version from a build tag, so that we don't have to update
 	// this manually
-	Version: "v0.1.5",
+	Version: "v0.1.6",
 	Usage:   "Manages Pallet repositories and package deployments",
 	Commands: []*cli.Command{
 		envCmd,
@@ -49,6 +49,7 @@ var envCmd = &cli.Command{
 	Subcommands: []*cli.Command{
 		{
 			Name:      "clone",
+			Category:  "Modify the environment",
 			Usage:     "Initializes the local environment from a remote release",
 			ArgsUsage: "[github_repository_path@release]",
 			Flags: []cli.Flag{
@@ -61,17 +62,20 @@ var envCmd = &cli.Command{
 			Action: envCloneAction,
 		},
 		{
-			Name:   "fetch",
-			Usage:  "Updates information about the remote release",
-			Action: envFetchAction,
+			Name:     "fetch",
+			Category: "Modify the environment",
+			Usage:    "Updates information about the remote release",
+			Action:   envFetchAction,
 		},
 		{
-			Name:   "pull",
-			Usage:  "Fast-forwards the local environment to match the remote release",
-			Action: envPullAction,
+			Name:     "pull",
+			Category: "Modify the environment",
+			Usage:    "Fast-forwards the local environment to match the remote release",
+			Action:   envPullAction,
 		},
 		// {
 		// 	Name:  "push",
+		// 	Category:  "Modify the environment",
 		// 	Usage: "Updates the remote release from the local environment",
 		// 	Action: func(c *cli.Context) error {
 		// 		fmt.Println("pushing to remote origin")
@@ -79,64 +83,83 @@ var envCmd = &cli.Command{
 		// 	},
 		// },
 		{
-			Name:    "rm",
-			Aliases: []string{"remove"},
-			Usage:   "Removes the local environment",
-			Action:  envRmAction,
+			Name:     "rm",
+			Aliases:  []string{"remove"},
+			Category: "Modify the environment",
+			Usage:    "Removes the local environment",
+			Action:   envRmAction,
 		},
 		// envRemoteCmd,
 		{
-			Name:    "show",
-			Aliases: []string{"s"},
-			Usage:   "Describes the local environment",
-			Action:  envShowAction,
+			Name:     "cache-repo",
+			Aliases:  []string{"c-r", "cache-repositories"},
+			Category: "Use the environment",
+			Usage:    "Updates the cache with the repositories available in the local environment",
+			Action:   envCacheRepoAction,
 		},
 		{
-			Name:   "cache",
-			Usage:  "Updates the cache with the repositories available in the local environment",
-			Action: envCacheAction,
+			Name:     "cache-img",
+			Aliases:  []string{"c-i", "cache-images"},
+			Category: "Use the environment",
+			Usage:    "Pre-downloads the Docker container images required by the local environment",
+			Action:   envCacheImgAction,
 		},
 		{
-			Name:    "deploy",
-			Aliases: []string{"d"},
-			Usage:   "Updates the Docker Swarm to match the deployments specified by the local environment",
-			Action:  envDeployAction,
+			Name:     "apply",
+			Aliases:  []string{"a"},
+			Category: "Use the environment",
+			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
+				"local environment",
+			Action: envApplyAction,
 		},
 		{
-			Name:    "ls-repo",
-			Aliases: []string{"ls-r", "list-repositories"},
-			Usage:   "Lists repositories available in the local environment",
-			Action:  envLsRepoAction,
+			Name:     "show",
+			Aliases:  []string{"s"},
+			Category: "Query the environment",
+			Usage:    "Describes the local environment",
+			Action:   envShowAction,
+		},
+		{
+			Name:     "ls-repo",
+			Aliases:  []string{"ls-r", "list-repositories"},
+			Category: "Query the environment",
+			Usage:    "Lists repositories available in the local environment",
+			Action:   envLsRepoAction,
 		},
 		{
 			Name:      "show-repo",
 			Aliases:   []string{"s-r", "show-repository"},
+			Category:  "Query the environment",
 			Usage:     "Describes a repository available in the local environment",
 			ArgsUsage: "repository_path",
 			Action:    envShowRepoAction,
 		},
 		{
-			Name:    "ls-pkg",
-			Aliases: []string{"ls-p", "list-packages"},
-			Usage:   "Lists packages available in the local environment",
-			Action:  envLsPkgAction,
+			Name:     "ls-pkg",
+			Aliases:  []string{"ls-p", "list-packages"},
+			Category: "Query the environment",
+			Usage:    "Lists packages available in the local environment",
+			Action:   envLsPkgAction,
 		},
 		{
 			Name:      "show-pkg",
 			Aliases:   []string{"s-p", "show-package"},
+			Category:  "Query the environment",
 			Usage:     "Describes a package available in the local environment",
 			ArgsUsage: "package_path",
 			Action:    envShowPkgAction,
 		},
 		{
-			Name:    "ls-depl",
-			Aliases: []string{"ls-d", "list-deployments"},
-			Usage:   "Lists package deployments specified by the local environment",
-			Action:  envLsDeplAction,
+			Name:     "ls-depl",
+			Aliases:  []string{"ls-d", "list-deployments"},
+			Category: "Query the environment",
+			Usage:    "Lists package deployments specified by the local environment",
+			Action:   envLsDeplAction,
 		},
 		{
 			Name:      "show-depl",
 			Aliases:   []string{"s-d", "show-deployment"},
+			Category:  "Query the environment",
 			Usage:     "Describes a package deployment specified by the local environment",
 			ArgsUsage: "package_path",
 			Action:    envShowDeplAction,
@@ -144,6 +167,7 @@ var envCmd = &cli.Command{
 		// {
 		// 	Name:      "add-repo",
 		// 	Aliases:   []string{"add-r", "add-repositories"},
+		// 	Category:  "Modify the environment",
 		// 	Usage:     "Adds repositories to the environment, tracking specified versions or branches",
 		// 	ArgsUsage: "[pallet_repository_path@version_query]...",
 		// 	Action: func(c *cli.Context) error {
@@ -156,6 +180,7 @@ var envCmd = &cli.Command{
 		// {
 		// 	Name:      "rm-repo",
 		// 	Aliases:   []string{"rm-r", "remove-repositories"},
+		// 	Category:  "Modify the environment",
 		// 	Usage:     "Removes a repository from the environment",
 		// 	ArgsUsage: "repository_path",
 		// 	Action: func(c *cli.Context) error {
@@ -166,6 +191,7 @@ var envCmd = &cli.Command{
 		// {
 		// 	Name:  "add-depl",
 		// 	Aliases:   []string{"add-d", "add-deployments"},
+		// 	Category:  "Modify the environment",
 		// 	Usage: "Adds a package deployment to the environment",
 		// 	Action: func(c *cli.Context) error {
 		// 		fmt.Println("adding package deployment", c.Args().First())
@@ -175,6 +201,7 @@ var envCmd = &cli.Command{
 		// {
 		// 	Name:      "rm-depl",
 		// 	Aliases:   []string{"rm-d", "remove-deployments"},
+		// 	Category:  "Modify the environment",
 		// 	Usage:     "Removes a package deployment from the environment",
 		// 	ArgsUsage: "package_path",
 		// 	Action: func(c *cli.Context) error {
@@ -207,36 +234,56 @@ var cacheCmd = &cli.Command{
 	Usage: "Manages the local cache of Pallet repositories and packages",
 	Subcommands: []*cli.Command{
 		{
-			Name:    "ls-repo",
-			Aliases: []string{"ls-r", "list-repositories"},
-			Usage:   "Lists cached repositories",
-			Action:  cacheLsRepoAction,
+			Name:     "ls-repo",
+			Aliases:  []string{"ls-r", "list-repositories"},
+			Category: "Query the cache",
+			Usage:    "Lists cached repositories",
+			Action:   cacheLsRepoAction,
 		},
 		{
 			Name:      "show-repo",
 			Aliases:   []string{"s-r", "show-repository"},
+			Category:  "Query the cache",
 			Usage:     "Describes a cached repository",
 			ArgsUsage: "repository_path@version",
 			Action:    cacheShowRepoAction,
 		},
 		{
-			Name:    "ls-pkg",
-			Aliases: []string{"ls-p", "list-packages"},
-			Usage:   "Lists packages offered by cached repositories",
-			Action:  cacheLsPkgAction,
+			Name:     "ls-pkg",
+			Aliases:  []string{"ls-p", "list-packages"},
+			Category: "Query the cache",
+			Usage:    "Lists packages offered by cached repositories",
+			Action:   cacheLsPkgAction,
 		},
 		{
 			Name:      "show-pkg",
 			Aliases:   []string{"s-p", "show-package"},
+			Category:  "Query the cache",
 			Usage:     "Describes a cached package",
 			ArgsUsage: "package_path@version",
 			Action:    cacheShowPkgAction,
 		},
 		{
-			Name:    "rm",
-			Aliases: []string{"remove"},
-			Usage:   "Removes the local cache",
-			Action:  cacheRmAction,
+			Name:     "ls-img",
+			Aliases:  []string{"ls-i", "list-images"},
+			Category: "Query the cache",
+			Usage:    "Lists Docker container images in the local cache",
+			Action:   cacheLsImgAction,
+		},
+		{
+			Name:      "show-img",
+			Aliases:   []string{"s-i", "show-image"},
+			Category:  "Query the cache",
+			Usage:     "Describes a cached Docker container image",
+			ArgsUsage: "image_sha",
+			Action:    cacheShowImgAction,
+		},
+		{
+			Name:     "rm",
+			Aliases:  []string{"remove"},
+			Category: "Modify the cache",
+			Usage:    "Removes the locally-cached repositories and Docker container images",
+			Action:   cacheRmAction,
 		},
 	},
 }
@@ -246,19 +293,21 @@ var cacheCmd = &cli.Command{
 var deplCmd = &cli.Command{
 	Name:    "depl",
 	Aliases: []string{"d", "deployments"},
-	Usage:   "Manages Pallet package deployments in the local environment",
+	Usage:   "Manages active Pallet package deployments in the local environment",
 	Subcommands: []*cli.Command{
 		{
-			Name:    "ls-stack",
-			Aliases: []string{"ls-s", "list-stacks"},
-			Usage:   "Lists running Docker stacks",
-			Action:  deplLsStackAction,
+			Name:     "ls-stack",
+			Category: "Query the active deployment",
+			Aliases:  []string{"ls-s", "list-stacks"},
+			Usage:    "Lists running Docker stacks",
+			Action:   deplLsStackAction,
 		},
 		{
-			Name:    "rm",
-			Aliases: []string{"remove"},
-			Usage:   "Removes all Docker stacks",
-			Action:  deplRmAction,
+			Name:     "rm",
+			Category: "Modify the active deployment",
+			Aliases:  []string{"remove"},
+			Usage:    "Removes all Docker stacks",
+			Action:   deplRmAction,
 		},
 	},
 }
@@ -290,45 +339,60 @@ var devEnvCmd = &cli.Command{
 	Usage:   "Facilitates development and maintenance of a Forklift environment",
 	Subcommands: []*cli.Command{
 		{
-			Name:    "show",
-			Aliases: []string{"s"},
-			Usage:   "Describes the development environment",
-			Action:  devEnvShowAction,
+			Name:     "cache-repo",
+			Aliases:  []string{"c-r", "cache-repositories"},
+			Category: "Use the environment",
+			Usage:    "Updates the cache with the repositories available in the development environment",
+			Action:   devEnvCacheRepoAction,
 		},
 		{
-			Name:   "cache",
-			Usage:  "Updates the cache with the repositories available in the development environment",
-			Action: devEnvCacheAction,
+			Name:     "cache-img",
+			Aliases:  []string{"c-i", "cache-images"},
+			Category: "Use the environment",
+			Usage:    "Pre-downloads the Docker container images required by the development environment",
+			Action:   devEnvCacheImgAction,
 		},
 		{
-			Name:    "deploy",
-			Aliases: []string{"d"},
+			Name:     "apply",
+			Aliases:  []string{"a"},
+			Category: "Use the environment",
 			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
 				"development environment",
-			Action: devEnvDeployAction,
+			Action: devEnvApplyAction,
 		},
 		{
-			Name:    "ls-repo",
-			Aliases: []string{"ls-r", "list-repositories"},
-			Usage:   "Lists repositories specified by the environment",
-			Action:  devEnvLsRepoAction,
+			Name:     "show",
+			Aliases:  []string{"s"},
+			Category: "Query the environment",
+			Usage:    "Describes the development environment",
+			Action:   devEnvShowAction,
+		},
+		{
+			Name:     "ls-repo",
+			Aliases:  []string{"ls-r", "list-repositories"},
+			Category: "Query the environment",
+			Usage:    "Lists repositories specified by the environment",
+			Action:   devEnvLsRepoAction,
 		},
 		{
 			Name:      "show-repo",
 			Aliases:   []string{"s-r", "show-repository"},
+			Category:  "Query the environment",
 			Usage:     "Describes a repository available in the development environment",
 			ArgsUsage: "repository_path",
 			Action:    devEnvShowRepoAction,
 		},
 		{
-			Name:    "ls-pkg",
-			Aliases: []string{"ls-p", "list-packages"},
-			Usage:   "Lists packages available in the development environment",
-			Action:  devEnvLsPkgAction,
+			Name:     "ls-pkg",
+			Aliases:  []string{"ls-p", "list-packages"},
+			Category: "Query the environment",
+			Usage:    "Lists packages available in the development environment",
+			Action:   devEnvLsPkgAction,
 		},
 		{
 			Name:      "show-pkg",
 			Aliases:   []string{"s-p", "show-package"},
+			Category:  "Query the environment",
 			Usage:     "Describes a package available in the development environment",
 			ArgsUsage: "package_path",
 			Action:    devEnvShowPkgAction,
@@ -342,6 +406,7 @@ var devEnvCmd = &cli.Command{
 		{
 			Name:      "show-depl",
 			Aliases:   []string{"s-d", "show-deployment"},
+			Category:  "Query the environment",
 			Usage:     "Describes a package deployment specified by the development environment",
 			ArgsUsage: "package_path",
 			Action:    devEnvShowDeplAction,
@@ -349,6 +414,7 @@ var devEnvCmd = &cli.Command{
 		{
 			Name:      "add-repo",
 			Aliases:   []string{"add-r", "add-repositories"},
+			Category:  "Query the environment",
 			Usage:     "Adds repositories to the environment, tracking specified versions or branches",
 			ArgsUsage: "[pallet_repository_path@version_query]...",
 			Action:    devEnvAddRepoAction,
@@ -357,6 +423,7 @@ var devEnvCmd = &cli.Command{
 		// {
 		// 	Name:      "rm-repo",
 		// 	Aliases:   []string{"rm-r", "remove-repositories},
+		// 	Category:  "Modify the environment",
 		// 	Usage:     "Removes a repository from the environment",
 		// 	ArgsUsage: "repository_path",
 		// 	Action: func(c *cli.Context) error {
@@ -367,6 +434,7 @@ var devEnvCmd = &cli.Command{
 		// {
 		// 	Name:  "add-depl",
 		// 	Aliases:   []string{"add-d, "add-deployments"},
+		// 	Category:  "Modify the environment",
 		// 	Usage: "Adds a package deployment to the environment",
 		// 	Action: func(c *cli.Context) error {
 		// 		fmt.Println("adding package deployment", c.Args().First())
@@ -376,6 +444,7 @@ var devEnvCmd = &cli.Command{
 		// {
 		// 	Name:      "rm-depl",
 		// 	Aliases:   []string{"rm-d", "remove-deployments"},
+		// 	Category:  "Modify the environment",
 		// 	Usage:     "Removes a package deployment from the environment",
 		// 	ArgsUsage: "package_path",
 		// 	Action: func(c *cli.Context) error {
