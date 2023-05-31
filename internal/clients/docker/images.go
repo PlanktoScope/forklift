@@ -86,7 +86,12 @@ func (c *Client) InspectImage(ctx context.Context, imageHash string) (Image, err
 }
 
 func (c *Client) PruneUnusedImages(ctx context.Context) (dt.ImagesPruneReport, error) {
-	return c.Client.ImagesPrune(ctx, dtf.Args{})
+	return c.Client.ImagesPrune(ctx, dtf.NewArgs(dtf.KeyValuePair{
+		// Note: it appears that the "dangling" filter sets whether to only prune dangling images;
+		// otherwise, all unused images will be pruned (which is what we want)
+		Key:   "dangling",
+		Value: "false",
+	}))
 }
 
 func CompareDeletedImages(i, j dt.ImageDeleteResponseItem) int {
