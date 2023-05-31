@@ -195,7 +195,7 @@ func cacheLsImgAction(c *cli.Context) error {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
 
-	imgs, err := client.ListImages(context.Background())
+	imgs, err := client.ListImages(context.Background(), c.Args().First())
 	if err != nil {
 		return errors.Wrapf(err, "couldn't list local Docker images")
 	}
@@ -203,7 +203,11 @@ func cacheLsImgAction(c *cli.Context) error {
 		return imgs[i].Repository < imgs[j].Repository
 	})
 	for _, img := range imgs {
-		fmt.Printf("%s: %s\n", img.ID, img.Repository)
+		fmt.Printf("%s: %s", img.ID, img.Repository)
+		if img.Tag != "" {
+			fmt.Printf(":%s", img.Tag)
+		}
+		fmt.Println()
 	}
 	return nil
 }

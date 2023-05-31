@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### 0.1.7 - 2023-05-31
+
+- `cache ls-img` can now search for locally-downloaded Docker container images matching a provided repository and tag.
+- `cache ls-img` now shows the first tag of each Docker container image together with the image repository name, if the tag exists
+
+### Fixed
+
+- Previously, `env apply` and `dev env apply` would always explicitly attempt to pull the image needed for each Docker Stack service, leading them to fail with an error if the computer had no internet connection. Now, they will only explicitly attempt to pull the image if it is not found among the locally-downloaded Docker container images.
+
 ## 0.1.6 - 2023-05-31
 
 ### Added

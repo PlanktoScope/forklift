@@ -20,12 +20,21 @@ import (
 
 type Image struct {
 	Repository string
+	Tag        string
 	ID         string
 	Inspect    dt.ImageInspect
 }
 
-func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
-	imageSummaries, err := c.Client.ImageList(ctx, dt.ImageListOptions{})
+func (c *Client) ListImages(ctx context.Context, matchName string) ([]Image, error) {
+	listOptions := dt.ImageListOptions{}
+	if matchName != "" {
+		listOptions.Filters = dtf.NewArgs(dtf.KeyValuePair{
+			Key:   "reference",
+			Value: matchName,
+		})
+	}
+
+	imageSummaries, err := c.Client.ImageList(ctx, listOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't list Docker images")
 	}
@@ -35,7 +44,15 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 		image := Image{
 			ID: strings.TrimPrefix(summary.ID, "sha256:")[:12],
 		}
-		if len(summary.RepoDigests) > 0 {
+		if len(summary.RepoTags) > 0 {
+			parts := strings.Split(summary.RepoTags[0], "@")
+			if len(parts) > 1 {
+				image.Tag = parts[1]
+			}
+			if len(parts) > 0 {
+				image.Repository = parts[0]
+			}
+		} else if len(summary.RepoDigests) > 0 {
 			parts := strings.Split(summary.RepoDigests[0], "@")
 			if len(parts) > 0 {
 				image.Repository = parts[0]
