@@ -474,6 +474,7 @@ func envApplyAction(c *cli.Context) error {
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
 	}
+	fmt.Println()
 	fmt.Println("Done!")
 	return nil
 }
@@ -504,8 +505,6 @@ func applyEnv(envPath, cachePath string) error {
 		fmt.Printf("Will %s %s\n", strings.ToLower(change.Type), change.Name)
 	}
 
-	fmt.Println()
-	fmt.Println("Applying package deployment changes...")
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker swarm client")
 	}
@@ -581,28 +580,27 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 func applyReconciliationChange(
 	cacheFS fs.FS, change reconciliationChange, dc *docker.Client,
 ) error {
+	fmt.Println()
 	switch change.Type {
 	default:
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
-		fmt.Printf("Adding %s...\n", change.Name)
+		fmt.Printf("Adding package deployment %s...\n", change.Name)
 		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
-		fmt.Println("  Done!")
 		return nil
 	case removeReconciliationChange:
-		fmt.Printf("Removing %s...\n", change.Name)
+		fmt.Printf("Removing package deployment %s...\n", change.Name)
 		if err := dc.RemoveStacks(context.Background(), []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
 	case updateReconciliationChange:
-		fmt.Printf("Updating %s...\n", change.Name)
+		fmt.Printf("Updating package deployment %s...\n", change.Name)
 		if err := deployStack(cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
-		fmt.Println("  Done!")
 		return nil
 	}
 }
@@ -622,7 +620,9 @@ func deployStack(
 			err, "couldn't load Docker stack definition from %s", definitionFilePath,
 		)
 	}
-	if err = dc.DeployStack(context.Background(), name, stackConfig); err != nil {
+	if err = dc.DeployStack(
+		context.Background(), name, stackConfig, docker.NewOutStream(os.Stdout),
+	); err != nil {
 		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
 	}
 	return nil

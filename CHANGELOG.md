@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (Breaking change) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used HashiCorp Terraform.
 - (Breaking change) Renamed the `env cache` and `dev env cache` commands to `env cache-repo` and `dev env cache-repo`, respectively. This disambiguates the commands for caching Pallets-related data and for caching Docker container images, while allowing them to be run separately (useful on Docker environments where root permissions are required to talk to the Docker daemon).
 
+### Fixed
+
+- When the `env apply` and `dev env apply` commands pull images as part of the process of deploying Docker stacks, they now pull images before creating the stack services with proper image tags, since the Docker API client pulling images without any tags.
+
 ## 0.1.5 - 2023-05-26
 
 ### Fixed

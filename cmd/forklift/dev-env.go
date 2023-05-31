@@ -90,6 +90,7 @@ func devEnvApplyAction(c *cli.Context) error {
 	if err := applyEnv(envPath, workspace.CachePath(wpath)); err != nil {
 		return err
 	}
+	fmt.Println()
 	fmt.Println("Done!")
 	return nil
 }

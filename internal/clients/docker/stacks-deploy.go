@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/cli/cli/compose/convert"
 	dct "github.com/docker/cli/cli/compose/types"
+	"github.com/docker/cli/cli/streams"
 	dt "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
@@ -146,14 +147,41 @@ func (c *Client) deployServices(
 	return added, updated, nil
 }
 
-func (c *Client) DeployStack(ctx context.Context, name string, config *dct.Config) error {
+func (c *Client) pullServiceImages(
+	ctx context.Context, services []dct.ServiceConfig, outStream *streams.Out,
+) error {
+	orderedImages := make([]string, 0, len(services))
+	images := make(map[string]struct{})
+	for _, service := range services {
+		if _, ok := images[service.Image]; !ok {
+			images[service.Image] = struct{}{}
+			orderedImages = append(orderedImages, service.Image)
+		}
+	}
+
+	for _, image := range orderedImages {
+		if _, err := c.PullImage(ctx, image, outStream); err != nil {
+			return errors.Wrapf(err, "couldn't download %s", image)
+		}
+	}
+	return nil
+}
+
+func (c *Client) DeployStack(
+	ctx context.Context, name string, config *dct.Config, outStream *streams.Out,
+) error {
 	// This function is adapted from the github.com/docker/cli/cli/command/stack/swarm package's
 	// deployCompose function, which is licensed under Apache-2.0. This function was changed by
-	// removing the need to pass in a command.Cli parameter, and by returning an error.
+	// removing the need to pass in a command.Cli parameter, and by returning an error, and by
+	// pulling all required images first in order to associate container images with tags.
 	if err := c.checkDaemonIsSwarmManager(ctx); err != nil {
 		return err
 	}
 	namespace := convert.NewNamespace(name)
+	if err := c.pullServiceImages(ctx, config.Services, outStream); err != nil {
+		return errors.Wrap(err, "couldn't pull container images for stack")
+	}
+
 	servicesMap := make(map[string]struct{})
 	for _, service := range config.Services {
 		servicesMap[service.Name] = struct{}{}
