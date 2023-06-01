@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### 0.1.7 - 2023-05-31
+### 0.1.7 - 2023-06-01
 
 - `cache ls-img` can now search for locally-downloaded Docker container images matching a provided repository and tag.
 - `cache ls-img` now shows the first tag of each Docker container image together with the image repository name, if the tag exists
