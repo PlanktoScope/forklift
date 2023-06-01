@@ -160,7 +160,15 @@ func (c *Client) pullServiceImages(
 	}
 
 	for _, image := range orderedImages {
-		if _, err := c.PullImage(ctx, image, outStream); err != nil {
+		images, err := c.ListImages(ctx, image)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't check if %s was already locally downloaded", image)
+		}
+		if len(images) > 0 {
+			continue
+		}
+
+		if _, err = c.PullImage(ctx, image, outStream); err != nil {
 			return errors.Wrapf(err, "couldn't download %s", image)
 		}
 	}
