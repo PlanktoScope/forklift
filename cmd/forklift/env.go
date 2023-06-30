@@ -457,6 +457,119 @@ func listRequiredImages(envPath, cachePath string) ([]string, error) {
 	return orderedImages, nil
 }
 
+// check
+
+func envCheckAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
+
+	if err := checkEnv(workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkEnv(envPath, cachePath string) error {
+	cacheFS := os.DirFS(cachePath)
+	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+		)
+	}
+
+	conflicts, err := forklift.CheckDeplConflicts(depls)
+	if err != nil {
+		return errors.Wrap(err, "couldn't check for conflicts among deployments")
+	}
+	if len(conflicts) > 0 {
+		fmt.Println("Found conflicts between deployments:")
+	}
+	for _, conflict := range conflicts {
+		printDeplConflict(conflict)
+	}
+
+	// missingDeps, err := forklift.CheckDeplDependencies(depls)
+	// if err != nil {
+	// 	return errors.Wrap(err, "couldn't check for missing dependencies among deployments")
+	// }
+	// if len(missingDeps) > 0 {
+	// 	fmt.Println("Found missing dependencies between deployments:")
+	// }
+	// for _, missingDep := range missingDeps {
+	// 	printMissingDeplDependency(missingDep)
+	// }
+
+	if len(conflicts) > 0 /*|| len(missingDeps) > 0*/ {
+		return errors.New("environment failed constraint checks")
+	}
+	return nil
+}
+
+func printDeplConflict(conflict forklift.DeplConflict) {
+	fmt.Printf("  Between %s and %s:\n", conflict.First.Name, conflict.Second.Name)
+	if conflict.HasNameConflict() {
+		fmt.Println("    Conflicting deployment names")
+	}
+	if conflict.HasListenerConflict() {
+		fmt.Println("    Conflicting host port listeners:")
+		printResourceConflicts(conflict.Listeners)
+	}
+	if conflict.HasNetworkConflict() {
+		fmt.Println("    Conflicting Docker networks:")
+		printResourceConflicts(conflict.Networks)
+	}
+	if conflict.HasServiceConflict() {
+		fmt.Println("    Conflicting network services:")
+		printResourceConflicts(conflict.Services)
+	}
+}
+
+func printResourceConflicts[Resource forklift.Describer](
+	conflicts []forklift.ResourceConflict[Resource],
+) {
+	for i, resourceConflict := range conflicts {
+		fmt.Printf("      Conflict %d:\n", i+1)
+		printResourceConflict(resourceConflict)
+	}
+}
+
+func printResourceConflict[Resource forklift.Describer](
+	conflict forklift.ResourceConflict[Resource],
+) {
+	fmt.Printf("        Conflicting resource from %s:\n", conflict.First.Source[0])
+	printResourceSource(conflict.First.Source[1:])
+	fmt.Printf("        Conflicting resource from %s:\n", conflict.Second.Source[0])
+	printResourceSource(conflict.Second.Source[1:])
+	fmt.Println("        Conflicts between resources:")
+	for _, err := range conflict.Errs {
+		fmt.Printf("          %s\n", err)
+	}
+}
+
+func printResourceSource(source []string) {
+	for i, line := range source {
+		for j := 0; j < i; j++ {
+			fmt.Printf("  ")
+		}
+		fmt.Printf("          %s", line)
+		if i+1 < len(source) {
+			fmt.Printf(":")
+		}
+		fmt.Println()
+	}
+}
+
+func printMissingDeplDependency(deps forklift.MissingDeplDependencies) {
+	fmt.Printf("  %+v\n", deps)
+}
+
 // apply
 
 func envApplyAction(c *cli.Context) error {
@@ -880,7 +993,7 @@ func printDepl(depl forklift.Depl) {
 	fmt.Printf("      Description: %s\n", depl.Pkg.Cached.Repo.Config.Repository.Description)
 	fmt.Printf("      Provided by Git repository: %s\n", depl.Pkg.Repo.VCSRepoPath)
 
-	enabledFeatures, err := depl.EnabledFeatures(depl.Pkg.Cached.Config.Features)
+	enabledFeatures, err := depl.EnabledFeatures()
 	if err != nil {
 		fmt.Printf("Warning: couldn't determine enabled features: %s\n", err.Error())
 	}
@@ -891,10 +1004,7 @@ func printDepl(depl forklift.Depl) {
 	fmt.Println()
 	printFeatures(enabledFeatures)
 
-	disabledFeatures, err := depl.DisabledFeatures(depl.Pkg.Cached.Config.Features)
-	if err != nil {
-		fmt.Printf("Warning: couldn't determine disabled features: %s\n", err.Error())
-	}
+	disabledFeatures := depl.DisabledFeatures()
 	fmt.Print("  Disabled features:")
 	if len(disabledFeatures) == 0 {
 		fmt.Print(" (none)")

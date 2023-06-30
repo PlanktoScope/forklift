@@ -75,6 +75,24 @@ func devEnvCacheImgAction(c *cli.Context) error {
 	return nil
 }
 
+// check
+
+func devEnvCheckAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
+
+	if err := checkEnv(envPath, workspace.CachePath(wpath)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // apply
 
 func devEnvApplyAction(c *cli.Context) error {

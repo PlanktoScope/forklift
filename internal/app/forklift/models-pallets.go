@@ -71,7 +71,6 @@ type PkgDeplSpec struct {
 	Name           string            `yaml:"name"`
 	DefinitionFile string            `yaml:"definition-file"`
 	Requires       RequiredResources `yaml:"requires"`
-	Provides       ProvidedResources `yaml:"provides"`
 }
 
 type PkgFeatureSpec struct {

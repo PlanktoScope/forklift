@@ -105,6 +105,13 @@ var envCmd = &cli.Command{
 			Action:   envCacheImgAction,
 		},
 		{
+			Name:     "check",
+			Aliases:  []string{"c"},
+			Category: "Use the environment",
+			Usage:    "Checks whether the local environment's resource constraints are satisfied",
+			Action:   envCheckAction,
+		},
+		{
 			Name:     "apply",
 			Aliases:  []string{"a"},
 			Category: "Use the environment",
@@ -351,6 +358,13 @@ var devEnvCmd = &cli.Command{
 			Category: "Use the environment",
 			Usage:    "Pre-downloads the Docker container images required by the development environment",
 			Action:   devEnvCacheImgAction,
+		},
+		{
+			Name:     "check",
+			Aliases:  []string{"c"},
+			Category: "Use the environment",
+			Usage:    "Checks whether the development environment's resource constraints are satisfied",
+			Action:   devEnvCheckAction,
 		},
 		{
 			Name:     "apply",
