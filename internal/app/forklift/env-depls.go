@@ -109,6 +109,9 @@ func (d *Depl) providedListeners(
 	provided = append(provided, pkgConfig.Host.Provides.AttachedListeners(
 		pkgConfig.Host.attachmentSource(parentSource),
 	)...)
+	provided = append(provided, pkgConfig.Deployment.Provides.AttachedListeners(
+		pkgConfig.Deployment.attachmentSource(parentSource),
+	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
@@ -156,6 +159,9 @@ func (d *Depl) providedNetworks(
 	provided = append(provided, pkgConfig.Host.Provides.AttachedNetworks(
 		pkgConfig.Host.attachmentSource(parentSource),
 	)...)
+	provided = append(provided, pkgConfig.Deployment.Provides.AttachedNetworks(
+		pkgConfig.Deployment.attachmentSource(parentSource),
+	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
@@ -195,6 +201,9 @@ func (d *Depl) providedServices(
 
 	provided = append(provided, pkgConfig.Host.Provides.AttachedServices(
 		pkgConfig.Host.attachmentSource(parentSource),
+	)...)
+	provided = append(provided, pkgConfig.Deployment.Provides.AttachedServices(
+		pkgConfig.Deployment.attachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)

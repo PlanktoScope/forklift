@@ -71,6 +71,7 @@ type PkgDeplSpec struct {
 	Name           string            `yaml:"name,omitempty"`
 	DefinitionFile string            `yaml:"definition-file,omitempty"`
 	Requires       RequiredResources `yaml:"requires,omitempty"`
+	Provides       ProvidedResources `yaml:"provides,omitempty"`
 }
 
 type PkgFeatureSpec struct {
