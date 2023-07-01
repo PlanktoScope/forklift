@@ -495,18 +495,18 @@ func checkEnv(envPath, cachePath string) error {
 		printDeplConflict(conflict)
 	}
 
-	// missingDeps, err := forklift.CheckDeplDependencies(depls)
-	// if err != nil {
-	// 	return errors.Wrap(err, "couldn't check for missing dependencies among deployments")
-	// }
-	// if len(missingDeps) > 0 {
-	// 	fmt.Println("Found missing dependencies between deployments:")
-	// }
-	// for _, missingDep := range missingDeps {
-	// 	printMissingDeplDependency(missingDep)
-	// }
+	missingDeps, err := forklift.CheckDeplDependencies(depls)
+	if err != nil {
+		return errors.Wrap(err, "couldn't check for missing dependencies among deployments")
+	}
+	if len(missingDeps) > 0 {
+		fmt.Println("Found missing dependencies between deployments:")
+	}
+	for _, missingDep := range missingDeps {
+		printMissingDeplDependency(missingDep)
+	}
 
-	if len(conflicts) > 0 /*|| len(missingDeps) > 0*/ {
+	if len(conflicts) > 0 || len(missingDeps) > 0 {
 		return errors.New("environment failed constraint checks")
 	}
 	return nil
@@ -567,7 +567,45 @@ func printResourceSource(source []string) {
 }
 
 func printMissingDeplDependency(deps forklift.MissingDeplDependencies) {
-	fmt.Printf("  %+v\n", deps)
+	fmt.Printf("  For %s:\n", deps.Depl.Name)
+	if deps.HasMissingNetworkDependency() {
+		fmt.Println("    Missing Docker networks:")
+		printMissingDependencies(deps.Networks)
+	}
+	if deps.HasMissingServiceDependency() {
+		fmt.Println("    Missing network services:")
+		printMissingDependencies(deps.Services)
+	}
+}
+
+func printMissingDependencies[Resource forklift.Describer](
+	missingDeps []forklift.MissingResourceDependency[Resource],
+) {
+	for i, missingDep := range missingDeps {
+		fmt.Printf("      Missing dependency %d:\n", i+1)
+		printMissingDependency(missingDep)
+	}
+}
+
+func printMissingDependency[Resource forklift.Describer](
+	missingDep forklift.MissingResourceDependency[Resource],
+) {
+	fmt.Printf("        Required: %+v\n", missingDep.Required.Resource)
+	fmt.Println("        Best candidates:")
+	for i, candidate := range missingDep.BestCandidates {
+		fmt.Printf("          Candidate %d:\n", i)
+		printDependencyCandidate(candidate)
+	}
+}
+
+func printDependencyCandidate[Resource forklift.Describer](
+	candidate forklift.ResourceDependencyCandidate[Resource],
+) {
+	printResourceSource(candidate.Provided.Source)
+	fmt.Printf("            Resource %+v:\n", candidate.Provided.Resource)
+	for _, err := range candidate.Errs {
+		fmt.Printf("              %s\n", err)
+	}
 }
 
 // apply

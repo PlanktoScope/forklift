@@ -9,26 +9,6 @@ type AttachedResource[Resource interface{}] struct {
 	Source   []string
 }
 
-// Dependency constraints
-
-type DependencyChecker[Resource interface{}] interface {
-	CheckDependency(candidate Resource) []error
-}
-
-type MissingResourceDependency[Resource interface{}] struct {
-	Resource       AttachedResource[Resource]
-	BestCandidates []AttachedResource[Resource]
-	Errs           []error
-}
-
-type MissingDeplDependencies struct {
-	Depl Depl
-
-	Listeners []MissingResourceDependency[ListenerResource]
-	Networks  []MissingResourceDependency[NetworkResource]
-	Services  []MissingResourceDependency[ServiceResource]
-}
-
 // Conflict constraints
 
 type ConflictChecker[Resource interface{}] interface {
@@ -50,4 +30,27 @@ type DeplConflict struct {
 	Listeners []ResourceConflict[ListenerResource]
 	Networks  []ResourceConflict[NetworkResource]
 	Services  []ResourceConflict[ServiceResource]
+}
+
+// Dependency constraints
+
+type DependencyChecker[Resource interface{}] interface {
+	CheckDependency(candidate Resource) []error
+}
+
+type ResourceDependencyCandidate[Resource interface{}] struct {
+	Provided AttachedResource[Resource]
+	Errs     []error
+}
+
+type MissingResourceDependency[Resource interface{}] struct {
+	Required       AttachedResource[Resource]
+	BestCandidates []ResourceDependencyCandidate[Resource]
+}
+
+type MissingDeplDependencies struct {
+	Depl Depl
+
+	Networks []MissingResourceDependency[NetworkResource]
+	Services []MissingResourceDependency[ServiceResource]
 }

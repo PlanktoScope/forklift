@@ -207,11 +207,67 @@ func (d *Depl) providedServices(
 	return provided
 }
 
-func (d *Depl) CheckMissingDependencies(
-	candidates []Depl,
-) (missingDeps []MissingDeplDependencies, err error) {
-	// TODO: implement
-	return nil, nil
+func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependencies, error) {
+	enabledFeatures, err := d.EnabledFeatures()
+	if err != nil {
+		return MissingDeplDependencies{}, errors.Errorf(
+			"couldn't determine enabled features of deployment %s", d.Name,
+		)
+	}
+	candidateEnabledFeatures := make([]map[string]PkgFeatureSpec, 0, len(candidates))
+	for _, candidate := range candidates {
+		f, err := candidate.EnabledFeatures()
+		if err != nil {
+			return MissingDeplDependencies{}, errors.Errorf(
+				"couldn't determine enabled features of deployment %s", candidate.Name,
+			)
+		}
+		candidateEnabledFeatures = append(candidateEnabledFeatures, f)
+	}
+
+	var (
+		allProvidedListeners []AttachedResource[ListenerResource]
+		allProvidedNetworks  []AttachedResource[NetworkResource]
+		allProvidedServices  []AttachedResource[ServiceResource]
+	)
+	for i, candidate := range candidates {
+		allProvidedListeners = append(
+			allProvidedListeners, candidate.providedListeners(candidateEnabledFeatures[i])...,
+		)
+		allProvidedNetworks = append(
+			allProvidedNetworks, candidate.providedNetworks(candidateEnabledFeatures[i])...,
+		)
+		allProvidedServices = append(
+			allProvidedServices, candidate.providedServices(candidateEnabledFeatures[i])...,
+		)
+	}
+
+	return MissingDeplDependencies{
+		Depl: *d,
+		Networks: CheckResourcesDependencies(
+			d.requiredNetworks(enabledFeatures), allProvidedNetworks,
+		),
+		Services: CheckResourcesDependencies(
+			splitMultiPathServiceResources(d.requiredServices(enabledFeatures)), allProvidedServices,
+		),
+	}, nil
+}
+
+func splitMultiPathServiceResources(
+	serviceResources []AttachedResource[ServiceResource],
+) (split []AttachedResource[ServiceResource]) {
+	split = make([]AttachedResource[ServiceResource], 0, len(serviceResources))
+	for _, service := range serviceResources {
+		for _, path := range service.Resource.Paths {
+			pathService := service.Resource
+			pathService.Paths = []string{path}
+			split = append(split, AttachedResource[ServiceResource]{
+				Resource: pathService,
+				Source:   service.Source,
+			})
+		}
+	}
+	return split
 }
 
 // Loading
@@ -317,7 +373,9 @@ func CheckDeplDependencies(
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't check dependencies of deployment %s", depl.Name)
 		}
-		missingDeps = append(missingDeps, deplMissingDeps...)
+		if deplMissingDeps.HasMissingDependency() {
+			missingDeps = append(missingDeps, deplMissingDeps)
+		}
 	}
 	return missingDeps, nil
 }

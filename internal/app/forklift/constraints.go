@@ -24,15 +24,15 @@ func (c DeplConflict) HasNameConflict() bool {
 }
 
 func (c DeplConflict) HasListenerConflict() bool {
-	return c.Listeners != nil && len(c.Listeners) > 0
+	return len(c.Listeners) > 0
 }
 
 func (c DeplConflict) HasNetworkConflict() bool {
-	return c.Networks != nil && len(c.Networks) > 0
+	return len(c.Networks) > 0
 }
 
 func (c DeplConflict) HasServiceConflict() bool {
-	return c.Services != nil && len(c.Services) > 0
+	return len(c.Services) > 0
 }
 
 func (c DeplConflict) HasConflict() bool {
@@ -41,3 +41,44 @@ func (c DeplConflict) HasConflict() bool {
 }
 
 // Dependencies
+
+func (c MissingDeplDependencies) HasMissingNetworkDependency() bool {
+	return len(c.Networks) > 0
+}
+
+func (c MissingDeplDependencies) HasMissingServiceDependency() bool {
+	return len(c.Services) > 0
+}
+
+func (c MissingDeplDependencies) HasMissingDependency() bool {
+	return c.HasMissingNetworkDependency() || c.HasMissingServiceDependency()
+}
+
+func CheckResourcesDependencies[Resource DependencyChecker[Resource]](
+	required []AttachedResource[Resource], provided []AttachedResource[Resource],
+) (missingDeps []MissingResourceDependency[Resource]) {
+	for _, r := range required {
+		bestErrsCount := -1
+		bestCandidates := make([]ResourceDependencyCandidate[Resource], 0, len(provided))
+		for _, p := range provided {
+			errs := r.Resource.CheckDependency(p.Resource)
+			if bestErrsCount == -1 || len(errs) <= bestErrsCount {
+				if len(errs) < bestErrsCount {
+					bestCandidates = make([]ResourceDependencyCandidate[Resource], 0, len(provided))
+				}
+				bestErrsCount = len(errs)
+				bestCandidates = append(bestCandidates, ResourceDependencyCandidate[Resource]{
+					Provided: p,
+					Errs:     errs,
+				})
+			}
+		}
+		if bestErrsCount != 0 {
+			missingDeps = append(missingDeps, MissingResourceDependency[Resource]{
+				Required:       r,
+				BestCandidates: bestCandidates,
+			})
+		}
+	}
+	return missingDeps
+}
