@@ -1,9 +1,5 @@
 package forklift
 
-type Describer interface {
-	Describe() string
-}
-
 type AttachedResource[Resource interface{}] struct {
 	Resource Resource
 	Source   []string

@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-func NewAttachedResource[Resource Describer](
+func NewAttachedResource[Resource any](
 	resource Resource, source []string,
 ) AttachedResource[Resource] {
 	return AttachedResource[Resource]{
 		Resource: resource,
-		Source:   append(source, resource.Describe()),
+		Source:   source,
 	}
 }
 
-func attachResources[Resource Describer](
+func attachResources[Resource any](
 	resources []Resource, source []string,
 ) (attached []AttachedResource[Resource]) {
 	attached = make([]AttachedResource[Resource], 0, len(resources))
@@ -52,13 +52,13 @@ func (r RequiredResources) AttachedServices(source []string) []AttachedResource[
 // PkgHostSpec
 
 func (s PkgHostSpec) attachmentSource(parentSource []string) []string {
-	return append(parentSource, "host")
+	return append(parentSource, "host specification")
 }
 
 // PkgDeplSpec
 
 func (s PkgDeplSpec) attachmentSource(parentSource []string) []string {
-	return append(parentSource, "deployment")
+	return append(parentSource, "deployment specification")
 }
 
 // PkgFeatureSpec
@@ -68,10 +68,6 @@ func (s PkgFeatureSpec) attachmentSource(parentSource []string, featureName stri
 }
 
 // Listener
-
-func (r ListenerResource) Describe() string {
-	return r.Description
-}
 
 func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []error) {
 	if r.Port != candidate.Port {
@@ -85,16 +81,12 @@ func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []er
 
 func (r ListenerResource) CheckConflict(candidate ListenerResource) (errs []error) {
 	if r.Port == candidate.Port && r.Protocol == candidate.Protocol {
-		errs = append(errs, fmt.Errorf("conflicting port/protocol '%d/%s'", r.Port, r.Protocol))
+		errs = append(errs, fmt.Errorf("same port/protocol '%d/%s'", r.Port, r.Protocol))
 	}
 	return errs
 }
 
 // Network
-
-func (r NetworkResource) Describe() string {
-	return r.Description
-}
 
 func (r NetworkResource) CheckDependency(candidate NetworkResource) (errs []error) {
 	if r.Name != candidate.Name {
@@ -105,16 +97,12 @@ func (r NetworkResource) CheckDependency(candidate NetworkResource) (errs []erro
 
 func (r NetworkResource) CheckConflict(candidate NetworkResource) (errs []error) {
 	if r.Name == candidate.Name {
-		errs = append(errs, fmt.Errorf("conflicting name '%s'", r.Name))
+		errs = append(errs, fmt.Errorf("same name '%s'", r.Name))
 	}
 	return errs
 }
 
 // Service
-
-func (r ServiceResource) Describe() string {
-	return r.Description
-}
 
 func (r ServiceResource) CheckDependency(candidate ServiceResource) (errs []error) {
 	if r.Port != candidate.Port {
@@ -183,7 +171,9 @@ func (r ServiceResource) CheckConflict(candidate ServiceResource) (errs []error)
 	}
 
 	if len(r.Paths) == 0 && len(candidate.Paths) == 0 {
-		errs = append(errs, fmt.Errorf("conflicting port/protocol '%d/%s'", r.Port, r.Protocol))
+		errs = append(errs, fmt.Errorf(
+			"same port/protocol '%d/%s' without specified service paths", r.Port, r.Protocol),
+		)
 		return errs
 	}
 
@@ -200,7 +190,7 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 
 	for _, path := range provided {
 		if pathMatchesExactly(path, candidatePaths) {
-			errorMessage := fmt.Sprintf("conflicting path '%s'", path)
+			errorMessage := fmt.Sprintf("same path '%s'", path)
 			if _, ok := pathConflicts[errorMessage]; ok {
 				continue
 			}
@@ -211,7 +201,7 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 
 		if match, prefix := pathMatchesPrefix(path, candidatePathPrefixes); match {
 			errorMessage := fmt.Sprintf(
-				"conflicting paths '%s' and '%s*'", path, prefix,
+				"overlapping paths '%s' and '%s*'", path, prefix,
 			)
 			if _, ok := pathConflicts[errorMessage]; ok {
 				continue
@@ -227,7 +217,7 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 		}
 		if match, prefix := pathMatchesPrefix(candidatePath, providedPathPrefixes); match {
 			errorMessage := fmt.Sprintf(
-				"conflicting paths '%s*' and '%s'", prefix, candidatePath,
+				"overlapping paths '%s*' and '%s'", prefix, candidatePath,
 			)
 			if _, ok := pathConflicts[errorMessage]; ok {
 				continue

@@ -3,78 +3,78 @@ package forklift
 // Repository specifications
 
 type RepoSpec struct {
-	Path        string `yaml:"path"`
-	Description string `yaml:"description"`
+	Path        string `yaml:"path,omitempty"`
+	Description string `yaml:"description,omitempty"`
 }
 
 type RepoConfig struct {
-	Repository RepoSpec `yaml:"repository"`
+	Repository RepoSpec `yaml:"repository,omitempty"`
 }
 
 // Package specifications
 
 type PkgConfig struct {
-	Package    PkgSpec                   `yaml:"package"`
-	Host       PkgHostSpec               `yaml:"host"`
-	Deployment PkgDeplSpec               `yaml:"deployment"`
-	Features   map[string]PkgFeatureSpec `yaml:"features"`
+	Package    PkgSpec                   `yaml:"package,omitempty"`
+	Host       PkgHostSpec               `yaml:"host,omitempty"`
+	Deployment PkgDeplSpec               `yaml:"deployment,omitempty"`
+	Features   map[string]PkgFeatureSpec `yaml:"features,omitempty"`
 }
 
 type PkgMaintainer struct {
-	Name  string `yaml:"name"`
-	Email string `yaml:"email"`
+	Name  string `yaml:"name,omitempty"`
+	Email string `yaml:"email,omitempty"`
 }
 
 type PkgSpec struct {
-	Description string          `yaml:"description"`
-	Maintainers []PkgMaintainer `yaml:"maintainers"`
-	License     string          `yaml:"license"`
-	LicenseFile string          `yaml:"license-file"`
-	Sources     []string        `yaml:"sources"`
+	Description string          `yaml:"description,omitempty"`
+	Maintainers []PkgMaintainer `yaml:"maintainers,omitempty"`
+	License     string          `yaml:"license,omitempty"`
+	LicenseFile string          `yaml:"license-file,omitempty"`
+	Sources     []string        `yaml:"sources,omitempty"`
 }
 
 type ProvidedResources struct {
-	Listeners []ListenerResource `yaml:"listeners"`
-	Networks  []NetworkResource  `yaml:"networks"`
-	Services  []ServiceResource  `yaml:"services"`
+	Listeners []ListenerResource `yaml:"listeners,omitempty"`
+	Networks  []NetworkResource  `yaml:"networks,omitempty"`
+	Services  []ServiceResource  `yaml:"services,omitempty"`
 }
 
 type RequiredResources struct {
-	Networks []NetworkResource `yaml:"networks"`
-	Services []ServiceResource `yaml:"services"`
+	Networks []NetworkResource `yaml:"networks,omitempty"`
+	Services []ServiceResource `yaml:"services,omitempty"`
 }
 
 type ListenerResource struct {
-	Description string `yaml:"description"`
-	Port        int    `yaml:"port"`
-	Protocol    string `yaml:"protocol"`
+	Description string `yaml:"description,omitempty"`
+	Port        int    `yaml:"port,omitempty"`
+	Protocol    string `yaml:"protocol,omitempty"`
 }
 
 type NetworkResource struct {
-	Description string `yaml:"description"`
-	Name        string `yaml:"name"`
+	Description string `yaml:"description,omitempty"`
+	Name        string `yaml:"name,omitempty"`
 }
 
 type ServiceResource struct {
-	Description string   `yaml:"description"`
-	Tags        []string `yaml:"tags"`
-	Port        int      `yaml:"port"`
-	Protocol    string   `yaml:"protocol"`
-	Paths       []string `yaml:"paths"`
+	Description string   `yaml:"description,omitempty"`
+	Tags        []string `yaml:"tags,omitempty"`
+	Port        int      `yaml:"port,omitempty"`
+	Protocol    string   `yaml:"protocol,omitempty"`
+	Paths       []string `yaml:"paths,omitempty"`
 }
 
 type PkgHostSpec struct {
-	Provides ProvidedResources `yaml:"provides"`
+	Provides ProvidedResources `yaml:"provides,omitempty"`
 }
 
 type PkgDeplSpec struct {
-	Name           string            `yaml:"name"`
-	DefinitionFile string            `yaml:"definition-file"`
-	Requires       RequiredResources `yaml:"requires"`
+	Name           string            `yaml:"name,omitempty"`
+	DefinitionFile string            `yaml:"definition-file,omitempty"`
+	Requires       RequiredResources `yaml:"requires,omitempty"`
 }
 
 type PkgFeatureSpec struct {
-	Description string            `yaml:"description"`
-	Requires    RequiredResources `yaml:"requires"`
-	Provides    ProvidedResources `yaml:"provides"`
+	Description string            `yaml:"description,omitempty"`
+	Requires    RequiredResources `yaml:"requires,omitempty"`
+	Provides    ProvidedResources `yaml:"provides,omitempty"`
 }

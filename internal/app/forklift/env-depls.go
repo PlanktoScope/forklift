@@ -226,14 +226,10 @@ func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependenc
 	}
 
 	var (
-		allProvidedListeners []AttachedResource[ListenerResource]
-		allProvidedNetworks  []AttachedResource[NetworkResource]
-		allProvidedServices  []AttachedResource[ServiceResource]
+		allProvidedNetworks []AttachedResource[NetworkResource]
+		allProvidedServices []AttachedResource[ServiceResource]
 	)
 	for i, candidate := range candidates {
-		allProvidedListeners = append(
-			allProvidedListeners, candidate.providedListeners(candidateEnabledFeatures[i])...,
-		)
 		allProvidedNetworks = append(
 			allProvidedNetworks, candidate.providedNetworks(candidateEnabledFeatures[i])...,
 		)
