@@ -934,6 +934,7 @@ func printRepoInfo(indent int, envPath, cachePath, repoPath string) error {
 	}
 	indentedPrintf(indent+1, "Path in cache: %s\n", cachedRepo.ConfigPath)
 	indentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
+	// TODO: show the README file
 	return nil
 }
 
@@ -1084,14 +1085,6 @@ func printDeplInfo(indent int, envPath, cachePath, deplName string) error {
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find package deployment specification %s in environment %s", deplName, envPath,
-		)
-	}
-	if depl.Pkg.Cached.Config.Deployment.Name != deplName {
-		return errors.Errorf(
-			"package deployment name %s specified by environment %s doesn't match name %s specified "+
-				"by package %s from repo %s",
-			deplName, envPath, depl.Pkg.Cached.Config.Deployment.Name,
-			depl.Pkg.Path, depl.Pkg.Repo.Path(),
 		)
 	}
 	printDepl(indent, depl)

@@ -69,6 +69,7 @@ func printCachedRepo(indent int, repo forklift.CachedRepo) {
 	indentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
 	indentedPrintf(indent, "Path in cache: %s\n", repo.ConfigPath)
 	indentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
+	// TODO: show the README file
 }
 
 // ls-pkg
@@ -180,7 +181,8 @@ func printDeplSpec(indent int, spec forklift.PkgDeplSpec) {
 	indentedPrintf(indent, "Deployment:\n")
 	indent++
 
-	indentedPrintf(indent, "Deploys as: %s\n", spec.Name)
+	// TODO: actually display the definition file?
+	indentedPrintf(indent, "Definition file: %s\n", spec.DefinitionFile)
 }
 
 func printFeatureSpecs(indent int, features map[string]forklift.PkgFeatureSpec) {

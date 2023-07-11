@@ -3,12 +3,13 @@ package forklift
 // Repository specifications
 
 type RepoSpec struct {
-	Path        string `yaml:"path,omitempty"`
-	Description string `yaml:"description,omitempty"`
+	Path        string `yaml:"path"`
+	Description string `yaml:"description"`
+	ReadmeFile  string `yaml:"readme-file"`
 }
 
 type RepoConfig struct {
-	Repository RepoSpec `yaml:"repository,omitempty"`
+	Repository RepoSpec `yaml:"repository"`
 }
 
 // Package specifications
@@ -26,9 +27,9 @@ type PkgMaintainer struct {
 }
 
 type PkgSpec struct {
-	Description string          `yaml:"description,omitempty"`
+	Description string          `yaml:"description"`
 	Maintainers []PkgMaintainer `yaml:"maintainers,omitempty"`
-	License     string          `yaml:"license,omitempty"`
+	License     string          `yaml:"license"`
 	LicenseFile string          `yaml:"license-file,omitempty"`
 	Sources     []string        `yaml:"sources,omitempty"`
 }
@@ -57,25 +58,27 @@ type NetworkResource struct {
 
 type ServiceResource struct {
 	Description string   `yaml:"description,omitempty"`
-	Tags        []string `yaml:"tags,omitempty"`
 	Port        int      `yaml:"port,omitempty"`
 	Protocol    string   `yaml:"protocol,omitempty"`
+	Tags        []string `yaml:"tags,omitempty"`
 	Paths       []string `yaml:"paths,omitempty"`
 }
 
 type PkgHostSpec struct {
+	Tags     []string          `yaml:"tags,omitempty"`
 	Provides ProvidedResources `yaml:"provides,omitempty"`
 }
 
 type PkgDeplSpec struct {
-	Name           string            `yaml:"name,omitempty"`
 	DefinitionFile string            `yaml:"definition-file,omitempty"`
+	Tags           []string          `yaml:"tags,omitempty"`
 	Requires       RequiredResources `yaml:"requires,omitempty"`
 	Provides       ProvidedResources `yaml:"provides,omitempty"`
 }
 
 type PkgFeatureSpec struct {
 	Description string            `yaml:"description,omitempty"`
+	Tags        []string          `yaml:"tags,omitempty"`
 	Requires    RequiredResources `yaml:"requires,omitempty"`
 	Provides    ProvidedResources `yaml:"provides,omitempty"`
 }
