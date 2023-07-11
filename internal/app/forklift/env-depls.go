@@ -263,6 +263,9 @@ func splitMultiPathServiceResources(
 ) (split []AttachedResource[ServiceResource]) {
 	split = make([]AttachedResource[ServiceResource], 0, len(serviceResources))
 	for _, service := range serviceResources {
+		if len(service.Resource.Paths) == 0 {
+			split = append(split, service)
+		}
 		for _, path := range service.Resource.Paths {
 			pathService := service.Resource
 			pathService.Paths = []string{path}
