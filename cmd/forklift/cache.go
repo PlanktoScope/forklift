@@ -39,14 +39,6 @@ func cacheLsRepoAction(c *cli.Context) error {
 
 // info-repo
 
-func printCachedRepo(repo forklift.CachedRepo) {
-	fmt.Printf("Cached Pallet repository: %s\n", repo.Config.Repository.Path)
-	fmt.Printf("  Version: %s\n", repo.Version)
-	fmt.Printf("  Provided by Git repository: %s\n", repo.VCSRepoPath)
-	fmt.Printf("  Path in cache: %s\n", repo.ConfigPath)
-	fmt.Printf("  Description: %s\n", repo.Config.Repository.Description)
-}
-
 func cacheShowRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
@@ -65,8 +57,19 @@ func cacheShowRepoAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet repository %s@%s", repoPath, version)
 	}
-	printCachedRepo(repo)
+	printCachedRepo(0, repo)
 	return nil
+}
+
+func printCachedRepo(indent int, repo forklift.CachedRepo) {
+	indentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
+	indent++
+
+	indentedPrintf(indent, "Version: %s\n", repo.Version)
+	indentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
+	indentedPrintf(indent, "Path in cache: %s\n", repo.ConfigPath)
+	indentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
+	// TODO: show the README file
 }
 
 // ls-pkg
@@ -93,78 +96,6 @@ func cacheLsPkgAction(c *cli.Context) error {
 
 // info-pkg
 
-func printPkgSpec(spec forklift.PkgSpec) {
-	fmt.Printf("  Description: %s\n", spec.Description)
-
-	fmt.Print("  Maintainers:")
-	if len(spec.Maintainers) == 0 {
-		fmt.Print(" (none)")
-	}
-	fmt.Println()
-	for _, maintainer := range spec.Maintainers {
-		if maintainer.Email != "" {
-			fmt.Printf("    %s <%s>\n", maintainer.Name, maintainer.Email)
-		} else {
-			fmt.Printf("    %s\n", maintainer.Name)
-		}
-	}
-
-	if spec.License != "" {
-		fmt.Printf("  License: %s\n", spec.License)
-	} else {
-		fmt.Printf("  License: (custom license)\n")
-	}
-
-	fmt.Print("  Sources:")
-	if len(spec.Sources) == 0 {
-		fmt.Print(" (none)")
-	}
-	fmt.Println()
-	for _, source := range spec.Sources {
-		fmt.Printf("    %s\n", source)
-	}
-}
-
-func printDeplSpec(spec forklift.PkgDeplSpec) {
-	fmt.Printf("  Deployment:\n")
-	fmt.Printf("    Deploys as: %s\n", spec.Name)
-}
-
-func printFeatureSpecs(features map[string]forklift.PkgFeatureSpec) {
-	fmt.Print("  Optional features:")
-	names := make([]string, 0, len(features))
-	for name := range features {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	if len(names) == 0 {
-		fmt.Print(" (none)")
-	}
-	fmt.Println()
-	for _, name := range names {
-		if description := features[name].Description; description != "" {
-			fmt.Printf("    %s: %s\n", name, description)
-			continue
-		}
-		fmt.Printf("    %s\n", name)
-	}
-}
-
-func printCachedPkg(pkg forklift.CachedPkg) {
-	fmt.Printf("Pallet package: %s\n", pkg.Path)
-	fmt.Printf("  Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path)
-	fmt.Printf("    Version: %s\n", pkg.Repo.Version)
-	fmt.Printf("    Description: %s\n", pkg.Repo.Config.Repository.Description)
-	fmt.Printf("    Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
-	fmt.Printf("  Path in cache: %s\n", pkg.ConfigPath)
-	fmt.Println()
-	printPkgSpec(pkg.Config.Package)
-	fmt.Println()
-	printDeplSpec(pkg.Config.Deployment)
-	fmt.Println()
-	printFeatureSpecs(pkg.Config.Features)
-}
-
 func cacheShowPkgAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.CachePath(wpath)) {
@@ -183,8 +114,97 @@ func cacheShowPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet package %s@%s", pkgPath, version)
 	}
-	printCachedPkg(pkg)
+	printCachedPkg(0, pkg)
 	return nil
+}
+
+func printCachedPkg(indent int, pkg forklift.CachedPkg) {
+	indentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
+	indent++
+
+	printCachedPkgRepo(indent, pkg)
+	indentedPrintf(indent, "Path in cache: %s\n", pkg.ConfigPath)
+	fmt.Println()
+	printPkgSpec(indent, pkg.Config.Package)
+	fmt.Println()
+	printDeplSpec(indent, pkg.Config.Deployment)
+	fmt.Println()
+	printFeatureSpecs(indent, pkg.Config.Features)
+}
+
+func printCachedPkgRepo(indent int, pkg forklift.CachedPkg) {
+	indentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path)
+	indent++
+
+	indentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
+	indentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
+	indentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+}
+
+func printPkgSpec(indent int, spec forklift.PkgSpec) {
+	indentedPrintf(indent, "Description: %s\n", spec.Description)
+
+	indentedPrint(indent, "Maintainers:")
+	if len(spec.Maintainers) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, maintainer := range spec.Maintainers {
+		printMaintainer(indent+1, maintainer)
+	}
+
+	if spec.License != "" {
+		indentedPrintf(indent, "License: %s\n", spec.License)
+	} else {
+		indentedPrintf(indent, "License: (custom license)\n")
+	}
+
+	indentedPrint(indent, "Sources:")
+	if len(spec.Sources) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, source := range spec.Sources {
+		bulletedPrintf(indent+1, "%s\n", source)
+	}
+}
+
+func printMaintainer(indent int, maintainer forklift.PkgMaintainer) {
+	if maintainer.Email != "" {
+		bulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
+	} else {
+		bulletedPrintf(indent, "%s\n", maintainer.Name)
+	}
+}
+
+func printDeplSpec(indent int, spec forklift.PkgDeplSpec) {
+	indentedPrintf(indent, "Deployment:\n")
+	indent++
+
+	// TODO: actually display the definition file?
+	indentedPrintf(indent, "Definition file: %s\n", spec.DefinitionFile)
+}
+
+func printFeatureSpecs(indent int, features map[string]forklift.PkgFeatureSpec) {
+	indentedPrint(indent, "Optional features:")
+	names := make([]string, 0, len(features))
+	for name := range features {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	if len(names) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
+
+	for _, name := range names {
+		if description := features[name].Description; description != "" {
+			indentedPrintf(indent, "%s: %s\n", name, description)
+			continue
+		}
+		indentedPrintf(indent, "%s\n", name)
+	}
 }
 
 // ls-img
@@ -225,13 +245,15 @@ func cacheShowImgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't inspect image %s", imageHash)
 	}
-	printImg(image)
+	printImg(0, image)
 	return nil
 }
 
-func printImg(img docker.Image) {
-	fmt.Printf("Docker container image: %s\n", img.ID)
-	fmt.Print("  Provided by container image repository: ")
+func printImg(indent int, img docker.Image) {
+	indentedPrintf(indent, "Docker container image: %s\n", img.ID)
+	indent++
+
+	indentedPrint(indent, "Provided by container image repository: ")
 	if img.Repository == "" {
 		fmt.Print("(none)")
 	} else {
@@ -239,26 +261,37 @@ func printImg(img docker.Image) {
 	}
 	fmt.Println()
 
-	fmt.Print("    Repo tags:")
-	if len(img.Inspect.RepoTags) == 0 {
+	printImgRepoTags(indent+1, img.Inspect.RepoTags)
+	printImgRepoDigests(indent+1, img.Inspect.RepoDigests)
+
+	indentedPrintf(indent, "Created: %s\n", img.Inspect.Created)
+	indentedPrintf(indent, "Size: %s\n", units.HumanSize(float64(img.Inspect.Size)))
+}
+
+func printImgRepoTags(indent int, tags []string) {
+	indentedPrint(indent, "Repo tags:")
+	if len(tags) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
-	for _, tag := range img.Inspect.RepoTags {
-		fmt.Printf("      %s\n", tag)
-	}
+	indent++
 
-	fmt.Print("    Repo digests:")
-	if len(img.Inspect.RepoDigests) == 0 {
+	for _, tag := range tags {
+		bulletedPrintf(indent, "%s\n", tag)
+	}
+}
+
+func printImgRepoDigests(indent int, digests []string) {
+	indentedPrint(indent, "Repo digests:")
+	if len(digests) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
-	for _, digest := range img.Inspect.RepoDigests {
-		fmt.Printf("      %s\n", digest)
-	}
+	indent++
 
-	fmt.Printf("  Created: %s\n", img.Inspect.Created)
-	fmt.Printf("  Size: %s\n", units.HumanSize(float64(img.Inspect.Size)))
+	for _, digest := range digests {
+		bulletedPrintf(indent, "%s\n", digest)
+	}
 }
 
 // rm

@@ -29,12 +29,12 @@ forklift env clone github.com/PlanktoScope/pallets-env@edge
 
 Then you will need to download the Pallet repositories specified by your local environment into your local cache, so that you can deploy packages provided by those repositories. You can download the necessary repositories using the command:
 ```
-forklift env cache
+forklift env cache-repo
 ```
 
 Then you will need to apply the package deployments as configured by your local environment, into your Docker Swarm. You can apply the deployments using the command (note that you need `sudo -E` unless you are running the Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
 ```
-sudo -E forklift env deploy
+sudo -E forklift env apply
 ```
 
 ### Work on a development environment
@@ -45,7 +45,7 @@ First, you will need to make/download a Pallet environment somewhere on your loc
 git clone https://github.com/PlanktoScope/pallets-env
 ```
 
-Then you will need to download/install forklift (see instructions in the "Download/install forklift" section above). Once you have forklift, you can run commands using the `dev env` subcommand; if forklift is in your systme path, you can simply run commands within the directory containing your development environment, or any subdirectory of it. For example, if your development environment is at `/home/pi/dev/pallets-env`, you can run the following commands to see some information about your development environment:
+Then you will need to download/install forklift (see instructions in the "Download/install forklift" section above). Once you have forklift, you can run commands using the `dev env` subcommand; if forklift is in your system path, you can simply run commands within the directory containing your development environment, or any subdirectory of it. For example, if your development environment is at `/home/pi/dev/pallets-env`, you can run the following commands to see some information about your development environment:
 
 ```
 cd /home/pi/dev/pallets-env
@@ -66,13 +66,15 @@ cd /etc/
 
 You can also use the `forklift dev env add-repo` command to add additional Pallet repositories to your development environment, and to change the versions of Pallet repositories already added to your development environment.
 
-You can also run commands like `forklift dev env cache` and `sudo -E forklift dev env deploy` (with appropriate values in the `--cwd` flag if necessary) to download the Pallet repositories specified by your development environment into your local cache and deploy the packages provided by those repositories according to the configuration in your development environment. This is useful if, for example, you want to make some experimental changes to your development environment and test them on your local machine before committing and pushing those changes onto GitHub.
+You can also run commands like `forklift dev env cache-repo` and `sudo -E forklift dev env apply` (with appropriate values in the `--cwd` flag if necessary) to download the Pallet repositories specified by your development environment into your local cache and deploy the packages provided by those repositories according to the configuration in your development environment. This is useful if, for example, you want to make some experimental changes to your development environment and test them on your local machine before committing and pushing those changes onto GitHub.
+
+Finally, you can run the `forklift dev env check` command to check the environment for any problems, such as resource constraint violations.
 
 ## Similar projects
 
 The following projects solve related problems with containers, though they make different trade-offs compared to Forklift and Pallets:
 
-- Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Swarms from a Terraform configuration: https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs
+- Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Docker Swarms from a Terraform configuration: https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs
 - swarm-pack (an inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages: https://github.com/swarm-pack/swarm-pack
 - SwarmManagement uses a single YAML file for declarative configuration of an entire Docker Swarm: https://github.com/hansehe/SwarmManagement
 - Podman Quadlets enable management of containers, volumes, and networks using declarative systemd units: https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html

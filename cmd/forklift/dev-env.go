@@ -22,7 +22,7 @@ func devEnvShowAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	return printEnvInfo(envPath)
+	return printEnvInfo(0, envPath)
 }
 
 // cache-repo
@@ -35,7 +35,7 @@ func devEnvCacheRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 
 	fmt.Printf("Downloading Pallet repositories specified by the development environment...\n")
-	changed, err := downloadRepos(envPath, workspace.CachePath(wpath))
+	changed, err := downloadRepos(0, envPath, workspace.CachePath(wpath))
 	if err != nil {
 		return err
 	}
@@ -67,11 +67,29 @@ func devEnvCacheImgAction(c *cli.Context) error {
 	}
 
 	fmt.Println("Downloading Docker container images specified by the development environment...")
-	if err := downloadImages(envPath, workspace.CachePath(wpath)); err != nil {
+	if err := downloadImages(0, envPath, workspace.CachePath(wpath)); err != nil {
 		return err
 	}
 	fmt.Println()
 	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift dev env apply`.")
+	return nil
+}
+
+// check
+
+func devEnvCheckAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
+
+	if err := checkEnv(0, envPath, workspace.CachePath(wpath)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -87,7 +105,7 @@ func devEnvApplyAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	if err := applyEnv(envPath, workspace.CachePath(wpath)); err != nil {
+	if err := applyEnv(0, envPath, workspace.CachePath(wpath)); err != nil {
 		return err
 	}
 	fmt.Println()
@@ -103,10 +121,10 @@ func devEnvLsRepoAction(c *cli.Context) error {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
 
-	return printEnvRepos(envPath)
+	return printEnvRepos(0, envPath)
 }
 
-// info-repo
+// show-repo
 
 func devEnvShowRepoAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
@@ -119,7 +137,7 @@ func devEnvShowRepoAction(c *cli.Context) error {
 	}
 
 	repoPath := c.Args().First()
-	return printRepoInfo(envPath, workspace.CachePath(wpath), repoPath)
+	return printRepoInfo(0, envPath, workspace.CachePath(wpath), repoPath)
 }
 
 // ls-pkg
@@ -134,10 +152,10 @@ func devEnvLsPkgAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	return printEnvPkgs(envPath, workspace.CachePath(wpath))
+	return printEnvPkgs(0, envPath, workspace.CachePath(wpath))
 }
 
-// info-pkg
+// show-pkg
 
 func devEnvShowPkgAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
@@ -150,7 +168,7 @@ func devEnvShowPkgAction(c *cli.Context) error {
 	}
 
 	pkgPath := c.Args().First()
-	return printPkgInfo(envPath, workspace.CachePath(wpath), pkgPath)
+	return printPkgInfo(0, envPath, workspace.CachePath(wpath), pkgPath)
 }
 
 // ls-depl
@@ -165,10 +183,10 @@ func devEnvLsDeplAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	return printEnvDepls(envPath, workspace.CachePath(wpath))
+	return printEnvDepls(0, envPath, workspace.CachePath(wpath))
 }
 
-// info-depl
+// show-depl
 
 func devEnvShowDeplAction(c *cli.Context) error {
 	envPath, err := dev.FindParentEnv(c.String("cwd"))
@@ -181,7 +199,7 @@ func devEnvShowDeplAction(c *cli.Context) error {
 	}
 
 	deplName := c.Args().First()
-	return printDeplInfo(envPath, workspace.CachePath(wpath), deplName)
+	return printDeplInfo(0, envPath, workspace.CachePath(wpath), deplName)
 }
 
 // add-repo

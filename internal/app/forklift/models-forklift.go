@@ -4,11 +4,11 @@ package forklift
 // Environment specifications
 
 type EnvSpec struct {
-	Description string `yaml:"description"`
+	Description string `yaml:"description,omitempty"`
 }
 
 type EnvConfig struct {
-	Environment EnvSpec `yaml:"environment"`
+	Environment EnvSpec `yaml:"environment,omitempty"`
 }
 
 // Repo versioning specifications
@@ -20,16 +20,16 @@ type VersionedRepo struct {
 }
 
 type RepoVersionConfig struct {
-	BaseVersion string `yaml:"base-version"`
-	Timestamp   string `yaml:"timestamp"`
-	Commit      string `yaml:"commit"`
+	BaseVersion string `yaml:"base-version,omitempty"`
+	Timestamp   string `yaml:"timestamp,omitempty"`
+	Commit      string `yaml:"commit,omitempty"`
 }
 
 // Package deployment specifications
 
 type DeplConfig struct {
-	Package  string   `yaml:"package"`
-	Features []string `yaml:"features"`
+	Package  string   `yaml:"package,omitempty"`
+	Features []string `yaml:"features,omitempty"`
 }
 
 type Depl struct {
