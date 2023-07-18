@@ -77,7 +77,7 @@ type PkgDeplSpec struct {
 }
 
 type PkgFeatureSpec struct {
-	Description string            `yaml:"description,omitempty"`
+	Description string            `yaml:"description"`
 	Tags        []string          `yaml:"tags,omitempty"`
 	Requires    RequiredResources `yaml:"requires,omitempty"`
 	Provides    ProvidedResources `yaml:"provides,omitempty"`
