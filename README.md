@@ -45,7 +45,7 @@ First, you will need to make/download a Pallet environment somewhere on your loc
 git clone https://github.com/PlanktoScope/pallets-env
 ```
 
-Then you will need to download/install forklift (see instructions in the "Download/install forklift" section above). Once you have forklift, you can run commands using the `dev env` subcommand; if forklift is in your systme path, you can simply run commands within the directory containing your development environment, or any subdirectory of it. For example, if your development environment is at `/home/pi/dev/pallets-env`, you can run the following commands to see some information about your development environment:
+Then you will need to download/install forklift (see instructions in the "Download/install forklift" section above). Once you have forklift, you can run commands using the `dev env` subcommand; if forklift is in your system path, you can simply run commands within the directory containing your development environment, or any subdirectory of it. For example, if your development environment is at `/home/pi/dev/pallets-env`, you can run the following commands to see some information about your development environment:
 
 ```
 cd /home/pi/dev/pallets-env
