@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- `env check` and `dev env check` now checks resource constraints againt all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
+
 ### 0.1.7 - 2023-06-01
 
 - `cache ls-img` can now search for locally-downloaded Docker container images matching a provided repository and tag.
