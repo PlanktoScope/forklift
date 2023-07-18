@@ -344,6 +344,14 @@ var devEnvCmd = &cli.Command{
 	Name:    "env",
 	Aliases: []string{"environment"},
 	Usage:   "Facilitates development and maintenance of a Forklift environment",
+	Flags: []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:    "repo",
+			Aliases: []string{"r"},
+			Usage: "Replaces version-locked repos from the cache with the corresponding repos in " +
+				"the specified directory paths",
+		},
+	},
 	Subcommands: []*cli.Command{
 		{
 			Name:     "cache-repo",

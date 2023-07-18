@@ -413,7 +413,7 @@ func envCacheImgAction(c *cli.Context) error {
 
 	fmt.Println("Downloading Docker container images specified by the local environment...")
 	if err := downloadImages(
-		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath),
+		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
 	); err != nil {
 		return err
 	}
@@ -422,8 +422,10 @@ func envCacheImgAction(c *cli.Context) error {
 	return nil
 }
 
-func downloadImages(indent int, envPath, cachePath string) error {
-	orderedImages, err := listRequiredImages(indent, envPath, cachePath)
+func downloadImages(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+) error {
+	orderedImages, err := listRequiredImages(indent, envPath, cachePath, replacementRepos)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -444,8 +446,11 @@ func downloadImages(indent int, envPath, cachePath string) error {
 	return nil
 }
 
-func listRequiredImages(indent int, envPath, cachePath string) ([]string, error) {
+func listRequiredImages(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+) ([]string, error) {
 	cacheFS := os.DirFS(cachePath)
+	// depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -493,14 +498,19 @@ func envCheckAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	if err := checkEnv(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+	if err := checkEnv(
+		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
+	); err != nil {
 		return err
 	}
 	return nil
 }
 
-func checkEnv(indent int, envPath, cachePath string) error {
+func checkEnv(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+) error {
 	cacheFS := os.DirFS(cachePath)
+	// depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
 	if err != nil {
 		return errors.Wrapf(
@@ -701,7 +711,9 @@ func envApplyAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	if err := applyEnv(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath)); err != nil {
+	if err := applyEnv(
+		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
+	); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
@@ -711,8 +723,11 @@ func envApplyAction(c *cli.Context) error {
 	return nil
 }
 
-func applyEnv(indent int, envPath, cachePath string) error {
+func applyEnv(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+) error {
 	cacheFS := os.DirFS(cachePath)
+	// depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS)
 	if err != nil {
 		return errors.Wrapf(
@@ -899,10 +914,13 @@ func envShowRepoAction(c *cli.Context) error {
 	}
 
 	repoPath := c.Args().First()
-	return printRepoInfo(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), repoPath)
+	return printRepoInfo(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil, repoPath)
 }
 
-func printRepoInfo(indent int, envPath, cachePath, repoPath string) error {
+func printRepoInfo(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+	repoPath string,
+) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
 	if err != nil {
 		return errors.Wrapf(
@@ -924,15 +942,25 @@ func printRepoInfo(indent int, envPath, cachePath, repoPath string) error {
 	printVersionedRepo(indent, versionedRepo)
 	fmt.Println()
 
-	cachedRepo, err := forklift.FindCachedRepo(os.DirFS(cachePath), repoPath, version)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"couldn't find Pallet repository %s@%s in cache, please run `forklift env cache-repo` again",
-			repoPath, version,
-		)
+	var cachedRepo forklift.CachedRepo
+	cachedRepo, ok := replacementRepos[repoPath]
+	if !ok {
+		if cachedRepo, err = forklift.FindCachedRepo(
+			os.DirFS(cachePath), repoPath, version,
+		); err != nil {
+			return errors.Wrapf(
+				err,
+				"couldn't find Pallet repository %s@%s in cache, please update the local cache of repos",
+				repoPath, version,
+			)
+		}
 	}
-	indentedPrintf(indent+1, "Path in cache: %s\n", cachedRepo.ConfigPath)
+	if filepath.IsAbs(cachedRepo.ConfigPath) {
+		indentedPrint(indent+1, "External path (replacing cached package): ")
+	} else {
+		indentedPrint(indent+1, "Path in cache: ")
+	}
+	fmt.Println(cachedRepo.ConfigPath)
 	indentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
 	// TODO: show the README file
 	return nil
@@ -958,14 +986,17 @@ func envLsPkgAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	return printEnvPkgs(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
+	return printEnvPkgs(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil)
 }
 
-func printEnvPkgs(indent int, envPath, cachePath string) error {
+func printEnvPkgs(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+) error {
 	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories in environment %s", envPath)
 	}
+	// pkgs, err := forklift.ListVersionedPkgs(os.DirFS(cachePath), replacementRepos, repos)
 	pkgs, err := forklift.ListVersionedPkgs(os.DirFS(cachePath), repos)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
@@ -992,16 +1023,20 @@ func envShowPkgAction(c *cli.Context) error {
 	}
 
 	pkgPath := c.Args().First()
-	return printPkgInfo(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), pkgPath)
+	return printPkgInfo(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil, pkgPath)
 }
 
-func printPkgInfo(indent int, envPath, cachePath, pkgPath string) error {
+func printPkgInfo(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+	pkgPath string,
+) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't open directory for Pallet repositories in environment %s", envPath,
 		)
 	}
+	// pkg, err := forklift.LoadVersionedPkg(reposFS, os.DirFS(cachePath), replacementRepos, pkgPath)
 	pkg, err := forklift.LoadVersionedPkg(reposFS, os.DirFS(cachePath), pkgPath)
 	if err != nil {
 		return errors.Wrapf(
@@ -1018,6 +1053,12 @@ func printVersionedPkg(indent int, pkg forklift.VersionedPkg) {
 
 	printVersionedPkgRepo(indent, pkg)
 	indentedPrintf(indent, "Path in cache: %s\n", pkg.Cached.ConfigPath)
+	if filepath.IsAbs(pkg.Cached.ConfigPath) {
+		indentedPrint(indent, "External path (replacing cached package): ")
+	} else {
+		indentedPrint(indent, "Path in cache: ")
+	}
+	fmt.Println(pkg.Cached.ConfigPath)
 	fmt.Println()
 
 	printPkgSpec(indent, pkg.Cached.Config.Package)
@@ -1047,10 +1088,13 @@ func envLsDeplAction(c *cli.Context) error {
 	if !workspace.Exists(workspace.CachePath(wpath)) {
 		return errMissingCache
 	}
-	return printEnvDepls(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath))
+	return printEnvDepls(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil)
 }
 
-func printEnvDepls(indent int, envPath, cachePath string) error {
+func printEnvDepls(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+) error {
+	// depls, err := forklift.ListDepls(os.DirFS(envPath), os.DirFS(cachePath), replacementRepos)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), os.DirFS(cachePath))
 	if err != nil {
 		return errors.Wrapf(
@@ -1076,11 +1120,15 @@ func envShowDeplAction(c *cli.Context) error {
 	}
 
 	deplName := c.Args().First()
-	return printDeplInfo(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), deplName)
+	return printDeplInfo(0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil, deplName)
 }
 
-func printDeplInfo(indent int, envPath, cachePath, deplName string) error {
+func printDeplInfo(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.CachedRepo,
+	deplName string,
+) error {
 	cacheFS := os.DirFS(cachePath)
+	// depl, err := forklift.LoadDepl(os.DirFS(envPath), cacheFS, replacementRepos, deplName)
 	depl, err := forklift.LoadDepl(os.DirFS(envPath), cacheFS, deplName)
 	if err != nil {
 		return errors.Wrapf(
