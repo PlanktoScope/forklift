@@ -1200,16 +1200,7 @@ func printDeplPkg(indent int, depl forklift.Depl) {
 	indent++
 
 	indentedPrintf(indent, "Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
-	printDeplPkgRepo(indent, depl.Pkg)
-}
-
-func printDeplPkgRepo(indent int, pkg forklift.VersionedPkg) {
-	indentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
-	indent++
-
-	indentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)
-	indentedPrintf(indent, "Description: %s\n", pkg.Cached.Repo.Config.Repository.Description)
-	indentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+	printVersionedPkgRepo(indent, depl.Pkg)
 }
 
 func printFeatures(indent int, features map[string]forklift.PkgFeatureSpec) {
