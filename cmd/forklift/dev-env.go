@@ -15,8 +15,8 @@ import (
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
 
-func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.CachedRepo, err error) {
-	repos = make(map[string]forklift.CachedRepo)
+func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.ExternalRepo, err error) {
+	repos = make(map[string]forklift.ExternalRepo)
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {
@@ -34,8 +34,11 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.CachedRep
 		}
 		for _, repo := range externalRepos {
 			repo.ConfigPath = fmt.Sprintf("%s/%s", replacementPath, repo.ConfigPath)
-			repoPath := fmt.Sprintf("%s/%s", repo.VCSRepoPath, repo.RepoSubdir)
-			repos[repoPath] = repo
+			repoPath := repo.Path()
+			repos[repoPath] = forklift.ExternalRepo{
+				FS:   os.DirFS(repo.ConfigPath),
+				Repo: repo,
+			}
 		}
 	}
 	return repos, nil
@@ -87,13 +90,13 @@ func devEnvCacheImgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	fmt.Println("Downloading Docker container images specified by the development environment...")
@@ -113,13 +116,13 @@ func devEnvCheckAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	// TODO: support overriding cached repos with any specified replacement repos from fs paths
@@ -136,13 +139,13 @@ func devEnvApplyAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	// TODO: support overriding cached repos with any specified replacement repos from fs paths
@@ -172,13 +175,13 @@ func devEnvShowRepoAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	repoPath := c.Args().First()
@@ -193,13 +196,13 @@ func devEnvLsPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	// TODO: support overriding cached repos with any specified replacement repos from fs paths
@@ -213,13 +216,13 @@ func devEnvShowPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	pkgPath := c.Args().First()
@@ -234,13 +237,13 @@ func devEnvLsDeplAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	// TODO: support overriding cached repos with any specified replacement repos from fs paths
@@ -254,13 +257,13 @@ func devEnvShowDeplAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
 	}
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		return errMissingCache
-	}
 	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
 	if err != nil {
 		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
 	}
 
 	deplName := c.Args().First()

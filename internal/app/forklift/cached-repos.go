@@ -16,6 +16,10 @@ func (r CachedRepo) FromSameVCSRepo(cr CachedRepo) bool {
 	return r.VCSRepoPath == cr.VCSRepoPath && r.Version == cr.Version
 }
 
+func (r CachedRepo) Path() string {
+	return filepath.Join(r.VCSRepoPath, r.RepoSubdir)
+}
+
 const (
 	compareLT = -1
 	compareEQ = 0

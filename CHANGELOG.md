@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 - `env check` and `dev env check` now checks resource constraints againt all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
+- `dev env` now allows specifying one or more directories containing Pallet repositories to replace any corresponding cached repositories, using the `--repo` flag (which can be specified repeatedly).
 
 ### 0.1.7 - 2023-06-01
 

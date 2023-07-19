@@ -1,6 +1,10 @@
 // Package forklift provides the core functionality of the forklift tool
 package forklift
 
+import (
+	"io/fs"
+)
+
 // Environment specifications
 
 type EnvSpec struct {
@@ -64,4 +68,11 @@ type CachedPkg struct {
 	PkgSubdir  string
 	ConfigPath string
 	Config     PkgConfig
+}
+
+// External repository loading
+
+type ExternalRepo struct {
+	Repo CachedRepo
+	FS   fs.FS
 }

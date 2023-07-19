@@ -37,7 +37,7 @@ func cacheLsRepoAction(c *cli.Context) error {
 	return nil
 }
 
-// info-repo
+// show-repo
 
 func cacheShowRepoAction(c *cli.Context) error {
 	wpath := c.String("workspace")
@@ -94,7 +94,7 @@ func cacheLsPkgAction(c *cli.Context) error {
 	return nil
 }
 
-// info-pkg
+// show-pkg
 
 func cacheShowPkgAction(c *cli.Context) error {
 	wpath := c.String("workspace")
@@ -182,7 +182,12 @@ func printDeplSpec(indent int, spec forklift.PkgDeplSpec) {
 	indent++
 
 	// TODO: actually display the definition file?
-	indentedPrintf(indent, "Definition file: %s\n", spec.DefinitionFile)
+	indentedPrintf(indent, "Definition file: ")
+	if len(spec.DefinitionFile) == 0 {
+		fmt.Println("(none)")
+		return
+	}
+	fmt.Println(spec.DefinitionFile)
 }
 
 func printFeatureSpecs(indent int, features map[string]forklift.PkgFeatureSpec) {
