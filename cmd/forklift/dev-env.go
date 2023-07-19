@@ -100,7 +100,6 @@ func devEnvCacheImgAction(c *cli.Context) error {
 	}
 
 	fmt.Println("Downloading Docker container images specified by the development environment...")
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	if err := downloadImages(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
 		return err
 	}

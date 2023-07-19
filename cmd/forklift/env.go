@@ -465,10 +465,19 @@ func listRequiredImages(
 		if depl.Pkg.Cached.Config.Deployment.DefinitionFile == "" {
 			continue
 		}
-		definitionFilePath := filepath.Join(
-			depl.Pkg.Cached.ConfigPath, depl.Pkg.Cached.Config.Deployment.DefinitionFile,
-		)
-		stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
+		pkgPath := depl.Pkg.Cached.ConfigPath
+		var f fs.FS
+		var definitionFilePath string
+		if filepath.IsAbs(pkgPath) {
+			f = os.DirFS(pkgPath)
+			definitionFilePath = depl.Pkg.Cached.Config.Deployment.DefinitionFile
+		} else {
+			f = cacheFS
+			definitionFilePath = filepath.Join(
+				pkgPath, depl.Pkg.Cached.Config.Deployment.DefinitionFile,
+			)
+		}
+		stackConfig, err := docker.LoadStackDefinition(f, definitionFilePath)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't load Docker stack definition from %s", definitionFilePath,
