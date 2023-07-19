@@ -697,9 +697,9 @@ func printDependencyCandidate[Resource any](
 	return nil
 }
 
-// apply
+// plan
 
-func envApplyAction(c *cli.Context) error {
+func envPlanAction(c *cli.Context) error {
 	wpath := c.String("workspace")
 	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
 		fmt.Println("The local environment is empty.")
@@ -709,19 +709,17 @@ func envApplyAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	if err := applyEnv(
+	if err := planEnv(
 		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
 	); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
 	}
-	fmt.Println()
-	fmt.Println("Done!")
 	return nil
 }
 
-func applyEnv(
+func planEnv(
 	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
 ) error {
 	cacheFS := os.DirFS(cachePath)
@@ -747,15 +745,6 @@ func applyEnv(
 	})
 	for _, change := range changes {
 		indentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
-	}
-
-	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker swarm client")
-	}
-	for _, change := range changes {
-		if err := applyReconciliationChange(0, cacheFS, change, dc); err != nil {
-			return errors.Wrapf(err, "couldn't apply '%s' change to stack %s", change.Type, change.Name)
-		}
 	}
 	return nil
 }
@@ -819,6 +808,66 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 
 	// TODO: reorder reconciliation actions based on dependencies
 	return changes
+}
+
+// apply
+
+func envApplyAction(c *cli.Context) error {
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.LocalEnvPath(wpath)) {
+		fmt.Println("The local environment is empty.")
+		return nil
+	}
+	if !workspace.Exists(workspace.CachePath(wpath)) {
+		return errMissingCache
+	}
+
+	if err := applyEnv(
+		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
+	); err != nil {
+		return errors.Wrap(
+			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
+		)
+	}
+	fmt.Println()
+	fmt.Println("Done!")
+	return nil
+}
+
+func applyEnv(
+	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+) error {
+	cacheFS := os.DirFS(cachePath)
+	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+		)
+	}
+	dc, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	stacks, err := dc.ListStacks(context.Background())
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list active Docker stacks")
+	}
+
+	indentedPrintln(indent, "Determining package deployment changes...")
+	changes := planReconciliation(depls, stacks)
+	sort.Slice(changes, func(i, j int) bool {
+		return changes[i].Name < changes[j].Name
+	})
+	for _, change := range changes {
+		indentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
+	}
+
+	for _, change := range changes {
+		if err := applyReconciliationChange(0, cacheFS, change, dc); err != nil {
+			return errors.Wrapf(err, "couldn't apply '%s' change to stack %s", change.Type, change.Name)
+		}
+	}
+	return nil
 }
 
 func applyReconciliationChange(

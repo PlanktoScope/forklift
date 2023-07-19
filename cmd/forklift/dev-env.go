@@ -131,6 +131,28 @@ func devEnvCheckAction(c *cli.Context) error {
 	return nil
 }
 
+// plan
+
+func devEnvPlanAction(c *cli.Context) error {
+	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	if err != nil {
+		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+	}
+	replacementRepos, err := loadReplacementRepos(c.StringSlice("repo"))
+	if err != nil {
+		return err
+	}
+	wpath := c.String("workspace")
+	if !workspace.Exists(workspace.CachePath(wpath)) && len(replacementRepos) == 0 {
+		return errMissingCache
+	}
+
+	if err := planEnv(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
+		return err
+	}
+	return nil
+}
+
 // apply
 
 func devEnvApplyAction(c *cli.Context) error {
@@ -147,7 +169,6 @@ func devEnvApplyAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	if err := applyEnv(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
 		return err
 	}
