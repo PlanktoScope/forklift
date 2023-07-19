@@ -311,16 +311,17 @@ func LoadDepl(
 	depl := Depl{
 		Name: deplName,
 	}
-	depl.Config, err = loadDeplConfig(deplsFS, fmt.Sprintf("%s.deploy.yml", deplName))
-	if err != nil {
+	if depl.Config, err = loadDeplConfig(
+		deplsFS, fmt.Sprintf("%s.deploy.yml", deplName),
+	); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load package deployment config for %s", deplName)
 	}
 
 	pkgPath := depl.Config.Package
 	repo, ok := FindExternalRepoOfPkg(replacementRepos, pkgPath)
 	if ok {
-		pkg, err := FindExternalPkg(repo, pkgPath)
-		if err != nil {
+		pkg, perr := FindExternalPkg(repo, pkgPath)
+		if perr != nil {
 			return Depl{}, errors.Wrapf(
 				err, "couldn't find external package %s from replacement repo %s",
 				pkgPath, repo.Repo.ConfigPath,
@@ -330,8 +331,7 @@ func LoadDepl(
 		return depl, nil
 	}
 
-	depl.Pkg, err = LoadVersionedPkg(reposFS, cacheFS, pkgPath)
-	if err != nil {
+	if depl.Pkg, err = LoadVersionedPkg(reposFS, cacheFS, pkgPath); err != nil {
 		return Depl{}, errors.Wrapf(
 			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
 		)

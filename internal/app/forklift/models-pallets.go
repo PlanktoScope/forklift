@@ -2,6 +2,8 @@ package forklift
 
 // Repository specifications
 
+const RepoSpecFile = "pallet-repository.yml"
+
 type RepoSpec struct {
 	Path        string `yaml:"path"`
 	Description string `yaml:"description"`
@@ -13,6 +15,8 @@ type RepoConfig struct {
 }
 
 // Package specifications
+
+const PkgSpecFile = "pallet-package.yml"
 
 type PkgConfig struct {
 	Package    PkgSpec                   `yaml:"package,omitempty"`

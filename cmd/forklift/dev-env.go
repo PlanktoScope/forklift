@@ -125,7 +125,6 @@ func devEnvCheckAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	if err := checkEnv(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
 		return err
 	}
@@ -185,7 +184,6 @@ func devEnvShowRepoAction(c *cli.Context) error {
 	}
 
 	repoPath := c.Args().First()
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	return printRepoInfo(0, envPath, workspace.CachePath(wpath), replacementRepos, repoPath)
 }
 
@@ -205,7 +203,6 @@ func devEnvLsPkgAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	return printEnvPkgs(0, envPath, workspace.CachePath(wpath), replacementRepos)
 }
 
@@ -226,7 +223,6 @@ func devEnvShowPkgAction(c *cli.Context) error {
 	}
 
 	pkgPath := c.Args().First()
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	return printPkgInfo(0, envPath, workspace.CachePath(wpath), replacementRepos, pkgPath)
 }
 
@@ -246,7 +242,6 @@ func devEnvLsDeplAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	return printEnvDepls(0, envPath, workspace.CachePath(wpath), replacementRepos)
 }
 
@@ -267,7 +262,6 @@ func devEnvShowDeplAction(c *cli.Context) error {
 	}
 
 	deplName := c.Args().First()
-	// TODO: support overriding cached repos with any specified replacement repos from fs paths
 	return printDeplInfo(0, envPath, workspace.CachePath(wpath), replacementRepos, deplName)
 }
 

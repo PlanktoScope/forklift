@@ -1038,8 +1038,8 @@ func printPkgInfo(
 	var pkg forklift.VersionedPkg
 	repo, ok := forklift.FindExternalRepoOfPkg(replacementRepos, pkgPath)
 	if ok {
-		externalPkg, err := forklift.FindExternalPkg(repo, pkgPath)
-		if err != nil {
+		externalPkg, perr := forklift.FindExternalPkg(repo, pkgPath)
+		if perr != nil {
 			return errors.Wrapf(
 				err, "couldn't find external package %s from replacement repo %s",
 				pkgPath, repo.Repo.ConfigPath,

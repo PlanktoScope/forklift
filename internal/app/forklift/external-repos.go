@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
 
@@ -30,7 +31,7 @@ func LoadExternalRepo(dir fs.FS, repoConfigFilePath string) (CachedRepo, error) 
 }
 
 func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
-	repoConfigFiles, err := doublestar.Glob(dir, "**/pallet-repository.yml")
+	repoConfigFiles, err := doublestar.Glob(dir, fmt.Sprintf("**/%s", RepoSpecFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
@@ -39,7 +40,7 @@ func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
 	repoMap := make(map[string]CachedRepo)
 	for _, repoConfigFilePath := range repoConfigFiles {
 		filename := filepath.Base(repoConfigFilePath)
-		if filename != "pallet-repository.yml" {
+		if filename != RepoSpecFile {
 			continue
 		}
 		repo, err := LoadExternalRepo(dir, repoConfigFilePath)

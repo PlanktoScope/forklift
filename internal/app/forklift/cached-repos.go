@@ -113,7 +113,7 @@ func LoadCachedRepo(cacheFS fs.FS, repoConfigFilePath string) (CachedRepo, error
 }
 
 func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
-	repoConfigFiles, err := doublestar.Glob(cacheFS, "**/pallet-repository.yml")
+	repoConfigFiles, err := doublestar.Glob(cacheFS, fmt.Sprintf("**/%s", RepoSpecFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
@@ -122,7 +122,7 @@ func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 	repoMap := make(map[string]CachedRepo)
 	for _, repoConfigFilePath := range repoConfigFiles {
 		filename := filepath.Base(repoConfigFilePath)
-		if filename != "pallet-repository.yml" {
+		if filename != RepoSpecFile {
 			continue
 		}
 		repo, err := LoadCachedRepo(cacheFS, repoConfigFilePath)
@@ -158,7 +158,7 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo,
 	// The repo subdirectory path in the repo path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-repository.yml file, so we must check every
 	// pallet-repository.yml file to find the actual repo path
-	searchPattern := fmt.Sprintf("%s@%s/**/pallet-repository.yml", vcsRepoPath, version)
+	searchPattern := fmt.Sprintf("%s@%s/**/%s", vcsRepoPath, version, RepoSpecFile)
 	candidateRepoConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
 	if err != nil {
 		return CachedRepo{}, errors.Wrapf(
@@ -173,7 +173,7 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo,
 	candidateRepos := make([]CachedRepo, 0)
 	for _, repoConfigFilePath := range candidateRepoConfigFiles {
 		filename := filepath.Base(repoConfigFilePath)
-		if filename != "pallet-repository.yml" {
+		if filename != RepoSpecFile {
 			continue
 		}
 		repo, err := LoadCachedRepo(cacheFS, repoConfigFilePath)

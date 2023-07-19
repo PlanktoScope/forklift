@@ -17,7 +17,7 @@ func ListVersionedPkgs(
 		var pkgs map[string]CachedPkg
 		var paths []string
 		if externalRepo, ok := replacementRepos[repo.Path()]; ok {
-			pkgs, paths, err = listVersionedPkgsOfExternalRepo(externalRepo, repo)
+			pkgs, paths, err = listVersionedPkgsOfExternalRepo(externalRepo)
 		} else {
 			pkgs, paths, err = listVersionedPkgsOfCachedRepo(cacheFS, repo)
 		}
@@ -39,7 +39,7 @@ func ListVersionedPkgs(
 }
 
 func listVersionedPkgsOfExternalRepo(
-	externalRepo ExternalRepo, repo VersionedRepo,
+	externalRepo ExternalRepo,
 ) (pkgMap map[string]CachedPkg, versionedPkgPaths []string, err error) {
 	pkgs, err := ListExternalPkgs(externalRepo, "")
 	if err != nil {
