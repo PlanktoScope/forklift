@@ -39,7 +39,29 @@ func GetCommitTimestamp(c CommitTimeGetter, hash string) (string, error) {
 	return ToTimestamp(commitTime), nil
 }
 
-// Repository versioning
+// VersionedRepo
+
+func (r VersionedRepo) Path() string {
+	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
+}
+
+func CompareVersionedRepos(r, s VersionedRepo) int {
+	if r.VCSRepoPath != s.VCSRepoPath {
+		if r.VCSRepoPath < s.VCSRepoPath {
+			return compareLT
+		}
+		return compareGT
+	}
+	if r.RepoSubdir != s.RepoSubdir {
+		if r.RepoSubdir < s.RepoSubdir {
+			return compareLT
+		}
+		return compareGT
+	}
+	return compareEQ
+}
+
+// RepoVersionConfig
 
 func (l RepoVersionConfig) IsCommitLocked() bool {
 	return l.Commit != ""
@@ -108,30 +130,34 @@ func (l RepoVersionConfig) Version() (string, error) {
 	return pseudoversion, nil
 }
 
-func (r VersionedRepo) Path() string {
-	return fmt.Sprintf("%s/%s", r.VCSRepoPath, r.RepoSubdir)
-}
-
-func CompareVersionedRepos(r, s VersionedRepo) int {
-	if r.VCSRepoPath != s.VCSRepoPath {
-		if r.VCSRepoPath < s.VCSRepoPath {
-			return compareLT
-		}
-		return compareGT
-	}
-	if r.RepoSubdir != s.RepoSubdir {
-		if r.RepoSubdir < s.RepoSubdir {
-			return compareLT
-		}
-		return compareGT
-	}
-	return compareEQ
-}
+// Loading
 
 const versionedReposDirName = "repositories"
 
 func VersionedReposFS(envFS fs.FS) (fs.FS, error) {
 	return fs.Sub(envFS, versionedReposDirName)
+}
+
+func LoadVersionedRepo(reposFS fs.FS, repoPath string) (VersionedRepo, error) {
+	vcsRepoPath, repoSubdir, err := SplitRepoPathSubdir(repoPath)
+	if err != nil {
+		return VersionedRepo{}, errors.Wrapf(
+			err, "couldn't parse path of version-locked Pallet repo %s", repoPath,
+		)
+	}
+	repo := VersionedRepo{
+		VCSRepoPath: vcsRepoPath,
+		RepoSubdir:  repoSubdir,
+	}
+
+	repo.Config, err = loadRepoVersionConfig(
+		reposFS, filepath.Join(repoPath, "forklift-repo.yml"),
+	)
+	if err != nil {
+		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
+	}
+
+	return repo, nil
 }
 
 // SplitRepoPathSubdir splits paths of form github.com/user-name/git-repo-name/pallets-repo-subdir
@@ -169,27 +195,7 @@ func loadRepoVersionConfig(reposFS fs.FS, filePath string) (RepoVersionConfig, e
 	return config, nil
 }
 
-func LoadVersionedRepo(reposFS fs.FS, repoPath string) (VersionedRepo, error) {
-	vcsRepoPath, repoSubdir, err := SplitRepoPathSubdir(repoPath)
-	if err != nil {
-		return VersionedRepo{}, errors.Wrapf(
-			err, "couldn't parse path of version-locked Pallet repo %s", repoPath,
-		)
-	}
-	repo := VersionedRepo{
-		VCSRepoPath: vcsRepoPath,
-		RepoSubdir:  repoSubdir,
-	}
-
-	repo.Config, err = loadRepoVersionConfig(
-		reposFS, filepath.Join(repoPath, "forklift-repo.yml"),
-	)
-	if err != nil {
-		return VersionedRepo{}, errors.Wrapf(err, "couldn't load repo version config for %s", repoPath)
-	}
-
-	return repo, nil
-}
+// Listing
 
 func ListVersionedRepos(envFS fs.FS) ([]VersionedRepo, error) {
 	reposFS, err := VersionedReposFS(envFS)

@@ -282,18 +282,6 @@ func splitMultiPathServiceResources(
 
 // Loading
 
-func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
-	bytes, err := fs.ReadFile(deplsFS, filePath)
-	if err != nil {
-		return DeplConfig{}, errors.Wrapf(err, "couldn't read deployment config file %s", filePath)
-	}
-	config := DeplConfig{}
-	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return DeplConfig{}, errors.Wrap(err, "couldn't parse deployment config")
-	}
-	return config, nil
-}
-
 func LoadDepl(
 	envFS, cacheFS fs.FS, replacementRepos map[string]ExternalRepo, deplName string,
 ) (Depl, error) {
@@ -342,6 +330,20 @@ func LoadDepl(
 	return depl, nil
 }
 
+func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
+	bytes, err := fs.ReadFile(deplsFS, filePath)
+	if err != nil {
+		return DeplConfig{}, errors.Wrapf(err, "couldn't read deployment config file %s", filePath)
+	}
+	config := DeplConfig{}
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
+		return DeplConfig{}, errors.Wrap(err, "couldn't parse deployment config")
+	}
+	return config, nil
+}
+
+// Listing
+
 func ListDepls(
 	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]ExternalRepo,
 ) ([]Depl, error) {
@@ -379,7 +381,7 @@ func ListDepls(
 	return orderedDepls, nil
 }
 
-// Constraint-checking functions
+// Constraint-checking
 
 func CheckDeplConflicts(depls []Depl) (conflicts []DeplConflict, err error) {
 	for i, depl := range depls {

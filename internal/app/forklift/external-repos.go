@@ -11,6 +11,8 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
+// Loading
+
 func LoadExternalRepo(dir fs.FS, repoConfigFilePath string) (CachedRepo, error) {
 	config, err := loadRepoConfig(dir, repoConfigFilePath)
 	if err != nil {
@@ -31,6 +33,21 @@ func LoadExternalRepo(dir fs.FS, repoConfigFilePath string) (CachedRepo, error) 
 	}
 	return repo, nil
 }
+
+func FindExternalRepoOfPkg(
+	repos map[string]ExternalRepo, pkgPath string,
+) (repo ExternalRepo, ok bool) {
+	repoCandidatePath := filepath.Dir(pkgPath)
+	for repoCandidatePath != "." {
+		if repo, ok = repos[repoCandidatePath]; ok {
+			return repo, true
+		}
+		repoCandidatePath = filepath.Dir(repoCandidatePath)
+	}
+	return ExternalRepo{}, false
+}
+
+// Listing
 
 func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
 	repoConfigFiles, err := doublestar.Glob(dir, fmt.Sprintf("**/%s", pallets.RepoSpecFile))

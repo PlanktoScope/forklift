@@ -8,6 +8,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// EnvConfig
+
 func LoadEnvConfig(envPath string) (EnvConfig, error) {
 	f := os.DirFS(envPath)
 	bytes, err := fs.ReadFile(f, "forklift-env.yml")
