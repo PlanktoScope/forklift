@@ -112,6 +112,14 @@ var envCmd = &cli.Command{
 			Action:   envCheckAction,
 		},
 		{
+			Name:     "plan",
+			Aliases:  []string{"p"},
+			Category: "Use the environment",
+			Usage: "Determines the changes needed to update the Docker Swarm to match the deployments " +
+				"specified by the local environment",
+			Action: envPlanAction,
+		},
+		{
 			Name:     "apply",
 			Aliases:  []string{"a"},
 			Category: "Use the environment",
@@ -344,6 +352,14 @@ var devEnvCmd = &cli.Command{
 	Name:    "env",
 	Aliases: []string{"environment"},
 	Usage:   "Facilitates development and maintenance of a Forklift environment",
+	Flags: []cli.Flag{
+		&cli.StringSliceFlag{
+			Name:    "repo",
+			Aliases: []string{"r"},
+			Usage: "Replaces version-locked repos from the cache with the corresponding repos in " +
+				"the specified directory paths",
+		},
+	},
 	Subcommands: []*cli.Command{
 		{
 			Name:     "cache-repo",
@@ -365,6 +381,14 @@ var devEnvCmd = &cli.Command{
 			Category: "Use the environment",
 			Usage:    "Checks whether the development environment's resource constraints are satisfied",
 			Action:   devEnvCheckAction,
+		},
+		{
+			Name:     "plan",
+			Aliases:  []string{"p"},
+			Category: "Use the environment",
+			Usage: "Determines the changes needed to update the Docker Swarm to match the deployments " +
+				"specified by the local environment",
+			Action: devEnvPlanAction,
 		},
 		{
 			Name:     "apply",

@@ -292,7 +292,9 @@ func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
 	return config, nil
 }
 
-func LoadDepl(envFS, cacheFS fs.FS, deplName string) (Depl, error) {
+func LoadDepl(
+	envFS, cacheFS fs.FS, replacementRepos map[string]ExternalRepo, deplName string,
+) (Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
 		return Depl{}, errors.Wrap(
@@ -309,14 +311,27 @@ func LoadDepl(envFS, cacheFS fs.FS, deplName string) (Depl, error) {
 	depl := Depl{
 		Name: deplName,
 	}
-	depl.Config, err = loadDeplConfig(deplsFS, fmt.Sprintf("%s.deploy.yml", deplName))
-	if err != nil {
+	if depl.Config, err = loadDeplConfig(
+		deplsFS, fmt.Sprintf("%s.deploy.yml", deplName),
+	); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load package deployment config for %s", deplName)
 	}
 
 	pkgPath := depl.Config.Package
-	depl.Pkg, err = LoadVersionedPkg(reposFS, cacheFS, pkgPath)
-	if err != nil {
+	repo, ok := FindExternalRepoOfPkg(replacementRepos, pkgPath)
+	if ok {
+		pkg, perr := FindExternalPkg(repo, pkgPath)
+		if perr != nil {
+			return Depl{}, errors.Wrapf(
+				err, "couldn't find external package %s from replacement repo %s",
+				pkgPath, repo.Repo.ConfigPath,
+			)
+		}
+		depl.Pkg = AsVersionedPkg(pkg)
+		return depl, nil
+	}
+
+	if depl.Pkg, err = LoadVersionedPkg(reposFS, cacheFS, pkgPath); err != nil {
 		return Depl{}, errors.Wrapf(
 			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
 		)
@@ -325,7 +340,9 @@ func LoadDepl(envFS, cacheFS fs.FS, deplName string) (Depl, error) {
 	return depl, nil
 }
 
-func ListDepls(envFS fs.FS, cacheFS fs.FS) ([]Depl, error) {
+func ListDepls(
+	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]ExternalRepo,
+) ([]Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
 		return nil, errors.Wrap(
@@ -347,7 +364,7 @@ func ListDepls(envFS fs.FS, cacheFS fs.FS) ([]Depl, error) {
 			)
 		}
 		deplNames = append(deplNames, deplName)
-		deplMap[deplName], err = LoadDepl(envFS, cacheFS, deplName)
+		deplMap[deplName], err = LoadDepl(envFS, cacheFS, replacementRepos, deplName)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load package deployment specification %s", deplName)
 		}

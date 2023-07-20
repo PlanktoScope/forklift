@@ -70,6 +70,13 @@ You can also run commands like `forklift dev env cache-repo` and `sudo -E forkli
 
 Finally, you can run the `forklift dev env check` command to check the environment for any problems, such as resource constraint violations.
 
+You can also override cached repos with repos from your filesystem by specifying one or more directories containing one or more repos; then the repos in those directories will be used instead of the respective repos from the cache, regardless of repo version. For example:
+
+```
+cd /home/pi/
+/home/pi/forklift dev --cwd /home/pi/dev/pallets-env env --repo /home/pi/forklift/dev/pallets check
+```
+
 ## Similar projects
 
 The following projects solve related problems with containers, though they make different trade-offs compared to Forklift and Pallets:
