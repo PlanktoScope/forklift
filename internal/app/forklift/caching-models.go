@@ -13,9 +13,6 @@ type CachedRepo struct {
 }
 
 type CachedPkg struct {
-	Repo       CachedRepo
-	Path       string
-	PkgSubdir  string
-	ConfigPath string
-	Config     pallets.PkgConfig
+	pallets.FSPkg
+	Repo CachedRepo
 }

@@ -70,12 +70,12 @@ func printVersionedPkg(indent int, pkg forklift.VersionedPkg) {
 	indent++
 
 	printVersionedPkgRepo(indent, pkg)
-	if filepath.IsAbs(pkg.Cached.ConfigPath) {
+	if filepath.IsAbs(pkg.Cached.FSPath) {
 		IndentedPrint(indent, "External path (replacing cached package): ")
 	} else {
 		IndentedPrint(indent, "Path in cache: ")
 	}
-	fmt.Println(pkg.Cached.ConfigPath)
+	fmt.Println(pkg.Cached.FSPath)
 	fmt.Println()
 
 	PrintPkgSpec(indent, pkg.Cached.Config.Package)

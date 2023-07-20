@@ -1,5 +1,30 @@
 package pallets
 
+import (
+	"io/fs"
+)
+
+// A Pkg is a Pallet package.
+type Pkg struct {
+	// Path is the Pallet package path, which consists of the Pallet repository path followed by the
+	// package subdirectory.
+	Path string
+	// Subdir is the path of the package within the Pallet repository which provides the package.
+	Subdir string
+	// Config is the Pallet package specification for the package.
+	Config PkgConfig
+}
+
+// A FSPkg is a Pallet package stored at the root of a [fs.FS] filesystem.
+type FSPkg struct {
+	// Pkg is the Pallet package at the root of the filesystem.
+	Pkg
+	// FS is a filesystem which contains the package's contents.
+	FS fs.FS
+	// Path is the path of the package's filesystem.
+	FSPath string
+}
+
 // PkgSpecFile is the name of the file defining each Pallet package.
 const PkgSpecFile = "pallet-package.yml"
 

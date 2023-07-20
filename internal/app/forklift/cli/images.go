@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 
+	dct "github.com/docker/cli/cli/compose/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
-	dct "github.com/docker/cli/cli/compose/types"
 )
 
 func DownloadImages(
@@ -76,13 +76,13 @@ func listRequiredImages(
 func loadStackDefinition(cacheFS fs.FS, pkg forklift.CachedPkg) (*dct.Config, error) {
 	var f fs.FS
 	var definitionFilePath string
-	pkgPath := pkg.ConfigPath
-	if filepath.IsAbs(pkgPath) {
-		f = os.DirFS(pkgPath)
+	fsPath := pkg.FSPath
+	if filepath.IsAbs(fsPath) {
+		f = os.DirFS(fsPath)
 		definitionFilePath = pkg.Config.Deployment.DefinitionFile
 	} else {
 		f = cacheFS
-		definitionFilePath = filepath.Join(pkgPath, pkg.Config.Deployment.DefinitionFile)
+		definitionFilePath = filepath.Join(fsPath, pkg.Config.Deployment.DefinitionFile)
 	}
 	stackConfig, err := docker.LoadStackDefinition(f, definitionFilePath)
 	if err != nil {
