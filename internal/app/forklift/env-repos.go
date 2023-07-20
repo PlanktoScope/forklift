@@ -27,6 +27,18 @@ func ShortCommit(commit string) string {
 	return commit[:shortCommitLength]
 }
 
+type CommitTimeGetter interface {
+	GetCommitTime(hash string) (time.Time, error)
+}
+
+func GetCommitTimestamp(c CommitTimeGetter, hash string) (string, error) {
+	commitTime, err := c.GetCommitTime(hash)
+	if err != nil {
+		return "", errors.Wrapf(err, "couldn't check time of commit %s", ShortCommit(hash))
+	}
+	return ToTimestamp(commitTime), nil
+}
+
 // Repository versioning
 
 func (l RepoVersionConfig) IsCommitLocked() bool {

@@ -1,4 +1,4 @@
-package main
+package depl
 
 import (
 	"context"
@@ -11,33 +11,9 @@ import (
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 )
 
-// CLI
-
-var deplCmd = &cli.Command{
-	Name:    "depl",
-	Aliases: []string{"d", "deployments"},
-	Usage:   "Manages active Pallet package deployments in the local environment",
-	Subcommands: []*cli.Command{
-		{
-			Name:     "ls-stack",
-			Category: "Query the active deployment",
-			Aliases:  []string{"ls-s", "list-stacks"},
-			Usage:    "Lists running Docker stacks",
-			Action:   deplLsStackAction,
-		},
-		{
-			Name:     "rm",
-			Category: "Modify the active deployment",
-			Aliases:  []string{"remove"},
-			Usage:    "Removes all Docker stacks",
-			Action:   deplRmAction,
-		},
-	},
-}
-
 // ls-stack
 
-func deplLsStackAction(c *cli.Context) error {
+func lsStackAction(c *cli.Context) error {
 	client, err := docker.NewClient()
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
@@ -58,7 +34,7 @@ func deplLsStackAction(c *cli.Context) error {
 
 // rm
 
-func deplRmAction(c *cli.Context) error {
+func rmAction(c *cli.Context) error {
 	client, err := docker.NewClient()
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")

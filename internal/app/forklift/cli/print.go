@@ -1,4 +1,4 @@
-// Shared utilities for the forklift CLI
+// Package cli has shared utilities and application logic for the forklift CLI
 package cli
 
 import (
@@ -71,7 +71,7 @@ func BulletedPrint(indent int, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
-	fmt.Printf(bullet)
+	fmt.Print(bullet)
 	fmt.Print(a...)
 }
 
@@ -79,7 +79,7 @@ func BulletedPrintln(indent int, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
-	fmt.Printf(bullet)
+	fmt.Print(bullet)
 	fmt.Println(a...)
 }
 
@@ -90,7 +90,9 @@ func BulletedPrintYaml(indent int, a any) error {
 	if err := encoder.Encode(a); err != nil {
 		return errors.Wrapf(err, "couldn't serialize %T as yaml document", a)
 	}
-	encoder.Close()
+	if err := encoder.Close(); err != nil {
+		return errors.Wrapf(err, "couldn't close yaml encloder for %T", a)
+	}
 	lines := strings.Split(buf.String(), "\n")
 	for i, line := range lines[:len(lines)-1] { // last line follows last "\n" and is empty
 		if i == 0 {

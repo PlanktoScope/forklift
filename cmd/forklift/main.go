@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/PlanktoScope/forklift/cmd/forklift/cache"
+	"github.com/PlanktoScope/forklift/cmd/forklift/depl"
+	"github.com/PlanktoScope/forklift/cmd/forklift/dev"
+	"github.com/PlanktoScope/forklift/cmd/forklift/env"
 )
 
 func main() {
@@ -23,10 +28,10 @@ var app = &cli.App{
 	Version: "v0.1.7",
 	Usage:   "Manages Pallet repositories and package deployments",
 	Commands: []*cli.Command{
-		envCmd,
-		cacheCmd,
-		deplCmd,
-		devCmd,
+		env.Cmd,
+		cache.Cmd,
+		depl.Cmd,
+		dev.Cmd,
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -38,25 +43,4 @@ var app = &cli.App{
 		},
 	},
 	Suggest: true,
-}
-
-// Dev
-
-var defaultWorkingDir, _ = os.Getwd()
-
-var devCmd = &cli.Command{
-	Name:    "dev",
-	Aliases: []string{"development"},
-	Usage:   "Facilitates development and maintenance in the current working directory",
-	Subcommands: []*cli.Command{
-		devEnvCmd,
-	},
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "cwd",
-			Value:   defaultWorkingDir,
-			Usage:   "Path of the current working directory",
-			EnvVars: []string{"FORKLIFT_CWD"},
-		},
-	},
 }
