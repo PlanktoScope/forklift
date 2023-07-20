@@ -15,10 +15,215 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
+
+// CLI
+
+var envCmd = &cli.Command{
+	Name:    "env",
+	Aliases: []string{"environment"},
+	Usage:   "Manages the local environment",
+	Subcommands: []*cli.Command{
+		{
+			Name:      "clone",
+			Category:  "Modify the environment",
+			Usage:     "Initializes the local environment from a remote release",
+			ArgsUsage: "[github_repository_path@release]",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "force",
+					Aliases: []string{"f"},
+					Usage:   "Deletes the local environment if it already exists",
+				},
+			},
+			Action: envCloneAction,
+		},
+		{
+			Name:     "fetch",
+			Category: "Modify the environment",
+			Usage:    "Updates information about the remote release",
+			Action:   envFetchAction,
+		},
+		{
+			Name:     "pull",
+			Category: "Modify the environment",
+			Usage:    "Fast-forwards the local environment to match the remote release",
+			Action:   envPullAction,
+		},
+		// {
+		// 	Name:  "push",
+		// 	Category:  "Modify the environment",
+		// 	Usage: "Updates the remote release from the local environment",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("pushing to remote origin")
+		// 		return nil
+		// 	},
+		// },
+		{
+			Name:     "rm",
+			Aliases:  []string{"remove"},
+			Category: "Modify the environment",
+			Usage:    "Removes the local environment",
+			Action:   envRmAction,
+		},
+		// envRemoteCmd,
+		{
+			Name:     "cache-repo",
+			Aliases:  []string{"c-r", "cache-repositories"},
+			Category: "Use the environment",
+			Usage:    "Updates the cache with the repositories available in the local environment",
+			Action:   envCacheRepoAction,
+		},
+		{
+			Name:     "cache-img",
+			Aliases:  []string{"c-i", "cache-images"},
+			Category: "Use the environment",
+			Usage:    "Pre-downloads the Docker container images required by the local environment",
+			Action:   envCacheImgAction,
+		},
+		{
+			Name:     "check",
+			Aliases:  []string{"c"},
+			Category: "Use the environment",
+			Usage:    "Checks whether the local environment's resource constraints are satisfied",
+			Action:   envCheckAction,
+		},
+		{
+			Name:     "plan",
+			Aliases:  []string{"p"},
+			Category: "Use the environment",
+			Usage: "Determines the changes needed to update the Docker Swarm to match the deployments " +
+				"specified by the local environment",
+			Action: envPlanAction,
+		},
+		{
+			Name:     "apply",
+			Aliases:  []string{"a"},
+			Category: "Use the environment",
+			Usage: "Updates the Docker Swarm to match the deployments specified by the " +
+				"local environment",
+			Action: envApplyAction,
+		},
+		{
+			Name:     "show",
+			Aliases:  []string{"s"},
+			Category: "Query the environment",
+			Usage:    "Describes the local environment",
+			Action:   envShowAction,
+		},
+		{
+			Name:     "ls-repo",
+			Aliases:  []string{"ls-r", "list-repositories"},
+			Category: "Query the environment",
+			Usage:    "Lists repositories available in the local environment",
+			Action:   envLsRepoAction,
+		},
+		{
+			Name:      "show-repo",
+			Aliases:   []string{"s-r", "show-repository"},
+			Category:  "Query the environment",
+			Usage:     "Describes a repository available in the local environment",
+			ArgsUsage: "repository_path",
+			Action:    envShowRepoAction,
+		},
+		{
+			Name:     "ls-pkg",
+			Aliases:  []string{"ls-p", "list-packages"},
+			Category: "Query the environment",
+			Usage:    "Lists packages available in the local environment",
+			Action:   envLsPkgAction,
+		},
+		{
+			Name:      "show-pkg",
+			Aliases:   []string{"s-p", "show-package"},
+			Category:  "Query the environment",
+			Usage:     "Describes a package available in the local environment",
+			ArgsUsage: "package_path",
+			Action:    envShowPkgAction,
+		},
+		{
+			Name:     "ls-depl",
+			Aliases:  []string{"ls-d", "list-deployments"},
+			Category: "Query the environment",
+			Usage:    "Lists package deployments specified by the local environment",
+			Action:   envLsDeplAction,
+		},
+		{
+			Name:      "show-depl",
+			Aliases:   []string{"s-d", "show-deployment"},
+			Category:  "Query the environment",
+			Usage:     "Describes a package deployment specified by the local environment",
+			ArgsUsage: "package_path",
+			Action:    envShowDeplAction,
+		},
+		// {
+		// 	Name:      "add-repo",
+		// 	Aliases:   []string{"add-r", "add-repositories"},
+		// 	Category:  "Modify the environment",
+		// 	Usage:     "Adds repositories to the environment, tracking specified versions or branches",
+		// 	ArgsUsage: "[pallet_repository_path@version_query]...",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("adding repositories", c.Args())
+		// 		// TODO: implement version queries - see https://go.dev/ref/mod#vcs-branch
+		// 		return nil
+		// 	},
+		// },
+		// TODO: add an upgrade-repo action
+		// {
+		// 	Name:      "rm-repo",
+		// 	Aliases:   []string{"rm-r", "remove-repositories"},
+		// 	Category:  "Modify the environment",
+		// 	Usage:     "Removes a repository from the environment",
+		// 	ArgsUsage: "repository_path",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("removing repository", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:  "add-depl",
+		// 	Aliases:   []string{"add-d", "add-deployments"},
+		// 	Category:  "Modify the environment",
+		// 	Usage: "Adds a package deployment to the environment",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("adding package deployment", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+		// {
+		// 	Name:      "rm-depl",
+		// 	Aliases:   []string{"rm-d", "remove-deployments"},
+		// 	Category:  "Modify the environment",
+		// 	Usage:     "Removes a package deployment from the environment",
+		// 	ArgsUsage: "package_path",
+		// 	Action: func(c *cli.Context) error {
+		// 		fmt.Println("removing package deployment", c.Args().First())
+		// 		return nil
+		// 	},
+		// },
+	},
+}
+
+// var envRemoteCmd = &cli.Command{
+// 	Name:  "remote",
+// 	Usage: "Manages the local environment's relationship to the remote source",
+// 	Subcommands: []*cli.Command{
+// 		{
+// 			Name:  "set",
+// 			Usage: "Sets the remote source for the local environment",
+// 			Action: func(c *cli.Context) error {
+// 				fmt.Println("setting remote source to", c.Args().First())
+// 				return nil
+// 			},
+// 		},
+// 	},
+// }
+
+// Errors
 
 var errMissingEnv = errors.Errorf(
 	"you first need to set up a local environment with `forklift env clone`",
@@ -150,19 +355,19 @@ func envShowAction(c *cli.Context) error {
 }
 
 func printEnvInfo(indent int, envPath string) error {
-	indentedPrintf(indent, "Environment: %s\n", envPath)
+	fcli.IndentedPrintf(indent, "Environment: %s\n", envPath)
 	config, err := forklift.LoadEnvConfig(envPath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load the environment config")
 	}
 
-	indentedPrintf(indent, "Description: %s\n", config.Environment.Description)
+	fcli.IndentedPrintf(indent, "Description: %s\n", config.Environment.Description)
 
 	ref, err := git.Head(envPath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query environment %s for its HEAD", envPath)
 	}
-	indentedPrintf(indent, "Currently on: %s\n", git.StringifyRef(ref))
+	fcli.IndentedPrintf(indent, "Currently on: %s\n", git.StringifyRef(ref))
 	// TODO: report any divergence between head and remotes
 	if err := printUncommittedChanges(indent+1, envPath); err != nil {
 		return err
@@ -185,7 +390,7 @@ func printRemotesInfo(indent int, envPath string) error {
 		return errors.Wrapf(err, "couldn't query environment %s for its remotes", envPath)
 	}
 
-	indentedPrintf(indent, "Remotes:")
+	fcli.IndentedPrintf(indent, "Remotes:")
 	if len(remotes) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -200,23 +405,23 @@ func printRemotesInfo(indent int, envPath string) error {
 
 func printRemoteInfo(indent int, remote *ggit.Remote) {
 	config := remote.Config()
-	indentedPrintf(indent, "%s:\n", config.Name)
+	fcli.IndentedPrintf(indent, "%s:\n", config.Name)
 	indent++
 
-	indentedPrintf(indent, "URLs:")
+	fcli.IndentedPrintf(indent, "URLs:")
 	if len(config.URLs) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
 	for i, url := range config.URLs {
-		bulletedPrintf(indent+1, "%s: ", url)
+		fcli.BulletedPrintf(indent+1, "%s: ", url)
 		if i == 0 {
 			fmt.Print("fetch, ")
 		}
 		fmt.Println("push")
 	}
 
-	indentedPrintf(indent, "Up-to-date references:")
+	fcli.IndentedPrintf(indent, "Up-to-date references:")
 	refs, err := remote.List(git.EmptyListOptions())
 	if err != nil {
 		fmt.Printf(" (couldn't retrieve references: %s)\n", err)
@@ -228,7 +433,7 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 	}
 	fmt.Println()
 	for _, ref := range refs {
-		bulletedPrintf(indent+1, "%s\n", git.StringifyRef(ref))
+		fcli.BulletedPrintf(indent+1, "%s\n", git.StringifyRef(ref))
 	}
 }
 
@@ -238,7 +443,7 @@ func printLocalRefsInfo(indent int, envPath string) error {
 		return errors.Wrapf(err, "couldn't query environment %s for its refs", envPath)
 	}
 
-	indentedPrintf(indent, "References:")
+	fcli.IndentedPrintf(indent, "References:")
 	if len(refs) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -246,7 +451,7 @@ func printLocalRefsInfo(indent int, envPath string) error {
 	indent++
 
 	for _, ref := range refs {
-		bulletedPrintf(indent, "%s\n", git.StringifyRef(ref))
+		fcli.BulletedPrintf(indent, "%s\n", git.StringifyRef(ref))
 	}
 
 	return nil
@@ -257,7 +462,7 @@ func printUncommittedChanges(indent int, envPath string) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query the environment %s for its status", envPath)
 	}
-	indentedPrint(indent, "Uncommitted changes:")
+	fcli.IndentedPrint(indent, "Uncommitted changes:")
 	if len(status) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -271,7 +476,7 @@ func printUncommittedChanges(indent int, envPath string) error {
 		if status.Staging == git.StatusRenamed {
 			file = fmt.Sprintf("%s -> %s", file, status.Extra)
 		}
-		bulletedPrintf(indent, "%c%c %s\n", status.Staging, status.Worktree, file)
+		fcli.BulletedPrintf(indent, "%c%c %s\n", status.Staging, status.Worktree, file)
 	}
 	return nil
 }
@@ -334,7 +539,7 @@ func downloadRepo(
 		return false, nil
 	}
 
-	indentedPrintf(indent, "Downloading %s@%s...\n", repo.VCSRepoPath, version)
+	fcli.IndentedPrintf(indent, "Downloading %s@%s...\n", repo.VCSRepoPath, version)
 	gitRepo, err := git.Clone(vcsRepoPath, path)
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't clone repo %s to %s", vcsRepoPath, path)
@@ -344,7 +549,7 @@ func downloadRepo(
 	shortCommit := repo.Config.ShortCommit()
 	if err = validateCommit(repo, gitRepo); err != nil {
 		if cerr := os.RemoveAll(path); cerr != nil {
-			indentedPrintf(
+			fcli.IndentedPrintf(
 				indent,
 				"Error: couldn't clean up %s after failed validation! You'll need to delete it yourself.\n",
 				path,
@@ -358,7 +563,7 @@ func downloadRepo(
 	// Checkout commit
 	if err = gitRepo.Checkout(repo.Config.Commit); err != nil {
 		if cerr := os.RemoveAll(path); cerr != nil {
-			indentedPrintf(
+			fcli.IndentedPrintf(
 				indent, "Error: couldn't clean up %s! You will need to delete it yourself.\n", path,
 			)
 		}
@@ -436,12 +641,14 @@ func downloadImages(
 	}
 	for _, image := range orderedImages {
 		fmt.Println()
-		indentedPrintf(indent, "Downloading %s...\n", image)
+		fcli.IndentedPrintf(indent, "Downloading %s...\n", image)
 		pulled, err := dc.PullImage(context.Background(), image, docker.NewOutStream(os.Stdout))
 		if err != nil {
 			return errors.Wrapf(err, "couldn't download %s", image)
 		}
-		indentedPrintf(indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
+		fcli.IndentedPrintf(
+			indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
+		)
 	}
 	return nil
 }
@@ -459,7 +666,7 @@ func listRequiredImages(
 	orderedImages := make([]string, 0, len(depls))
 	images := make(map[string]struct{})
 	for _, depl := range depls {
-		indentedPrintf(
+		fcli.IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
 		if depl.Pkg.Cached.Config.Deployment.DefinitionFile == "" {
@@ -484,7 +691,7 @@ func listRequiredImages(
 			)
 		}
 		for _, service := range stackConfig.Services {
-			bulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)
+			fcli.BulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)
 			if _, ok := images[service.Image]; !ok {
 				images[service.Image] = struct{}{}
 				orderedImages = append(orderedImages, service.Image)
@@ -530,7 +737,7 @@ func checkEnv(
 		return errors.Wrap(err, "couldn't check for conflicts among deployments")
 	}
 	if len(conflicts) > 0 {
-		indentedPrintln(indent, "Found resource conflicts among deployments:")
+		fcli.IndentedPrintln(indent, "Found resource conflicts among deployments:")
 	}
 	for _, conflict := range conflicts {
 		if err = printDeplConflict(1, conflict); err != nil {
@@ -546,7 +753,7 @@ func checkEnv(
 		return errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
 	}
 	if len(missingDeps) > 0 {
-		indentedPrintln(indent, "Found unmet resource dependencies among deployments:")
+		fcli.IndentedPrintln(indent, "Found unmet resource dependencies among deployments:")
 	}
 	for _, missingDep := range missingDeps {
 		if err := printMissingDeplDependency(1, missingDep); err != nil {
@@ -561,26 +768,26 @@ func checkEnv(
 }
 
 func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
-	indentedPrintf(indent, "Between %s and %s:\n", conflict.First.Name, conflict.Second.Name)
+	fcli.IndentedPrintf(indent, "Between %s and %s:\n", conflict.First.Name, conflict.Second.Name)
 	indent++
 
 	if conflict.HasNameConflict() {
-		indentedPrintln(indent, "Conflicting deployment names")
+		fcli.IndentedPrintln(indent, "Conflicting deployment names")
 	}
 	if conflict.HasListenerConflict() {
-		indentedPrintln(indent, "Conflicting host port listeners:")
+		fcli.IndentedPrintln(indent, "Conflicting host port listeners:")
 		if err := printResourceConflicts(indent+1, conflict.Listeners); err != nil {
 			return errors.Wrap(err, "couldn't print conflicting host port listeners")
 		}
 	}
 	if conflict.HasNetworkConflict() {
-		indentedPrintln(indent, "Conflicting Docker networks:")
+		fcli.IndentedPrintln(indent, "Conflicting Docker networks:")
 		if err := printResourceConflicts(indent+1, conflict.Networks); err != nil {
 			return errors.Wrap(err, "couldn't print conflicting docker networks")
 		}
 	}
 	if conflict.HasServiceConflict() {
-		indentedPrintln(indent, "Conflicting network services:")
+		fcli.IndentedPrintln(indent, "Conflicting network services:")
 		if err := printResourceConflicts(indent+1, conflict.Services); err != nil {
 			return errors.Wrap(err, "couldn't print conflicting network services")
 		}
@@ -602,25 +809,25 @@ func printResourceConflicts[Resource any](
 func printResourceConflict[Resource any](
 	indent int, conflict forklift.ResourceConflict[Resource],
 ) error {
-	bulletedPrintf(indent, "Conflicting resource from %s:\n", conflict.First.Source[0])
+	fcli.BulletedPrintf(indent, "Conflicting resource from %s:\n", conflict.First.Source[0])
 	indent++ // because the bullet adds an indentation level
 	resourceIndent := printResourceSource(indent+1, conflict.First.Source[1:])
-	if err := indentedPrintYaml(resourceIndent+1, conflict.First.Resource); err != nil {
+	if err := fcli.IndentedPrintYaml(resourceIndent+1, conflict.First.Resource); err != nil {
 		return errors.Wrap(err, "couldn't print first resource")
 	}
-	indentedPrintf(indent, "Conflicting resource from %s:\n", conflict.Second.Source[0])
+	fcli.IndentedPrintf(indent, "Conflicting resource from %s:\n", conflict.Second.Source[0])
 	resourceIndent = printResourceSource(indent+1, conflict.Second.Source[1:])
-	if err := indentedPrintYaml(resourceIndent+1, conflict.Second.Resource); err != nil {
+	if err := fcli.IndentedPrintYaml(resourceIndent+1, conflict.Second.Resource); err != nil {
 		return errors.Wrap(err, "couldn't print second resource")
 	}
 
-	indentedPrint(indent, "Resources are conflicting because of:")
+	fcli.IndentedPrint(indent, "Resources are conflicting because of:")
 	if len(conflict.Errs) == 0 {
 		fmt.Print(" (unknown)")
 	}
 	fmt.Println()
 	for _, err := range conflict.Errs {
-		bulletedPrintf(indent+1, "%s\n", err)
+		fcli.BulletedPrintf(indent+1, "%s\n", err)
 	}
 	return nil
 }
@@ -628,18 +835,18 @@ func printResourceConflict[Resource any](
 func printResourceSource(indent int, source []string) (finalIndent int) {
 	for i, line := range source {
 		finalIndent = indent + i
-		indentedPrintf(finalIndent, "%s:", line)
+		fcli.IndentedPrintf(finalIndent, "%s:", line)
 		fmt.Println()
 	}
 	return finalIndent
 }
 
 func printMissingDeplDependency(indent int, deps forklift.MissingDeplDependencies) error {
-	indentedPrintf(indent, "For %s:\n", deps.Depl.Name)
+	fcli.IndentedPrintf(indent, "For %s:\n", deps.Depl.Name)
 	indent++
 
 	if deps.HasMissingNetworkDependency() {
-		indentedPrintln(indent, "Missing Docker networks:")
+		fcli.IndentedPrintln(indent, "Missing Docker networks:")
 		if err := printMissingDependencies(indent+1, deps.Networks); err != nil {
 			return errors.Wrapf(
 				err, "couldn't print unmet Docker network dependencies of deployment %s", deps.Depl.Name,
@@ -647,7 +854,7 @@ func printMissingDeplDependency(indent int, deps forklift.MissingDeplDependencie
 		}
 	}
 	if deps.HasMissingServiceDependency() {
-		indentedPrintln(indent, "Missing network services:")
+		fcli.IndentedPrintln(indent, "Missing network services:")
 		if err := printMissingDependencies(indent+1, deps.Services); err != nil {
 			return errors.Wrapf(
 				err, "couldn't print unmet network service dependencies of deployment %s", deps.Depl.Name,
@@ -671,13 +878,13 @@ func printMissingDependencies[Resource any](
 func printMissingDependency[Resource any](
 	indent int, missingDep forklift.MissingResourceDependency[Resource],
 ) error {
-	bulletedPrintf(indent, "Resource required by %s:\n", missingDep.Required.Source[0])
+	fcli.BulletedPrintf(indent, "Resource required by %s:\n", missingDep.Required.Source[0])
 	indent++ // because the bullet adds an indentation level
 	resourceIndent := printResourceSource(indent+1, missingDep.Required.Source[1:])
-	if err := indentedPrintYaml(resourceIndent+1, missingDep.Required.Resource); err != nil {
+	if err := fcli.IndentedPrintYaml(resourceIndent+1, missingDep.Required.Resource); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}
-	indentedPrintln(indent, "Best candidates to meet requirement:")
+	fcli.IndentedPrintln(indent, "Best candidates to meet requirement:")
 	indent++
 
 	for _, candidate := range missingDep.BestCandidates {
@@ -691,17 +898,17 @@ func printMissingDependency[Resource any](
 func printDependencyCandidate[Resource any](
 	indent int, candidate forklift.ResourceDependencyCandidate[Resource],
 ) error {
-	bulletedPrintf(indent, "Candidate resource from %s:\n", candidate.Provided.Source[0])
+	fcli.BulletedPrintf(indent, "Candidate resource from %s:\n", candidate.Provided.Source[0])
 	indent++ // because the bullet adds an indentation level
 	resourceIndent := printResourceSource(indent+1, candidate.Provided.Source[1:])
-	if err := indentedPrintYaml(resourceIndent+1, candidate.Provided.Resource); err != nil {
+	if err := fcli.IndentedPrintYaml(resourceIndent+1, candidate.Provided.Resource); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}
 
-	indentedPrintln(indent, "Candidate doesn't meet requirement because of:")
+	fcli.IndentedPrintln(indent, "Candidate doesn't meet requirement because of:")
 	indent++
 	for _, err := range candidate.Errs {
-		bulletedPrintf(indent, "%s\n", err)
+		fcli.BulletedPrintf(indent, "%s\n", err)
 	}
 	return nil
 }
@@ -747,13 +954,13 @@ func planEnv(
 		return errors.Wrapf(err, "couldn't list active Docker stacks")
 	}
 
-	indentedPrintln(indent, "Determining package deployment changes...")
+	fcli.IndentedPrintln(indent, "Determining package deployment changes...")
 	changes := planReconciliation(depls, stacks)
 	sort.Slice(changes, func(i, j int) bool {
 		return changes[i].Name < changes[j].Name
 	})
 	for _, change := range changes {
-		indentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
+		fcli.IndentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
 	}
 	return nil
 }
@@ -862,13 +1069,13 @@ func applyEnv(
 		return errors.Wrapf(err, "couldn't list active Docker stacks")
 	}
 
-	indentedPrintln(indent, "Determining package deployment changes...")
+	fcli.IndentedPrintln(indent, "Determining package deployment changes...")
 	changes := planReconciliation(depls, stacks)
 	sort.Slice(changes, func(i, j int) bool {
 		return changes[i].Name < changes[j].Name
 	})
 	for _, change := range changes {
-		indentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
+		fcli.IndentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
 	}
 
 	for _, change := range changes {
@@ -887,19 +1094,19 @@ func applyReconciliationChange(
 	default:
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
-		indentedPrintf(indent, "Adding package deployment %s...\n", change.Name)
+		fcli.IndentedPrintf(indent, "Adding package deployment %s...\n", change.Name)
 		if err := deployStack(indent+1, cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
 	case removeReconciliationChange:
-		indentedPrintf(indent, "Removing package deployment %s...\n", change.Name)
+		fcli.IndentedPrintf(indent, "Removing package deployment %s...\n", change.Name)
 		if err := dc.RemoveStacks(context.Background(), []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
 	case updateReconciliationChange:
-		indentedPrintf(indent, "Updating package deployment %s...\n", change.Name)
+		fcli.IndentedPrintf(indent, "Updating package deployment %s...\n", change.Name)
 		if err := deployStack(indent+1, cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
@@ -912,7 +1119,7 @@ func deployStack(
 ) error {
 	pkgDeplSpec := cachedPkg.Config.Deployment
 	if !pkgDeplSpec.DefinesStack() {
-		indentedPrintln(indent, "No Docker stack to deploy!")
+		fcli.IndentedPrintln(indent, "No Docker stack to deploy!")
 		return nil
 	}
 	definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
@@ -951,7 +1158,7 @@ func printEnvRepos(indent int, envPath string) error {
 		return forklift.CompareVersionedRepos(repos[i], repos[j]) < 0
 	})
 	for _, repo := range repos {
-		indentedPrintf(indent, "%s\n", repo.Path())
+		fcli.IndentedPrintf(indent, "%s\n", repo.Path())
 	}
 	return nil
 }
@@ -1013,22 +1220,22 @@ func printRepoInfo(
 		}
 	}
 	if filepath.IsAbs(cachedRepo.ConfigPath) {
-		indentedPrint(indent+1, "External path (replacing cached package): ")
+		fcli.IndentedPrint(indent+1, "External path (replacing cached package): ")
 	} else {
-		indentedPrint(indent+1, "Path in cache: ")
+		fcli.IndentedPrint(indent+1, "Path in cache: ")
 	}
 	fmt.Println(cachedRepo.ConfigPath)
-	indentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
+	fcli.IndentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
 	// TODO: show the README file
 	return nil
 }
 
 func printVersionedRepo(indent int, repo forklift.VersionedRepo) {
-	indentedPrintf(indent, "Pallet repository: %s\n", repo.Path())
+	fcli.IndentedPrintf(indent, "Pallet repository: %s\n", repo.Path())
 	indent++
 	version, _ := repo.Config.Version() // assume that the validity of the version was already checked
-	indentedPrintf(indent, "Locked version: %s\n", version)
-	indentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
+	fcli.IndentedPrintf(indent, "Locked version: %s\n", version)
+	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
 }
 
 // ls-pkg
@@ -1061,7 +1268,7 @@ func printEnvPkgs(
 		return forklift.CompareCachedPkgs(pkgs[i], pkgs[j]) < 0
 	})
 	for _, pkg := range pkgs {
-		indentedPrintf(indent, "%s\n", pkg.Path)
+		fcli.IndentedPrintf(indent, "%s\n", pkg.Path)
 	}
 	return nil
 }
@@ -1115,14 +1322,14 @@ func printPkgInfo(
 }
 
 func printVersionedPkg(indent int, pkg forklift.VersionedPkg) {
-	indentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
+	fcli.IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
 	indent++
 
 	printVersionedPkgRepo(indent, pkg)
 	if filepath.IsAbs(pkg.Cached.ConfigPath) {
-		indentedPrint(indent, "External path (replacing cached package): ")
+		fcli.IndentedPrint(indent, "External path (replacing cached package): ")
 	} else {
-		indentedPrint(indent, "Path in cache: ")
+		fcli.IndentedPrint(indent, "Path in cache: ")
 	}
 	fmt.Println(pkg.Cached.ConfigPath)
 	fmt.Println()
@@ -1135,19 +1342,19 @@ func printVersionedPkg(indent int, pkg forklift.VersionedPkg) {
 }
 
 func printVersionedPkgRepo(indent int, pkg forklift.VersionedPkg) {
-	indentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
+	fcli.IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
 	indent++
 
 	if filepath.IsAbs(pkg.Cached.Repo.ConfigPath) {
-		indentedPrintf(
+		fcli.IndentedPrintf(
 			indent, "External path (replacing cached repository): %s\n", pkg.Cached.Repo.ConfigPath,
 		)
 	} else {
-		indentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)
+		fcli.IndentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)
 	}
 
-	indentedPrintf(indent, "Description: %s\n", pkg.Cached.Repo.Config.Repository.Description)
-	indentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+	fcli.IndentedPrintf(indent, "Description: %s\n", pkg.Cached.Repo.Config.Repository.Description)
+	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
 }
 
 // ls-depl
@@ -1174,7 +1381,7 @@ func printEnvDepls(
 		)
 	}
 	for _, depl := range depls {
-		indentedPrintf(indent, "%s\n", depl.Name)
+		fcli.IndentedPrintf(indent, "%s\n", depl.Name)
 	}
 	return nil
 }
@@ -1213,7 +1420,7 @@ func printDeplInfo(
 	pkgDeplSpec := cachedPkg.Config.Deployment
 	if pkgDeplSpec.DefinesStack() {
 		fmt.Println()
-		indentedPrintln(indent, "Deploys with Docker stack:")
+		fcli.IndentedPrintln(indent, "Deploys with Docker stack:")
 		definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
 		stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
 		if err != nil {
@@ -1228,16 +1435,16 @@ func printDeplInfo(
 }
 
 func printDepl(indent int, depl forklift.Depl) {
-	indentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
+	fcli.IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
 	indent++
 
 	printDeplPkg(indent, depl)
 
 	enabledFeatures, err := depl.EnabledFeatures()
 	if err != nil {
-		indentedPrintf(indent, "Warning: couldn't determine enabled features: %s\n", err.Error())
+		fcli.IndentedPrintf(indent, "Warning: couldn't determine enabled features: %s\n", err.Error())
 	}
-	indentedPrint(indent, "Enabled features:")
+	fcli.IndentedPrint(indent, "Enabled features:")
 	if len(enabledFeatures) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -1245,7 +1452,7 @@ func printDepl(indent int, depl forklift.Depl) {
 	printFeatures(indent+1, enabledFeatures)
 
 	disabledFeatures := depl.DisabledFeatures()
-	indentedPrint(indent, "Disabled features:")
+	fcli.IndentedPrint(indent, "Disabled features:")
 	if len(disabledFeatures) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -1254,10 +1461,10 @@ func printDepl(indent int, depl forklift.Depl) {
 }
 
 func printDeplPkg(indent int, depl forklift.Depl) {
-	indentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
+	fcli.IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
 	indent++
 
-	indentedPrintf(indent, "Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
+	fcli.IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
 	printVersionedPkgRepo(indent, depl.Pkg)
 }
 
@@ -1269,10 +1476,10 @@ func printFeatures(indent int, features map[string]forklift.PkgFeatureSpec) {
 	sort.Strings(orderedNames)
 	for _, name := range orderedNames {
 		if description := features[name].Description; description != "" {
-			indentedPrintf(indent, "%s: %s\n", name, description)
+			fcli.IndentedPrintf(indent, "%s: %s\n", name, description)
 			continue
 		}
-		indentedPrintf(indent, "%s\n", name)
+		fcli.IndentedPrintf(indent, "%s\n", name)
 	}
 }
 
@@ -1285,7 +1492,7 @@ func printDockerStackServices(indent int, services []dct.ServiceConfig) {
 	if len(services) == 0 {
 		return
 	}
-	indentedPrint(indent, "Services:")
+	fcli.IndentedPrint(indent, "Services:")
 	sort.Slice(services, func(i, j int) bool {
 		return services[i].Name < services[j].Name
 	})
@@ -1296,6 +1503,6 @@ func printDockerStackServices(indent int, services []dct.ServiceConfig) {
 	indent++
 
 	for _, service := range services {
-		indentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
+		fcli.IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
 	}
 }

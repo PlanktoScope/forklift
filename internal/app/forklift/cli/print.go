@@ -1,4 +1,5 @@
-package main
+// Shared utilities for the forklift CLI
+package cli
 
 import (
 	"bytes"
@@ -16,28 +17,28 @@ const (
 
 // Indented
 
-func indentedPrintf(indent int, format string, a ...any) {
+func IndentedPrintf(indent int, format string, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
 	fmt.Printf(format, a...)
 }
 
-func indentedPrint(indent int, a ...any) {
+func IndentedPrint(indent int, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
 	fmt.Print(a...)
 }
 
-func indentedPrintln(indent int, a ...any) {
+func IndentedPrintln(indent int, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
 	fmt.Println(a...)
 }
 
-func indentedPrintYaml(indent int, a any) error {
+func IndentedPrintYaml(indent int, a any) error {
 	buf := &bytes.Buffer{}
 	encoder := yaml.NewEncoder(buf)
 	encoder.SetIndent(len(indentation))
@@ -51,14 +52,14 @@ func indentedPrintYaml(indent int, a any) error {
 	}
 	lines := strings.Split(buf.String(), "\n")
 	for _, line := range lines[:len(lines)-1] { // last line follows last "\n" and is empty
-		indentedPrintln(indent, line)
+		IndentedPrintln(indent, line)
 	}
 	return nil
 }
 
 // Bulleted
 
-func bulletedPrintf(indent int, format string, a ...any) {
+func BulletedPrintf(indent int, format string, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
@@ -66,8 +67,7 @@ func bulletedPrintf(indent int, format string, a ...any) {
 	fmt.Printf(format, a...)
 }
 
-/*
-func bulletedPrint(indent int, a ...any) {
+func BulletedPrint(indent int, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
@@ -75,7 +75,7 @@ func bulletedPrint(indent int, a ...any) {
 	fmt.Print(a...)
 }
 
-func bulletedPrintln(indent int, a ...any) {
+func BulletedPrintln(indent int, a ...any) {
 	for i := 0; i < indent; i++ {
 		fmt.Print(indentation)
 	}
@@ -83,7 +83,7 @@ func bulletedPrintln(indent int, a ...any) {
 	fmt.Println(a...)
 }
 
-func bulletedPrintYaml(indent int, a any) error {
+func BulletedPrintYaml(indent int, a any) error {
 	buf := &bytes.Buffer{}
 	encoder := yaml.NewEncoder(buf)
 	encoder.SetIndent(len(indentation))
@@ -94,11 +94,10 @@ func bulletedPrintYaml(indent int, a any) error {
 	lines := strings.Split(buf.String(), "\n")
 	for i, line := range lines[:len(lines)-1] { // last line follows last "\n" and is empty
 		if i == 0 {
-			bulletedPrintln(indent, line)
+			BulletedPrintln(indent, line)
 		} else {
-			indentedPrintln(indent+1, line)
+			IndentedPrintln(indent+1, line)
 		}
 	}
 	return nil
 }
-*/

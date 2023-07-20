@@ -11,9 +11,71 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 )
+
+// CLI
+
+var cacheCmd = &cli.Command{
+	Name:  "cache",
+	Usage: "Manages the local cache of Pallet repositories and packages",
+	Subcommands: []*cli.Command{
+		{
+			Name:     "ls-repo",
+			Aliases:  []string{"ls-r", "list-repositories"},
+			Category: "Query the cache",
+			Usage:    "Lists cached repositories",
+			Action:   cacheLsRepoAction,
+		},
+		{
+			Name:      "show-repo",
+			Aliases:   []string{"s-r", "show-repository"},
+			Category:  "Query the cache",
+			Usage:     "Describes a cached repository",
+			ArgsUsage: "repository_path@version",
+			Action:    cacheShowRepoAction,
+		},
+		{
+			Name:     "ls-pkg",
+			Aliases:  []string{"ls-p", "list-packages"},
+			Category: "Query the cache",
+			Usage:    "Lists packages offered by cached repositories",
+			Action:   cacheLsPkgAction,
+		},
+		{
+			Name:      "show-pkg",
+			Aliases:   []string{"s-p", "show-package"},
+			Category:  "Query the cache",
+			Usage:     "Describes a cached package",
+			ArgsUsage: "package_path@version",
+			Action:    cacheShowPkgAction,
+		},
+		{
+			Name:     "ls-img",
+			Aliases:  []string{"ls-i", "list-images"},
+			Category: "Query the cache",
+			Usage:    "Lists Docker container images in the local cache",
+			Action:   cacheLsImgAction,
+		},
+		{
+			Name:      "show-img",
+			Aliases:   []string{"s-i", "show-image"},
+			Category:  "Query the cache",
+			Usage:     "Describes a cached Docker container image",
+			ArgsUsage: "image_sha",
+			Action:    cacheShowImgAction,
+		},
+		{
+			Name:     "rm",
+			Aliases:  []string{"remove"},
+			Category: "Modify the cache",
+			Usage:    "Removes the locally-cached repositories and Docker container images",
+			Action:   cacheRmAction,
+		},
+	},
+}
 
 // ls-repo
 
@@ -62,13 +124,13 @@ func cacheShowRepoAction(c *cli.Context) error {
 }
 
 func printCachedRepo(indent int, repo forklift.CachedRepo) {
-	indentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
+	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
 	indent++
 
-	indentedPrintf(indent, "Version: %s\n", repo.Version)
-	indentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
-	indentedPrintf(indent, "Path in cache: %s\n", repo.ConfigPath)
-	indentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
+	fcli.IndentedPrintf(indent, "Version: %s\n", repo.Version)
+	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
+	fcli.IndentedPrintf(indent, "Path in cache: %s\n", repo.ConfigPath)
+	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
 	// TODO: show the README file
 }
 
@@ -119,11 +181,11 @@ func cacheShowPkgAction(c *cli.Context) error {
 }
 
 func printCachedPkg(indent int, pkg forklift.CachedPkg) {
-	indentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
+	fcli.IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
 	indent++
 
 	printCachedPkgRepo(indent, pkg)
-	indentedPrintf(indent, "Path in cache: %s\n", pkg.ConfigPath)
+	fcli.IndentedPrintf(indent, "Path in cache: %s\n", pkg.ConfigPath)
 	fmt.Println()
 	printPkgSpec(indent, pkg.Config.Package)
 	fmt.Println()
@@ -133,18 +195,20 @@ func printCachedPkg(indent int, pkg forklift.CachedPkg) {
 }
 
 func printCachedPkgRepo(indent int, pkg forklift.CachedPkg) {
-	indentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path)
+	fcli.IndentedPrintf(
+		indent, "Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path,
+	)
 	indent++
 
-	indentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
-	indentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
-	indentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+	fcli.IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
+	fcli.IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
+	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
 }
 
 func printPkgSpec(indent int, spec forklift.PkgSpec) {
-	indentedPrintf(indent, "Description: %s\n", spec.Description)
+	fcli.IndentedPrintf(indent, "Description: %s\n", spec.Description)
 
-	indentedPrint(indent, "Maintainers:")
+	fcli.IndentedPrint(indent, "Maintainers:")
 	if len(spec.Maintainers) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -154,35 +218,35 @@ func printPkgSpec(indent int, spec forklift.PkgSpec) {
 	}
 
 	if spec.License != "" {
-		indentedPrintf(indent, "License: %s\n", spec.License)
+		fcli.IndentedPrintf(indent, "License: %s\n", spec.License)
 	} else {
-		indentedPrintf(indent, "License: (custom license)\n")
+		fcli.IndentedPrintf(indent, "License: (custom license)\n")
 	}
 
-	indentedPrint(indent, "Sources:")
+	fcli.IndentedPrint(indent, "Sources:")
 	if len(spec.Sources) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
 	for _, source := range spec.Sources {
-		bulletedPrintf(indent+1, "%s\n", source)
+		fcli.BulletedPrintf(indent+1, "%s\n", source)
 	}
 }
 
 func printMaintainer(indent int, maintainer forklift.PkgMaintainer) {
 	if maintainer.Email != "" {
-		bulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
+		fcli.BulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
 	} else {
-		bulletedPrintf(indent, "%s\n", maintainer.Name)
+		fcli.BulletedPrintf(indent, "%s\n", maintainer.Name)
 	}
 }
 
 func printDeplSpec(indent int, spec forklift.PkgDeplSpec) {
-	indentedPrintf(indent, "Deployment:\n")
+	fcli.IndentedPrintf(indent, "Deployment:\n")
 	indent++
 
 	// TODO: actually display the definition file?
-	indentedPrintf(indent, "Definition file: ")
+	fcli.IndentedPrintf(indent, "Definition file: ")
 	if len(spec.DefinitionFile) == 0 {
 		fmt.Println("(none)")
 		return
@@ -191,7 +255,7 @@ func printDeplSpec(indent int, spec forklift.PkgDeplSpec) {
 }
 
 func printFeatureSpecs(indent int, features map[string]forklift.PkgFeatureSpec) {
-	indentedPrint(indent, "Optional features:")
+	fcli.IndentedPrint(indent, "Optional features:")
 	names := make([]string, 0, len(features))
 	for name := range features {
 		names = append(names, name)
@@ -205,10 +269,10 @@ func printFeatureSpecs(indent int, features map[string]forklift.PkgFeatureSpec) 
 
 	for _, name := range names {
 		if description := features[name].Description; description != "" {
-			indentedPrintf(indent, "%s: %s\n", name, description)
+			fcli.IndentedPrintf(indent, "%s: %s\n", name, description)
 			continue
 		}
-		indentedPrintf(indent, "%s\n", name)
+		fcli.IndentedPrintf(indent, "%s\n", name)
 	}
 }
 
@@ -255,10 +319,10 @@ func cacheShowImgAction(c *cli.Context) error {
 }
 
 func printImg(indent int, img docker.Image) {
-	indentedPrintf(indent, "Docker container image: %s\n", img.ID)
+	fcli.IndentedPrintf(indent, "Docker container image: %s\n", img.ID)
 	indent++
 
-	indentedPrint(indent, "Provided by container image repository: ")
+	fcli.IndentedPrint(indent, "Provided by container image repository: ")
 	if img.Repository == "" {
 		fmt.Print("(none)")
 	} else {
@@ -269,12 +333,12 @@ func printImg(indent int, img docker.Image) {
 	printImgRepoTags(indent+1, img.Inspect.RepoTags)
 	printImgRepoDigests(indent+1, img.Inspect.RepoDigests)
 
-	indentedPrintf(indent, "Created: %s\n", img.Inspect.Created)
-	indentedPrintf(indent, "Size: %s\n", units.HumanSize(float64(img.Inspect.Size)))
+	fcli.IndentedPrintf(indent, "Created: %s\n", img.Inspect.Created)
+	fcli.IndentedPrintf(indent, "Size: %s\n", units.HumanSize(float64(img.Inspect.Size)))
 }
 
 func printImgRepoTags(indent int, tags []string) {
-	indentedPrint(indent, "Repo tags:")
+	fcli.IndentedPrint(indent, "Repo tags:")
 	if len(tags) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -282,12 +346,12 @@ func printImgRepoTags(indent int, tags []string) {
 	indent++
 
 	for _, tag := range tags {
-		bulletedPrintf(indent, "%s\n", tag)
+		fcli.BulletedPrintf(indent, "%s\n", tag)
 	}
 }
 
 func printImgRepoDigests(indent int, digests []string) {
-	indentedPrint(indent, "Repo digests:")
+	fcli.IndentedPrint(indent, "Repo digests:")
 	if len(digests) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -295,7 +359,7 @@ func printImgRepoDigests(indent int, digests []string) {
 	indent++
 
 	for _, digest := range digests {
-		bulletedPrintf(indent, "%s\n", digest)
+		fcli.BulletedPrintf(indent, "%s\n", digest)
 	}
 }
 
