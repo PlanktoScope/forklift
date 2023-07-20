@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 	gosemver "golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 func (r CachedRepo) FromSameVCSRepo(cr CachedRepo) bool {
@@ -76,17 +78,19 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 	return vcsRepoPath, version, nil
 }
 
-func loadRepoConfig(cacheFS fs.FS, filePath string) (RepoConfig, error) {
+func loadRepoConfig(cacheFS fs.FS, filePath string) (pallets.RepoConfig, error) {
 	bytes, err := fs.ReadFile(cacheFS, filePath)
 	if err != nil {
-		return RepoConfig{}, errors.Wrapf(err, "couldn't read repo config file %s", filePath)
+		return pallets.RepoConfig{}, errors.Wrapf(err, "couldn't read repo config file %s", filePath)
 	}
-	config := RepoConfig{}
+	config := pallets.RepoConfig{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
+		return pallets.RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
 	}
 	if config.Repository.Path == "" {
-		return RepoConfig{}, errors.Errorf("repo config at %s is missing `path` parameter", filePath)
+		return pallets.RepoConfig{}, errors.Errorf(
+			"repo config at %s is missing `path` parameter", filePath,
+		)
 	}
 	return config, nil
 }
@@ -113,7 +117,7 @@ func LoadCachedRepo(cacheFS fs.FS, repoConfigFilePath string) (CachedRepo, error
 }
 
 func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
-	repoConfigFiles, err := doublestar.Glob(cacheFS, fmt.Sprintf("**/%s", RepoSpecFile))
+	repoConfigFiles, err := doublestar.Glob(cacheFS, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
@@ -122,7 +126,7 @@ func ListCachedRepos(cacheFS fs.FS) ([]CachedRepo, error) {
 	repoMap := make(map[string]CachedRepo)
 	for _, repoConfigFilePath := range repoConfigFiles {
 		filename := filepath.Base(repoConfigFilePath)
-		if filename != RepoSpecFile {
+		if filename != pallets.RepoSpecFile {
 			continue
 		}
 		repo, err := LoadCachedRepo(cacheFS, repoConfigFilePath)
@@ -158,7 +162,7 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo,
 	// The repo subdirectory path in the repo path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-repository.yml file, so we must check every
 	// pallet-repository.yml file to find the actual repo path
-	searchPattern := fmt.Sprintf("%s@%s/**/%s", vcsRepoPath, version, RepoSpecFile)
+	searchPattern := fmt.Sprintf("%s@%s/**/%s", vcsRepoPath, version, pallets.RepoSpecFile)
 	candidateRepoConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
 	if err != nil {
 		return CachedRepo{}, errors.Wrapf(
@@ -173,7 +177,7 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (CachedRepo,
 	candidateRepos := make([]CachedRepo, 0)
 	for _, repoConfigFilePath := range candidateRepoConfigFiles {
 		filename := filepath.Base(repoConfigFilePath)
-		if filename != RepoSpecFile {
+		if filename != pallets.RepoSpecFile {
 			continue
 		}
 		repo, err := LoadCachedRepo(cacheFS, repoConfigFilePath)

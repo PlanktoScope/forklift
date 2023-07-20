@@ -7,10 +7,12 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, error) {
-	searchPattern := fmt.Sprintf("**/%s", PkgSpecFile)
+	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
 	if cachedPrefix != "" {
 		searchPattern = filepath.Join(cachedPrefix, searchPattern)
 	}
@@ -23,7 +25,7 @@ func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, erro
 	pkgMap := make(map[string]CachedPkg)
 	for _, pkgConfigFilePath := range pkgConfigFiles {
 		filename := filepath.Base(pkgConfigFilePath)
-		if filename != PkgSpecFile {
+		if filename != pallets.PkgSpecFile {
 			continue
 		}
 		pkg, err := loadExternalPkg(repo, pkgConfigFilePath)
@@ -86,7 +88,7 @@ func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-package.yml file, so we must check every
 	// directory whose name matches the last part of the package path to look for the package
-	searchPattern := fmt.Sprintf("**/%s/%s", pkgInnermostDir, PkgSpecFile)
+	searchPattern := fmt.Sprintf("**/%s/%s", pkgInnermostDir, pallets.PkgSpecFile)
 	candidatePkgConfigFiles, err := doublestar.Glob(repo.FS, searchPattern)
 	if err != nil {
 		return CachedPkg{}, errors.Wrapf(
@@ -99,7 +101,7 @@ func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
 	candidatePkgs := make([]CachedPkg, 0)
 	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
 		filename := filepath.Base(pkgConfigFilePath)
-		if filename != PkgSpecFile {
+		if filename != pallets.PkgSpecFile {
 			continue
 		}
 		pkg, err := loadExternalPkg(repo, pkgConfigFilePath)

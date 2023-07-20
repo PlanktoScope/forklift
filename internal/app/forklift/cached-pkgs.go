@@ -10,11 +10,9 @@ import (
 	"github.com/pkg/errors"
 	gosemver "golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
-)
 
-func (s PkgDeplSpec) DefinesStack() bool {
-	return s.DefinitionFile != ""
-}
+	"github.com/PlanktoScope/forklift/pkg/pallets"
+)
 
 func CompareCachedPkgs(p, q CachedPkg) int {
 	repoPathComparison := CompareCachedRepoPaths(p.Repo, q.Repo)
@@ -35,7 +33,7 @@ func CompareCachedPkgs(p, q CachedPkg) int {
 }
 
 func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
-	searchPattern := fmt.Sprintf("**/%s", PkgSpecFile)
+	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
 	if cachedPrefix != "" {
 		searchPattern = filepath.Join(cachedPrefix, searchPattern)
 	}
@@ -48,7 +46,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 	pkgMap := make(map[string]CachedPkg)
 	for _, pkgConfigFilePath := range pkgConfigFiles {
 		filename := filepath.Base(pkgConfigFilePath)
-		if filename != PkgSpecFile {
+		if filename != pallets.PkgSpecFile {
 			continue
 		}
 		pkg, err := loadCachedPkg(cacheFS, pkgConfigFilePath)
@@ -101,14 +99,14 @@ func loadCachedPkg(cacheFS fs.FS, pkgConfigFilePath string) (CachedPkg, error) {
 	return pkg, nil
 }
 
-func loadPkgConfig(cacheFS fs.FS, filePath string) (PkgConfig, error) {
+func loadPkgConfig(cacheFS fs.FS, filePath string) (pallets.PkgConfig, error) {
 	bytes, err := fs.ReadFile(cacheFS, filePath)
 	if err != nil {
-		return PkgConfig{}, errors.Wrapf(err, "couldn't read package config file %s", filePath)
+		return pallets.PkgConfig{}, errors.Wrapf(err, "couldn't read package config file %s", filePath)
 	}
-	config := PkgConfig{}
+	config := pallets.PkgConfig{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return PkgConfig{}, errors.Wrap(err, "couldn't parse package config")
+		return pallets.PkgConfig{}, errors.Wrap(err, "couldn't parse package config")
 	}
 	return config, nil
 }
@@ -116,7 +114,7 @@ func loadPkgConfig(cacheFS fs.FS, filePath string) (PkgConfig, error) {
 func findRepoOfPkg(cacheFS fs.FS, pkgConfigFilePath string) (CachedRepo, error) {
 	repoCandidatePath := filepath.Dir(pkgConfigFilePath)
 	for repoCandidatePath != "." {
-		repoConfigCandidatePath := filepath.Join(repoCandidatePath, RepoSpecFile)
+		repoConfigCandidatePath := filepath.Join(repoCandidatePath, pallets.RepoSpecFile)
 		repo, err := LoadCachedRepo(cacheFS, repoConfigCandidatePath)
 		if err == nil {
 			return repo, nil
@@ -138,7 +136,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 	// filesystem directory path with the pallet-package.yml file, so we must check every
 	// directory whose name matches the last part of the package path to look for the package
 	searchPattern := fmt.Sprintf(
-		"%s@%s/**/%s/%s", vcsRepoPath, version, pkgInnermostDir, PkgSpecFile,
+		"%s@%s/**/%s/%s", vcsRepoPath, version, pkgInnermostDir, pallets.PkgSpecFile,
 	)
 	candidatePkgConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
 	if err != nil {
@@ -154,7 +152,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 	candidatePkgs := make([]CachedPkg, 0)
 	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
 		filename := filepath.Base(pkgConfigFilePath)
-		if filename != PkgSpecFile {
+		if filename != pallets.PkgSpecFile {
 			continue
 		}
 		pkg, err := loadCachedPkg(cacheFS, pkgConfigFilePath)

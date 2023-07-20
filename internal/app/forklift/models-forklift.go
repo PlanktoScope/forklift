@@ -3,6 +3,8 @@ package forklift
 
 import (
 	"io/fs"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Environment specifications
@@ -49,7 +51,7 @@ type CachedRepo struct {
 	Version     string
 	RepoSubdir  string
 	ConfigPath  string
-	Config      RepoConfig
+	Config      pallets.RepoConfig
 }
 
 // Package versioning
@@ -67,7 +69,7 @@ type CachedPkg struct {
 	Path       string
 	PkgSubdir  string
 	ConfigPath string
-	Config     PkgConfig
+	Config     pallets.PkgConfig
 }
 
 // External repository loading

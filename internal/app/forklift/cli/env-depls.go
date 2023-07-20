@@ -11,6 +11,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Print
@@ -96,7 +97,7 @@ func printDeplPkg(indent int, depl forklift.Depl) {
 	printVersionedPkgRepo(indent, depl.Pkg)
 }
 
-func printFeatures(indent int, features map[string]forklift.PkgFeatureSpec) {
+func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {
 	orderedNames := make([]string, 0, len(features))
 	for name := range features {
 		orderedNames = append(orderedNames, name)

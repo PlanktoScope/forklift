@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // print
 
-func PrintPkgSpec(indent int, spec forklift.PkgSpec) {
+func PrintPkgSpec(indent int, spec pallets.PkgSpec) {
 	IndentedPrintf(indent, "Description: %s\n", spec.Description)
 
 	IndentedPrint(indent, "Maintainers:")
@@ -37,7 +37,7 @@ func PrintPkgSpec(indent int, spec forklift.PkgSpec) {
 	}
 }
 
-func printMaintainer(indent int, maintainer forklift.PkgMaintainer) {
+func printMaintainer(indent int, maintainer pallets.PkgMaintainer) {
 	if maintainer.Email != "" {
 		BulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
 	} else {
@@ -45,7 +45,7 @@ func printMaintainer(indent int, maintainer forklift.PkgMaintainer) {
 	}
 }
 
-func PrintDeplSpec(indent int, spec forklift.PkgDeplSpec) {
+func PrintDeplSpec(indent int, spec pallets.PkgDeplSpec) {
 	IndentedPrintf(indent, "Deployment:\n")
 	indent++
 
@@ -58,7 +58,7 @@ func PrintDeplSpec(indent int, spec forklift.PkgDeplSpec) {
 	fmt.Println(spec.DefinitionFile)
 }
 
-func PrintFeatureSpecs(indent int, features map[string]forklift.PkgFeatureSpec) {
+func PrintFeatureSpecs(indent int, features map[string]pallets.PkgFeatureSpec) {
 	IndentedPrint(indent, "Optional features:")
 	names := make([]string, 0, len(features))
 	for name := range features {

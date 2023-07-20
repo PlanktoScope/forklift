@@ -15,6 +15,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // print
@@ -223,7 +224,7 @@ func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
 }
 
 func printResourceConflicts[Resource any](
-	indent int, conflicts []forklift.ResourceConflict[Resource],
+	indent int, conflicts []pallets.ResourceConflict[Resource],
 ) error {
 	for _, resourceConflict := range conflicts {
 		if err := printResourceConflict(indent, resourceConflict); err != nil {
@@ -234,7 +235,7 @@ func printResourceConflicts[Resource any](
 }
 
 func printResourceConflict[Resource any](
-	indent int, conflict forklift.ResourceConflict[Resource],
+	indent int, conflict pallets.ResourceConflict[Resource],
 ) error {
 	BulletedPrintf(indent, "Conflicting resource from %s:\n", conflict.First.Source[0])
 	indent++ // because the bullet adds an indentation level
@@ -292,7 +293,7 @@ func printMissingDeplDependency(indent int, deps forklift.MissingDeplDependencie
 }
 
 func printMissingDependencies[Resource any](
-	indent int, missingDeps []forklift.MissingResourceDependency[Resource],
+	indent int, missingDeps []pallets.MissingResourceDependency[Resource],
 ) error {
 	for _, missingDep := range missingDeps {
 		if err := printMissingDependency(indent, missingDep); err != nil {
@@ -303,7 +304,7 @@ func printMissingDependencies[Resource any](
 }
 
 func printMissingDependency[Resource any](
-	indent int, missingDep forklift.MissingResourceDependency[Resource],
+	indent int, missingDep pallets.MissingResourceDependency[Resource],
 ) error {
 	BulletedPrintf(indent, "Resource required by %s:\n", missingDep.Required.Source[0])
 	indent++ // because the bullet adds an indentation level
@@ -323,7 +324,7 @@ func printMissingDependency[Resource any](
 }
 
 func printDependencyCandidate[Resource any](
-	indent int, candidate forklift.ResourceDependencyCandidate[Resource],
+	indent int, candidate pallets.ResourceDependencyCandidate[Resource],
 ) error {
 	BulletedPrintf(indent, "Candidate resource from %s:\n", candidate.Provided.Source[0])
 	indent++ // because the bullet adds an indentation level

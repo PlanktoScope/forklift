@@ -1,29 +1,11 @@
-package forklift
+package pallets
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
-
-func NewAttachedResource[Resource any](
-	resource Resource, source []string,
-) AttachedResource[Resource] {
-	return AttachedResource[Resource]{
-		Resource: resource,
-		Source:   source,
-	}
-}
-
-func attachResources[Resource any](
-	resources []Resource, source []string,
-) (attached []AttachedResource[Resource]) {
-	attached = make([]AttachedResource[Resource], 0, len(resources))
-	for _, resource := range resources {
-		attached = append(attached, NewAttachedResource(resource, source))
-	}
-	return attached
-}
 
 // ProvidedResources
 
@@ -49,25 +31,7 @@ func (r RequiredResources) AttachedServices(source []string) []AttachedResource[
 	return attachResources(r.Services, append(source, "requires resource"))
 }
 
-// PkgHostSpec
-
-func (s PkgHostSpec) attachmentSource(parentSource []string) []string {
-	return append(parentSource, "host specification")
-}
-
-// PkgDeplSpec
-
-func (s PkgDeplSpec) attachmentSource(parentSource []string) []string {
-	return append(parentSource, "deployment specification")
-}
-
-// PkgFeatureSpec
-
-func (s PkgFeatureSpec) attachmentSource(parentSource []string, featureName string) []string {
-	return append(parentSource, fmt.Sprintf("feature %s", featureName))
-}
-
-// Listener
+// ListenerResource
 
 func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []error) {
 	if r.Port != candidate.Port {
@@ -86,7 +50,7 @@ func (r ListenerResource) CheckConflict(candidate ListenerResource) (errs []erro
 	return errs
 }
 
-// Network
+// NetworkResource
 
 func (r NetworkResource) CheckDependency(candidate NetworkResource) (errs []error) {
 	if r.Name != candidate.Name {
@@ -102,7 +66,7 @@ func (r NetworkResource) CheckConflict(candidate NetworkResource) (errs []error)
 	return errs
 }
 
-// Service
+// ServiceResource
 
 func (r ServiceResource) CheckDependency(candidate ServiceResource) (errs []error) {
 	if r.Port != candidate.Port {

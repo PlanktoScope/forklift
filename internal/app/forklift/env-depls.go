@@ -9,6 +9,8 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 const deplsDirName = "deployments"
@@ -19,9 +21,9 @@ func DeplsFS(envFS fs.FS) (fs.FS, error) {
 
 // Depl
 
-func (d *Depl) EnabledFeatures() (enabled map[string]PkgFeatureSpec, err error) {
+func (d *Depl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureSpec, err error) {
 	all := d.Pkg.Cached.Config.Features
-	enabled = make(map[string]PkgFeatureSpec)
+	enabled = make(map[string]pallets.PkgFeatureSpec)
 	for _, name := range d.Config.Features {
 		featureSpec, ok := all[name]
 		if !ok {
@@ -32,13 +34,13 @@ func (d *Depl) EnabledFeatures() (enabled map[string]PkgFeatureSpec, err error) 
 	return enabled, nil
 }
 
-func (d *Depl) DisabledFeatures() map[string]PkgFeatureSpec {
+func (d *Depl) DisabledFeatures() map[string]pallets.PkgFeatureSpec {
 	all := d.Pkg.Cached.Config.Features
 	enabled := make(map[string]struct{})
 	for _, name := range d.Config.Features {
 		enabled[name] = struct{}{}
 	}
-	disabled := make(map[string]PkgFeatureSpec)
+	disabled := make(map[string]pallets.PkgFeatureSpec)
 	for name := range all {
 		if _, ok := enabled[name]; ok {
 			continue
@@ -88,42 +90,42 @@ func (d *Depl) CheckConflicts(candidate Depl) (DeplConflict, error) {
 		First:  *d,
 		Second: candidate,
 		Name:   d.Name == candidate.Name,
-		Listeners: CheckResourcesConflicts(
+		Listeners: pallets.CheckResourcesConflicts(
 			d.providedListeners(enabledFeatures), candidate.providedListeners(candidateEnabledFeatures),
 		),
-		Networks: CheckResourcesConflicts(
+		Networks: pallets.CheckResourcesConflicts(
 			d.providedNetworks(enabledFeatures), candidate.providedNetworks(candidateEnabledFeatures),
 		),
-		Services: CheckResourcesConflicts(
+		Services: pallets.CheckResourcesConflicts(
 			d.providedServices(enabledFeatures), candidate.providedServices(candidateEnabledFeatures),
 		),
 	}, nil
 }
 
 func (d *Depl) providedListeners(
-	enabledFeatures map[string]PkgFeatureSpec,
-) (provided []AttachedResource[ListenerResource]) {
+	enabledFeatures map[string]pallets.PkgFeatureSpec,
+) (provided []pallets.AttachedResource[pallets.ListenerResource]) {
 	pkgConfig := d.Pkg.Cached.Config
-	parentSource := d.attachmentSource()
+	parentSource := d.resourceAttachmentSource()
 
 	provided = append(provided, pkgConfig.Host.Provides.AttachedListeners(
-		pkgConfig.Host.attachmentSource(parentSource),
+		pkgConfig.Host.ResourceAttachmentSource(parentSource),
 	)...)
 	provided = append(provided, pkgConfig.Deployment.Provides.AttachedListeners(
-		pkgConfig.Deployment.attachmentSource(parentSource),
+		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
 		feature := enabledFeatures[featureName]
 		provided = append(provided, feature.Provides.AttachedListeners(
-			feature.attachmentSource(parentSource, featureName),
+			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
 	}
 	return provided
 }
 
-func (d *Depl) attachmentSource() []string {
+func (d *Depl) resourceAttachmentSource() []string {
 	return []string{
 		fmt.Sprintf("deployment %s", d.Name),
 		fmt.Sprintf("package %s", d.Config.Package),
@@ -131,86 +133,86 @@ func (d *Depl) attachmentSource() []string {
 }
 
 func (d *Depl) requiredNetworks(
-	enabledFeatures map[string]PkgFeatureSpec,
-) (required []AttachedResource[NetworkResource]) {
+	enabledFeatures map[string]pallets.PkgFeatureSpec,
+) (required []pallets.AttachedResource[pallets.NetworkResource]) {
 	pkgConfig := d.Pkg.Cached.Config
-	parentSource := d.attachmentSource()
+	parentSource := d.resourceAttachmentSource()
 
 	required = append(required, pkgConfig.Deployment.Requires.AttachedNetworks(
-		pkgConfig.Deployment.attachmentSource(parentSource),
+		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
 		feature := enabledFeatures[featureName]
 		required = append(required, feature.Requires.AttachedNetworks(
-			feature.attachmentSource(parentSource, featureName),
+			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
 	}
 	return required
 }
 
 func (d *Depl) providedNetworks(
-	enabledFeatures map[string]PkgFeatureSpec,
-) (provided []AttachedResource[NetworkResource]) {
+	enabledFeatures map[string]pallets.PkgFeatureSpec,
+) (provided []pallets.AttachedResource[pallets.NetworkResource]) {
 	pkgConfig := d.Pkg.Cached.Config
-	parentSource := d.attachmentSource()
+	parentSource := d.resourceAttachmentSource()
 
 	provided = append(provided, pkgConfig.Host.Provides.AttachedNetworks(
-		pkgConfig.Host.attachmentSource(parentSource),
+		pkgConfig.Host.ResourceAttachmentSource(parentSource),
 	)...)
 	provided = append(provided, pkgConfig.Deployment.Provides.AttachedNetworks(
-		pkgConfig.Deployment.attachmentSource(parentSource),
+		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
 		feature := enabledFeatures[featureName]
 		provided = append(provided, feature.Provides.AttachedNetworks(
-			feature.attachmentSource(parentSource, featureName),
+			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
 	}
 	return provided
 }
 
 func (d *Depl) requiredServices(
-	enabledFeatures map[string]PkgFeatureSpec,
-) (required []AttachedResource[ServiceResource]) {
+	enabledFeatures map[string]pallets.PkgFeatureSpec,
+) (required []pallets.AttachedResource[pallets.ServiceResource]) {
 	pkgConfig := d.Pkg.Cached.Config
-	parentSource := d.attachmentSource()
+	parentSource := d.resourceAttachmentSource()
 
 	required = append(required, pkgConfig.Deployment.Requires.AttachedServices(
-		pkgConfig.Deployment.attachmentSource(parentSource),
+		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
 		feature := enabledFeatures[featureName]
 		required = append(required, feature.Requires.AttachedServices(
-			feature.attachmentSource(parentSource, featureName),
+			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
 	}
 	return required
 }
 
 func (d *Depl) providedServices(
-	enabledFeatures map[string]PkgFeatureSpec,
-) (provided []AttachedResource[ServiceResource]) {
+	enabledFeatures map[string]pallets.PkgFeatureSpec,
+) (provided []pallets.AttachedResource[pallets.ServiceResource]) {
 	pkgConfig := d.Pkg.Cached.Config
-	parentSource := d.attachmentSource()
+	parentSource := d.resourceAttachmentSource()
 
 	provided = append(provided, pkgConfig.Host.Provides.AttachedServices(
-		pkgConfig.Host.attachmentSource(parentSource),
+		pkgConfig.Host.ResourceAttachmentSource(parentSource),
 	)...)
 	provided = append(provided, pkgConfig.Deployment.Provides.AttachedServices(
-		pkgConfig.Deployment.attachmentSource(parentSource),
+		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
 	for _, featureName := range orderedFeatureNames {
 		feature := enabledFeatures[featureName]
 		provided = append(provided, feature.Provides.AttachedServices(
-			feature.attachmentSource(parentSource, featureName),
+			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
 	}
 	return provided
@@ -223,7 +225,7 @@ func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependenc
 			"couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
-	candidateEnabledFeatures := make([]map[string]PkgFeatureSpec, 0, len(candidates))
+	candidateEnabledFeatures := make([]map[string]pallets.PkgFeatureSpec, 0, len(candidates))
 	for _, candidate := range candidates {
 		f, err := candidate.EnabledFeatures()
 		if err != nil {
@@ -235,8 +237,8 @@ func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependenc
 	}
 
 	var (
-		allProvidedNetworks []AttachedResource[NetworkResource]
-		allProvidedServices []AttachedResource[ServiceResource]
+		allProvidedNetworks []pallets.AttachedResource[pallets.NetworkResource]
+		allProvidedServices []pallets.AttachedResource[pallets.ServiceResource]
 	)
 	for i, candidate := range candidates {
 		allProvidedNetworks = append(
@@ -249,19 +251,19 @@ func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependenc
 
 	return MissingDeplDependencies{
 		Depl: *d,
-		Networks: CheckResourcesDependencies(
+		Networks: pallets.CheckResourcesDependencies(
 			d.requiredNetworks(enabledFeatures), allProvidedNetworks,
 		),
-		Services: CheckResourcesDependencies(
+		Services: pallets.CheckResourcesDependencies(
 			splitMultiPathServiceResources(d.requiredServices(enabledFeatures)), allProvidedServices,
 		),
 	}, nil
 }
 
 func splitMultiPathServiceResources(
-	serviceResources []AttachedResource[ServiceResource],
-) (split []AttachedResource[ServiceResource]) {
-	split = make([]AttachedResource[ServiceResource], 0, len(serviceResources))
+	serviceResources []pallets.AttachedResource[pallets.ServiceResource],
+) (split []pallets.AttachedResource[pallets.ServiceResource]) {
+	split = make([]pallets.AttachedResource[pallets.ServiceResource], 0, len(serviceResources))
 	for _, service := range serviceResources {
 		if len(service.Resource.Paths) == 0 {
 			split = append(split, service)
@@ -269,7 +271,7 @@ func splitMultiPathServiceResources(
 		for _, path := range service.Resource.Paths {
 			pathService := service.Resource
 			pathService.Paths = []string{path}
-			split = append(split, AttachedResource[ServiceResource]{
+			split = append(split, pallets.AttachedResource[pallets.ServiceResource]{
 				Resource: pathService,
 				Source:   service.Source,
 			})

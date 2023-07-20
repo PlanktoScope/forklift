@@ -7,6 +7,8 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 func LoadExternalRepo(dir fs.FS, repoConfigFilePath string) (CachedRepo, error) {
@@ -31,7 +33,7 @@ func LoadExternalRepo(dir fs.FS, repoConfigFilePath string) (CachedRepo, error) 
 }
 
 func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
-	repoConfigFiles, err := doublestar.Glob(dir, fmt.Sprintf("**/%s", RepoSpecFile))
+	repoConfigFiles, err := doublestar.Glob(dir, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
@@ -40,7 +42,7 @@ func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
 	repoMap := make(map[string]CachedRepo)
 	for _, repoConfigFilePath := range repoConfigFiles {
 		filename := filepath.Base(repoConfigFilePath)
-		if filename != RepoSpecFile {
+		if filename != pallets.RepoSpecFile {
 			continue
 		}
 		repo, err := LoadExternalRepo(dir, repoConfigFilePath)

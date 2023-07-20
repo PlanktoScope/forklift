@@ -1,20 +1,4 @@
-package forklift
-
-// Repository specifications
-
-const RepoSpecFile = "pallet-repository.yml"
-
-type RepoSpec struct {
-	Path        string `yaml:"path"`
-	Description string `yaml:"description"`
-	ReadmeFile  string `yaml:"readme-file"`
-}
-
-type RepoConfig struct {
-	Repository RepoSpec `yaml:"repository"`
-}
-
-// Package specifications
+package pallets
 
 const PkgSpecFile = "pallet-package.yml"
 
@@ -25,11 +9,6 @@ type PkgConfig struct {
 	Features   map[string]PkgFeatureSpec `yaml:"features,omitempty"`
 }
 
-type PkgMaintainer struct {
-	Name  string `yaml:"name,omitempty"`
-	Email string `yaml:"email,omitempty"`
-}
-
 type PkgSpec struct {
 	Description string          `yaml:"description"`
 	Maintainers []PkgMaintainer `yaml:"maintainers,omitempty"`
@@ -37,6 +16,32 @@ type PkgSpec struct {
 	LicenseFile string          `yaml:"license-file,omitempty"`
 	Sources     []string        `yaml:"sources,omitempty"`
 }
+
+type PkgMaintainer struct {
+	Name  string `yaml:"name,omitempty"`
+	Email string `yaml:"email,omitempty"`
+}
+
+type PkgHostSpec struct {
+	Tags     []string          `yaml:"tags,omitempty"`
+	Provides ProvidedResources `yaml:"provides,omitempty"`
+}
+
+type PkgDeplSpec struct {
+	DefinitionFile string            `yaml:"definition-file,omitempty"`
+	Tags           []string          `yaml:"tags,omitempty"`
+	Requires       RequiredResources `yaml:"requires,omitempty"`
+	Provides       ProvidedResources `yaml:"provides,omitempty"`
+}
+
+type PkgFeatureSpec struct {
+	Description string            `yaml:"description"`
+	Tags        []string          `yaml:"tags,omitempty"`
+	Requires    RequiredResources `yaml:"requires,omitempty"`
+	Provides    ProvidedResources `yaml:"provides,omitempty"`
+}
+
+// Resources
 
 type ProvidedResources struct {
 	Listeners []ListenerResource `yaml:"listeners,omitempty"`
@@ -66,23 +71,4 @@ type ServiceResource struct {
 	Protocol    string   `yaml:"protocol,omitempty"`
 	Tags        []string `yaml:"tags,omitempty"`
 	Paths       []string `yaml:"paths,omitempty"`
-}
-
-type PkgHostSpec struct {
-	Tags     []string          `yaml:"tags,omitempty"`
-	Provides ProvidedResources `yaml:"provides,omitempty"`
-}
-
-type PkgDeplSpec struct {
-	DefinitionFile string            `yaml:"definition-file,omitempty"`
-	Tags           []string          `yaml:"tags,omitempty"`
-	Requires       RequiredResources `yaml:"requires,omitempty"`
-	Provides       ProvidedResources `yaml:"provides,omitempty"`
-}
-
-type PkgFeatureSpec struct {
-	Description string            `yaml:"description"`
-	Tags        []string          `yaml:"tags,omitempty"`
-	Requires    RequiredResources `yaml:"requires,omitempty"`
-	Provides    ProvidedResources `yaml:"provides,omitempty"`
 }
