@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -503,17 +502,14 @@ func applyReconciliationChange(
 func deployStack(
 	indent int, cacheFS fs.FS, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
 ) error {
-	pkgDeplSpec := cachedPkg.Config.Deployment
-	if !pkgDeplSpec.DefinesStack() {
+	if !cachedPkg.Config.Deployment.DefinesStack() {
 		IndentedPrintln(indent, "No Docker stack to deploy!")
 		return nil
 	}
-	definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
-	stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
+
+	stackConfig, err := loadStackDefinition(cacheFS, cachedPkg)
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load Docker stack definition from %s", definitionFilePath,
-		)
+		return err
 	}
 	if err = dc.DeployStack(
 		context.Background(), name, stackConfig, docker.NewOutStream(os.Stdout),

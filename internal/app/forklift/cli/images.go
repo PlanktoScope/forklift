@@ -11,6 +11,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
+	dct "github.com/docker/cli/cli/compose/types"
 )
 
 func DownloadImages(
@@ -53,26 +54,13 @@ func listRequiredImages(
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
-		if depl.Pkg.Cached.Config.Deployment.DefinitionFile == "" {
+		if !depl.Pkg.Cached.Config.Deployment.DefinesStack() {
 			continue
 		}
-		pkgPath := depl.Pkg.Cached.ConfigPath
-		var f fs.FS
-		var definitionFilePath string
-		if filepath.IsAbs(pkgPath) {
-			f = os.DirFS(pkgPath)
-			definitionFilePath = depl.Pkg.Cached.Config.Deployment.DefinitionFile
-		} else {
-			f = cacheFS
-			definitionFilePath = filepath.Join(
-				pkgPath, depl.Pkg.Cached.Config.Deployment.DefinitionFile,
-			)
-		}
-		stackConfig, err := docker.LoadStackDefinition(f, definitionFilePath)
+
+		stackConfig, err := loadStackDefinition(cacheFS, depl.Pkg.Cached)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't load Docker stack definition from %s", definitionFilePath,
-			)
+			return nil, err
 		}
 		for _, service := range stackConfig.Services {
 			BulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)
@@ -83,4 +71,24 @@ func listRequiredImages(
 		}
 	}
 	return orderedImages, nil
+}
+
+func loadStackDefinition(cacheFS fs.FS, pkg forklift.CachedPkg) (*dct.Config, error) {
+	var f fs.FS
+	var definitionFilePath string
+	pkgPath := pkg.ConfigPath
+	if filepath.IsAbs(pkgPath) {
+		f = os.DirFS(pkgPath)
+		definitionFilePath = pkg.Config.Deployment.DefinitionFile
+	} else {
+		f = cacheFS
+		definitionFilePath = filepath.Join(pkgPath, pkg.Config.Deployment.DefinitionFile)
+	}
+	stackConfig, err := docker.LoadStackDefinition(f, definitionFilePath)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load Docker stack definition from %s", definitionFilePath,
+		)
+	}
+	return stackConfig, nil
 }

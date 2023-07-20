@@ -3,14 +3,12 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 
 	dct "github.com/docker/cli/cli/compose/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
@@ -46,14 +44,12 @@ func PrintDeplInfo(
 	indent++
 
 	cachedPkg := depl.Pkg.Cached
-	pkgDeplSpec := cachedPkg.Config.Deployment
-	if pkgDeplSpec.DefinesStack() {
+	if cachedPkg.Config.Deployment.DefinesStack() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker stack:")
-		definitionFilePath := filepath.Join(cachedPkg.ConfigPath, pkgDeplSpec.DefinitionFile)
-		stackConfig, err := docker.LoadStackDefinition(cacheFS, definitionFilePath)
+		stackConfig, err := loadStackDefinition(cacheFS, cachedPkg)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't load Docker stack definition from %s", definitionFilePath)
+			return err
 		}
 		printDockerStackConfig(indent+1, *stackConfig)
 	}
