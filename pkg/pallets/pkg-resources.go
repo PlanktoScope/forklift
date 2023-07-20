@@ -9,30 +9,52 @@ import (
 
 // ProvidedResources
 
+const (
+	providesSourcePart = "provides resource"
+	requiresSourcePart = "requires resource"
+)
+
+// AttachedListeners returns a list of [AttachedResource] instances for each respective host port
+// listener in the ProvidedResources instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedResources instance.
 func (r ProvidedResources) AttachedListeners(source []string) []AttachedResource[ListenerResource] {
-	return attachResources(r.Listeners, append(source, "provides resource"))
+	return attachResources(r.Listeners, append(source, providesSourcePart))
 }
 
+// AttachedNetworks returns a list of [AttachedResource] instances for each respective Docker
+// network in the ProvidedResources instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedResources instance.
 func (r ProvidedResources) AttachedNetworks(source []string) []AttachedResource[NetworkResource] {
-	return attachResources(r.Networks, append(source, "provides resource"))
+	return attachResources(r.Networks, append(source, providesSourcePart))
 }
 
+// AttachedServices returns a list of [AttachedResource] instances for each respective network
+// service in the ProvidedResources instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedResources instance.
 func (r ProvidedResources) AttachedServices(source []string) []AttachedResource[ServiceResource] {
-	return attachResources(r.Services, append(source, "provides resource"))
+	return attachResources(r.Services, append(source, providesSourcePart))
 }
 
 // RequiredResources
 
+// AttachedNetworks returns a list of [AttachedResource] instances for each respective Docker
+// network resource requirement in the RequiredResources instance, adding a string to the provided
+// list of source elements which describes the source of the RequiredResources instance.
 func (r RequiredResources) AttachedNetworks(source []string) []AttachedResource[NetworkResource] {
-	return attachResources(r.Networks, append(source, "requires resource"))
+	return attachResources(r.Networks, append(source, requiresSourcePart))
 }
 
+// AttachedServices returns a list of [AttachedResource] instances for each respective network
+// service resource requirement in the RequiredResources instance, adding a string to the provided
+// list of source elements which describes the source of the RequiredResources instance.
 func (r RequiredResources) AttachedServices(source []string) []AttachedResource[ServiceResource] {
-	return attachResources(r.Services, append(source, "requires resource"))
+	return attachResources(r.Services, append(source, requiresSourcePart))
 }
 
 // ListenerResource
 
+// CheckDependency checks whether the host port listener resource requirement, represented by the
+// ListenerResource instance, is satisfied by the candidate host port listener resource.
 func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []error) {
 	if r.Port != candidate.Port {
 		errs = append(errs, fmt.Errorf("unmatched port '%d'", r.Port))
@@ -43,6 +65,8 @@ func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []er
 	return errs
 }
 
+// CheckConflict checks whether the host port listener resource, represented by the ListenerResource
+// instance, conflicts with the candidate host port listener resource.
 func (r ListenerResource) CheckConflict(candidate ListenerResource) (errs []error) {
 	if r.Port == candidate.Port && r.Protocol == candidate.Protocol {
 		errs = append(errs, fmt.Errorf("same port/protocol '%d/%s'", r.Port, r.Protocol))
@@ -52,6 +76,8 @@ func (r ListenerResource) CheckConflict(candidate ListenerResource) (errs []erro
 
 // NetworkResource
 
+// CheckDependency checks whether the Docker network resource requirement, represented by the
+// NetworkResource instance, is satisfied by the candidate Docker network resource.
 func (r NetworkResource) CheckDependency(candidate NetworkResource) (errs []error) {
 	if r.Name != candidate.Name {
 		errs = append(errs, fmt.Errorf("unmatched name '%s'", r.Name))
@@ -59,6 +85,8 @@ func (r NetworkResource) CheckDependency(candidate NetworkResource) (errs []erro
 	return errs
 }
 
+// CheckConflict checks whether the Docker network resource, represented by the NetworkResource
+// instance, conflicts with the candidate Docker network resource.
 func (r NetworkResource) CheckConflict(candidate NetworkResource) (errs []error) {
 	if r.Name == candidate.Name {
 		errs = append(errs, fmt.Errorf("same name '%s'", r.Name))
@@ -68,6 +96,8 @@ func (r NetworkResource) CheckConflict(candidate NetworkResource) (errs []error)
 
 // ServiceResource
 
+// CheckDependency checks whether the network service resource requirement, represented by the
+// ServiceResource instance, is satisfied by the candidate network service resource.
 func (r ServiceResource) CheckDependency(candidate ServiceResource) (errs []error) {
 	if r.Port != candidate.Port {
 		errs = append(errs, fmt.Errorf("unmatched port '%d'", r.Port))
@@ -102,6 +132,8 @@ func (r ServiceResource) CheckDependency(candidate ServiceResource) (errs []erro
 	return errs
 }
 
+// parseServicePaths splits the provided list of paths into a set of exact paths and a set of prefix
+// paths, with the trailing asterisk (`*`) removed from the prefixes.
 func parseServicePaths(paths []string) (exact, prefixes map[string]struct{}) {
 	exact = make(map[string]struct{})
 	prefixes = make(map[string]struct{})
@@ -115,11 +147,13 @@ func parseServicePaths(paths []string) (exact, prefixes map[string]struct{}) {
 	return exact, prefixes
 }
 
+// pathMatchesExactly checks whether the provided path matches the provided set of exact paths.
 func pathMatchesExactly(path string, exactPaths map[string]struct{}) bool {
 	_, ok := exactPaths[path]
 	return ok
 }
 
+// pathMatchesPrefix checks whether the provided path matches the provided set of prefix paths.
 func pathMatchesPrefix(path string, pathPrefixes map[string]struct{}) (match bool, prefix string) {
 	for prefix := range pathPrefixes {
 		if strings.HasPrefix(strings.TrimSuffix(path, "*"), prefix) {
@@ -129,6 +163,8 @@ func pathMatchesPrefix(path string, pathPrefixes map[string]struct{}) (match boo
 	return false, ""
 }
 
+// CheckConflict checks whether the network service resource, represented by the ServiceResource
+// instance, conflicts with the candidate network service resource.
 func (r ServiceResource) CheckConflict(candidate ServiceResource) (errs []error) {
 	if r.Port != candidate.Port || r.Protocol != candidate.Protocol {
 		return nil
@@ -147,6 +183,8 @@ func (r ServiceResource) CheckConflict(candidate ServiceResource) (errs []error)
 	return errs
 }
 
+// checkConflictingPaths checks every path in the list of provided paths against every path in the
+// list of candidate paths to identify any conflicts between the two lists of paths.
 func checkConflictingPaths(provided, candidate []string) (errs []error) {
 	pathConflicts := make(map[string]struct{})
 	candidatePaths, candidatePathPrefixes := parseServicePaths(candidate)
