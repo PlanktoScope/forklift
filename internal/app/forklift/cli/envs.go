@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"sort"
 	"strings"
@@ -464,7 +463,7 @@ func ApplyEnv(
 	}
 
 	for _, change := range changes {
-		if err := applyReconciliationChange(0, cacheFS, change, dc); err != nil {
+		if err := applyReconciliationChange(0, change, dc); err != nil {
 			return errors.Wrapf(err, "couldn't apply '%s' change to stack %s", change.Type, change.Name)
 		}
 	}
@@ -472,7 +471,7 @@ func ApplyEnv(
 }
 
 func applyReconciliationChange(
-	indent int, cacheFS fs.FS, change reconciliationChange, dc *docker.Client,
+	indent int, change reconciliationChange, dc *docker.Client,
 ) error {
 	fmt.Println()
 	switch change.Type {
@@ -480,7 +479,7 @@ func applyReconciliationChange(
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
 		IndentedPrintf(indent, "Adding package deployment %s...\n", change.Name)
-		if err := deployStack(indent+1, cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
+		if err := deployStack(indent+1, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
@@ -492,7 +491,7 @@ func applyReconciliationChange(
 		return nil
 	case updateReconciliationChange:
 		IndentedPrintf(indent, "Updating package deployment %s...\n", change.Name)
-		if err := deployStack(indent+1, cacheFS, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
+		if err := deployStack(indent+1, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
@@ -500,14 +499,14 @@ func applyReconciliationChange(
 }
 
 func deployStack(
-	indent int, cacheFS fs.FS, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
+	indent int, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
 ) error {
 	if !cachedPkg.Config.Deployment.DefinesStack() {
 		IndentedPrintln(indent, "No Docker stack to deploy!")
 		return nil
 	}
 
-	stackConfig, err := loadStackDefinition(cacheFS, cachedPkg)
+	stackConfig, err := loadStackDefinition(cachedPkg)
 	if err != nil {
 		return err
 	}

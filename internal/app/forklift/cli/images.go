@@ -3,9 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 
 	dct "github.com/docker/cli/cli/compose/types"
 	"github.com/pkg/errors"
@@ -58,7 +56,7 @@ func listRequiredImages(
 			continue
 		}
 
-		stackConfig, err := loadStackDefinition(cacheFS, depl.Pkg.Cached)
+		stackConfig, err := loadStackDefinition(depl.Pkg.Cached)
 		if err != nil {
 			return nil, err
 		}
@@ -73,21 +71,12 @@ func listRequiredImages(
 	return orderedImages, nil
 }
 
-func loadStackDefinition(cacheFS fs.FS, pkg forklift.CachedPkg) (*dct.Config, error) {
-	var f fs.FS
-	var definitionFilePath string
-	fsPath := pkg.FSPath
-	if filepath.IsAbs(fsPath) {
-		f = os.DirFS(fsPath)
-		definitionFilePath = pkg.Config.Deployment.DefinitionFile
-	} else {
-		f = cacheFS
-		definitionFilePath = filepath.Join(fsPath, pkg.Config.Deployment.DefinitionFile)
-	}
-	stackConfig, err := docker.LoadStackDefinition(f, definitionFilePath)
+func loadStackDefinition(pkg forklift.CachedPkg) (*dct.Config, error) {
+	definitionFile := pkg.Config.Deployment.DefinitionFile
+	stackConfig, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load Docker stack definition from %s", definitionFilePath,
+			err, "couldn't load Docker stack definition from %s/%s", pkg.FSPath, definitionFile,
 		)
 	}
 	return stackConfig, nil

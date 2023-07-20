@@ -47,7 +47,7 @@ func PrintDeplInfo(
 	if cachedPkg.Config.Deployment.DefinesStack() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker stack:")
-		stackConfig, err := loadStackDefinition(cacheFS, cachedPkg)
+		stackConfig, err := loadStackDefinition(cachedPkg)
 		if err != nil {
 			return err
 		}
