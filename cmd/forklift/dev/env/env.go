@@ -10,7 +10,6 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/dev"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
@@ -37,7 +36,7 @@ func processFullBaseArgs(c *cli.Context) (
 }
 
 func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
-	envPath, err := dev.FindParentEnv(cwdPath)
+	envPath, err := forklift.FindParentEnv(cwdPath)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "The current working directory %s is not part of a Forklift environment.", cwdPath,

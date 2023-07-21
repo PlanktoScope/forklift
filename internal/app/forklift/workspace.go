@@ -60,32 +60,3 @@ func (w *FSWorkspace) GetCache() (*FSCache, error) {
 		FS: pathedFS,
 	}, nil
 }
-
-// FSEnv
-
-func LoadFSEnv(path string) (*FSEnv, error) {
-	if !Exists(path) {
-		return nil, errors.Errorf("couldn't find environment at %s", path)
-	}
-	return &FSEnv{
-		FS: pallets.AttachPath(os.DirFS(path), path),
-	}, nil
-}
-
-func (e *FSEnv) Exists() bool {
-	return Exists(e.FS.Path())
-}
-
-func (e *FSEnv) Remove() error {
-	return os.RemoveAll(e.FS.Path())
-}
-
-// FSCache
-
-func (c *FSCache) Exists() bool {
-	return Exists(c.FS.Path())
-}
-
-func (c *FSCache) Remove() error {
-	return os.RemoveAll(c.FS.Path())
-}
