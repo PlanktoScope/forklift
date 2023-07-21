@@ -6,9 +6,8 @@ import (
 
 // A Pkg is a Pallet package.
 type Pkg struct {
-	// Path is the Pallet package path, which consists of the Pallet repository path followed by the
-	// package subdirectory.
-	Path string
+	// Path is the Pallet repository path of the Pallet repository path which provides the package.
+	RepoPath string
 	// Subdir is the path of the package within the Pallet repository which provides the package.
 	Subdir string
 	// Config is the Pallet package specification for the package.

@@ -9,12 +9,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Pkg
+
+func (p Pkg) Path() string {
+	return filepath.Join(p.RepoPath, p.Subdir)
+}
+
 // FSPkg
 
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
 // The base path should correspond to the location of the base filesystem. In the loaded FSPkg's
-// embedded [Pkg], the Pallet package path (not to be confused with the path in the provided base
-// filesystem) is not initialized, nor is the package subdirectory initialized.
+// embedded [Pkg], the Pallet repository path is not initialized, nor is the Pallet package
+// subdirectory initialized.
 func LoadFSPkg(baseFS fs.FS, baseFSPath, pkgFSPath string) (p FSPkg, err error) {
 	p = FSPkg{
 		FSPath: filepath.Join(baseFSPath, pkgFSPath),

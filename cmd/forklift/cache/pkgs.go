@@ -30,7 +30,7 @@ func lsPkgAction(c *cli.Context) error {
 		return forklift.CompareCachedPkgs(pkgs[i], pkgs[j]) < 0
 	})
 	for _, pkg := range pkgs {
-		fmt.Printf("%s@%s\n", pkg.Path, pkg.Repo.Version)
+		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)
 	}
 	return nil
 }
@@ -60,7 +60,7 @@ func showPkgAction(c *cli.Context) error {
 }
 
 func printCachedPkg(indent int, pkg forklift.CachedPkg) {
-	fcli.IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
+	fcli.IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
 	indent++
 
 	printCachedPkgRepo(indent, pkg)

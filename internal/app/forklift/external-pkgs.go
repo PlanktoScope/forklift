@@ -41,7 +41,7 @@ func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
 				err, "couldn't check external pkg defined at %s", pkgConfigFilePath,
 			)
 		}
-		if pkg.Path != pkgPath {
+		if pkg.Path() != pkgPath {
 			continue
 		}
 
@@ -67,7 +67,7 @@ func loadExternalPkg(repo ExternalRepo, pkgConfigPath string) (CachedPkg, error)
 		)
 	}
 	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FSPath, fmt.Sprintf("%s/", repo.Repo.ConfigPath))
-	fsPkg.Path = fmt.Sprintf("%s/%s", repo.Repo.Config.Repository.Path, fsPkg.Subdir)
+	fsPkg.RepoPath = repo.Repo.Config.Repository.Path
 
 	return CachedPkg{
 		FSPkg: fsPkg,
@@ -77,7 +77,7 @@ func loadExternalPkg(repo ExternalRepo, pkgConfigPath string) (CachedPkg, error)
 
 func AsVersionedPkg(pkg CachedPkg) VersionedPkg {
 	return VersionedPkg{
-		Path: pkg.Path,
+		Path: pkg.Path(),
 		Repo: VersionedRepo{
 			VCSRepoPath: pkg.Repo.VCSRepoPath,
 			RepoSubdir:  pkg.Repo.RepoSubdir,
@@ -110,7 +110,7 @@ func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, erro
 			return nil, errors.Wrapf(err, "couldn't load cached package from %s", pkgConfigFilePath)
 		}
 
-		if prevPkg, ok := pkgMap[pkg.Path]; ok {
+		if prevPkg, ok := pkgMap[pkg.Path()]; ok {
 			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo) && prevPkg.FSPath != pkg.FSPath {
 				return nil, errors.Errorf(
 					"package repeatedly defined in the same version of the same Github repo: %s, %s",
@@ -118,8 +118,8 @@ func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, erro
 				)
 			}
 		}
-		repoPkgPaths = append(repoPkgPaths, pkg.Path)
-		pkgMap[pkg.Path] = pkg
+		repoPkgPaths = append(repoPkgPaths, pkg.Path())
+		pkgMap[pkg.Path()] = pkg
 	}
 
 	orderedPkgs := make([]CachedPkg, 0, len(repoPkgPaths))

@@ -51,7 +51,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 				err, "couldn't check cached pkg defined at %s", pkgConfigFilePath,
 			)
 		}
-		if pkg.Path != pkgPath {
+		if pkg.Path() != pkgPath {
 			continue
 		}
 
@@ -84,8 +84,8 @@ func loadCachedPkg(cacheFS fs.FS, pkgConfigPath string) (CachedPkg, error) {
 			err, "couldn't identify cached repository for package from %s", pkgConfigPath,
 		)
 	}
-	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FSPath, fmt.Sprintf("%s/", repo.ConfigPath))
-	fsPkg.Path = fmt.Sprintf("%s/%s", repo.Config.Repository.Path, fsPkg.Subdir)
+	fsPkg.RepoPath = repo.Config.Repository.Path
+	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FSPath, fmt.Sprintf("%s/", repo.FSPath))
 
 	return CachedPkg{
 		FSPkg: fsPkg,

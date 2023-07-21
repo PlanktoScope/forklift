@@ -28,7 +28,7 @@ func PrintEnvPkgs(
 		return forklift.CompareCachedPkgs(pkgs[i], pkgs[j]) < 0
 	})
 	for _, pkg := range pkgs {
-		IndentedPrintf(indent, "%s\n", pkg.Path)
+		IndentedPrintf(indent, "%s\n", pkg.Path())
 	}
 	return nil
 }
