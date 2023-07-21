@@ -11,6 +11,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // ls-repo
@@ -27,7 +28,7 @@ func lsRepoAction(c *cli.Context) error {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	sort.Slice(repos, func(i, j int) bool {
-		return forklift.CompareCachedRepos(repos[i], repos[j]) < 0
+		return pallets.CompareRepos(repos[i].Repo, repos[j].Repo) < 0
 	})
 	for _, repo := range repos {
 		fmt.Printf("%s@%s\n", repo.Config.Repository.Path, repo.Version)
@@ -59,7 +60,7 @@ func showRepoAction(c *cli.Context) error {
 	return nil
 }
 
-func printCachedRepo(indent int, repo forklift.CachedRepo) {
+func printCachedRepo(indent int, repo pallets.FSRepo) {
 	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
 	indent++
 

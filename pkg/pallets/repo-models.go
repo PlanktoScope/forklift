@@ -5,6 +5,13 @@ import (
 	"io/fs"
 )
 
+// The result of comparison functions is one of these values.
+const (
+	CompareLT = -1
+	CompareEQ = 0
+	CompareGT = 1
+)
+
 // A Repo is a Pallet repository.
 type Repo struct {
 	// VCSRepoPath is the path of the VCS repository path which provides the Pallet repository.
@@ -14,6 +21,8 @@ type Repo struct {
 	Subdir string
 	// Config is the Pallet repository specification for the repository.
 	Config RepoConfig
+	// Version is the Pallet repository version or pseudoversion of the repository.
+	Version string
 }
 
 // A FSRepo is a Pallet repository stored at the root of a [fs.FS] filesystem.

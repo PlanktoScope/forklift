@@ -11,6 +11,8 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Pseudo-versions
@@ -48,17 +50,17 @@ func (r VersionedRepo) Path() string {
 func CompareVersionedRepos(r, s VersionedRepo) int {
 	if r.VCSRepoPath != s.VCSRepoPath {
 		if r.VCSRepoPath < s.VCSRepoPath {
-			return compareLT
+			return pallets.CompareLT
 		}
-		return compareGT
+		return pallets.CompareGT
 	}
 	if r.RepoSubdir != s.RepoSubdir {
 		if r.RepoSubdir < s.RepoSubdir {
-			return compareLT
+			return pallets.CompareLT
 		}
-		return compareGT
+		return pallets.CompareGT
 	}
-	return compareEQ
+	return pallets.CompareEQ
 }
 
 // RepoVersionConfig

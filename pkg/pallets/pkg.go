@@ -11,6 +11,7 @@ import (
 
 // Pkg
 
+// Path returns the Pallet package path of the Pkg instance.
 func (p Pkg) Path() string {
 	return filepath.Join(p.RepoPath, p.Subdir)
 }

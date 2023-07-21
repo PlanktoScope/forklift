@@ -11,6 +11,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Print
@@ -54,7 +55,7 @@ func PrintRepoInfo(
 	printVersionedRepo(indent, versionedRepo)
 	fmt.Println()
 
-	var cachedRepo forklift.CachedRepo
+	var cachedRepo pallets.FSRepo
 	replacementRepo, ok := replacementRepos[repoPath]
 	if ok {
 		cachedRepo = replacementRepo.Repo

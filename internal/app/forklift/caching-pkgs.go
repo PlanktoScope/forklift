@@ -92,7 +92,7 @@ func loadCachedPkg(cacheFS fs.FS, pkgConfigPath string) (CachedPkg, error) {
 	}, nil
 }
 
-func findRepoOfPkg(cacheFS fs.FS, pkgConfigPath string) (CachedRepo, error) {
+func findRepoOfPkg(cacheFS fs.FS, pkgConfigPath string) (pallets.FSRepo, error) {
 	repoCandidatePath := pkgConfigPath
 	for repoCandidatePath != "." {
 		repo, err := loadCachedRepo(cacheFS, repoCandidatePath)
@@ -101,7 +101,7 @@ func findRepoOfPkg(cacheFS fs.FS, pkgConfigPath string) (CachedRepo, error) {
 		}
 		repoCandidatePath = filepath.Dir(repoCandidatePath)
 	}
-	return CachedRepo{}, errors.Errorf(
+	return pallets.FSRepo{}, errors.Errorf(
 		"no repository config file found in any parent directory of %s", pkgConfigPath,
 	)
 }
@@ -133,7 +133,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,
 		)
 		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
-			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo) && prevPkg.FSPath != pkg.FSPath {
+			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FSPath != pkg.FSPath {
 				return nil, errors.Errorf(
 					"package repeatedly defined in the same version of the same Github repo: %s, %s",
 					prevPkg.FSPath, pkg.FSPath,
@@ -154,19 +154,19 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 // Sorting
 
 func CompareCachedPkgs(p, q CachedPkg) int {
-	repoPathComparison := CompareCachedRepoPaths(p.Repo, q.Repo)
-	if repoPathComparison != compareEQ {
+	repoPathComparison := pallets.CompareRepoPaths(p.Repo.Repo, q.Repo.Repo)
+	if repoPathComparison != pallets.CompareEQ {
 		return repoPathComparison
 	}
 	if p.Subdir != q.Subdir {
 		if p.Subdir < q.Subdir {
-			return compareLT
+			return pallets.CompareLT
 		}
-		return compareGT
+		return pallets.CompareGT
 	}
 	repoVersionComparison := gosemver.Compare(p.Repo.Version, q.Repo.Version)
-	if repoVersionComparison != compareEQ {
+	if repoVersionComparison != pallets.CompareEQ {
 		return repoVersionComparison
 	}
-	return compareEQ
+	return pallets.CompareEQ
 }

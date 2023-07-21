@@ -109,7 +109,7 @@ func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, erro
 		}
 
 		if prevPkg, ok := pkgMap[pkg.Path()]; ok {
-			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo) && prevPkg.FSPath != pkg.FSPath {
+			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FSPath != pkg.FSPath {
 				return nil, errors.Errorf(
 					"package repeatedly defined in the same version of the same Github repo: %s, %s",
 					prevPkg.FSPath, pkg.FSPath,
