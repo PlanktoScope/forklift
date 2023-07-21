@@ -14,7 +14,7 @@ import (
 )
 
 func DownloadImages(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 ) error {
 	orderedImages, err := listRequiredImages(indent, envPath, cachePath, replacementRepos)
 	if err != nil {
@@ -38,7 +38,7 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 ) ([]string, error) {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
@@ -72,7 +72,8 @@ func listRequiredImages(
 	return orderedImages, nil
 }
 
-func loadStackDefinition(pkg forklift.CachedPkg) (*dct.Config, error) {
+// TODO: make this just be a method on FSPkg
+func loadStackDefinition(pkg *pallets.FSPkg) (*dct.Config, error) {
 	definitionFile := pkg.Config.Deployment.DefinitionFile
 	stackConfig, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
 	if err != nil {

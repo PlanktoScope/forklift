@@ -60,7 +60,7 @@ func showRepoAction(c *cli.Context) error {
 	return nil
 }
 
-func printCachedRepo(indent int, repo pallets.FSRepo) {
+func printCachedRepo(indent int, repo *pallets.FSRepo) {
 	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
 	indent++
 

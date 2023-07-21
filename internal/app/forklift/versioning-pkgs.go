@@ -57,12 +57,12 @@ func findVersionedRepoOfPkg(reposFS fs.FS, pkgPath string) (VersionedRepo, error
 // Listing
 
 func ListVersionedPkgs(
-	cacheFS fs.FS, replacementRepos map[string]pallets.FSRepo, repos []VersionedRepo,
-) (orderedPkgs []CachedPkg, err error) {
+	cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo, repos []VersionedRepo,
+) (orderedPkgs []*pallets.FSPkg, err error) {
 	versionedPkgPaths := make([]string, 0)
-	pkgMap := make(map[string]CachedPkg)
+	pkgMap := make(map[string]*pallets.FSPkg)
 	for _, repo := range repos {
-		var pkgs map[string]CachedPkg
+		var pkgs map[string]*pallets.FSPkg
 		var paths []string
 		if externalRepo, ok := replacementRepos[repo.Path()]; ok {
 			pkgs, paths, err = listVersionedPkgsOfExternalRepo(externalRepo)
@@ -79,7 +79,7 @@ func ListVersionedPkgs(
 		}
 	}
 
-	orderedPkgs = make([]CachedPkg, 0, len(versionedPkgPaths))
+	orderedPkgs = make([]*pallets.FSPkg, 0, len(versionedPkgPaths))
 	for _, path := range versionedPkgPaths {
 		orderedPkgs = append(orderedPkgs, pkgMap[path])
 	}
@@ -87,8 +87,8 @@ func ListVersionedPkgs(
 }
 
 func listVersionedPkgsOfExternalRepo(
-	externalRepo pallets.FSRepo,
-) (pkgMap map[string]CachedPkg, versionedPkgPaths []string, err error) {
+	externalRepo *pallets.FSRepo,
+) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
 	pkgs, err := ListExternalPkgs(externalRepo, "")
 	if err != nil {
 		return nil, nil, errors.Wrapf(
@@ -96,7 +96,7 @@ func listVersionedPkgsOfExternalRepo(
 		)
 	}
 
-	pkgMap = make(map[string]CachedPkg)
+	pkgMap = make(map[string]*pallets.FSPkg)
 	for _, pkg := range pkgs {
 		if prevPkg, ok := pkgMap[pkg.Path()]; ok {
 			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
@@ -115,7 +115,7 @@ func listVersionedPkgsOfExternalRepo(
 
 func listVersionedPkgsOfCachedRepo(
 	cacheFS fs.FS, repo VersionedRepo,
-) (pkgMap map[string]CachedPkg, versionedPkgPaths []string, err error) {
+) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
 	repoVersion, err := repo.Config.Version()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "couldn't determine version of repo %s", repo.Path())
@@ -131,7 +131,7 @@ func listVersionedPkgsOfCachedRepo(
 		)
 	}
 
-	pkgMap = make(map[string]CachedPkg)
+	pkgMap = make(map[string]*pallets.FSPkg)
 	for _, pkg := range pkgs {
 		versionedPkgPath := fmt.Sprintf(
 			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,

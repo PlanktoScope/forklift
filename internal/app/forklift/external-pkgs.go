@@ -12,7 +12,7 @@ import (
 
 // Loading
 
-func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
+func FindExternalPkg(repo *pallets.FSRepo, pkgPath string) (*pallets.FSPkg, error) {
 	pkgInnermostDir := filepath.Base(pkgPath)
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-package.yml file, so we must check every
@@ -20,22 +20,22 @@ func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
 	searchPattern := fmt.Sprintf("**/%s/%s", pkgInnermostDir, pallets.PkgSpecFile)
 	candidatePkgConfigFiles, err := doublestar.Glob(repo.FS, searchPattern)
 	if err != nil {
-		return CachedPkg{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't search for external Pallet package configs matching pattern %s", searchPattern,
 		)
 	}
 	if len(candidatePkgConfigFiles) == 0 {
-		return CachedPkg{}, errors.New("no matching Pallet package configs were found")
+		return nil, errors.New("no matching Pallet package configs were found")
 	}
-	candidatePkgs := make([]CachedPkg, 0)
+	candidatePkgs := make([]*pallets.FSPkg, 0)
 	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
 		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
 
-		pkg, err := loadPkgFromRepo(repo, filepath.Dir(pkgConfigFilePath))
+		pkg, err := repo.LoadPkg(filepath.Dir(pkgConfigFilePath))
 		if err != nil {
-			return CachedPkg{}, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "couldn't check external pkg defined at %s", pkgConfigFilePath,
 			)
 		}
@@ -44,7 +44,7 @@ func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
 		}
 
 		if len(candidatePkgs) > 0 {
-			return CachedPkg{}, errors.Errorf(
+			return nil, errors.Errorf(
 				"package %s repeatedly defined in the same version of the same Github repo: %s, %s",
 				pkgPath, candidatePkgs[0].FS.Path(), pkg.FS.Path(),
 			)
@@ -52,24 +52,12 @@ func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
 		candidatePkgs = append(candidatePkgs, pkg)
 	}
 	if len(candidatePkgs) == 0 {
-		return CachedPkg{}, errors.Errorf("no external repos were found matching %s", pkgPath)
+		return nil, errors.Errorf("no external repos were found matching %s", pkgPath)
 	}
 	return candidatePkgs[0], nil
 }
 
-func loadPkgFromRepo(repo pallets.FSRepo, subdirPath string) (CachedPkg, error) {
-	fsPkg, err := repo.LoadPkg(subdirPath)
-	if err != nil {
-		return CachedPkg{}, err
-	}
-
-	return CachedPkg{
-		FSPkg: fsPkg,
-		Repo:  repo,
-	}, nil
-}
-
-func AsVersionedPkg(pkg CachedPkg) VersionedPkg {
+func AsVersionedPkg(pkg *pallets.FSPkg) VersionedPkg {
 	return VersionedPkg{
 		Path: pkg.Path(),
 		Repo: VersionedRepo{
@@ -82,7 +70,7 @@ func AsVersionedPkg(pkg CachedPkg) VersionedPkg {
 
 // Listing
 
-func ListExternalPkgs(repo pallets.FSRepo, cachedPrefix string) ([]CachedPkg, error) {
+func ListExternalPkgs(repo *pallets.FSRepo, cachedPrefix string) ([]*pallets.FSPkg, error) {
 	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
 	if cachedPrefix != "" {
 		searchPattern = filepath.Join(cachedPrefix, searchPattern)
@@ -93,12 +81,12 @@ func ListExternalPkgs(repo pallets.FSRepo, cachedPrefix string) ([]CachedPkg, er
 	}
 
 	repoPkgPaths := make([]string, 0, len(pkgConfigFiles))
-	pkgMap := make(map[string]CachedPkg)
+	pkgMap := make(map[string]*pallets.FSPkg)
 	for _, pkgConfigFilePath := range pkgConfigFiles {
 		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
-		pkg, err := loadPkgFromRepo(repo, filepath.Dir(pkgConfigFilePath))
+		pkg, err := repo.LoadPkg(filepath.Dir(pkgConfigFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load cached package from %s", pkgConfigFilePath)
 		}
@@ -115,7 +103,7 @@ func ListExternalPkgs(repo pallets.FSRepo, cachedPrefix string) ([]CachedPkg, er
 		pkgMap[pkg.Path()] = pkg
 	}
 
-	orderedPkgs := make([]CachedPkg, 0, len(repoPkgPaths))
+	orderedPkgs := make([]*pallets.FSPkg, 0, len(repoPkgPaths))
 	for _, path := range repoPkgPaths {
 		orderedPkgs = append(orderedPkgs, pkgMap[path])
 	}

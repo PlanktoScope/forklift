@@ -15,7 +15,7 @@ import (
 // Print
 
 func PrintEnvPkgs(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 ) error {
 	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
 	if err != nil {
@@ -35,7 +35,7 @@ func PrintEnvPkgs(
 }
 
 func PrintPkgInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 	pkgPath string,
 ) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))

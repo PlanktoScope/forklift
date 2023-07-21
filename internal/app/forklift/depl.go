@@ -283,7 +283,7 @@ func splitMultiPathServiceResources(
 // Loading
 
 func LoadDepl(
-	envFS, cacheFS fs.FS, replacementRepos map[string]pallets.FSRepo, deplName string,
+	envFS, cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo, deplName string,
 ) (Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
@@ -344,7 +344,7 @@ func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
 // Listing
 
 func ListDepls(
-	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]pallets.FSRepo,
+	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo,
 ) ([]Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {

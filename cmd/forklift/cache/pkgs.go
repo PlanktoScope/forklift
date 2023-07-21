@@ -11,6 +11,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // ls-pkg
@@ -59,7 +60,7 @@ func showPkgAction(c *cli.Context) error {
 	return nil
 }
 
-func printCachedPkg(indent int, pkg forklift.CachedPkg) {
+func printCachedPkg(indent int, pkg *pallets.FSPkg) {
 	fcli.IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
 	indent++
 
@@ -73,7 +74,7 @@ func printCachedPkg(indent int, pkg forklift.CachedPkg) {
 	fcli.PrintFeatureSpecs(indent, pkg.Config.Features)
 }
 
-func printCachedPkgRepo(indent int, pkg forklift.CachedPkg) {
+func printCachedPkgRepo(indent int, pkg *pallets.FSPkg) {
 	fcli.IndentedPrintf(
 		indent, "Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path,
 	)

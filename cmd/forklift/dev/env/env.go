@@ -16,7 +16,7 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context) (
-	envPath string, workspacePath string, replacementRepos map[string]pallets.FSRepo,
+	envPath string, workspacePath string, replacementRepos map[string]*pallets.FSRepo,
 	err error,
 ) {
 	if envPath, err = dev.FindParentEnv(c.String("cwd")); err != nil {
@@ -37,8 +37,8 @@ func processFullBaseArgs(c *cli.Context) (
 	return envPath, workspacePath, replacementRepos, nil
 }
 
-func loadReplacementRepos(fsPaths []string) (repos map[string]pallets.FSRepo, err error) {
-	repos = make(map[string]pallets.FSRepo)
+func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, err error) {
+	repos = make(map[string]*pallets.FSRepo)
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {

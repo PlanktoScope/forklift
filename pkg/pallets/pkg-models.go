@@ -16,6 +16,8 @@ type FSPkg struct {
 	Pkg
 	// FS is a filesystem which contains the package's contents.
 	FS PathedFS
+	// Repo is a pointer to the [FSRepo] instance which provides the package.
+	Repo *FSRepo
 }
 
 // PkgSpecFile is the name of the file defining each Pallet package.

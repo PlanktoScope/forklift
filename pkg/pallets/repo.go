@@ -66,26 +66,30 @@ func CompareRepos(r, s Repo) int {
 // The base path should correspond to the location of the base filesystem. In the loaded FSRepo's
 // embedded [Repo], the VCS repository path is not initialized, nor is the Pallet repository
 // subdirectory initialized, nor is the Pallet repository version initialized.
-func LoadFSRepo(fsys PathedFS, subdirPath string) (p FSRepo, err error) {
+func LoadFSRepo(fsys PathedFS, subdirPath string) (p *FSRepo, err error) {
+	p = &FSRepo{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
-		return FSRepo{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
 	if p.Repo.Config, err = LoadRepoConfig(p.FS, RepoSpecFile); err != nil {
-		return FSRepo{}, errors.Wrapf(err, "couldn't load repo config")
+		return nil, errors.Wrapf(err, "couldn't load repo config")
 	}
 	return p, nil
 }
 
-func (r FSRepo) LoadPkg(pkgSubdir string) (p FSPkg, err error) {
+// LoadPkg loads a package from the FSRepo instance, and initializes the package's RepoPath, Subdir,
+// and Repo fields.
+func (r *FSRepo) LoadPkg(pkgSubdir string) (p *FSPkg, err error) {
 	if p, err = LoadFSPkg(r.FS, pkgSubdir); err != nil {
-		return FSPkg{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't load package %s from repo %s", pkgSubdir, r.Path(),
 		)
 	}
 	p.RepoPath = r.Config.Repository.Path
 	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", r.FS.Path()))
+	p.Repo = r
 
 	return p, nil
 }

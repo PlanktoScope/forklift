@@ -31,7 +31,7 @@ func PrintEnvRepos(indent int, envPath string) error {
 }
 
 func PrintRepoInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 	repoPath string,
 ) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
@@ -55,7 +55,7 @@ func PrintRepoInfo(
 	printVersionedRepo(indent, versionedRepo)
 	fmt.Println()
 
-	var cachedRepo pallets.FSRepo
+	var cachedRepo *pallets.FSRepo
 	replacementRepo, ok := replacementRepos[repoPath]
 	if ok {
 		cachedRepo = replacementRepo

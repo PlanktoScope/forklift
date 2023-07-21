@@ -21,15 +21,16 @@ func (p Pkg) Path() string {
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
 // The base path should correspond to the location of the base filesystem. In the loaded FSPkg's
 // embedded [Pkg], the Pallet repository path is not initialized, nor is the Pallet package
-// subdirectory initialized.
-func LoadFSPkg(fsys PathedFS, subdirPath string) (p FSPkg, err error) {
+// subdirectory initialized, nor is the pointer to the Pallet repository initialized.
+func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
+	p = &FSPkg{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
-		return FSPkg{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
 	if p.Pkg.Config, err = LoadPkgConfig(p.FS, PkgSpecFile); err != nil {
-		return FSPkg{}, errors.Wrapf(err, "couldn't load package config")
+		return nil, errors.Wrapf(err, "couldn't load package config")
 	}
 	return p, nil
 }

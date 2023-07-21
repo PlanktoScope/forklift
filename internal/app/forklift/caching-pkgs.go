@@ -15,10 +15,10 @@ import (
 
 // Loading
 
-func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, error) {
+func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (*pallets.FSPkg, error) {
 	vcsRepoPath, _, err := SplitRepoPathSubdir(pkgPath)
 	if err != nil {
-		return CachedPkg{}, errors.Wrapf(err, "couldn't parse path of Pallet package %s", pkgPath)
+		return nil, errors.Wrapf(err, "couldn't parse path of Pallet package %s", pkgPath)
 	}
 	pkgInnermostDir := filepath.Base(pkgPath)
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
@@ -29,16 +29,16 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 	)
 	candidatePkgConfigFiles, err := doublestar.Glob(cacheFS, searchPattern)
 	if err != nil {
-		return CachedPkg{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't search for cached Pallet package configs matching pattern %s", searchPattern,
 		)
 	}
 	if len(candidatePkgConfigFiles) == 0 {
-		return CachedPkg{}, errors.Errorf(
+		return nil, errors.Errorf(
 			"no matching Pallet package configs were found in %s@%s", vcsRepoPath, version,
 		)
 	}
-	candidatePkgs := make([]CachedPkg, 0)
+	candidatePkgs := make([]*pallets.FSPkg, 0)
 	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
 		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
@@ -46,7 +46,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 
 		pkg, err := loadCachedPkg(cacheFS, filepath.Dir(pkgConfigFilePath))
 		if err != nil {
-			return CachedPkg{}, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "couldn't check cached pkg defined at %s", pkgConfigFilePath,
 			)
 		}
@@ -55,7 +55,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 		}
 
 		if len(candidatePkgs) > 0 {
-			return CachedPkg{}, errors.Errorf(
+			return nil, errors.Errorf(
 				"package %s repeatedly defined in the same version of the same Github repo: %s, %s",
 				pkgPath, candidatePkgs[0].FS.Path(), pkg.FS.Path(),
 			)
@@ -63,24 +63,24 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 		candidatePkgs = append(candidatePkgs, pkg)
 	}
 	if len(candidatePkgs) == 0 {
-		return CachedPkg{}, errors.Errorf(
+		return nil, errors.Errorf(
 			"no cached packages were found matching %s@%s", pkgPath, version,
 		)
 	}
 	return candidatePkgs[0], nil
 }
 
-func loadCachedPkg(cacheFS fs.FS, subdirPath string) (CachedPkg, error) {
+func loadCachedPkg(cacheFS fs.FS, subdirPath string) (*pallets.FSPkg, error) {
 	repo, err := findRepoContaining(cacheFS, subdirPath)
 	if err != nil {
-		return CachedPkg{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't identify cached repository for package from %s", subdirPath,
 		)
 	}
-	return loadPkgFromRepo(repo, strings.TrimPrefix(subdirPath, fmt.Sprintf("%s/", repo.FS.Path())))
+	return repo.LoadPkg(strings.TrimPrefix(subdirPath, fmt.Sprintf("%s/", repo.FS.Path())))
 }
 
-func findRepoContaining(cacheFS fs.FS, subdirPath string) (pallets.FSRepo, error) {
+func findRepoContaining(cacheFS fs.FS, subdirPath string) (*pallets.FSRepo, error) {
 	repoCandidatePath := subdirPath
 	for repoCandidatePath != "." {
 		repo, err := loadCachedRepo(cacheFS, repoCandidatePath)
@@ -89,14 +89,14 @@ func findRepoContaining(cacheFS fs.FS, subdirPath string) (pallets.FSRepo, error
 		}
 		repoCandidatePath = filepath.Dir(repoCandidatePath)
 	}
-	return pallets.FSRepo{}, errors.Errorf(
+	return nil, errors.Errorf(
 		"no repository config file found in any parent directory of %s", subdirPath,
 	)
 }
 
 // Listing
 
-func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
+func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]*pallets.FSPkg, error) {
 	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
 	if cachedPrefix != "" {
 		searchPattern = filepath.Join(cachedPrefix, searchPattern)
@@ -107,7 +107,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 	}
 
 	repoVersionedPkgPaths := make([]string, 0, len(pkgConfigFiles))
-	pkgMap := make(map[string]CachedPkg)
+	pkgMap := make(map[string]*pallets.FSPkg)
 	for _, pkgConfigFilePath := range pkgConfigFiles {
 		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
@@ -132,7 +132,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 		pkgMap[versionedPkgPath] = pkg
 	}
 
-	orderedPkgs := make([]CachedPkg, 0, len(repoVersionedPkgPaths))
+	orderedPkgs := make([]*pallets.FSPkg, 0, len(repoVersionedPkgPaths))
 	for _, path := range repoVersionedPkgPaths {
 		orderedPkgs = append(orderedPkgs, pkgMap[path])
 	}
@@ -141,7 +141,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 
 // Sorting
 
-func CompareCachedPkgs(p, q CachedPkg) int {
+func CompareCachedPkgs(p, q *pallets.FSPkg) int {
 	repoPathComparison := pallets.CompareRepoPaths(p.Repo.Repo, q.Repo.Repo)
 	if repoPathComparison != pallets.CompareEQ {
 		return repoPathComparison

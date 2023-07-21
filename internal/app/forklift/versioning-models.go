@@ -1,5 +1,9 @@
 package forklift
 
+import (
+	"github.com/PlanktoScope/forklift/pkg/pallets"
+)
+
 // Repos
 
 type VersionedRepo struct {
@@ -17,7 +21,8 @@ type RepoVersionConfig struct {
 // Pkgs
 
 type VersionedPkg struct {
-	Path   string
-	Repo   VersionedRepo
-	Cached CachedPkg
+	Path string
+	Repo VersionedRepo
+	// TODO: rename this to FSPkg
+	Cached *pallets.FSPkg
 }

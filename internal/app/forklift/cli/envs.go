@@ -148,7 +148,7 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 // check
 
 func CheckEnv(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 ) error {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
@@ -342,7 +342,7 @@ func printDependencyCandidate[Resource any](
 // plan
 
 func PlanEnv(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 ) error {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
@@ -435,7 +435,7 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 // apply
 
 func ApplyEnv(
-	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
 ) error {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
@@ -498,9 +498,7 @@ func applyReconciliationChange(
 	}
 }
 
-func deployStack(
-	indent int, cachedPkg forklift.CachedPkg, name string, dc *docker.Client,
-) error {
+func deployStack(indent int, cachedPkg *pallets.FSPkg, name string, dc *docker.Client) error {
 	if !cachedPkg.Config.Deployment.DefinesStack() {
 		IndentedPrintln(indent, "No Docker stack to deploy!")
 		return nil

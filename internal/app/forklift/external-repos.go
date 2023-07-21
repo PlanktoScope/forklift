@@ -11,8 +11,8 @@ import (
 )
 
 func FindExternalRepoOfPkg(
-	repos map[string]pallets.FSRepo, pkgPath string,
-) (repo pallets.FSRepo, ok bool) {
+	repos map[string]*pallets.FSRepo, pkgPath string,
+) (repo *pallets.FSRepo, ok bool) {
 	repoCandidatePath := filepath.Dir(pkgPath)
 	for repoCandidatePath != "." {
 		if repo, ok = repos[repoCandidatePath]; ok {
@@ -20,19 +20,19 @@ func FindExternalRepoOfPkg(
 		}
 		repoCandidatePath = filepath.Dir(repoCandidatePath)
 	}
-	return pallets.FSRepo{}, false
+	return nil, false
 }
 
 // Listing
 
-func ListExternalRepos(fsys pallets.PathedFS) ([]pallets.FSRepo, error) {
+func ListExternalRepos(fsys pallets.PathedFS) ([]*pallets.FSRepo, error) {
 	repoConfigFiles, err := doublestar.Glob(fsys, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
 
 	repoPaths := make([]string, 0, len(repoConfigFiles))
-	repoMap := make(map[string]pallets.FSRepo)
+	repoMap := make(map[string]*pallets.FSRepo)
 	for _, repoConfigFilePath := range repoConfigFiles {
 		if filepath.Base(repoConfigFilePath) != pallets.RepoSpecFile {
 			continue
@@ -55,25 +55,23 @@ func ListExternalRepos(fsys pallets.PathedFS) ([]pallets.FSRepo, error) {
 		repoMap[repoPath] = repo
 	}
 
-	orderedRepos := make([]pallets.FSRepo, 0, len(repoPaths))
+	orderedRepos := make([]*pallets.FSRepo, 0, len(repoPaths))
 	for _, path := range repoPaths {
 		orderedRepos = append(orderedRepos, repoMap[path])
 	}
 	return orderedRepos, nil
 }
 
-func loadExternalRepo(fsys pallets.PathedFS, subdirPath string) (pallets.FSRepo, error) {
+func loadExternalRepo(fsys pallets.PathedFS, subdirPath string) (*pallets.FSRepo, error) {
 	repo, err := pallets.LoadFSRepo(fsys, subdirPath)
 	if err != nil {
-		return pallets.FSRepo{}, errors.Wrapf(
-			err, "couldn't load external repo config from %s", subdirPath,
-		)
+		return nil, errors.Wrapf(err, "couldn't load repo config from %s", subdirPath)
 	}
 	// TODO: move SplitRepoPathSubdir into pkg/pallets
 	if repo.VCSRepoPath, repo.Subdir, err = SplitRepoPathSubdir(
 		repo.Config.Repository.Path,
 	); err != nil {
-		return pallets.FSRepo{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't parse path of Pallet repo %s", repo.Config.Repository.Path,
 		)
 	}
