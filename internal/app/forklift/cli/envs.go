@@ -396,7 +396,7 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 
 	changes := make([]reconciliationChange, 0, len(deplSet)+len(stackSet))
 	for name, depl := range deplSet {
-		definesStack := depl.Pkg.Cached.Config.Deployment.DefinesStack()
+		definesStack := depl.Pkg.Config.Deployment.DefinesStack()
 		stack, ok := stackSet[name]
 		if !ok {
 			if definesStack {
@@ -418,7 +418,7 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 		}
 	}
 	for name, stack := range stackSet {
-		if depl, ok := deplSet[name]; ok && depl.Pkg.Cached.Config.Deployment.DefinesStack() {
+		if depl, ok := deplSet[name]; ok && depl.Pkg.Config.Deployment.DefinesStack() {
 			continue
 		}
 		changes = append(changes, reconciliationChange{
@@ -479,7 +479,7 @@ func applyReconciliationChange(
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
 		IndentedPrintf(indent, "Adding package deployment %s...\n", change.Name)
-		if err := deployStack(indent+1, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
+		if err := deployStack(indent+1, change.Depl.Pkg.FSPkg, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
@@ -491,7 +491,7 @@ func applyReconciliationChange(
 		return nil
 	case updateReconciliationChange:
 		IndentedPrintf(indent, "Updating package deployment %s...\n", change.Name)
-		if err := deployStack(indent+1, change.Depl.Pkg.Cached, change.Name, dc); err != nil {
+		if err := deployStack(indent+1, change.Depl.Pkg.FSPkg, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil

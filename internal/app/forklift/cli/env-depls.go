@@ -43,11 +43,10 @@ func PrintDeplInfo(
 	printDepl(indent, depl)
 	indent++
 
-	cachedPkg := depl.Pkg.Cached
-	if cachedPkg.Config.Deployment.DefinesStack() {
+	if depl.Pkg.Config.Deployment.DefinesStack() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker stack:")
-		stackConfig, err := loadStackDefinition(cachedPkg)
+		stackConfig, err := loadStackDefinition(depl.Pkg.FSPkg)
 		if err != nil {
 			return err
 		}
@@ -89,7 +88,7 @@ func printDeplPkg(indent int, depl forklift.Depl) {
 	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
 	indent++
 
-	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Cached.Config.Package.Description)
+	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Config.Package.Description)
 	printVersionedPkgRepo(indent, depl.Pkg)
 }
 

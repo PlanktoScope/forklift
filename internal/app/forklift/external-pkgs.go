@@ -57,14 +57,13 @@ func FindExternalPkg(repo *pallets.FSRepo, pkgPath string) (*pallets.FSPkg, erro
 	return candidatePkgs[0], nil
 }
 
-func AsVersionedPkg(pkg *pallets.FSPkg) VersionedPkg {
-	return VersionedPkg{
-		Path: pkg.Path(),
-		Repo: VersionedRepo{
+func AsVersionedPkg(pkg *pallets.FSPkg) *VersionedPkg {
+	return &VersionedPkg{
+		FSPkg: pkg,
+		VersionedRepo: VersionedRepo{
 			VCSRepoPath: pkg.Repo.VCSRepoPath,
 			RepoSubdir:  pkg.Repo.Subdir,
 		},
-		Cached: pkg,
 	}
 }
 

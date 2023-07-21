@@ -22,7 +22,7 @@ func DeplsFS(envFS fs.FS) (fs.FS, error) {
 // Depl
 
 func (d *Depl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureSpec, err error) {
-	all := d.Pkg.Cached.Config.Features
+	all := d.Pkg.Config.Features
 	enabled = make(map[string]pallets.PkgFeatureSpec)
 	for _, name := range d.Config.Features {
 		featureSpec, ok := all[name]
@@ -35,7 +35,7 @@ func (d *Depl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureSpec, err
 }
 
 func (d *Depl) DisabledFeatures() map[string]pallets.PkgFeatureSpec {
-	all := d.Pkg.Cached.Config.Features
+	all := d.Pkg.Config.Features
 	enabled := make(map[string]struct{})
 	for _, name := range d.Config.Features {
 		enabled[name] = struct{}{}
@@ -105,14 +105,13 @@ func (d *Depl) CheckConflicts(candidate Depl) (DeplConflict, error) {
 func (d *Depl) providedListeners(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (provided []pallets.AttachedResource[pallets.ListenerResource]) {
-	pkgConfig := d.Pkg.Cached.Config
 	parentSource := d.resourceAttachmentSource()
 
-	provided = append(provided, pkgConfig.Host.Provides.AttachedListeners(
-		pkgConfig.Host.ResourceAttachmentSource(parentSource),
+	provided = append(provided, d.Pkg.Config.Host.Provides.AttachedListeners(
+		d.Pkg.Config.Host.ResourceAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, pkgConfig.Deployment.Provides.AttachedListeners(
-		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
+	provided = append(provided, d.Pkg.Config.Deployment.Provides.AttachedListeners(
+		d.Pkg.Config.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
@@ -135,11 +134,10 @@ func (d *Depl) resourceAttachmentSource() []string {
 func (d *Depl) requiredNetworks(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (required []pallets.AttachedResource[pallets.NetworkResource]) {
-	pkgConfig := d.Pkg.Cached.Config
 	parentSource := d.resourceAttachmentSource()
 
-	required = append(required, pkgConfig.Deployment.Requires.AttachedNetworks(
-		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
+	required = append(required, d.Pkg.Config.Deployment.Requires.AttachedNetworks(
+		d.Pkg.Config.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
@@ -155,14 +153,13 @@ func (d *Depl) requiredNetworks(
 func (d *Depl) providedNetworks(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (provided []pallets.AttachedResource[pallets.NetworkResource]) {
-	pkgConfig := d.Pkg.Cached.Config
 	parentSource := d.resourceAttachmentSource()
 
-	provided = append(provided, pkgConfig.Host.Provides.AttachedNetworks(
-		pkgConfig.Host.ResourceAttachmentSource(parentSource),
+	provided = append(provided, d.Pkg.Config.Host.Provides.AttachedNetworks(
+		d.Pkg.Config.Host.ResourceAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, pkgConfig.Deployment.Provides.AttachedNetworks(
-		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
+	provided = append(provided, d.Pkg.Config.Deployment.Provides.AttachedNetworks(
+		d.Pkg.Config.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
@@ -178,11 +175,10 @@ func (d *Depl) providedNetworks(
 func (d *Depl) requiredServices(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (required []pallets.AttachedResource[pallets.ServiceResource]) {
-	pkgConfig := d.Pkg.Cached.Config
 	parentSource := d.resourceAttachmentSource()
 
-	required = append(required, pkgConfig.Deployment.Requires.AttachedServices(
-		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
+	required = append(required, d.Pkg.Config.Deployment.Requires.AttachedServices(
+		d.Pkg.Config.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)
@@ -198,14 +194,13 @@ func (d *Depl) requiredServices(
 func (d *Depl) providedServices(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (provided []pallets.AttachedResource[pallets.ServiceResource]) {
-	pkgConfig := d.Pkg.Cached.Config
 	parentSource := d.resourceAttachmentSource()
 
-	provided = append(provided, pkgConfig.Host.Provides.AttachedServices(
-		pkgConfig.Host.ResourceAttachmentSource(parentSource),
+	provided = append(provided, d.Pkg.Config.Host.Provides.AttachedServices(
+		d.Pkg.Config.Host.ResourceAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, pkgConfig.Deployment.Provides.AttachedServices(
-		pkgConfig.Deployment.ResourceAttachmentSource(parentSource),
+	provided = append(provided, d.Pkg.Config.Deployment.Provides.AttachedServices(
+		d.Pkg.Config.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	orderedFeatureNames := sortKeys(enabledFeatures)

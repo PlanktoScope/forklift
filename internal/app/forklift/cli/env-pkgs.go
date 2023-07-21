@@ -45,7 +45,7 @@ func PrintPkgInfo(
 		)
 	}
 
-	var pkg forklift.VersionedPkg
+	var pkg *forklift.VersionedPkg
 	repo, ok := forklift.FindExternalRepoOfPkg(replacementRepos, pkgPath)
 	if ok {
 		externalPkg, perr := forklift.FindExternalPkg(repo, pkgPath)
@@ -65,38 +65,38 @@ func PrintPkgInfo(
 	return nil
 }
 
-func printVersionedPkg(indent int, pkg forklift.VersionedPkg) {
-	IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path)
+func printVersionedPkg(indent int, pkg *forklift.VersionedPkg) {
+	IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
 	indent++
 
 	printVersionedPkgRepo(indent, pkg)
-	if filepath.IsAbs(pkg.Cached.FS.Path()) {
+	if filepath.IsAbs(pkg.FS.Path()) {
 		IndentedPrint(indent, "External path (replacing cached package): ")
 	} else {
 		IndentedPrint(indent, "Path in cache: ")
 	}
-	fmt.Println(pkg.Cached.FS.Path())
+	fmt.Println(pkg.FS.Path())
 	fmt.Println()
 
-	PrintPkgSpec(indent, pkg.Cached.Config.Package)
+	PrintPkgSpec(indent, pkg.Config.Package)
 	fmt.Println()
-	PrintDeplSpec(indent, pkg.Cached.Config.Deployment)
+	PrintDeplSpec(indent, pkg.Config.Deployment)
 	fmt.Println()
-	PrintFeatureSpecs(indent, pkg.Cached.Config.Features)
+	PrintFeatureSpecs(indent, pkg.Config.Features)
 }
 
-func printVersionedPkgRepo(indent int, pkg forklift.VersionedPkg) {
+func printVersionedPkgRepo(indent int, pkg *forklift.VersionedPkg) {
 	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
 	indent++
 
-	if filepath.IsAbs(pkg.Cached.FS.Path()) {
+	if filepath.IsAbs(pkg.FS.Path()) {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Cached.Repo.FS.Path(),
+			indent, "External path (replacing cached repository): %s\n", pkg.Repo.FS.Path(),
 		)
 	} else {
-		IndentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)
+		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
 	}
 
-	IndentedPrintf(indent, "Description: %s\n", pkg.Cached.Repo.Config.Repository.Description)
+	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
 	IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
 }

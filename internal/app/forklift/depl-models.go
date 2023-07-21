@@ -8,5 +8,5 @@ type DeplConfig struct {
 type Depl struct {
 	Name   string
 	Config DeplConfig
-	Pkg    VersionedPkg
+	Pkg    *VersionedPkg
 }

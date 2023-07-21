@@ -21,8 +21,6 @@ type RepoVersionConfig struct {
 // Pkgs
 
 type VersionedPkg struct {
-	Path string
-	Repo VersionedRepo
-	// TODO: rename this to FSPkg
-	Cached *pallets.FSPkg
+	*pallets.FSPkg
+	VersionedRepo VersionedRepo
 }

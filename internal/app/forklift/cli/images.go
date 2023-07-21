@@ -53,11 +53,11 @@ func listRequiredImages(
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
-		if !depl.Pkg.Cached.Config.Deployment.DefinesStack() {
+		if !depl.Pkg.Config.Deployment.DefinesStack() {
 			continue
 		}
 
-		stackConfig, err := loadStackDefinition(depl.Pkg.Cached)
+		stackConfig, err := loadStackDefinition(depl.Pkg.FSPkg)
 		if err != nil {
 			return nil, err
 		}

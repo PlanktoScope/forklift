@@ -12,31 +12,26 @@ import (
 
 // Loading
 
-func LoadVersionedPkg(reposFS, cacheFS fs.FS, pkgPath string) (VersionedPkg, error) {
-	repo, err := findVersionedRepoOfPkg(reposFS, pkgPath)
-	if err != nil {
-		return VersionedPkg{}, errors.Wrapf(
+func LoadVersionedPkg(reposFS, cacheFS fs.FS, pkgPath string) (p *VersionedPkg, err error) {
+	p = &VersionedPkg{}
+	if p.VersionedRepo, err = findVersionedRepoOfPkg(reposFS, pkgPath); err != nil {
+		return nil, errors.Wrapf(
 			err, "couldn't find repo providing package %s in local environment", pkgPath,
 		)
 	}
-	version, err := repo.Config.Version()
+	version, err := p.VersionedRepo.Config.Version()
 	if err != nil {
-		return VersionedPkg{}, errors.Wrapf(
-			err, "couldn't determine version of repo %s in local environment", repo.Path(),
+		return nil, errors.Wrapf(
+			err, "couldn't determine version of repo %s in local environment", p.VersionedRepo.Path(),
 		)
 	}
-	pkg, err := FindCachedPkg(cacheFS, pkgPath, version)
-	if err != nil {
-		return VersionedPkg{}, errors.Wrapf(
+	if p.FSPkg, err = FindCachedPkg(cacheFS, pkgPath, version); err != nil {
+		return nil, errors.Wrapf(
 			err, "couldn't find package %s@%s in cache", pkgPath, version,
 		)
 	}
 
-	return VersionedPkg{
-		Path:   pkgPath,
-		Repo:   repo,
-		Cached: pkg,
-	}, nil
+	return p, nil
 }
 
 func findVersionedRepoOfPkg(reposFS fs.FS, pkgPath string) (VersionedRepo, error) {
