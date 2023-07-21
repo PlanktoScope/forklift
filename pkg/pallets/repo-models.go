@@ -1,10 +1,6 @@
 // Package pallets implements the specification for the Pallets package management system.
 package pallets
 
-import (
-	"io/fs"
-)
-
 // The result of comparison functions is one of these values.
 const (
 	CompareLT = -1
@@ -30,9 +26,7 @@ type FSRepo struct {
 	// Repo is the Pallet repository at the root of the filesystem.
 	Repo
 	// FS is a filesystem which contains the repository's contents.
-	FS fs.FS
-	// Path is the path of the repository's filesystem.
-	FSPath string
+	FS PathedFS
 }
 
 // RepoSpecFile is the name of the file defining each Pallet repository.

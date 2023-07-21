@@ -1,9 +1,5 @@
 package pallets
 
-import (
-	"io/fs"
-)
-
 // A Pkg is a Pallet package.
 type Pkg struct {
 	// Path is the Pallet repository path of the Pallet repository path which provides the package.
@@ -19,9 +15,7 @@ type FSPkg struct {
 	// Pkg is the Pallet package at the root of the filesystem.
 	Pkg
 	// FS is a filesystem which contains the package's contents.
-	FS fs.FS
-	// Path is the path of the package's filesystem.
-	FSPath string
+	FS PathedFS
 }
 
 // PkgSpecFile is the name of the file defining each Pallet package.

@@ -2,7 +2,6 @@ package forklift
 
 import (
 	"fmt"
-	"io/fs"
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -28,8 +27,8 @@ func FindExternalRepoOfPkg(
 
 // Listing
 
-func ListExternalRepos(dirFS fs.FS) ([]pallets.FSRepo, error) {
-	repoConfigFiles, err := doublestar.Glob(dirFS, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
+func ListExternalRepos(fsys pallets.PathedFS) ([]pallets.FSRepo, error) {
+	repoConfigFiles, err := doublestar.Glob(fsys, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
 	}
@@ -40,17 +39,17 @@ func ListExternalRepos(dirFS fs.FS) ([]pallets.FSRepo, error) {
 		if filepath.Base(repoConfigFilePath) != pallets.RepoSpecFile {
 			continue
 		}
-		repo, err := loadExternalRepo(dirFS, filepath.Dir(repoConfigFilePath))
+		repo, err := loadExternalRepo(fsys, filepath.Dir(repoConfigFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load cached repo from %s", repoConfigFilePath)
 		}
 
 		repoPath := repo.Config.Repository.Path
 		if prevRepo, ok := repoMap[repoPath]; ok {
-			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.FSPath != repo.FSPath {
+			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.FS.Path() != repo.FS.Path() {
 				return nil, errors.Errorf(
 					"repository repeatedly defined in the same version of the same Github repo: %s, %s",
-					prevRepo.FSPath, repo.FSPath,
+					prevRepo.FS.Path(), repo.FS.Path(),
 				)
 			}
 		}
@@ -65,13 +64,14 @@ func ListExternalRepos(dirFS fs.FS) ([]pallets.FSRepo, error) {
 	return orderedRepos, nil
 }
 
-func loadExternalRepo(dirFS fs.FS, repoConfigPath string) (pallets.FSRepo, error) {
-	repo, err := pallets.LoadFSRepo(dirFS, "", repoConfigPath)
+func loadExternalRepo(fsys pallets.PathedFS, subdirPath string) (pallets.FSRepo, error) {
+	repo, err := pallets.LoadFSRepo(fsys, subdirPath)
 	if err != nil {
 		return pallets.FSRepo{}, errors.Wrapf(
-			err, "couldn't load external repo config from %s", repoConfigPath,
+			err, "couldn't load external repo config from %s", subdirPath,
 		)
 	}
+	// TODO: move SplitRepoPathSubdir into pkg/pallets
 	if repo.VCSRepoPath, repo.Subdir, err = SplitRepoPathSubdir(
 		repo.Config.Repository.Path,
 	); err != nil {

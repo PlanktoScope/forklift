@@ -62,18 +62,15 @@ func CompareRepos(r, s Repo) int {
 
 // LoadFSRepo loads a FSRepo from the specified directory path in the provided base filesystem.
 // The base path should correspond to the location of the base filesystem. In the loaded FSRepo's
-// embedded [Repo], the Pallet repository path is not initialized, nor is the Pallet repository
+// embedded [Repo], the VCS repository path is not initialized, nor is the Pallet repository
 // subdirectory initialized, nor is the Pallet repository version initialized.
-func LoadFSRepo(baseFS fs.FS, baseFSPath, repoFSPath string) (p FSRepo, err error) {
-	p = FSRepo{
-		FSPath: filepath.Join(baseFSPath, repoFSPath),
-	}
-	if p.FS, err = fs.Sub(baseFS, repoFSPath); err != nil {
+func LoadFSRepo(fsys PathedFS, subdirPath string) (p FSRepo, err error) {
+	if p.FS, err = fsys.Sub(subdirPath); err != nil {
 		return FSRepo{}, errors.Wrapf(
-			err, "couldn't enter directory %s from fs at %s", repoFSPath, baseFSPath,
+			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if p.Repo.Config, err = LoadRepoConfig(p.FS, p.FSPath, RepoSpecFile); err != nil {
+	if p.Repo.Config, err = LoadRepoConfig(p.FS, RepoSpecFile); err != nil {
 		return FSRepo{}, errors.Wrapf(err, "couldn't load repo config")
 	}
 	return p, nil
@@ -83,11 +80,11 @@ func LoadFSRepo(baseFS fs.FS, baseFSPath, repoFSPath string) (p FSRepo, err erro
 
 // LoadRepoConfig loads a RepoConfig from the specified file path in the provided base filesystem.
 // The base path should correspond to the location of the base filesystem.
-func LoadRepoConfig(baseFS fs.FS, baseFSPath, filePath string) (RepoConfig, error) {
-	bytes, err := fs.ReadFile(baseFS, filePath)
+func LoadRepoConfig(fsys PathedFS, filePath string) (RepoConfig, error) {
+	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return RepoConfig{}, errors.Wrapf(
-			err, "couldn't read repo config file %s/%s", baseFSPath, filePath,
+			err, "couldn't read repo config file %s/%s", fsys.Path(), filePath,
 		)
 	}
 	config := RepoConfig{}

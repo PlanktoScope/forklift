@@ -64,7 +64,7 @@ func printCachedPkg(indent int, pkg forklift.CachedPkg) {
 	indent++
 
 	printCachedPkgRepo(indent, pkg)
-	fcli.IndentedPrintf(indent, "Path in cache: %s\n", pkg.FSPath)
+	fcli.IndentedPrintf(indent, "Path in cache: %s\n", pkg.FS.Path())
 	fmt.Println()
 	fcli.PrintPkgSpec(indent, pkg.Config.Package)
 	fmt.Println()

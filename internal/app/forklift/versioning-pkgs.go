@@ -90,17 +90,17 @@ func listVersionedPkgsOfExternalRepo(
 	pkgs, err := ListExternalPkgs(externalRepo, "")
 	if err != nil {
 		return nil, nil, errors.Wrapf(
-			err, "couldn't list packages from external repo at %s", externalRepo.Repo.FSPath,
+			err, "couldn't list packages from external repo at %s", externalRepo.Repo.FS.Path(),
 		)
 	}
 
 	pkgMap = make(map[string]CachedPkg)
 	for _, pkg := range pkgs {
 		if prevPkg, ok := pkgMap[pkg.Path()]; ok {
-			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FSPath != pkg.FSPath {
+			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
 				return nil, nil, errors.Errorf(
 					"package repeatedly defined in the same version of the same cached Github repo: %s, %s",
-					prevPkg.FSPath, pkg.FSPath,
+					prevPkg.FS.Path(), pkg.FS.Path(),
 				)
 			}
 		}
@@ -135,10 +135,10 @@ func listVersionedPkgsOfCachedRepo(
 			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,
 		)
 		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
-			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FSPath != pkg.FSPath {
+			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
 				return nil, nil, errors.Errorf(
 					"package repeatedly defined in the same version of the same cached Github repo: %s, %s",
-					prevPkg.FSPath, pkg.FSPath,
+					prevPkg.FS.Path(), pkg.FS.Path(),
 				)
 			}
 		}

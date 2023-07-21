@@ -66,7 +66,7 @@ func printCachedRepo(indent int, repo pallets.FSRepo) {
 
 	fcli.IndentedPrintf(indent, "Version: %s\n", repo.Version)
 	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
-	fcli.IndentedPrintf(indent, "Path in cache: %s\n", repo.FSPath)
+	fcli.IndentedPrintf(indent, "Path in cache: %s\n", repo.FS.Path())
 	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
 	// TODO: show the README file
 }

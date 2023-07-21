@@ -12,6 +12,7 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/dev"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 func processFullBaseArgs(c *cli.Context) (
@@ -54,10 +55,12 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.ExternalR
 			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
 		}
 		for _, repo := range externalRepos {
-			repo.FSPath = fmt.Sprintf("%s/%s", replacementPath, repo.FSPath)
+			repo.FS = pallets.AttachPath(
+				repo.FS, fmt.Sprintf("%s/%s", replacementPath, repo.FS.Path()),
+			)
 			repoPath := repo.Path()
 			repos[repoPath] = forklift.ExternalRepo{
-				FS:   os.DirFS(repo.FSPath),
+				FS:   os.DirFS(repo.FS.Path()),
 				Repo: repo,
 			}
 		}

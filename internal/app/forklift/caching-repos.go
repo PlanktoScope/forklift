@@ -49,7 +49,7 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (pallets.FSR
 			if len(candidateRepos) > 0 {
 				return pallets.FSRepo{}, errors.Errorf(
 					"repository %s repeatedly defined in the same version of the same Github repo: %s, %s",
-					repoPath, candidateRepos[0].FSPath, repo.FSPath,
+					repoPath, candidateRepos[0].FS.Path(), repo.FS.Path(),
 				)
 			}
 			candidateRepos = append(candidateRepos, repo)
@@ -64,15 +64,15 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (pallets.FSR
 }
 
 func loadCachedRepo(cacheFS fs.FS, repoConfigPath string) (pallets.FSRepo, error) {
-	repo, err := pallets.LoadFSRepo(cacheFS, "", repoConfigPath)
+	repo, err := pallets.LoadFSRepo(pallets.AttachPath(cacheFS, ""), repoConfigPath)
 	if err != nil {
 		return pallets.FSRepo{}, errors.Wrapf(
 			err, "couldn't load cached repo config from %s", repoConfigPath,
 		)
 	}
-	if repo.VCSRepoPath, repo.Version, err = splitRepoPathVersion(repo.FSPath); err != nil {
+	if repo.VCSRepoPath, repo.Version, err = splitRepoPathVersion(repo.FS.Path()); err != nil {
 		return pallets.FSRepo{}, errors.Wrapf(
-			err, "couldn't parse path of cached repo configured at %s", repo.FSPath,
+			err, "couldn't parse path of cached repo configured at %s", repo.FS.Path(),
 		)
 	}
 	repo.Subdir = strings.TrimPrefix(
@@ -124,10 +124,10 @@ func ListCachedRepos(cacheFS fs.FS) ([]pallets.FSRepo, error) {
 
 		versionedRepoPath := fmt.Sprintf("%s@%s", repo.Config.Repository.Path, repo.Version)
 		if prevRepo, ok := repoMap[versionedRepoPath]; ok {
-			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.FSPath != repo.FSPath {
+			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.FS.Path() != repo.FS.Path() {
 				return nil, errors.Errorf(
 					"repository repeatedly defined in the same version of the same Github repo: %s, %s",
-					prevRepo.FSPath, repo.FSPath,
+					prevRepo.FS.Path(), repo.FS.Path(),
 				)
 			}
 		}

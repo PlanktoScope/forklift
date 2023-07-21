@@ -22,16 +22,13 @@ func (p Pkg) Path() string {
 // The base path should correspond to the location of the base filesystem. In the loaded FSPkg's
 // embedded [Pkg], the Pallet repository path is not initialized, nor is the Pallet package
 // subdirectory initialized.
-func LoadFSPkg(baseFS fs.FS, baseFSPath, pkgFSPath string) (p FSPkg, err error) {
-	p = FSPkg{
-		FSPath: filepath.Join(baseFSPath, pkgFSPath),
-	}
-	if p.FS, err = fs.Sub(baseFS, pkgFSPath); err != nil {
+func LoadFSPkg(fsys PathedFS, subdirPath string) (p FSPkg, err error) {
+	if p.FS, err = fsys.Sub(subdirPath); err != nil {
 		return FSPkg{}, errors.Wrapf(
-			err, "couldn't enter directory %s from fs at %s", pkgFSPath, baseFSPath,
+			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if p.Pkg.Config, err = LoadPkgConfig(p.FS, p.FSPath, PkgSpecFile); err != nil {
+	if p.Pkg.Config, err = LoadPkgConfig(p.FS, PkgSpecFile); err != nil {
 		return FSPkg{}, errors.Wrapf(err, "couldn't load package config")
 	}
 	return p, nil
@@ -41,11 +38,11 @@ func LoadFSPkg(baseFS fs.FS, baseFSPath, pkgFSPath string) (p FSPkg, err error) 
 
 // LoadPkgConfig loads a PkgConfig from the specified file path in the provided base filesystem.
 // The base path should correspond to the location of the base filesystem.
-func LoadPkgConfig(baseFS fs.FS, baseFSPath, filePath string) (PkgConfig, error) {
-	bytes, err := fs.ReadFile(baseFS, filePath)
+func LoadPkgConfig(fsys PathedFS, filePath string) (PkgConfig, error) {
+	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return PkgConfig{}, errors.Wrapf(
-			err, "couldn't read package config file %s/%s", baseFSPath, filePath,
+			err, "couldn't read package config file %s/%s", fsys.Path(), filePath,
 		)
 	}
 	config := PkgConfig{}

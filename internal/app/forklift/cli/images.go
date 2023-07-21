@@ -76,7 +76,7 @@ func loadStackDefinition(pkg forklift.CachedPkg) (*dct.Config, error) {
 	stackConfig, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load Docker stack definition from %s/%s", pkg.FSPath, definitionFile,
+			err, "couldn't load Docker stack definition from %s/%s", pkg.FS.Path(), definitionFile,
 		)
 	}
 	return stackConfig, nil
