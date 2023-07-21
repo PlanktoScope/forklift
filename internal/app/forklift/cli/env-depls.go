@@ -15,7 +15,7 @@ import (
 // Print
 
 func PrintEnvDepls(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 ) error {
 	depls, err := forklift.ListDepls(os.DirFS(envPath), os.DirFS(cachePath), replacementRepos)
 	if err != nil {
@@ -30,7 +30,7 @@ func PrintEnvDepls(
 }
 
 func PrintDeplInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 	deplName string,
 ) error {
 	cacheFS := os.DirFS(cachePath)

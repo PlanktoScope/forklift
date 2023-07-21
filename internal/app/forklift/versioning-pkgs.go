@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Loading
@@ -55,7 +57,7 @@ func findVersionedRepoOfPkg(reposFS fs.FS, pkgPath string) (VersionedRepo, error
 // Listing
 
 func ListVersionedPkgs(
-	cacheFS fs.FS, replacementRepos map[string]ExternalRepo, repos []VersionedRepo,
+	cacheFS fs.FS, replacementRepos map[string]pallets.FSRepo, repos []VersionedRepo,
 ) (orderedPkgs []CachedPkg, err error) {
 	versionedPkgPaths := make([]string, 0)
 	pkgMap := make(map[string]CachedPkg)
@@ -85,12 +87,12 @@ func ListVersionedPkgs(
 }
 
 func listVersionedPkgsOfExternalRepo(
-	externalRepo ExternalRepo,
+	externalRepo pallets.FSRepo,
 ) (pkgMap map[string]CachedPkg, versionedPkgPaths []string, err error) {
 	pkgs, err := ListExternalPkgs(externalRepo, "")
 	if err != nil {
 		return nil, nil, errors.Wrapf(
-			err, "couldn't list packages from external repo at %s", externalRepo.Repo.FS.Path(),
+			err, "couldn't list packages from external repo at %s", externalRepo.FS.Path(),
 		)
 	}
 

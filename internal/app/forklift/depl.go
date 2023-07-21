@@ -283,7 +283,7 @@ func splitMultiPathServiceResources(
 // Loading
 
 func LoadDepl(
-	envFS, cacheFS fs.FS, replacementRepos map[string]ExternalRepo, deplName string,
+	envFS, cacheFS fs.FS, replacementRepos map[string]pallets.FSRepo, deplName string,
 ) (Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
@@ -313,8 +313,7 @@ func LoadDepl(
 		pkg, perr := FindExternalPkg(repo, pkgPath)
 		if perr != nil {
 			return Depl{}, errors.Wrapf(
-				err, "couldn't find external package %s from replacement repo %s",
-				pkgPath, repo.Repo.FS.Path(),
+				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
 			)
 		}
 		depl.Pkg = AsVersionedPkg(pkg)
@@ -345,7 +344,7 @@ func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
 // Listing
 
 func ListDepls(
-	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]ExternalRepo,
+	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]pallets.FSRepo,
 ) ([]Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {

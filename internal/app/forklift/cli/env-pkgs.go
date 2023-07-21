@@ -9,12 +9,13 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Print
 
 func PrintEnvPkgs(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 ) error {
 	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
 	if err != nil {
@@ -34,7 +35,7 @@ func PrintEnvPkgs(
 }
 
 func PrintPkgInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 	pkgPath string,
 ) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
@@ -50,8 +51,7 @@ func PrintPkgInfo(
 		externalPkg, perr := forklift.FindExternalPkg(repo, pkgPath)
 		if perr != nil {
 			return errors.Wrapf(
-				err, "couldn't find external package %s from replacement repo %s",
-				pkgPath, repo.Repo.FS.Path(),
+				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
 			)
 		}
 		pkg = forklift.AsVersionedPkg(externalPkg)
@@ -89,9 +89,9 @@ func printVersionedPkgRepo(indent int, pkg forklift.VersionedPkg) {
 	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
 	indent++
 
-	if filepath.IsAbs(pkg.Cached.Repo.FS.Path()) {
+	if filepath.IsAbs(pkg.Cached.FS.Path()) {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Cached.Repo.FS.Path(),
+			indent, "External path (replacing cached repository): %s\n", pkg.Cached.FS.Path(),
 		)
 	} else {
 		IndentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)

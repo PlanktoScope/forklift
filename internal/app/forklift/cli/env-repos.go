@@ -31,7 +31,7 @@ func PrintEnvRepos(indent int, envPath string) error {
 }
 
 func PrintRepoInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 	repoPath string,
 ) error {
 	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
@@ -58,7 +58,7 @@ func PrintRepoInfo(
 	var cachedRepo pallets.FSRepo
 	replacementRepo, ok := replacementRepos[repoPath]
 	if ok {
-		cachedRepo = replacementRepo.Repo
+		cachedRepo = replacementRepo
 	} else {
 		if cachedRepo, err = forklift.FindCachedRepo(
 			os.DirFS(cachePath), repoPath, version,

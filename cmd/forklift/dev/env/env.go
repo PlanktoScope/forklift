@@ -16,7 +16,7 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context) (
-	envPath string, workspacePath string, replacementRepos map[string]forklift.ExternalRepo,
+	envPath string, workspacePath string, replacementRepos map[string]pallets.FSRepo,
 	err error,
 ) {
 	if envPath, err = dev.FindParentEnv(c.String("cwd")); err != nil {
@@ -37,8 +37,8 @@ func processFullBaseArgs(c *cli.Context) (
 	return envPath, workspacePath, replacementRepos, nil
 }
 
-func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.ExternalRepo, err error) {
-	repos = make(map[string]forklift.ExternalRepo)
+func loadReplacementRepos(fsPaths []string) (repos map[string]pallets.FSRepo, err error) {
+	repos = make(map[string]pallets.FSRepo)
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {
@@ -47,7 +47,9 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.ExternalR
 		if !workspace.Exists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repository replacement path %s", replacementPath)
 		}
-		externalRepos, err := forklift.ListExternalRepos(os.DirFS(replacementPath))
+		externalRepos, err := forklift.ListExternalRepos(
+			pallets.AttachPath(os.DirFS(replacementPath), replacementPath),
+		)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)
 		}
@@ -55,14 +57,7 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.ExternalR
 			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
 		}
 		for _, repo := range externalRepos {
-			repo.FS = pallets.AttachPath(
-				repo.FS, fmt.Sprintf("%s/%s", replacementPath, repo.FS.Path()),
-			)
-			repoPath := repo.Path()
-			repos[repoPath] = forklift.ExternalRepo{
-				FS:   os.DirFS(repo.FS.Path()),
-				Repo: repo,
-			}
+			repos[repo.Path()] = repo
 		}
 	}
 	return repos, nil

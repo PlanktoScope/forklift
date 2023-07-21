@@ -13,8 +13,8 @@ import (
 // Loading
 
 func FindExternalRepoOfPkg(
-	repos map[string]ExternalRepo, pkgPath string,
-) (repo ExternalRepo, ok bool) {
+	repos map[string]pallets.FSRepo, pkgPath string,
+) (repo pallets.FSRepo, ok bool) {
 	repoCandidatePath := filepath.Dir(pkgPath)
 	for repoCandidatePath != "." {
 		if repo, ok = repos[repoCandidatePath]; ok {
@@ -22,7 +22,7 @@ func FindExternalRepoOfPkg(
 		}
 		repoCandidatePath = filepath.Dir(repoCandidatePath)
 	}
-	return ExternalRepo{}, false
+	return pallets.FSRepo{}, false
 }
 
 // Listing

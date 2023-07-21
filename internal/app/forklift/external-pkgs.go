@@ -13,7 +13,7 @@ import (
 
 // Loading
 
-func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
+func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
 	pkgInnermostDir := filepath.Base(pkgPath)
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-package.yml file, so we must check every
@@ -58,19 +58,17 @@ func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
 	return candidatePkgs[0], nil
 }
 
-func loadExternalPkg(repo ExternalRepo, pkgConfigPath string) (CachedPkg, error) {
-	fsPkg, err := pallets.LoadFSPkg(pallets.AttachPath(repo.FS, repo.Repo.FS.Path()), pkgConfigPath)
+func loadExternalPkg(repo pallets.FSRepo, subdirPath string) (CachedPkg, error) {
+	fsPkg, err := pallets.LoadFSPkg(repo.FS, subdirPath)
 	if err != nil {
-		return CachedPkg{}, errors.Wrapf(
-			err, "couldn't load filesystem package from %s", pkgConfigPath,
-		)
+		return CachedPkg{}, errors.Wrapf(err, "couldn't load filesystem package from %s", subdirPath)
 	}
-	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FS.Path(), fmt.Sprintf("%s/", repo.Repo.FS.Path()))
+	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
 	fsPkg.RepoPath = repo.Repo.Config.Repository.Path
 
 	return CachedPkg{
 		FSPkg: fsPkg,
-		Repo:  repo.Repo,
+		Repo:  repo,
 	}, nil
 }
 
@@ -87,7 +85,7 @@ func AsVersionedPkg(pkg CachedPkg) VersionedPkg {
 
 // Listing
 
-func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, error) {
+func ListExternalPkgs(repo pallets.FSRepo, cachedPrefix string) ([]CachedPkg, error) {
 	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
 	if cachedPrefix != "" {
 		searchPattern = filepath.Join(cachedPrefix, searchPattern)

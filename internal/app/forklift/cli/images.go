@@ -10,10 +10,11 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 func DownloadImages(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 ) error {
 	orderedImages, err := listRequiredImages(indent, envPath, cachePath, replacementRepos)
 	if err != nil {
@@ -37,7 +38,7 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int, envPath, cachePath string, replacementRepos map[string]forklift.ExternalRepo,
+	indent int, envPath, cachePath string, replacementRepos map[string]pallets.FSRepo,
 ) ([]string, error) {
 	cacheFS := os.DirFS(cachePath)
 	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
