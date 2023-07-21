@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 
@@ -15,13 +14,16 @@ import (
 // Print
 
 func PrintEnvPkgs(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
+	repos, err := forklift.ListVersionedRepos(env.FS)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet repositories in environment %s", envPath)
+		return errors.Wrapf(
+			err, "couldn't identify Pallet repositories in environment %s", env.FS.Path(),
+		)
 	}
-	pkgs, err := forklift.ListVersionedPkgs(os.DirFS(cachePath), replacementRepos, repos)
+	pkgs, err := forklift.ListVersionedPkgs(cache.FS, replacementRepos, repos)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
@@ -35,13 +37,14 @@ func PrintEnvPkgs(
 }
 
 func PrintPkgInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	pkgPath string,
 ) error {
-	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
+	reposFS, err := forklift.VersionedReposFS(env.FS)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't open directory for Pallet repositories in environment %s", envPath,
+			err, "couldn't open directory for Pallet repositories in environment %s", env.FS.Path(),
 		)
 	}
 
@@ -55,9 +58,10 @@ func PrintPkgInfo(
 			)
 		}
 		pkg = forklift.AsVersionedPkg(externalPkg)
-	} else if pkg, err = forklift.LoadVersionedPkg(reposFS, os.DirFS(cachePath), pkgPath); err != nil {
+	} else if pkg, err = forklift.LoadVersionedPkg(reposFS, cache.FS, pkgPath); err != nil {
 		return errors.Wrapf(
-			err, "couldn't look up information about package %s in environment %s", pkgPath, envPath,
+			err, "couldn't look up information about package %s in environment %s", pkgPath,
+			env.FS.Path(),
 		)
 	}
 

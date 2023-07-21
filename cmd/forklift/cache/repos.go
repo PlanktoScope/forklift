@@ -10,20 +10,21 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Printf("The cache is empty.")
-		return nil
+	cache, err := getCache(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+	if !cache.Exists() {
+		return errMissingCache
 	}
 
-	repos, err := forklift.ListCachedRepos(workspace.CacheFS(wpath))
+	repos, err := forklift.ListCachedRepos(cache.FS)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
@@ -39,10 +40,12 @@ func lsRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Printf("The cache is empty.")
-		return nil
+	cache, err := getCache(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+	if !cache.Exists() {
+		return errMissingCache
 	}
 
 	versionedRepoPath := c.Args().First()
@@ -52,7 +55,7 @@ func showRepoAction(c *cli.Context) error {
 			"Couldn't parse Pallet repo path %s as repo_path@version", versionedRepoPath,
 		)
 	}
-	repo, err := forklift.FindCachedRepo(workspace.CacheFS(wpath), repoPath, version)
+	repo, err := forklift.FindCachedRepo(cache.FS, repoPath, version)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet repository %s@%s", repoPath, version)
 	}

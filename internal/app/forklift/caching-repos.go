@@ -1,3 +1,4 @@
+// TODO: turn these into methods on Cache
 package forklift
 
 import (
@@ -39,19 +40,22 @@ func FindCachedRepo(cacheFS fs.FS, repoPath string, version string) (*pallets.FS
 		if filepath.Base(repoConfigFilePath) != pallets.RepoSpecFile {
 			continue
 		}
+
 		repo, err := loadCachedRepo(cacheFS, filepath.Dir(repoConfigFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't check cached repo defined at %s", repoConfigFilePath)
 		}
-		if repo.Config.Repository.Path == repoPath {
-			if len(candidateRepos) > 0 {
-				return nil, errors.Errorf(
-					"repository %s repeatedly defined in the same version of the same Github repo: %s, %s",
-					repoPath, candidateRepos[0].FS.Path(), repo.FS.Path(),
-				)
-			}
-			candidateRepos = append(candidateRepos, repo)
+		if repo.Config.Repository.Path != repoPath {
+			continue
 		}
+
+		if len(candidateRepos) > 0 {
+			return nil, errors.Errorf(
+				"repository %s repeatedly defined in the same version of the same Github repo: %s, %s",
+				repoPath, candidateRepos[0].FS.Path(), repo.FS.Path(),
+			)
+		}
+		candidateRepos = append(candidateRepos, repo)
 	}
 	if len(candidateRepos) == 0 {
 		return nil, errors.Errorf(
@@ -77,7 +81,7 @@ func loadCachedRepo(cacheFS fs.FS, repoConfigPath string) (*pallets.FSRepo, erro
 	return repo, nil
 }
 
-// splitRepoPathVersion splits paths of form github.com/user-name/git-repo-name@version into
+// splitRepoPathVersion splits paths of form github.com/user-name/git-repo-name/etc@version into
 // github.com/user-name/git-repo-name and version.
 func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err error) {
 	const sep = "/"

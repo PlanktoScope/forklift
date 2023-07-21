@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
 
@@ -15,28 +15,45 @@ var errMissingEnv = errors.Errorf(
 	"you first need to set up a local environment with `forklift env clone`",
 )
 
-func processFullBaseArgs(c *cli.Context) (workspacePath string, err error) {
-	workspacePath = c.String("workspace")
-	if !workspace.Exists(workspace.LocalEnvPath(workspacePath)) {
-		return "", errMissingEnv
+func processFullBaseArgs(c *cli.Context) (env *forklift.FSEnv, cache *forklift.FSCache, err error) {
+	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+	if err != nil {
+		return nil, nil, err
 	}
-	if !workspace.Exists(workspace.CachePath(workspacePath)) {
-		return "", errors.Errorf(
+	if env, err = workspace.GetCurrentEnv(); err != nil {
+		return nil, nil, errMissingEnv
+	}
+	if cache, err = workspace.GetCache(); err != nil {
+		return nil, nil, err
+	}
+	if !cache.Exists() {
+		return nil, nil, errors.New(
 			"you first need to cache the repos specified by your environment with " +
 				"`forklift env cache-repo`",
 		)
 	}
-	return workspacePath, nil
+	return env, cache, nil
+}
+
+func getEnv(wpath string) (env *forklift.FSEnv, err error) {
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	if env, err = workspace.GetCurrentEnv(); err != nil {
+		return nil, errMissingEnv
+	}
+	return env, nil
 }
 
 // clone
 
 func cloneAction(c *cli.Context) error {
 	wpath := c.String("workspace")
-	if !workspace.Exists(wpath) {
+	if !forklift.Exists(wpath) {
 		fmt.Printf("Making a new workspace at %s...", wpath)
 	}
-	if err := workspace.EnsureExists(wpath); err != nil {
+	if err := forklift.EnsureExists(wpath); err != nil {
 		return errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 	}
 
@@ -45,7 +62,11 @@ func cloneAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't parse remote release %s", remoteRelease)
 	}
-	local := workspace.LocalEnvPath(wpath)
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't load workspace")
+	}
+	local := workspace.GetCurrentEnvPath()
 	fmt.Printf("Cloning environment %s to %s...\n", remote, local)
 	gitRepo, err := git.Clone(remote, local)
 	if err != nil {
@@ -61,18 +82,22 @@ func cloneAction(c *cli.Context) error {
 					"cloning another remote release to it",
 			)
 		}
-		fmt.Printf(
-			"Removing local environment from workspace %s, because it already exists and the "+
-				"command's --force flag was enabled...\n",
-			wpath,
+
+		env, eerr := workspace.GetCurrentEnv()
+		if eerr != nil {
+			return err
+		}
+		fmt.Println(
+			"Removing local environment from workspace, because it already exists and the " +
+				"command's --force flag was enabled...",
 		)
-		if err = workspace.RemoveLocalEnv(wpath); err != nil {
+		if err = env.Remove(); err != nil {
 			return errors.Wrap(err, "couldn't remove local environment")
 		}
-		fmt.Printf("Cloning environment %s to %s...\n", remote, local)
-		if gitRepo, err = git.Clone(remote, local); err != nil {
+		fmt.Printf("Cloning environment %s to %s...\n", remote, env.FS.Path())
+		if gitRepo, err = git.Clone(remote, env.FS.Path()); err != nil {
 			return errors.Wrapf(
-				err, "couldn't clone environment %s at release %s to %s", remote, release, local,
+				err, "couldn't clone environment %s at release %s to %s", remote, release, env.FS.Path(),
 			)
 		}
 	}
@@ -89,14 +114,13 @@ func cloneAction(c *cli.Context) error {
 // fetch
 
 func fetchAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	envPath := workspace.LocalEnvPath(wpath)
-	if !workspace.Exists(envPath) {
-		return errMissingEnv
+	env, err := getEnv(c.String("workspace"))
+	if err != nil {
+		return err
 	}
 
 	fmt.Println("Fetching updates...")
-	updated, err := git.Fetch(envPath)
+	updated, err := git.Fetch(env.FS.Path())
 	if err != nil {
 		return errors.Wrap(err, "couldn't fetch changes from the remote release")
 	}
@@ -110,14 +134,13 @@ func fetchAction(c *cli.Context) error {
 // pull
 
 func pullAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	envPath := workspace.LocalEnvPath(wpath)
-	if !workspace.Exists(envPath) {
-		return errMissingEnv
+	env, err := getEnv(c.String("workspace"))
+	if err != nil {
+		return err
 	}
 
 	fmt.Println("Attempting to fast-forward the local environment...")
-	updated, err := git.Pull(envPath)
+	updated, err := git.Pull(env.FS.Path())
 	if err != nil {
 		return errors.Wrap(err, "couldn't fast-forward the local environment")
 	}
@@ -131,35 +154,36 @@ func pullAction(c *cli.Context) error {
 // rm
 
 func rmAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	fmt.Printf("Removing local environment from workspace %s...\n", wpath)
+	env, err := getEnv(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Removing local environment from workspace...\n")
 	// TODO: return an error if there are uncommitted or unpushed changes to be removed - in which
 	// case require a --force flag
-	return errors.Wrap(workspace.RemoveLocalEnv(wpath), "couldn't remove local environment")
+	return errors.Wrap(env.Remove(), "couldn't remove local environment")
 }
 
 // show
 
 func showAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	envPath := workspace.LocalEnvPath(wpath)
-	if !workspace.Exists(envPath) {
-		return errMissingEnv
+	env, err := getEnv(c.String("workspace"))
+	if err != nil {
+		return err
 	}
-	return fcli.PrintEnvInfo(0, envPath)
+	return fcli.PrintEnvInfo(0, env)
 }
 
 // check
 
 func checkAction(c *cli.Context) error {
-	wpath, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if err := fcli.CheckEnv(
-		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
-	); err != nil {
+	if err := fcli.CheckEnv(0, env, cache, nil); err != nil {
 		return err
 	}
 	return nil
@@ -168,14 +192,12 @@ func checkAction(c *cli.Context) error {
 // plan
 
 func planAction(c *cli.Context) error {
-	wpath, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if err := fcli.PlanEnv(
-		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
-	); err != nil {
+	if err := fcli.PlanEnv(0, env, cache, nil); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
@@ -186,14 +208,12 @@ func planAction(c *cli.Context) error {
 // apply
 
 func applyAction(c *cli.Context) error {
-	wpath, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if err := fcli.ApplyEnv(
-		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
-	); err != nil {
+	if err := fcli.ApplyEnv(0, env, cache, nil); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)

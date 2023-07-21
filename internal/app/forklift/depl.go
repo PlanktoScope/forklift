@@ -59,7 +59,7 @@ func sortKeys[Value any](m map[string]Value) (sorted []string) {
 	return sorted
 }
 
-func (d *Depl) CheckAllConflicts(candidates []Depl) (conflicts []DeplConflict, err error) {
+func (d *Depl) CheckAllConflicts(candidates []*Depl) (conflicts []DeplConflict, err error) {
 	conflicts = make([]DeplConflict, 0, len(candidates))
 	for _, candidate := range candidates {
 		conflict, err := d.CheckConflicts(candidate)
@@ -73,7 +73,7 @@ func (d *Depl) CheckAllConflicts(candidates []Depl) (conflicts []DeplConflict, e
 	return conflicts, nil
 }
 
-func (d *Depl) CheckConflicts(candidate Depl) (DeplConflict, error) {
+func (d *Depl) CheckConflicts(candidate *Depl) (DeplConflict, error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
 		return DeplConflict{}, errors.Errorf(
@@ -87,7 +87,7 @@ func (d *Depl) CheckConflicts(candidate Depl) (DeplConflict, error) {
 		)
 	}
 	return DeplConflict{
-		First:  *d,
+		First:  d,
 		Second: candidate,
 		Name:   d.Name == candidate.Name,
 		Listeners: pallets.CheckResourcesConflicts(
@@ -213,7 +213,7 @@ func (d *Depl) providedServices(
 	return provided
 }
 
-func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependencies, error) {
+func (d *Depl) CheckMissingDependencies(candidates []*Depl) (MissingDeplDependencies, error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
 		return MissingDeplDependencies{}, errors.Errorf(
@@ -245,7 +245,7 @@ func (d *Depl) CheckMissingDependencies(candidates []Depl) (MissingDeplDependenc
 	}
 
 	return MissingDeplDependencies{
-		Depl: *d,
+		Depl: d,
 		Networks: pallets.CheckResourcesDependencies(
 			d.requiredNetworks(enabledFeatures), allProvidedNetworks,
 		),
@@ -279,27 +279,27 @@ func splitMultiPathServiceResources(
 
 func LoadDepl(
 	envFS, cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo, deplName string,
-) (Depl, error) {
+) (*Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
-		return Depl{}, errors.Wrap(
+		return nil, errors.Wrap(
 			err, "couldn't open directory for Pallet package deployments in local environment",
 		)
 	}
 	reposFS, err := VersionedReposFS(envFS)
 	if err != nil {
-		return Depl{}, errors.Wrap(
+		return nil, errors.Wrap(
 			err, "couldn't open directory for Pallet repositories in local environment",
 		)
 	}
 
-	depl := Depl{
+	depl := &Depl{
 		Name: deplName,
 	}
 	if depl.Config, err = loadDeplConfig(
 		deplsFS, fmt.Sprintf("%s.deploy.yml", deplName),
 	); err != nil {
-		return Depl{}, errors.Wrapf(err, "couldn't load package deployment config for %s", deplName)
+		return nil, errors.Wrapf(err, "couldn't load package deployment config for %s", deplName)
 	}
 
 	pkgPath := depl.Config.Package
@@ -307,7 +307,7 @@ func LoadDepl(
 	if ok {
 		pkg, perr := FindExternalPkg(repo, pkgPath)
 		if perr != nil {
-			return Depl{}, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
 			)
 		}
@@ -316,7 +316,7 @@ func LoadDepl(
 	}
 
 	if depl.Pkg, err = LoadVersionedPkg(reposFS, cacheFS, pkgPath); err != nil {
-		return Depl{}, errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
 		)
 	}
@@ -340,7 +340,7 @@ func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
 
 func ListDepls(
 	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo,
-) ([]Depl, error) {
+) ([]*Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
 		return nil, errors.Wrap(
@@ -353,7 +353,7 @@ func ListDepls(
 	}
 
 	deplNames := make([]string, 0, len(files))
-	deplMap := make(map[string]Depl)
+	deplMap := make(map[string]*Depl)
 	for _, filePath := range files {
 		deplName := strings.TrimSuffix(filePath, ".deploy.yml")
 		if _, ok := deplMap[deplName]; ok {
@@ -368,7 +368,7 @@ func ListDepls(
 		}
 	}
 
-	orderedDepls := make([]Depl, 0, len(deplNames))
+	orderedDepls := make([]*Depl, 0, len(deplNames))
 	for _, deplName := range deplNames {
 		orderedDepls = append(orderedDepls, deplMap[deplName])
 	}
@@ -377,7 +377,7 @@ func ListDepls(
 
 // Constraint-checking
 
-func CheckDeplConflicts(depls []Depl) (conflicts []DeplConflict, err error) {
+func CheckDeplConflicts(depls []*Depl) (conflicts []DeplConflict, err error) {
 	for i, depl := range depls {
 		deplConflicts, err := depl.CheckAllConflicts(depls[i+1:])
 		if err != nil {
@@ -389,7 +389,7 @@ func CheckDeplConflicts(depls []Depl) (conflicts []DeplConflict, err error) {
 }
 
 func CheckDeplDependencies(
-	depls []Depl,
+	depls []*Depl,
 ) (missingDeps []MissingDeplDependencies, err error) {
 	for _, depl := range depls {
 		deplMissingDeps, err := depl.CheckMissingDependencies(depls)

@@ -7,7 +7,7 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// print
+// Print
 
 func PrintPkgSpec(indent int, spec pallets.PkgSpec) {
 	IndentedPrintf(indent, "Description: %s\n", spec.Description)

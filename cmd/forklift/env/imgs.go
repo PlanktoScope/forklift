@@ -6,21 +6,18 @@ import (
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 )
 
 // cache-img
 
 func cacheImgAction(c *cli.Context) error {
-	wpath, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	fmt.Println("Downloading Docker container images specified by the local environment...")
-	if err := fcli.DownloadImages(
-		0, workspace.LocalEnvPath(wpath), workspace.CachePath(wpath), nil,
-	); err != nil {
+	if err := fcli.DownloadImages(0, env, cache, nil); err != nil {
 		return err
 	}
 	fmt.Println()

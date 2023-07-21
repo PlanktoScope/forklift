@@ -11,30 +11,42 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/app/forklift/dev"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 func processFullBaseArgs(c *cli.Context) (
-	envPath string, workspacePath string, replacementRepos map[string]*pallets.FSRepo,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	err error,
 ) {
-	if envPath, err = dev.FindParentEnv(c.String("cwd")); err != nil {
-		return "", "", nil, errors.Wrap(
-			err, "The current working directory is not part of a Forklift environment.",
-		)
+	if env, err = getEnv(c.String("cwd")); err != nil {
+		return nil, nil, nil, err
 	}
 	if replacementRepos, err = loadReplacementRepos(c.StringSlice("repo")); err != nil {
-		return "", "", nil, err
+		return nil, nil, nil, err
 	}
-	workspacePath = c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(workspacePath)) && len(replacementRepos) == 0 {
-		return "", "", nil, errors.Errorf(
+	if cache, err = getCache(c.String("workspace")); err != nil && len(replacementRepos) == 0 {
+		return nil, nil, nil, err
+	}
+	if len(replacementRepos) == 0 && !cache.Exists() {
+		return nil, nil, nil, errors.New(
 			"you first need to cache the repos specified by your environment with " +
 				"`forklift dev env cache-repo`",
 		)
 	}
-	return envPath, workspacePath, replacementRepos, nil
+	return env, cache, replacementRepos, nil
+}
+
+func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
+	envPath, err := dev.FindParentEnv(cwdPath)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "The current working directory %s is not part of a Forklift environment.", cwdPath,
+		)
+	}
+	if env, err = forklift.LoadFSEnv(envPath); err != nil {
+		return nil, errors.Wrap(err, "couldn't load environment")
+	}
+	return env, nil
 }
 
 func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, err error) {
@@ -44,7 +56,7 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, e
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
 		}
-		if !workspace.Exists(replacementPath) {
+		if !forklift.Exists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repository replacement path %s", replacementPath)
 		}
 		externalRepos, err := forklift.ListExternalRepos(
@@ -63,25 +75,37 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, e
 	return repos, nil
 }
 
+func getCache(wpath string) (*forklift.FSCache, error) {
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := workspace.GetCache()
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
 // show
 
 func showAction(c *cli.Context) error {
-	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	env, err := getEnv(c.String("cwd"))
 	if err != nil {
-		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+		return err
 	}
-	return fcli.PrintEnvInfo(0, envPath)
+	return fcli.PrintEnvInfo(0, env)
 }
 
 // check
 
 func checkAction(c *cli.Context) error {
-	envPath, wpath, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if err := fcli.CheckEnv(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
+	if err := fcli.CheckEnv(0, env, cache, replacementRepos); err != nil {
 		return err
 	}
 	return nil
@@ -90,12 +114,12 @@ func checkAction(c *cli.Context) error {
 // plan
 
 func planAction(c *cli.Context) error {
-	envPath, wpath, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if err := fcli.PlanEnv(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
+	if err := fcli.PlanEnv(0, env, cache, replacementRepos); err != nil {
 		return err
 	}
 	return nil
@@ -104,12 +128,12 @@ func planAction(c *cli.Context) error {
 // apply
 
 func applyAction(c *cli.Context) error {
-	envPath, wpath, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if err := fcli.ApplyEnv(0, envPath, workspace.CachePath(wpath), replacementRepos); err != nil {
+	if err := fcli.ApplyEnv(0, env, cache, replacementRepos); err != nil {
 		return err
 	}
 	fmt.Println()

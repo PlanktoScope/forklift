@@ -9,15 +9,14 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Print
 
-func PrintEnvRepos(indent int, envPath string) error {
-	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
+func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
+	repos, err := forklift.ListVersionedRepos(env.FS)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
@@ -31,19 +30,21 @@ func PrintEnvRepos(indent int, envPath string) error {
 }
 
 func PrintRepoInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	repoPath string,
 ) error {
-	reposFS, err := forklift.VersionedReposFS(os.DirFS(envPath))
+	reposFS, err := forklift.VersionedReposFS(env.FS)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't open directory for Pallet repositories in environment %s", envPath,
+			err, "couldn't open directory for Pallet repositories in environment %s", env.FS.Path(),
 		)
 	}
 	versionedRepo, err := forklift.LoadVersionedRepo(reposFS, repoPath)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't load Pallet repo versioning config %s from environment %s", repoPath, envPath,
+			err, "couldn't load Pallet repo versioning config %s from environment %s",
+			repoPath, env.FS.Path(),
 		)
 	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
@@ -61,7 +62,7 @@ func PrintRepoInfo(
 		cachedRepo = replacementRepo
 	} else {
 		if cachedRepo, err = forklift.FindCachedRepo(
-			os.DirFS(cachePath), repoPath, version,
+			cache.FS, repoPath, version,
 		); err != nil {
 			return errors.Wrapf(
 				err,
@@ -91,14 +92,14 @@ func printVersionedRepo(indent int, repo forklift.VersionedRepo) {
 
 // Download
 
-func DownloadRepos(indent int, envPath, cachePath string) (changed bool, err error) {
-	repos, err := forklift.ListVersionedRepos(os.DirFS(envPath))
+func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (changed bool, err error) {
+	repos, err := forklift.ListVersionedRepos(env.FS)
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	changed = false
 	for _, repo := range repos {
-		downloaded, err := downloadRepo(indent, cachePath, repo)
+		downloaded, err := downloadRepo(indent, cache.FS.Path(), repo)
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(
@@ -110,7 +111,7 @@ func DownloadRepos(indent int, envPath, cachePath string) (changed bool, err err
 }
 
 func downloadRepo(
-	indent int, palletsPath string, repo forklift.VersionedRepo,
+	indent int, cachePath string, repo forklift.VersionedRepo,
 ) (downloaded bool, err error) {
 	if !repo.Config.IsCommitLocked() {
 		return false, errors.Errorf(
@@ -122,8 +123,8 @@ func downloadRepo(
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't determine version for %s", vcsRepoPath)
 	}
-	path := filepath.Join(palletsPath, fmt.Sprintf("%s@%s", repo.VCSRepoPath, version))
-	if workspace.Exists(path) {
+	path := filepath.Join(cachePath, fmt.Sprintf("%s@%s", repo.VCSRepoPath, version))
+	if forklift.Exists(path) {
 		// TODO: perform a disk checksum
 		return false, nil
 	}
@@ -137,6 +138,7 @@ func downloadRepo(
 	// Validate commit
 	shortCommit := repo.Config.ShortCommit()
 	if err = validateCommit(repo, gitRepo); err != nil {
+		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(path); cerr != nil {
 			IndentedPrintf(
 				indent,

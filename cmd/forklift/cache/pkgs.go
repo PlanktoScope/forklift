@@ -10,20 +10,21 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty.")
-		return nil
+	cache, err := getCache(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+	if !cache.Exists() {
+		return errMissingCache
 	}
 
-	pkgs, err := forklift.ListCachedPkgs(workspace.CacheFS(wpath), "")
+	pkgs, err := forklift.ListCachedPkgs(cache.FS, "")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
@@ -39,10 +40,12 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	if !workspace.Exists(workspace.CachePath(wpath)) {
-		fmt.Println("The cache is empty.")
-		return nil
+	cache, err := getCache(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+	if !cache.Exists() {
+		return errMissingCache
 	}
 
 	versionedPkgPath := c.Args().First()
@@ -52,7 +55,7 @@ func showPkgAction(c *cli.Context) error {
 			"Couldn't parse Pallet package path %s as repo_path@version", versionedPkgPath,
 		)
 	}
-	pkg, err := forklift.FindCachedPkg(workspace.CacheFS(wpath), pkgPath, version)
+	pkg, err := forklift.FindCachedPkg(cache.FS, pkgPath, version)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet package %s@%s", pkgPath, version)
 	}

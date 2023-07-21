@@ -1,3 +1,4 @@
+// TODO: turn these into methods on Cache
 package forklift
 
 import (

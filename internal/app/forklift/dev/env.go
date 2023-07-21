@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: this should return an FSEnv instead
 func FindParentEnv(cwd string) (string, error) {
 	envCandidatePath, err := filepath.Abs(cwd)
 	if err != nil {

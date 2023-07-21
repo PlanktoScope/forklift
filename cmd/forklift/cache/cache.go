@@ -9,17 +9,38 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 )
+
+var errMissingCache = errors.Errorf(
+	"you first need to cache the repos specified by your environment with " +
+		"`forklift env cache-repo`",
+)
+
+func getCache(wpath string) (*forklift.FSCache, error) {
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := workspace.GetCache()
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
 
 // rm
 
 func rmAction(c *cli.Context) error {
-	wpath := c.String("workspace")
-	fmt.Printf("Removing cache from workspace %s...\n", wpath)
-	if err := workspace.RemoveCache(wpath); err != nil {
-		return errors.Wrap(err, "couldn't remove forklift cache of repositories")
+	cache, err := getCache(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Clearing cache...")
+	if err = cache.Remove(); err != nil {
+		return errors.Wrap(err, "couldn't clear cache")
 	}
 
 	fmt.Println("Removing unused Docker container images...")

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"sort"
 
 	dct "github.com/docker/cli/cli/compose/types"
@@ -15,12 +14,14 @@ import (
 // Print
 
 func PrintEnvDepls(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	depls, err := forklift.ListDepls(os.DirFS(envPath), os.DirFS(cachePath), replacementRepos)
+	depls, err := forklift.ListDepls(env.FS, cache.FS, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+			err, "couldn't identify Pallet package deployments specified by environment %s",
+			env.FS.Path(),
 		)
 	}
 	for _, depl := range depls {
@@ -30,14 +31,15 @@ func PrintEnvDepls(
 }
 
 func PrintDeplInfo(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	deplName string,
 ) error {
-	cacheFS := os.DirFS(cachePath)
-	depl, err := forklift.LoadDepl(os.DirFS(envPath), cacheFS, replacementRepos, deplName)
+	depl, err := forklift.LoadDepl(env.FS, cache.FS, replacementRepos, deplName)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't find package deployment specification %s in environment %s", deplName, envPath,
+			err, "couldn't find package deployment specification %s in environment %s",
+			deplName, env.FS.Path(),
 		)
 	}
 	printDepl(indent, depl)
@@ -58,7 +60,7 @@ func PrintDeplInfo(
 	return nil
 }
 
-func printDepl(indent int, depl forklift.Depl) {
+func printDepl(indent int, depl *forklift.Depl) {
 	IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
 	indent++
 
@@ -84,7 +86,7 @@ func printDepl(indent int, depl forklift.Depl) {
 	printFeatures(indent+1, disabledFeatures)
 }
 
-func printDeplPkg(indent int, depl forklift.Depl) {
+func printDeplPkg(indent int, depl *forklift.Depl) {
 	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
 	indent++
 

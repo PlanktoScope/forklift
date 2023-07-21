@@ -11,22 +11,19 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/dev"
-	"github.com/PlanktoScope/forklift/internal/app/forklift/workspace"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
 
 // cache-repo
 
 func cacheRepoAction(c *cli.Context) error {
-	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	env, cache, _, err := processFullBaseArgs(c)
 	if err != nil {
-		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+		return err
 	}
-	wpath := c.String("workspace")
 
 	fmt.Printf("Downloading Pallet repositories specified by the development environment...\n")
-	changed, err := fcli.DownloadRepos(0, envPath, workspace.CachePath(wpath))
+	changed, err := fcli.DownloadRepos(0, env, cache)
 	if err != nil {
 		return err
 	}
@@ -48,35 +45,32 @@ func cacheRepoAction(c *cli.Context) error {
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	env, err := getEnv(c.String("cwd"))
 	if err != nil {
-		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+		return err
 	}
-
-	return fcli.PrintEnvRepos(0, envPath)
+	return fcli.PrintEnvRepos(0, env)
 }
 
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	envPath, wpath, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, envPath, workspace.CachePath(wpath), replacementRepos, repoPath)
+	return fcli.PrintRepoInfo(0, env, cache, replacementRepos, repoPath)
 }
 
 // add-repo
 
 func addRepoAction(c *cli.Context) error {
-	envPath, err := dev.FindParentEnv(c.String("cwd"))
+	env, cache, _, err := processFullBaseArgs(c)
 	if err != nil {
-		return errors.Wrap(err, "The current working directory is not part of a Forklift environment.")
+		return err
 	}
-	wpath := c.String("workspace")
-	cachePath := workspace.CachePath(wpath)
 
 	remoteReleases := c.Args().Slice()
 	if len(remoteReleases) == 0 {
@@ -87,18 +81,18 @@ func addRepoAction(c *cli.Context) error {
 		return errors.Wrap(err, "one or more arguments is invalid")
 	}
 	fmt.Println("Updating local mirrors of remote Git repos...")
-	if err = updateLocalRepoMirrors(remoteReleases, cachePath); err != nil {
+	if err = updateLocalRepoMirrors(remoteReleases, cache.FS.Path()); err != nil {
 		return errors.Wrap(err, "couldn't update local repo mirrors")
 	}
 
 	fmt.Println()
 	fmt.Println("Resolving version queries...")
-	palletRepoConfigs, err := determinePalletRepoConfigs(remoteReleases, cachePath)
+	palletRepoConfigs, err := determinePalletRepoConfigs(remoteReleases, cache.FS.Path())
 	if err != nil {
 		return errors.Wrap(err, "couldn't resolve version queries for pallet repos")
 	}
 	fmt.Println()
-	fmt.Printf("Saving configurations to %s...\n", envPath)
+	fmt.Printf("Saving configurations to %s...\n", env.FS.Path())
 	for _, remoteRelease := range remoteReleases {
 		config, ok := palletRepoConfigs[remoteRelease]
 		if !ok {
@@ -106,7 +100,7 @@ func addRepoAction(c *cli.Context) error {
 		}
 		// TODO: write configs as files
 		path := filepath.Join(
-			envPath, "repositories", config.VCSRepoPath, config.RepoSubdir, "forklift-repo.yml",
+			env.FS.Path(), "repositories", config.VCSRepoPath, config.RepoSubdir, "forklift-repo.yml",
 		)
 		marshaled, err := yaml.Marshal(config.Config)
 		if err != nil {

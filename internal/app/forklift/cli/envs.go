@@ -16,33 +16,34 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// print
+// Print
 
-func PrintEnvInfo(indent int, envPath string) error {
-	IndentedPrintf(indent, "Environment: %s\n", envPath)
-	config, err := forklift.LoadEnvConfig(envPath)
+func PrintEnvInfo(indent int, env *forklift.FSEnv) error {
+	IndentedPrintf(indent, "Environment: %s\n", env.FS.Path())
+	// TODO: LoadEnvConfig should be implemented like LoadRepoConfig, and there should be a LoadFSEnv
+	config, err := forklift.LoadEnvConfig(env.FS.Path())
 	if err != nil {
 		return errors.Wrap(err, "couldn't load the environment config")
 	}
 
 	IndentedPrintf(indent, "Description: %s\n", config.Environment.Description)
 
-	ref, err := git.Head(envPath)
+	ref, err := git.Head(env.FS.Path())
 	if err != nil {
-		return errors.Wrapf(err, "couldn't query environment %s for its HEAD", envPath)
+		return errors.Wrapf(err, "couldn't query environment %s for its HEAD", env.FS.Path())
 	}
 	IndentedPrintf(indent, "Currently on: %s\n", git.StringifyRef(ref))
 	// TODO: report any divergence between head and remotes
-	if err := printUncommittedChanges(indent+1, envPath); err != nil {
+	if err := printUncommittedChanges(indent+1, env.FS.Path()); err != nil {
 		return err
 	}
 
 	fmt.Println()
-	if err := printLocalRefsInfo(indent, envPath); err != nil {
+	if err := printLocalRefsInfo(indent, env.FS.Path()); err != nil {
 		return err
 	}
 	fmt.Println()
-	if err := printRemotesInfo(indent, envPath); err != nil {
+	if err := printRemotesInfo(indent, env.FS.Path()); err != nil {
 		return err
 	}
 	return nil
@@ -145,16 +146,17 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 	}
 }
 
-// check
+// Check
 
 func CheckEnv(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	cacheFS := os.DirFS(cachePath)
-	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
+	depls, err := forklift.ListDepls(env.FS, cache.FS, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+			err, "couldn't identify Pallet package deployments specified by environment %s",
+			env.FS.Path(),
 		)
 	}
 
@@ -339,16 +341,17 @@ func printDependencyCandidate[Resource any](
 	return nil
 }
 
-// plan
+// Plan
 
 func PlanEnv(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	cacheFS := os.DirFS(cachePath)
-	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
+	depls, err := forklift.ListDepls(env.FS, cache.FS, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+			err, "couldn't identify Pallet package deployments specified by environment %s",
+			env.FS.Path(),
 		)
 	}
 	dc, err := docker.NewClient()
@@ -380,12 +383,12 @@ const (
 type reconciliationChange struct {
 	Name  string
 	Type  string
-	Depl  forklift.Depl
+	Depl  *forklift.Depl
 	Stack docker.Stack
 }
 
-func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconciliationChange {
-	deplSet := make(map[string]forklift.Depl)
+func planReconciliation(depls []*forklift.Depl, stacks []docker.Stack) []reconciliationChange {
+	deplSet := make(map[string]*forklift.Depl)
 	for _, depl := range depls {
 		deplSet[depl.Name] = depl
 	}
@@ -432,16 +435,17 @@ func planReconciliation(depls []forklift.Depl, stacks []docker.Stack) []reconcil
 	return changes
 }
 
-// apply
+// Apply
 
 func ApplyEnv(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	cacheFS := os.DirFS(cachePath)
-	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
+	depls, err := forklift.ListDepls(env.FS, cache.FS, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+			err, "couldn't identify Pallet package deployments specified by environment %s",
+			env.FS.Path(),
 		)
 	}
 	dc, err := docker.NewClient()

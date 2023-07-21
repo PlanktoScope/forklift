@@ -13,10 +13,13 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
+// Download
+
 func DownloadImages(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	orderedImages, err := listRequiredImages(indent, envPath, cachePath, replacementRepos)
+	orderedImages, err := listRequiredImages(indent, env, cache, replacementRepos)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -38,13 +41,14 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int, envPath, cachePath string, replacementRepos map[string]*pallets.FSRepo,
+	indent int,
+	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) ([]string, error) {
-	cacheFS := os.DirFS(cachePath)
-	depls, err := forklift.ListDepls(os.DirFS(envPath), cacheFS, replacementRepos)
+	depls, err := forklift.ListDepls(env.FS, cache.FS, replacementRepos)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s", envPath,
+			err, "couldn't identify Pallet package deployments specified by environment %s",
+			env.FS.Path(),
 		)
 	}
 	orderedImages := make([]string, 0, len(depls))
@@ -72,7 +76,6 @@ func listRequiredImages(
 	return orderedImages, nil
 }
 
-// TODO: make this just be a method on FSPkg
 func loadStackDefinition(pkg *pallets.FSPkg) (*dct.Config, error) {
 	definitionFile := pkg.Config.Deployment.DefinitionFile
 	stackConfig, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
