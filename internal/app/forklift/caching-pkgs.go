@@ -70,30 +70,18 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 	return candidatePkgs[0], nil
 }
 
-func loadCachedPkg(cacheFS fs.FS, pkgConfigPath string) (CachedPkg, error) {
-	fsPkg, err := pallets.LoadFSPkg(pallets.AttachPath(cacheFS, ""), pkgConfigPath)
+func loadCachedPkg(cacheFS fs.FS, subdirPath string) (CachedPkg, error) {
+	repo, err := findRepoContaining(cacheFS, subdirPath)
 	if err != nil {
 		return CachedPkg{}, errors.Wrapf(
-			err, "couldn't load filesystem package from %s", pkgConfigPath,
+			err, "couldn't identify cached repository for package from %s", subdirPath,
 		)
 	}
-	repo, err := findRepoOfPkg(cacheFS, pkgConfigPath)
-	if err != nil {
-		return CachedPkg{}, errors.Wrapf(
-			err, "couldn't identify cached repository for package from %s", pkgConfigPath,
-		)
-	}
-	fsPkg.RepoPath = repo.Config.Repository.Path
-	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
-
-	return CachedPkg{
-		FSPkg: fsPkg,
-		Repo:  repo,
-	}, nil
+	return loadPkgFromRepo(repo, strings.TrimPrefix(subdirPath, fmt.Sprintf("%s/", repo.FS.Path())))
 }
 
-func findRepoOfPkg(cacheFS fs.FS, pkgConfigPath string) (pallets.FSRepo, error) {
-	repoCandidatePath := pkgConfigPath
+func findRepoContaining(cacheFS fs.FS, subdirPath string) (pallets.FSRepo, error) {
+	repoCandidatePath := subdirPath
 	for repoCandidatePath != "." {
 		repo, err := loadCachedRepo(cacheFS, repoCandidatePath)
 		if err == nil {
@@ -102,7 +90,7 @@ func findRepoOfPkg(cacheFS fs.FS, pkgConfigPath string) (pallets.FSRepo, error) 
 		repoCandidatePath = filepath.Dir(repoCandidatePath)
 	}
 	return pallets.FSRepo{}, errors.Errorf(
-		"no repository config file found in any parent directory of %s", pkgConfigPath,
+		"no repository config file found in any parent directory of %s", subdirPath,
 	)
 }
 

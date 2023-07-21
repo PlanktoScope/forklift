@@ -91,7 +91,7 @@ func printVersionedPkgRepo(indent int, pkg forklift.VersionedPkg) {
 
 	if filepath.IsAbs(pkg.Cached.FS.Path()) {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Cached.FS.Path(),
+			indent, "External path (replacing cached repository): %s\n", pkg.Cached.Repo.FS.Path(),
 		)
 	} else {
 		IndentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)

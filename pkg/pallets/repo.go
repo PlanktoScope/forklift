@@ -1,8 +1,10 @@
 package pallets
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
@@ -76,6 +78,18 @@ func LoadFSRepo(fsys PathedFS, subdirPath string) (p FSRepo, err error) {
 	return p, nil
 }
 
+func (r FSRepo) LoadPkg(pkgSubdir string) (p FSPkg, err error) {
+	if p, err = LoadFSPkg(r.FS, pkgSubdir); err != nil {
+		return FSPkg{}, errors.Wrapf(
+			err, "couldn't load package %s from repo %s", pkgSubdir, r.Path(),
+		)
+	}
+	p.RepoPath = r.Config.Repository.Path
+	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", r.FS.Path()))
+
+	return p, nil
+}
+
 // RepoConfig
 
 // LoadRepoConfig loads a RepoConfig from the specified file path in the provided base filesystem.
@@ -94,12 +108,14 @@ func LoadRepoConfig(fsys PathedFS, filePath string) (RepoConfig, error) {
 	return config, nil
 }
 
+// Check looks for errors in the construction of the repository configuration.
 func (c RepoConfig) Check() (errs []error) {
 	return ErrsWrap(c.Repository.Check(), "invalid repo spec")
 }
 
 // RepoSpec
 
+// Check looks for errors in the construction of the repo spec.
 func (s RepoSpec) Check() (errs []error) {
 	if s.Path == "" {
 		errs = append(errs, errors.Errorf("repo spec is missing `path` parameter"))

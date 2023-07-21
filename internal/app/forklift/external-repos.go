@@ -10,8 +10,6 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// Loading
-
 func FindExternalRepoOfPkg(
 	repos map[string]pallets.FSRepo, pkgPath string,
 ) (repo pallets.FSRepo, ok bool) {

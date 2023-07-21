@@ -3,7 +3,6 @@ package forklift
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
@@ -34,7 +33,7 @@ func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
 			continue
 		}
 
-		pkg, err := loadExternalPkg(repo, filepath.Dir(pkgConfigFilePath))
+		pkg, err := loadPkgFromRepo(repo, filepath.Dir(pkgConfigFilePath))
 		if err != nil {
 			return CachedPkg{}, errors.Wrapf(
 				err, "couldn't check external pkg defined at %s", pkgConfigFilePath,
@@ -58,13 +57,11 @@ func FindExternalPkg(repo pallets.FSRepo, pkgPath string) (CachedPkg, error) {
 	return candidatePkgs[0], nil
 }
 
-func loadExternalPkg(repo pallets.FSRepo, subdirPath string) (CachedPkg, error) {
-	fsPkg, err := pallets.LoadFSPkg(repo.FS, subdirPath)
+func loadPkgFromRepo(repo pallets.FSRepo, subdirPath string) (CachedPkg, error) {
+	fsPkg, err := repo.LoadPkg(subdirPath)
 	if err != nil {
-		return CachedPkg{}, errors.Wrapf(err, "couldn't load filesystem package from %s", subdirPath)
+		return CachedPkg{}, err
 	}
-	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
-	fsPkg.RepoPath = repo.Repo.Config.Repository.Path
 
 	return CachedPkg{
 		FSPkg: fsPkg,
@@ -101,7 +98,7 @@ func ListExternalPkgs(repo pallets.FSRepo, cachedPrefix string) ([]CachedPkg, er
 		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
-		pkg, err := loadExternalPkg(repo, filepath.Dir(pkgConfigFilePath))
+		pkg, err := loadPkgFromRepo(repo, filepath.Dir(pkgConfigFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load cached package from %s", pkgConfigFilePath)
 		}
