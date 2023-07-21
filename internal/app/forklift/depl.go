@@ -314,7 +314,7 @@ func LoadDepl(
 		if perr != nil {
 			return Depl{}, errors.Wrapf(
 				err, "couldn't find external package %s from replacement repo %s",
-				pkgPath, repo.Repo.ConfigPath,
+				pkgPath, repo.Repo.FSPath,
 			)
 		}
 		depl.Pkg = AsVersionedPkg(pkg)

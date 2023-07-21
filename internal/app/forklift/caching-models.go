@@ -5,11 +5,9 @@ import (
 )
 
 type CachedRepo struct {
-	VCSRepoPath string
-	Version     string
-	RepoSubdir  string
-	ConfigPath  string
-	Config      pallets.RepoConfig
+	pallets.FSRepo
+	// TODO: move version to pallets.Repo?
+	Version string
 }
 
 type CachedPkg struct {

@@ -69,12 +69,12 @@ func PrintRepoInfo(
 			)
 		}
 	}
-	if filepath.IsAbs(cachedRepo.ConfigPath) {
+	if filepath.IsAbs(cachedRepo.FSPath) {
 		IndentedPrint(indent+1, "External path (replacing cached package): ")
 	} else {
 		IndentedPrint(indent+1, "Path in cache: ")
 	}
-	fmt.Println(cachedRepo.ConfigPath)
+	fmt.Println(cachedRepo.FSPath)
 	IndentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
 	// TODO: show the README file
 	return nil

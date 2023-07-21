@@ -30,8 +30,7 @@ func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
 	}
 	candidatePkgs := make([]CachedPkg, 0)
 	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
-		filename := filepath.Base(pkgConfigFilePath)
-		if filename != pallets.PkgSpecFile {
+		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
 
@@ -60,13 +59,13 @@ func FindExternalPkg(repo ExternalRepo, pkgPath string) (CachedPkg, error) {
 }
 
 func loadExternalPkg(repo ExternalRepo, pkgConfigPath string) (CachedPkg, error) {
-	fsPkg, err := pallets.LoadFSPkg(repo.FS, repo.Repo.ConfigPath, pkgConfigPath)
+	fsPkg, err := pallets.LoadFSPkg(repo.FS, repo.Repo.FSPath, pkgConfigPath)
 	if err != nil {
 		return CachedPkg{}, errors.Wrapf(
 			err, "couldn't load filesystem package from %s", pkgConfigPath,
 		)
 	}
-	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FSPath, fmt.Sprintf("%s/", repo.Repo.ConfigPath))
+	fsPkg.Subdir = strings.TrimPrefix(fsPkg.FSPath, fmt.Sprintf("%s/", repo.Repo.FSPath))
 	fsPkg.RepoPath = repo.Repo.Config.Repository.Path
 
 	return CachedPkg{
@@ -80,7 +79,7 @@ func AsVersionedPkg(pkg CachedPkg) VersionedPkg {
 		Path: pkg.Path(),
 		Repo: VersionedRepo{
 			VCSRepoPath: pkg.Repo.VCSRepoPath,
-			RepoSubdir:  pkg.Repo.RepoSubdir,
+			RepoSubdir:  pkg.Repo.Subdir,
 		},
 		Cached: pkg,
 	}
@@ -101,8 +100,7 @@ func ListExternalPkgs(repo ExternalRepo, cachedPrefix string) ([]CachedPkg, erro
 	repoPkgPaths := make([]string, 0, len(pkgConfigFiles))
 	pkgMap := make(map[string]CachedPkg)
 	for _, pkgConfigFilePath := range pkgConfigFiles {
-		filename := filepath.Base(pkgConfigFilePath)
-		if filename != pallets.PkgSpecFile {
+		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
 		pkg, err := loadExternalPkg(repo, filepath.Dir(pkgConfigFilePath))

@@ -13,27 +13,6 @@ import (
 
 // Loading
 
-func LoadExternalRepo(dir fs.FS, repoConfigFilePath string) (CachedRepo, error) {
-	config, err := loadRepoConfig(dir, repoConfigFilePath)
-	if err != nil {
-		return CachedRepo{}, errors.Wrapf(
-			err, "couldn't load cached repo config from %s", repoConfigFilePath,
-		)
-	}
-
-	repo := CachedRepo{
-		ConfigPath: filepath.Dir(repoConfigFilePath),
-		Config:     config,
-	}
-	repo.VCSRepoPath, repo.RepoSubdir, err = SplitRepoPathSubdir(config.Repository.Path)
-	if err != nil {
-		return CachedRepo{}, errors.Wrapf(
-			err, "couldn't parse path of Pallet repo %s", config.Repository.Path,
-		)
-	}
-	return repo, nil
-}
-
 func FindExternalRepoOfPkg(
 	repos map[string]ExternalRepo, pkgPath string,
 ) (repo ExternalRepo, ok bool) {
@@ -58,21 +37,20 @@ func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
 	repoPaths := make([]string, 0, len(repoConfigFiles))
 	repoMap := make(map[string]CachedRepo)
 	for _, repoConfigFilePath := range repoConfigFiles {
-		filename := filepath.Base(repoConfigFilePath)
-		if filename != pallets.RepoSpecFile {
+		if filepath.Base(repoConfigFilePath) != pallets.RepoSpecFile {
 			continue
 		}
-		repo, err := LoadExternalRepo(dir, repoConfigFilePath)
+		repo, err := loadExternalRepo(dir, filepath.Dir(repoConfigFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load cached repo from %s", repoConfigFilePath)
 		}
 
 		repoPath := repo.Config.Repository.Path
 		if prevRepo, ok := repoMap[repoPath]; ok {
-			if prevRepo.FromSameVCSRepo(repo) && prevRepo.ConfigPath != repo.ConfigPath {
+			if prevRepo.FromSameVCSRepo(repo) && prevRepo.FSPath != repo.FSPath {
 				return nil, errors.Errorf(
 					"repository repeatedly defined in the same version of the same Github repo: %s, %s",
-					prevRepo.ConfigPath, repo.ConfigPath,
+					prevRepo.FSPath, repo.FSPath,
 				)
 			}
 		}
@@ -85,4 +63,24 @@ func ListExternalRepos(dir fs.FS) ([]CachedRepo, error) {
 		orderedRepos = append(orderedRepos, repoMap[path])
 	}
 	return orderedRepos, nil
+}
+
+func loadExternalRepo(dirFS fs.FS, repoConfigPath string) (CachedRepo, error) {
+	fsRepo, err := pallets.LoadFSRepo(dirFS, "", repoConfigPath)
+	if err != nil {
+		return CachedRepo{}, errors.Wrapf(
+			err, "couldn't load external repo config from %s", repoConfigPath,
+		)
+	}
+	repo := CachedRepo{
+		FSRepo: fsRepo,
+	}
+	if repo.VCSRepoPath, repo.Subdir, err = SplitRepoPathSubdir(
+		repo.Config.Repository.Path,
+	); err != nil {
+		return CachedRepo{}, errors.Wrapf(
+			err, "couldn't parse path of Pallet repo %s", repo.Config.Repository.Path,
+		)
+	}
+	return repo, nil
 }

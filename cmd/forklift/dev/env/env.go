@@ -54,10 +54,10 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]forklift.ExternalR
 			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
 		}
 		for _, repo := range externalRepos {
-			repo.ConfigPath = fmt.Sprintf("%s/%s", replacementPath, repo.ConfigPath)
+			repo.FSPath = fmt.Sprintf("%s/%s", replacementPath, repo.FSPath)
 			repoPath := repo.Path()
 			repos[repoPath] = forklift.ExternalRepo{
-				FS:   os.DirFS(repo.ConfigPath),
+				FS:   os.DirFS(repo.FSPath),
 				Repo: repo,
 			}
 		}

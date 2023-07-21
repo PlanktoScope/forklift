@@ -40,8 +40,7 @@ func FindCachedPkg(cacheFS fs.FS, pkgPath string, version string) (CachedPkg, er
 	}
 	candidatePkgs := make([]CachedPkg, 0)
 	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
-		filename := filepath.Base(pkgConfigFilePath)
-		if filename != pallets.PkgSpecFile {
+		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
 
@@ -96,8 +95,7 @@ func loadCachedPkg(cacheFS fs.FS, pkgConfigPath string) (CachedPkg, error) {
 func findRepoOfPkg(cacheFS fs.FS, pkgConfigPath string) (CachedRepo, error) {
 	repoCandidatePath := pkgConfigPath
 	for repoCandidatePath != "." {
-		repoConfigCandidatePath := filepath.Join(repoCandidatePath, pallets.RepoSpecFile)
-		repo, err := LoadCachedRepo(cacheFS, repoConfigCandidatePath)
+		repo, err := loadCachedRepo(cacheFS, repoCandidatePath)
 		if err == nil {
 			return repo, nil
 		}
@@ -123,8 +121,7 @@ func ListCachedPkgs(cacheFS fs.FS, cachedPrefix string) ([]CachedPkg, error) {
 	repoVersionedPkgPaths := make([]string, 0, len(pkgConfigFiles))
 	pkgMap := make(map[string]CachedPkg)
 	for _, pkgConfigFilePath := range pkgConfigFiles {
-		filename := filepath.Base(pkgConfigFilePath)
-		if filename != pallets.PkgSpecFile {
+		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
 			continue
 		}
 		pkg, err := loadCachedPkg(cacheFS, filepath.Dir(pkgConfigFilePath))

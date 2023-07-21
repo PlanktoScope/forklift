@@ -90,7 +90,7 @@ func listVersionedPkgsOfExternalRepo(
 	pkgs, err := ListExternalPkgs(externalRepo, "")
 	if err != nil {
 		return nil, nil, errors.Wrapf(
-			err, "couldn't list packages from external repo at %s", externalRepo.Repo.ConfigPath,
+			err, "couldn't list packages from external repo at %s", externalRepo.Repo.FSPath,
 		)
 	}
 

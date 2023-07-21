@@ -51,7 +51,7 @@ func PrintPkgInfo(
 		if perr != nil {
 			return errors.Wrapf(
 				err, "couldn't find external package %s from replacement repo %s",
-				pkgPath, repo.Repo.ConfigPath,
+				pkgPath, repo.Repo.FSPath,
 			)
 		}
 		pkg = forklift.AsVersionedPkg(externalPkg)
@@ -89,9 +89,9 @@ func printVersionedPkgRepo(indent int, pkg forklift.VersionedPkg) {
 	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
 	indent++
 
-	if filepath.IsAbs(pkg.Cached.Repo.ConfigPath) {
+	if filepath.IsAbs(pkg.Cached.Repo.FSPath) {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Cached.Repo.ConfigPath,
+			indent, "External path (replacing cached repository): %s\n", pkg.Cached.Repo.FSPath,
 		)
 	} else {
 		IndentedPrintf(indent, "Version: %s\n", pkg.Cached.Repo.Version)
