@@ -136,6 +136,7 @@ func (l RepoVersionConfig) Version() (string, error) {
 
 const versionedReposDirName = "repositories"
 
+// TODO: this should be a method on FSEnv
 func VersionedReposFS(envFS fs.FS) (fs.FS, error) {
 	return fs.Sub(envFS, versionedReposDirName)
 }

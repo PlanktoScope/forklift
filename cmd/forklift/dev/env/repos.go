@@ -17,7 +17,7 @@ import (
 // cache-repo
 
 func cacheRepoAction(c *cli.Context) error {
-	env, cache, _, err := processFullBaseArgs(c)
+	env, cache, _, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func lsRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func showRepoAction(c *cli.Context) error {
 // add-repo
 
 func addRepoAction(c *cli.Context) error {
-	env, cache, _, err := processFullBaseArgs(c)
+	env, cache, _, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}

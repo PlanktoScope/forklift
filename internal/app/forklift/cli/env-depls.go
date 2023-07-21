@@ -17,7 +17,7 @@ func PrintEnvDepls(
 	indent int,
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	depls, err := forklift.ListDepls(env.FS, cache.FS, replacementRepos)
+	depls, err := forklift.ListDepls(env.FS, cache, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",
@@ -35,7 +35,7 @@ func PrintDeplInfo(
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	deplName string,
 ) error {
-	depl, err := forklift.LoadDepl(env.FS, cache.FS, replacementRepos, deplName)
+	depl, err := forklift.LoadDepl(env.FS, cache, replacementRepos, deplName)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find package deployment specification %s in environment %s",

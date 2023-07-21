@@ -278,7 +278,7 @@ func splitMultiPathServiceResources(
 // Loading
 
 func LoadDepl(
-	envFS, cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo, deplName string,
+	envFS fs.FS, cache *FSCache, replacementRepos map[string]*pallets.FSRepo, deplName string,
 ) (*Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
@@ -315,7 +315,7 @@ func LoadDepl(
 		return depl, nil
 	}
 
-	if depl.Pkg, err = LoadVersionedPkg(reposFS, cacheFS, pkgPath); err != nil {
+	if depl.Pkg, err = LoadVersionedPkg(reposFS, cache, pkgPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
 		)
@@ -339,7 +339,7 @@ func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
 // Listing
 
 func ListDepls(
-	envFS fs.FS, cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo,
+	envFS fs.FS, cache *FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) ([]*Depl, error) {
 	deplsFS, err := DeplsFS(envFS)
 	if err != nil {
@@ -362,7 +362,7 @@ func ListDepls(
 			)
 		}
 		deplNames = append(deplNames, deplName)
-		deplMap[deplName], err = LoadDepl(envFS, cacheFS, replacementRepos, deplName)
+		deplMap[deplName], err = LoadDepl(envFS, cache, replacementRepos, deplName)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load package deployment specification %s", deplName)
 		}

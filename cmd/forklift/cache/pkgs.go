@@ -24,7 +24,7 @@ func lsPkgAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	pkgs, err := forklift.ListCachedPkgs(cache.FS, "")
+	pkgs, err := cache.ListPkgs("")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
@@ -55,7 +55,7 @@ func showPkgAction(c *cli.Context) error {
 			"Couldn't parse Pallet package path %s as repo_path@version", versionedPkgPath,
 		)
 	}
-	pkg, err := forklift.FindCachedPkg(cache.FS, pkgPath, version)
+	pkg, err := cache.FindPkg(pkgPath, version)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet package %s@%s", pkgPath, version)
 	}

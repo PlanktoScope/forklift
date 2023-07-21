@@ -23,7 +23,7 @@ func PrintEnvPkgs(
 			err, "couldn't identify Pallet repositories in environment %s", env.FS.Path(),
 		)
 	}
-	pkgs, err := forklift.ListVersionedPkgs(cache.FS, replacementRepos, repos)
+	pkgs, err := forklift.ListVersionedPkgs(cache, replacementRepos, repos)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
@@ -58,7 +58,7 @@ func PrintPkgInfo(
 			)
 		}
 		pkg = forklift.AsVersionedPkg(externalPkg)
-	} else if pkg, err = forklift.LoadVersionedPkg(reposFS, cache.FS, pkgPath); err != nil {
+	} else if pkg, err = forklift.LoadVersionedPkg(reposFS, cache, pkgPath); err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in environment %s", pkgPath,
 			env.FS.Path(),

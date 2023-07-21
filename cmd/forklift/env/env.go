@@ -15,7 +15,9 @@ var errMissingEnv = errors.Errorf(
 	"you first need to set up a local environment with `forklift env clone`",
 )
 
-func processFullBaseArgs(c *cli.Context) (env *forklift.FSEnv, cache *forklift.FSCache, err error) {
+func processFullBaseArgs(
+	c *cli.Context, ensureCache bool,
+) (env *forklift.FSEnv, cache *forklift.FSCache, err error) {
 	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return nil, nil, err
@@ -26,7 +28,7 @@ func processFullBaseArgs(c *cli.Context) (env *forklift.FSEnv, cache *forklift.F
 	if cache, err = workspace.GetCache(); err != nil {
 		return nil, nil, err
 	}
-	if !cache.Exists() {
+	if ensureCache && !cache.Exists() {
 		return nil, nil, errors.New(
 			"you first need to cache the repos specified by your environment with " +
 				"`forklift env cache-repo`",
@@ -178,7 +180,7 @@ func showAction(c *cli.Context) error {
 // check
 
 func checkAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -192,7 +194,7 @@ func checkAction(c *cli.Context) error {
 // plan
 
 func planAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -208,7 +210,7 @@ func planAction(c *cli.Context) error {
 // apply
 
 func applyAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}

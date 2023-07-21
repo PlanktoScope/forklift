@@ -61,9 +61,7 @@ func PrintRepoInfo(
 	if ok {
 		cachedRepo = replacementRepo
 	} else {
-		if cachedRepo, err = forklift.FindCachedRepo(
-			cache.FS, repoPath, version,
-		); err != nil {
+		if cachedRepo, err = cache.FindRepo(repoPath, version); err != nil {
 			return errors.Wrapf(
 				err,
 				"couldn't find Pallet repository %s@%s in cache, please update the local cache of repos",

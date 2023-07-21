@@ -13,7 +13,7 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-func processFullBaseArgs(c *cli.Context) (
+func processFullBaseArgs(c *cli.Context, ensureCache bool) (
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	err error,
 ) {
@@ -26,7 +26,7 @@ func processFullBaseArgs(c *cli.Context) (
 	if cache, err = getCache(c.String("workspace")); err != nil && len(replacementRepos) == 0 {
 		return nil, nil, nil, err
 	}
-	if len(replacementRepos) == 0 && !cache.Exists() {
+	if (ensureCache || len(replacementRepos) == 0) && !cache.Exists() {
 		return nil, nil, nil, errors.New(
 			"you first need to cache the repos specified by your environment with " +
 				"`forklift dev env cache-repo`",
@@ -99,7 +99,7 @@ func showAction(c *cli.Context) error {
 // check
 
 func checkAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func checkAction(c *cli.Context) error {
 // plan
 
 func planAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func planAction(c *cli.Context) error {
 // apply
 
 func applyAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}

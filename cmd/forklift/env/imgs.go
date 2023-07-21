@@ -11,7 +11,7 @@ import (
 // cache-img
 
 func cacheImgAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c)
+	env, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}

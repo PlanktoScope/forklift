@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
@@ -24,7 +23,7 @@ func lsRepoAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	repos, err := forklift.ListCachedRepos(cache.FS)
+	repos, err := cache.ListRepos()
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
@@ -55,7 +54,7 @@ func showRepoAction(c *cli.Context) error {
 			"Couldn't parse Pallet repo path %s as repo_path@version", versionedRepoPath,
 		)
 	}
-	repo, err := forklift.FindCachedRepo(cache.FS, repoPath, version)
+	repo, err := cache.FindRepo(repoPath, version)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet repository %s@%s", repoPath, version)
 	}

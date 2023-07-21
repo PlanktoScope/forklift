@@ -9,7 +9,7 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func lsDeplAction(c *cli.Context) error {
 // show-depl
 
 func showDeplAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}

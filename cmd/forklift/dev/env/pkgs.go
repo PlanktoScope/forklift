@@ -9,7 +9,7 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c)
+	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}

@@ -12,7 +12,7 @@ import (
 
 // Loading
 
-func LoadVersionedPkg(reposFS, cacheFS fs.FS, pkgPath string) (p *VersionedPkg, err error) {
+func LoadVersionedPkg(reposFS fs.FS, cache *FSCache, pkgPath string) (p *VersionedPkg, err error) {
 	p = &VersionedPkg{}
 	if p.VersionedRepo, err = findVersionedRepoOfPkg(reposFS, pkgPath); err != nil {
 		return nil, errors.Wrapf(
@@ -25,7 +25,7 @@ func LoadVersionedPkg(reposFS, cacheFS fs.FS, pkgPath string) (p *VersionedPkg, 
 			err, "couldn't determine version of repo %s in local environment", p.VersionedRepo.Path(),
 		)
 	}
-	if p.FSPkg, err = FindCachedPkg(cacheFS, pkgPath, version); err != nil {
+	if p.FSPkg, err = cache.FindPkg(pkgPath, version); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't find package %s@%s in cache", pkgPath, version,
 		)
@@ -52,7 +52,7 @@ func findVersionedRepoOfPkg(reposFS fs.FS, pkgPath string) (VersionedRepo, error
 // Listing
 
 func ListVersionedPkgs(
-	cacheFS fs.FS, replacementRepos map[string]*pallets.FSRepo, repos []VersionedRepo,
+	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, repos []VersionedRepo,
 ) (orderedPkgs []*pallets.FSPkg, err error) {
 	versionedPkgPaths := make([]string, 0)
 	pkgMap := make(map[string]*pallets.FSPkg)
@@ -62,7 +62,7 @@ func ListVersionedPkgs(
 		if externalRepo, ok := replacementRepos[repo.Path()]; ok {
 			pkgs, paths, err = listVersionedPkgsOfExternalRepo(externalRepo)
 		} else {
-			pkgs, paths, err = listVersionedPkgsOfCachedRepo(cacheFS, repo)
+			pkgs, paths, err = listVersionedPkgsOfCachedRepo(cache, repo)
 		}
 
 		for k, v := range pkgs {
@@ -109,7 +109,7 @@ func listVersionedPkgsOfExternalRepo(
 }
 
 func listVersionedPkgsOfCachedRepo(
-	cacheFS fs.FS, repo VersionedRepo,
+	cache *FSCache, repo VersionedRepo,
 ) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
 	repoVersion, err := repo.Config.Version()
 	if err != nil {
@@ -119,7 +119,7 @@ func listVersionedPkgsOfCachedRepo(
 		fmt.Sprintf("%s@%s", repo.VCSRepoPath, repoVersion),
 		repo.RepoSubdir,
 	)
-	pkgs, err := ListCachedPkgs(cacheFS, repoCachePath)
+	pkgs, err := cache.ListPkgs(repoCachePath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(
 			err, "couldn't list packages from repo cached at %s", repoCachePath,
