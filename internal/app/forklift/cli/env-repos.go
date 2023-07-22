@@ -16,12 +16,12 @@ import (
 // Print
 
 func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
-	repos, err := env.ListVersionedRepos()
+	repos, err := env.ListRepoVersionRequirements()
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	sort.Slice(repos, func(i, j int) bool {
-		return forklift.CompareVersionedRepos(repos[i], repos[j]) < 0
+		return forklift.CompareRepoVersionRequirements(repos[i], repos[j]) < 0
 	})
 	for _, repo := range repos {
 		IndentedPrintf(indent, "%s\n", repo.Path())
@@ -34,7 +34,7 @@ func PrintRepoInfo(
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	repoPath string,
 ) error {
-	versionedRepo, err := env.LoadVersionedRepo(repoPath)
+	versionedRepo, err := env.LoadRepoVersionRequirement(repoPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't load Pallet repo versioning config %s from environment %s",
@@ -47,7 +47,7 @@ func PrintRepoInfo(
 	if err != nil {
 		return errors.Wrapf(err, "couldn't determine configured version of Pallet repo %s", repoPath)
 	}
-	printVersionedRepo(indent, versionedRepo)
+	printRepoVersionRequirement(indent, versionedRepo)
 	fmt.Println()
 
 	var cachedRepo *pallets.FSRepo
@@ -73,7 +73,7 @@ func PrintRepoInfo(
 	return nil
 }
 
-func printVersionedRepo(indent int, repo forklift.VersionedRepo) {
+func printRepoVersionRequirement(indent int, repo forklift.RepoVersionRequirement) {
 	IndentedPrintf(indent, "Pallet repository: %s\n", repo.Path())
 	indent++
 	version, _ := repo.Config.Version() // assume that the validity of the version was already checked
@@ -84,7 +84,7 @@ func printVersionedRepo(indent int, repo forklift.VersionedRepo) {
 // Download
 
 func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (changed bool, err error) {
-	repos, err := env.ListVersionedRepos()
+	repos, err := env.ListRepoVersionRequirements()
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
@@ -102,7 +102,7 @@ func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (ch
 }
 
 func downloadRepo(
-	indent int, cachePath string, repo forklift.VersionedRepo,
+	indent int, cachePath string, repo forklift.RepoVersionRequirement,
 ) (downloaded bool, err error) {
 	if !repo.Config.IsCommitLocked() {
 		return false, errors.Errorf(
@@ -157,7 +157,7 @@ func downloadRepo(
 	return true, nil
 }
 
-func validateCommit(versionedRepo forklift.VersionedRepo, gitRepo *git.Repo) error {
+func validateCommit(versionedRepo forklift.RepoVersionRequirement, gitRepo *git.Repo) error {
 	// Check commit time
 	commitTimestamp, err := forklift.GetCommitTimestamp(gitRepo, versionedRepo.Config.Commit)
 	if err != nil {

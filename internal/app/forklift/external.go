@@ -6,10 +6,11 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
+// TODO: see if we can remove the need for this
 func AsVersionedPkg(pkg *pallets.FSPkg) *VersionedPkg {
 	return &VersionedPkg{
 		FSPkg: pkg,
-		VersionedRepo: VersionedRepo{
+		RepoVersionRequirement: RepoVersionRequirement{
 			VCSRepoPath: pkg.Repo.VCSRepoPath,
 			RepoSubdir:  pkg.Repo.Subdir,
 		},

@@ -184,6 +184,18 @@ func (r Repo) FromSameVCSRepo(candidate Repo) bool {
 	return r.VCSRepoPath == candidate.VCSRepoPath && r.Version == candidate.Version
 }
 
+// Check looks for errors in the construction of the repository.
+func (r Repo) Check() (errs []error) {
+	if r.Path() != r.Config.Repository.Path {
+		errs = append(errs, errors.Errorf(
+			"repo path %s is inconsistent with path %s specified in repo configuration",
+			r.Path(), r.Config.Repository.Path,
+		))
+	}
+	errs = append(errs, ErrsWrap(r.Config.Check(), "invalid repo config")...)
+	return errs
+}
+
 // The result of comparison functions is one of these values.
 const (
 	CompareLT = -1

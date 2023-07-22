@@ -5,23 +5,30 @@ import (
 )
 
 const (
-	// VersionedRepoDirName is the directory in a Forklift environment which contains versioned
-	// repository configurations.
-	VersionedReposDirName = "repositories"
-	// VersionedRepoFileExt is the file name for versioned repositories.
-	VersionedRepoSpecFile = "forklift-repo.yml"
+	// RepoRequirementsDirName is the directory in a Forklift environment which contains Pallet
+	// repository requirement configurations.
+	// TODO: move repositories to requirements/repositories, to allow for a future
+	// requirements/environments subdirectory
+	RepoRequirementsDirName = "repositories"
+	// RepoRequirementFileExt is the file name for versioned repositories.
+	// TODO: rename this to "forklift-version-requirement.yml"
+	RepoRequirementSpecFile = "forklift-repo.yml"
 )
 
 // Repos
 
-type VersionedRepo struct {
+// TODO: make a FSRepoRequirement which has a getter for the version requirement
+
+// A RepoVersionRequirement is a requirement for a Pallet repository in an environment.
+type RepoVersionRequirement struct {
 	VCSRepoPath string
 	RepoSubdir  string
-	Config      RepoVersionConfig
+	Config      VersionLockConfig
 }
 
-// A RepoVersionConfig defines a requirement for a Pallets repository at a specific version.
-type RepoVersionConfig struct {
+// A VersionLockConfig defines a requirement for a Pallet repository or package at a specific
+// version.
+type VersionLockConfig struct {
 	BaseVersion string `yaml:"base-version,omitempty"`
 	Timestamp   string `yaml:"timestamp,omitempty"`
 	Commit      string `yaml:"commit,omitempty"`
@@ -31,5 +38,5 @@ type RepoVersionConfig struct {
 
 type VersionedPkg struct {
 	*pallets.FSPkg
-	VersionedRepo VersionedRepo
+	RepoVersionRequirement RepoVersionRequirement
 }

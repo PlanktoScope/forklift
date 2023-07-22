@@ -16,7 +16,7 @@ func PrintEnvPkgs(
 	indent int,
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	repos, err := env.ListVersionedRepos()
+	repos, err := env.ListRepoVersionRequirements()
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet repositories in environment %s", env.FS.Path(),

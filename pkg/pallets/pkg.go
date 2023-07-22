@@ -73,6 +73,20 @@ func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
 	return nil
 }
 
+// Check looks for errors in the construction of the package.
+func (p *FSPkg) Check() (errs []error) {
+	if p.Repo != nil {
+		if p.Pkg.Repo != &p.Repo.Repo {
+			errs = append(errs, errors.New(
+				"inconsistent pointers to the repository between the package as a FSPkg and the package "+
+					"as a Pkg",
+			))
+		}
+	}
+	errs = append(errs, p.Pkg.Check()...)
+	return errs
+}
+
 func CompareFSPkgs(p, q *FSPkg) int {
 	repoPathComparison := CompareRepoPaths(p.Repo.Repo, q.Repo.Repo)
 	if repoPathComparison != CompareEQ {
@@ -96,6 +110,19 @@ func CompareFSPkgs(p, q *FSPkg) int {
 // Path returns the Pallet package path of the Pkg instance.
 func (p Pkg) Path() string {
 	return filepath.Join(p.RepoPath, p.Subdir)
+}
+
+// Check looks for errors in the construction of the package.
+func (p Pkg) Check() (errs []error) {
+	// TODO: implement a check method on PkgConfig
+	// errs = append(errs, ErrsWrap(p.Config.Check(), "invalid package config")...)
+	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
+		errs = append(errs, errors.Errorf(
+			"repo path %s of package is inconsistent with path %s of attached repo",
+			p.RepoPath, p.Repo.Path(),
+		))
+	}
+	return errs
 }
 
 // PkgConfig

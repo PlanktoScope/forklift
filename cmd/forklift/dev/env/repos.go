@@ -186,9 +186,9 @@ func updateLocalRepoMirror(remote, cachedPath string) error {
 
 func determinePalletRepoConfigs(
 	remoteReleases []string, cachePath string,
-) (map[string]forklift.VersionedRepo, error) {
-	vcsRepoConfigs := make(map[string]forklift.VersionedRepo)
-	palletRepoConfigs := make(map[string]forklift.VersionedRepo)
+) (map[string]forklift.RepoVersionRequirement, error) {
+	vcsRepoConfigs := make(map[string]forklift.RepoVersionRequirement)
+	palletRepoConfigs := make(map[string]forklift.RepoVersionRequirement)
 	for _, remoteRelease := range remoteReleases {
 		vcsRepoPath, repoSubdir, versionQuery, err := splitRemoteRepoRelease(remoteRelease)
 		if err != nil {
@@ -224,25 +224,25 @@ func determinePalletRepoConfigs(
 
 func resolveVCSRepoVersionQuery(
 	cachePath, vcsRepoPath, versionQuery string,
-) (forklift.VersionedRepo, error) {
-	repo := forklift.VersionedRepo{
+) (forklift.RepoVersionRequirement, error) {
+	repo := forklift.RepoVersionRequirement{
 		VCSRepoPath: vcsRepoPath,
 	}
 	if versionQuery == "" {
-		return forklift.VersionedRepo{}, errors.New(
+		return forklift.RepoVersionRequirement{}, errors.New(
 			"support for empty version queries is not yet implemented!",
 		)
 	}
 	localPath := filepath.Join(cachePath, vcsRepoPath)
 	gitRepo, err := git.Open(localPath)
 	if err != nil {
-		return forklift.VersionedRepo{}, errors.Wrapf(
+		return forklift.RepoVersionRequirement{}, errors.Wrapf(
 			err, "couldn't open local mirror of %s", vcsRepoPath,
 		)
 	}
 	commit, err := queryRefs(gitRepo, versionQuery)
 	if err != nil {
-		return forklift.VersionedRepo{}, err
+		return forklift.RepoVersionRequirement{}, err
 	}
 	if commit == "" {
 		commit, err = gitRepo.GetCommitFullHash(versionQuery)
@@ -251,12 +251,12 @@ func resolveVCSRepoVersionQuery(
 		}
 	}
 	if commit == "" {
-		return forklift.VersionedRepo{}, errors.Errorf(
+		return forklift.RepoVersionRequirement{}, errors.Errorf(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
 	if repo.Config, err = lockCommit(gitRepo, commit); err != nil {
-		return forklift.VersionedRepo{}, err
+		return forklift.RepoVersionRequirement{}, err
 	}
 	return repo, nil
 }
@@ -279,10 +279,10 @@ func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error
 	return "", nil
 }
 
-func lockCommit(gitRepo *git.Repo, commit string) (config forklift.RepoVersionConfig, err error) {
+func lockCommit(gitRepo *git.Repo, commit string) (config forklift.VersionLockConfig, err error) {
 	config.Commit = commit
 	if config.Timestamp, err = forklift.GetCommitTimestamp(gitRepo, config.Commit); err != nil {
-		return forklift.RepoVersionConfig{}, err
+		return forklift.VersionLockConfig{}, err
 	}
 	// FIXME: look for a version tagged on the commit, or the last version if it's a pseudoversion.
 	// If there's a proper tagged version, write the tag as the base version and write the commit hash

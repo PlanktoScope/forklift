@@ -12,7 +12,6 @@ type FSRepo struct {
 // A Repo is a Pallets repository, a collection of Pallets packages which are tested, released,
 // distributed, and upgraded together.
 type Repo struct {
-	// TODO: maybe VCSRepoPath and Subdir should just be accessed as methods on Config.Path
 	// VCSRepoPath is the path of the VCS repository path which provides the Pallet repository.
 	VCSRepoPath string
 	// Subdir is the path of the repository within the VCS repository which provides the Pallet
