@@ -5,19 +5,19 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// An Env is a Forklift environment, a complete specification of all Pallet package deployments
-// which should be active on a Docker host.
-type Env struct {
-	// Config is the Forklift environment specification for the environment.
-	Config EnvConfig
-}
-
 // A FSEnv is a Forklift environment configuration stored at the root of a [fs.FS] filesystem.
 type FSEnv struct {
 	// Env is the Forklift environment at the root of the filesystem.
 	Env
 	// FS is a filesystem which contains the environment's contents.
 	FS pallets.PathedFS
+}
+
+// An Env is a Forklift environment, a complete specification of all Pallet package deployments
+// which should be active on a Docker host.
+type Env struct {
+	// Config is the Forklift environment specification for the environment.
+	Config EnvConfig
 }
 
 // EnvSpecFile is the name of the file defining each Forklift environment.

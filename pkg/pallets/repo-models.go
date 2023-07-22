@@ -1,16 +1,18 @@
 // Package pallets implements the specification for the Pallets package management system.
 package pallets
 
-// The result of comparison functions is one of these values.
-const (
-	CompareLT = -1
-	CompareEQ = 0
-	CompareGT = 1
-)
+// A FSRepo is a Pallet repository stored at the root of a [fs.FS] filesystem.
+type FSRepo struct {
+	// Repo is the Pallet repository at the root of the filesystem.
+	Repo
+	// FS is a filesystem which contains the repository's contents.
+	FS PathedFS
+}
 
 // A Repo is a Pallets repository, a collection of Pallets packages which are tested, released,
 // distributed, and upgraded together.
 type Repo struct {
+	// TODO: maybe VCSRepoPath and Subdir should just be accessed as methods on Config.Path
 	// VCSRepoPath is the path of the VCS repository path which provides the Pallet repository.
 	VCSRepoPath string
 	// Subdir is the path of the repository within the VCS repository which provides the Pallet
@@ -20,14 +22,6 @@ type Repo struct {
 	Config RepoConfig
 	// Version is the Pallet repository version or pseudoversion of the repository.
 	Version string
-}
-
-// A FSRepo is a Pallet repository stored at the root of a [fs.FS] filesystem.
-type FSRepo struct {
-	// Repo is the Pallet repository at the root of the filesystem.
-	Repo
-	// FS is a filesystem which contains the repository's contents.
-	FS PathedFS
 }
 
 // RepoSpecFile is the name of the file defining each Pallet repository.

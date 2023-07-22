@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
@@ -23,7 +24,8 @@ func lsRepoAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	repos, err := cache.ListRepos()
+	// TODO: add a --pattern cli flag for the pattern
+	repos, err := cache.LoadFSRepos("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
@@ -54,21 +56,21 @@ func showRepoAction(c *cli.Context) error {
 			"Couldn't parse Pallet repo path %s as repo_path@version", versionedRepoPath,
 		)
 	}
-	repo, err := cache.FindRepo(repoPath, version)
+	repo, err := cache.LoadFSRepo(repoPath, version)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet repository %s@%s", repoPath, version)
 	}
-	printCachedRepo(0, repo)
+	printCachedRepo(0, cache, repo)
 	return nil
 }
 
-func printCachedRepo(indent int, repo *pallets.FSRepo) {
+func printCachedRepo(indent int, cache *forklift.FSCache, repo *pallets.FSRepo) {
 	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
 	indent++
 
 	fcli.IndentedPrintf(indent, "Version: %s\n", repo.Version)
 	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
-	fcli.IndentedPrintf(indent, "Path in cache: %s\n", repo.FS.Path())
+	fcli.IndentedPrintf(indent, "Path in cache: %s\n", cache.TrimCachePathPrefix(repo.FS.Path()))
 	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
 	// TODO: show the README file
 }

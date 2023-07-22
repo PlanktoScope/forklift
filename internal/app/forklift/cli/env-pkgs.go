@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -44,7 +43,7 @@ func PrintPkgInfo(
 	var pkg *forklift.VersionedPkg
 	var err error
 	if repo, ok := forklift.FindExternalRepoOfPkg(replacementRepos, pkgPath); ok {
-		externalPkg, perr := forklift.FindExternalPkg(repo, pkgPath)
+		externalPkg, perr := repo.LoadFSPkg(repo.GetPkgSubdir(pkgPath))
 		if perr != nil {
 			return errors.Wrapf(
 				perr, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
@@ -58,22 +57,20 @@ func PrintPkgInfo(
 		)
 	}
 
-	printVersionedPkg(indent, pkg)
+	printVersionedPkg(indent, cache, pkg)
 	return nil
 }
 
-func printVersionedPkg(indent int, pkg *forklift.VersionedPkg) {
+func printVersionedPkg(indent int, cache *forklift.FSCache, pkg *forklift.VersionedPkg) {
 	IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
 	indent++
 
-	printVersionedPkgRepo(indent, pkg)
-	if filepath.IsAbs(pkg.FS.Path()) {
-		IndentedPrint(indent, "External path (replacing cached package): ")
+	printVersionedPkgRepo(indent, cache, pkg)
+	if cache.CoversPath(pkg.FS.Path()) {
+		IndentedPrintf(indent, "Path in cache: %s\n", cache.TrimCachePathPrefix(pkg.FS.Path()))
 	} else {
-		IndentedPrint(indent, "Path in cache: ")
+		IndentedPrintf(indent, "External path (replacing cached package): %s\n", pkg.FS.Path())
 	}
-	fmt.Println(pkg.FS.Path())
-	fmt.Println()
 
 	PrintPkgSpec(indent, pkg.Config.Package)
 	fmt.Println()
@@ -82,16 +79,16 @@ func printVersionedPkg(indent int, pkg *forklift.VersionedPkg) {
 	PrintFeatureSpecs(indent, pkg.Config.Features)
 }
 
-func printVersionedPkgRepo(indent int, pkg *forklift.VersionedPkg) {
+func printVersionedPkgRepo(indent int, cache *forklift.FSCache, pkg *forklift.VersionedPkg) {
 	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
 	indent++
 
-	if filepath.IsAbs(pkg.FS.Path()) {
+	if cache.CoversPath(pkg.FS.Path()) {
+		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
+	} else {
 		IndentedPrintf(
 			indent, "External path (replacing cached repository): %s\n", pkg.Repo.FS.Path(),
 		)
-	} else {
-		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
 	}
 
 	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)

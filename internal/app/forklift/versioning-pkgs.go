@@ -9,6 +9,7 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
+// TODO: rename this method
 func ListVersionedPkgs(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, repos []VersionedRepo,
 ) (orderedPkgs []*pallets.FSPkg, err error) {
@@ -39,11 +40,11 @@ func ListVersionedPkgs(
 	return orderedPkgs, nil
 }
 
-// TODO: move this into a method on pallets.FSRepo
+// TODO: rename this method
 func listVersionedPkgsOfExternalRepo(
 	externalRepo *pallets.FSRepo,
 ) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
-	pkgs, err := ListExternalPkgs(externalRepo, "")
+	pkgs, err := externalRepo.LoadFSPkgs("**")
 	if err != nil {
 		return nil, nil, errors.Wrapf(
 			err, "couldn't list packages from external repo at %s", externalRepo.FS.Path(),
@@ -67,6 +68,7 @@ func listVersionedPkgsOfExternalRepo(
 	return pkgMap, versionedPkgPaths, nil
 }
 
+// TODO: rename this method
 func (r VersionedRepo) listVersionedPkgs(
 	cache *FSCache,
 ) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
@@ -75,7 +77,7 @@ func (r VersionedRepo) listVersionedPkgs(
 		return nil, nil, errors.Wrapf(err, "couldn't determine version of repo %s", r.Path())
 	}
 	repoCachePath := filepath.Join(fmt.Sprintf("%s@%s", r.VCSRepoPath, repoVersion), r.RepoSubdir)
-	pkgs, err := cache.ListPkgs(repoCachePath)
+	pkgs, err := cache.LoadFSPkgs(repoCachePath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(
 			err, "couldn't list packages from repo cached at %s", repoCachePath,

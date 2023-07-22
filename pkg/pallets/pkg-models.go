@@ -1,5 +1,15 @@
 package pallets
 
+// A FSPkg is a Pallet package stored at the root of a [fs.FS] filesystem.
+type FSPkg struct {
+	// Pkg is the Pallet package at the root of the filesystem.
+	Pkg
+	// FS is a filesystem which contains the package's contents.
+	FS PathedFS
+	// Repo is a pointer to the [FSRepo] instance which provides the package.
+	Repo *FSRepo
+}
+
 // A Pkg is a Pallet package, a configuration of a software application which can be deployed on a
 // Docker host.
 type Pkg struct {
@@ -9,16 +19,8 @@ type Pkg struct {
 	Subdir string
 	// Config is the Pallet package specification for the package.
 	Config PkgConfig
-}
-
-// A FSPkg is a Pallet package stored at the root of a [fs.FS] filesystem.
-type FSPkg struct {
-	// Pkg is the Pallet package at the root of the filesystem.
-	Pkg
-	// FS is a filesystem which contains the package's contents.
-	FS PathedFS
-	// Repo is a pointer to the [FSRepo] instance which provides the package.
-	Repo *FSRepo
+	// Repo is a pointer to the [Repo] which provides the package.
+	Repo *Repo
 }
 
 // PkgSpecFile is the name of the file defining each Pallet package.

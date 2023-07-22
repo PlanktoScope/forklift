@@ -92,6 +92,7 @@ func (e *FSEnv) LoadVersionedRepo(repoPath string) (VersionedRepo, error) {
 	return repo, nil
 }
 
+// TODO: rename this method
 func (e *FSEnv) ListVersionedRepos() ([]VersionedRepo, error) {
 	reposFS, err := e.GetVersionedReposFS()
 	if err != nil {
@@ -142,7 +143,7 @@ func (e *FSEnv) LoadVersionedPkg(cache *FSCache, pkgPath string) (p *VersionedPk
 			err, "couldn't determine version of repo %s in local environment", p.VersionedRepo.Path(),
 		)
 	}
-	if p.FSPkg, err = cache.FindPkg(pkgPath, version); err != nil {
+	if p.FSPkg, err = cache.LoadFSPkg(pkgPath, version); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't find package %s@%s in cache", pkgPath, version,
 		)
@@ -151,6 +152,7 @@ func (e *FSEnv) LoadVersionedPkg(cache *FSCache, pkgPath string) (p *VersionedPk
 	return p, nil
 }
 
+// TODO: rename this method
 func (e *FSEnv) findVersionedRepoOfPkg(pkgPath string) (VersionedRepo, error) {
 	repoCandidatePath := filepath.Dir(pkgPath)
 	for repoCandidatePath != "." {
@@ -194,7 +196,7 @@ func (e *FSEnv) LoadDepl(
 	pkgPath := depl.Config.Package
 	repo, ok := FindExternalRepoOfPkg(replacementRepos, pkgPath)
 	if ok {
-		pkg, perr := FindExternalPkg(repo, pkgPath)
+		pkg, perr := repo.LoadFSPkg(repo.GetPkgSubdir(pkgPath))
 		if perr != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
@@ -213,6 +215,7 @@ func (e *FSEnv) LoadDepl(
 	return depl, nil
 }
 
+// TODO: rename this method
 func (e *FSEnv) ListDepls(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) ([]*Depl, error) {

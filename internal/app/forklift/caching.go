@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/pkg/pallets"
@@ -14,17 +13,31 @@ import (
 
 // FSCache
 
+// Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSCache) Exists() bool {
 	return Exists(c.FS.Path())
 }
 
+// Remove deletes the cache from the OS's filesystem, if it exists.
 func (c *FSCache) Remove() error {
 	return os.RemoveAll(c.FS.Path())
 }
 
+// CoversPath checks whether the provided path is within the scope of the cache.
+func (c *FSCache) CoversPath(path string) bool {
+	return strings.HasPrefix(path, fmt.Sprintf("%s/", c.FS.Path()))
+}
+
+// TrimCachePathPrefix removes the path of the cache from the start of the provided path.
+func (c *FSCache) TrimCachePathPrefix(path string) string {
+	return strings.TrimPrefix(path, fmt.Sprintf("%s/", c.FS.Path()))
+}
+
 // FSCache: Repositories
 
-func (c *FSCache) FindRepo(repoPath string, version string) (*pallets.FSRepo, error) {
+// LoadFSRepo loads the FSRepo with the specified path and version.
+// The loaded FSRepo instance is fully initialized.
+func (c *FSCache) LoadFSRepo(repoPath string, version string) (*pallets.FSRepo, error) {
 	vcsRepoPath, _, err := pallets.SplitRepoPathSubdir(repoPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
@@ -32,62 +45,62 @@ func (c *FSCache) FindRepo(repoPath string, version string) (*pallets.FSRepo, er
 	// The repo subdirectory path in the repo path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-repository.yml file, so we must check every
 	// pallet-repository.yml file to find the actual repo path
-	searchPattern := fmt.Sprintf("%s@%s/**/%s", vcsRepoPath, version, pallets.RepoSpecFile)
-	candidateRepoConfigFiles, err := doublestar.Glob(c.FS, searchPattern)
+	searchPattern := fmt.Sprintf("%s@%s/**", vcsRepoPath, version)
+	repos, err := c.LoadFSRepos(searchPattern)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't search for cached Pallet repo configs matching pattern %s", searchPattern,
-		)
+		return nil, err
 	}
-	if len(candidateRepoConfigFiles) == 0 {
-		return nil, errors.Errorf(
-			"no Pallet repo configs were found in %s@%s", vcsRepoPath, version,
-		)
-	}
-	candidateRepos := make([]*pallets.FSRepo, 0)
-	for _, repoConfigFilePath := range candidateRepoConfigFiles {
-		if filepath.Base(repoConfigFilePath) != pallets.RepoSpecFile {
-			continue
-		}
 
-		repo, err := c.loadRepo(filepath.Dir(repoConfigFilePath))
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't check cached repo defined at %s", repoConfigFilePath)
-		}
-		if repo.Config.Repository.Path != repoPath {
+	candidateRepos := make([]*pallets.FSRepo, 0)
+	for _, repo := range repos {
+		if repo.Path() != repoPath {
 			continue
 		}
 
 		if len(candidateRepos) > 0 {
 			return nil, errors.Errorf(
-				"repository %s repeatedly defined in the same version of the same Github repo: %s, %s",
-				repoPath, candidateRepos[0].FS.Path(), repo.FS.Path(),
+				"version %s of repository %s was found in multiple different locations: %s, %s",
+				version, repoPath, candidateRepos[0].FS.Path(), repo.FS.Path(),
 			)
 		}
 		candidateRepos = append(candidateRepos, repo)
 	}
 	if len(candidateRepos) == 0 {
-		return nil, errors.Errorf(
-			"no cached repos were found matching %s@%s", repoPath, version,
-		)
+		return nil, errors.Errorf("no cached repos were found matching %s@%s", repoPath, version)
 	}
 	return candidateRepos[0], nil
 }
 
-func (c *FSCache) loadRepo(repoConfigPath string) (*pallets.FSRepo, error) {
-	repo, err := pallets.LoadFSRepo(pallets.AttachPath(c.FS, ""), repoConfigPath)
+// LoadFSRepos loads all FSRepos from the cache matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching repo directories to
+// search for.
+// The loaded FSRepo instances are fully initialized.
+func (c *FSCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
+	repos, err := pallets.LoadFSRepos(c.FS, searchPattern, c.processLoadedFSRepo)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't load repo config from %s", repoConfigPath)
+		return nil, errors.Wrap(err, "couldn't load repos from cache")
 	}
-	if repo.VCSRepoPath, repo.Version, err = splitRepoPathVersion(repo.FS.Path()); err != nil {
-		return nil, errors.Wrapf(
+
+	return repos, nil
+}
+
+// processLoadedFSRepo sets the Version field of the repo based on its path in the cache.
+func (c *FSCache) processLoadedFSRepo(repo *pallets.FSRepo) (err error) {
+	var vcsRepoPath string
+	if vcsRepoPath, repo.Version, err = splitRepoPathVersion(
+		c.TrimCachePathPrefix(repo.FS.Path()),
+	); err != nil {
+		return errors.Wrapf(
 			err, "couldn't parse path of cached repo configured at %s", repo.FS.Path(),
 		)
 	}
-	repo.Subdir = strings.TrimPrefix(
-		repo.Config.Repository.Path, fmt.Sprintf("%s/", repo.VCSRepoPath),
-	)
-	return repo, nil
+	if vcsRepoPath != repo.VCSRepoPath {
+		return errors.Errorf(
+			"cached repo %s is in cache at %s@%s instead of %s@%s",
+			repo.Path(), vcsRepoPath, repo.Version, repo.VCSRepoPath, repo.Version,
+		)
+	}
+	return nil
 }
 
 // splitRepoPathVersion splits paths of form github.com/user-name/git-repo-name/etc@version into
@@ -112,46 +125,11 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 	return vcsRepoPath, version, nil
 }
 
-func (c *FSCache) ListRepos() ([]*pallets.FSRepo, error) {
-	repoConfigFiles, err := doublestar.Glob(c.FS, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't search for cached repo configs")
-	}
-
-	versionedRepoPaths := make([]string, 0, len(repoConfigFiles))
-	repoMap := make(map[string]*pallets.FSRepo)
-	for _, repoConfigFilePath := range repoConfigFiles {
-		if filepath.Base(repoConfigFilePath) != pallets.RepoSpecFile {
-			continue
-		}
-		repo, err := c.loadRepo(filepath.Dir(repoConfigFilePath))
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load cached repo from %s", repoConfigFilePath)
-		}
-
-		versionedRepoPath := fmt.Sprintf("%s@%s", repo.Config.Repository.Path, repo.Version)
-		if prevRepo, ok := repoMap[versionedRepoPath]; ok {
-			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.FS.Path() != repo.FS.Path() {
-				return nil, errors.Errorf(
-					"repository repeatedly defined in the same version of the same Github repo: %s, %s",
-					prevRepo.FS.Path(), repo.FS.Path(),
-				)
-			}
-		}
-		versionedRepoPaths = append(versionedRepoPaths, versionedRepoPath)
-		repoMap[versionedRepoPath] = repo
-	}
-
-	orderedRepos := make([]*pallets.FSRepo, 0, len(versionedRepoPaths))
-	for _, path := range versionedRepoPaths {
-		orderedRepos = append(orderedRepos, repoMap[path])
-	}
-	return orderedRepos, nil
-}
-
 // FSCache: Packages
 
-func (c *FSCache) FindPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
+// LoadFSPkg loads the FSPkg with the specified path and version.
+// The loaded FSPkg instance is fully initialized.
+func (c *FSCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
 	vcsRepoPath, _, err := pallets.SplitRepoPathSubdir(pkgPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse path of Pallet package %s", pkgPath)
@@ -160,115 +138,77 @@ func (c *FSCache) FindPkg(pkgPath string, version string) (*pallets.FSPkg, error
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-package.yml file, so we must check every
 	// directory whose name matches the last part of the package path to look for the package
-	searchPattern := fmt.Sprintf(
-		"%s@%s/**/%s/%s", vcsRepoPath, version, pkgInnermostDir, pallets.PkgSpecFile,
-	)
-	candidatePkgConfigFiles, err := doublestar.Glob(c.FS, searchPattern)
+	searchPattern := fmt.Sprintf("%s@%s/**/%s", vcsRepoPath, version, pkgInnermostDir)
+	pkgs, err := c.LoadFSPkgs(searchPattern)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't search for cached Pallet package configs matching pattern %s", searchPattern,
-		)
+		return nil, err
 	}
-	if len(candidatePkgConfigFiles) == 0 {
-		return nil, errors.Errorf(
-			"no matching Pallet package configs were found in %s@%s", vcsRepoPath, version,
-		)
-	}
-	candidatePkgs := make([]*pallets.FSPkg, 0)
-	for _, pkgConfigFilePath := range candidatePkgConfigFiles {
-		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
-			continue
-		}
 
-		pkg, err := c.loadPkg(filepath.Dir(pkgConfigFilePath))
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't check cached pkg defined at %s", pkgConfigFilePath,
-			)
-		}
+	candidatePkgs := make([]*pallets.FSPkg, 0)
+	for _, pkg := range pkgs {
 		if pkg.Path() != pkgPath {
 			continue
 		}
 
 		if len(candidatePkgs) > 0 {
 			return nil, errors.Errorf(
-				"package %s repeatedly defined in the same version of the same Github repo: %s, %s",
-				pkgPath, candidatePkgs[0].FS.Path(), pkg.FS.Path(),
+				"version %s of package %s was found in multiple different locations: %s, %s",
+				version, pkgPath, candidatePkgs[0].FS.Path(), pkg.FS.Path(),
 			)
 		}
 		candidatePkgs = append(candidatePkgs, pkg)
 	}
 	if len(candidatePkgs) == 0 {
-		return nil, errors.Errorf(
-			"no cached packages were found matching %s@%s", pkgPath, version,
-		)
+		return nil, errors.Errorf("no cached packages were found matching %s@%s", pkgPath, version)
 	}
 	return candidatePkgs[0], nil
 }
 
-func (c *FSCache) loadPkg(subdirPath string) (*pallets.FSPkg, error) {
-	repo, err := c.findRepoContaining(subdirPath)
+// LoadFSPkgs loads all FSPkgs from the cache matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
+// to search for.
+// The loaded FSPkg instances are fully initialized.
+func (c *FSCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
+	pkgs, err := pallets.LoadFSPkgs(c.FS, searchPattern)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't identify cached repository for package from %s", subdirPath,
-		)
-	}
-	return repo.LoadPkg(strings.TrimPrefix(subdirPath, fmt.Sprintf("%s/", repo.FS.Path())))
-}
-
-func (c *FSCache) findRepoContaining(subdirPath string) (*pallets.FSRepo, error) {
-	repoCandidatePath := subdirPath
-	for repoCandidatePath != "." {
-		repo, err := c.loadRepo(repoCandidatePath)
-		if err == nil {
-			return repo, nil
-		}
-		repoCandidatePath = filepath.Dir(repoCandidatePath)
-	}
-	return nil, errors.Errorf(
-		"no repository config file found in any parent directory of %s", subdirPath,
-	)
-}
-
-func (c *FSCache) ListPkgs(cachedPrefix string) ([]*pallets.FSPkg, error) {
-	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
-	if cachedPrefix != "" {
-		searchPattern = filepath.Join(cachedPrefix, searchPattern)
-	}
-	pkgConfigFiles, err := doublestar.Glob(c.FS, searchPattern)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't search for cached package configs")
+		return nil, err
 	}
 
-	repoVersionedPkgPaths := make([]string, 0, len(pkgConfigFiles))
 	pkgMap := make(map[string]*pallets.FSPkg)
-	for _, pkgConfigFilePath := range pkgConfigFiles {
-		if filepath.Base(pkgConfigFilePath) != pallets.PkgSpecFile {
-			continue
-		}
-		pkg, err := c.loadPkg(filepath.Dir(pkgConfigFilePath))
+	for _, pkg := range pkgs {
+		repo, err := c.loadFSRepoContaining(c.TrimCachePathPrefix(pkg.FS.Path()))
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load cached package from %s", pkgConfigFilePath)
+			return nil, errors.Wrapf(
+				err, "couldn't find the cached repo providing the package at %s", pkg.FS.Path(),
+			)
 		}
-
+		if err = pkg.AttachFSRepo(repo); err != nil {
+			return nil, errors.Wrap(err, "couldn't attach repo to package")
+		}
 		versionedPkgPath := fmt.Sprintf(
 			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,
 		)
 		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
 			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
 				return nil, errors.Errorf(
-					"package repeatedly defined in the same version of the same Github repo: %s, %s",
-					prevPkg.FS.Path(), pkg.FS.Path(),
+					"the same version of package %s was found in multiple different locations: %s, %s",
+					pkg.Path(), prevPkg.FS.Path(), pkg.FS.Path(),
 				)
 			}
 		}
-		repoVersionedPkgPaths = append(repoVersionedPkgPaths, versionedPkgPath)
 		pkgMap[versionedPkgPath] = pkg
 	}
 
-	orderedPkgs := make([]*pallets.FSPkg, 0, len(repoVersionedPkgPaths))
-	for _, path := range repoVersionedPkgPaths {
-		orderedPkgs = append(orderedPkgs, pkgMap[path])
+	return pkgs, nil
+}
+
+// loadFSRepoContaining finds and loads the FSRepo which contains the provided subdirectory path.
+func (c *FSCache) loadFSRepoContaining(subdirPath string) (repo *pallets.FSRepo, err error) {
+	if repo, err = pallets.LoadFSRepoContaining(c.FS, subdirPath); err != nil {
+		return nil, errors.Wrapf(err, "couldn't find any repo containing %s", subdirPath)
 	}
-	return orderedPkgs, nil
+	if err = c.processLoadedFSRepo(repo); err != nil {
+		return nil, err
+	}
+	return repo, nil
 }

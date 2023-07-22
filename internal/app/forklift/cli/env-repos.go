@@ -55,7 +55,7 @@ func PrintRepoInfo(
 	if ok {
 		cachedRepo = replacementRepo
 	} else {
-		if cachedRepo, err = cache.FindRepo(repoPath, version); err != nil {
+		if cachedRepo, err = cache.LoadFSRepo(repoPath, version); err != nil {
 			return errors.Wrapf(
 				err,
 				"couldn't find Pallet repository %s@%s in cache, please update the local cache of repos",
@@ -63,12 +63,11 @@ func PrintRepoInfo(
 			)
 		}
 	}
-	if filepath.IsAbs(cachedRepo.FS.Path()) {
-		IndentedPrint(indent+1, "External path (replacing cached package): ")
+	if cache.CoversPath(cachedRepo.FS.Path()) {
+		IndentedPrintf(indent+1, "Path in cache: %s\n", cache.TrimCachePathPrefix(cachedRepo.FS.Path()))
 	} else {
-		IndentedPrint(indent+1, "Path in cache: ")
+		IndentedPrintf(indent+1, "External path (replacing cached repo): %s\n", cachedRepo.FS.Path())
 	}
-	fmt.Println(cachedRepo.FS.Path())
 	IndentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
 	// TODO: show the README file
 	return nil

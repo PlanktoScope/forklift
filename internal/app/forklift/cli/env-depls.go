@@ -42,7 +42,7 @@ func PrintDeplInfo(
 			deplName, env.FS.Path(),
 		)
 	}
-	printDepl(indent, depl)
+	printDepl(indent, cache, depl)
 	indent++
 
 	if depl.Pkg.Config.Deployment.DefinesStack() {
@@ -60,11 +60,11 @@ func PrintDeplInfo(
 	return nil
 }
 
-func printDepl(indent int, depl *forklift.Depl) {
+func printDepl(indent int, cache *forklift.FSCache, depl *forklift.Depl) {
 	IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
 	indent++
 
-	printDeplPkg(indent, depl)
+	printDeplPkg(indent, cache, depl)
 
 	enabledFeatures, err := depl.EnabledFeatures()
 	if err != nil {
@@ -86,12 +86,12 @@ func printDepl(indent int, depl *forklift.Depl) {
 	printFeatures(indent+1, disabledFeatures)
 }
 
-func printDeplPkg(indent int, depl *forklift.Depl) {
+func printDeplPkg(indent int, cache *forklift.FSCache, depl *forklift.Depl) {
 	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
 	indent++
 
 	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Config.Package.Description)
-	printVersionedPkgRepo(indent, depl.Pkg)
+	printVersionedPkgRepo(indent, cache, depl.Pkg)
 }
 
 func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {

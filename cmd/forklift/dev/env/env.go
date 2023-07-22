@@ -60,8 +60,8 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, e
 		if !forklift.Exists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repository replacement path %s", replacementPath)
 		}
-		externalRepos, err := forklift.ListExternalRepos(
-			pallets.AttachPath(os.DirFS(replacementPath), replacementPath),
+		externalRepos, err := pallets.LoadFSRepos(
+			pallets.AttachPath(os.DirFS(replacementPath), replacementPath), "**", nil,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)

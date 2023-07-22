@@ -4,25 +4,19 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
-// Pkg
-
-// Path returns the Pallet package path of the Pkg instance.
-func (p Pkg) Path() string {
-	return filepath.Join(p.RepoPath, p.Subdir)
-}
-
 // FSPkg
 
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
-// The base path should correspond to the location of the base filesystem. In the loaded FSPkg's
-// embedded [Pkg], the Pallet repository path is not initialized, nor is the Pallet package
-// subdirectory initialized, nor is the pointer to the Pallet repository initialized.
+// In the loaded FSPkg's embedded [Pkg], the Pallet repository path is not initialized, nor is the
+// Pallet package subdirectory initialized, nor is the pointer to the Pallet repository initialized.
 func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 	p = &FSPkg{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
@@ -34,6 +28,49 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 		return nil, errors.Wrapf(err, "couldn't load package config")
 	}
 	return p, nil
+}
+
+// LoadFSPkgs loads all FSPkgs from the provided base filesystem matching the specified search
+// pattern, modifying each FSPkg with the the optional processor function if a non-nil function is
+// provided. The search pattern should be a [doublestar] pattern, such as `**`, matching package
+// directories to search for.
+// The Pallet repository path, and the Pallet package subdirectory, and the pointer to the Pallet
+// repository are all left uninitialized.
+func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
+	searchPattern = filepath.Join(searchPattern, PkgSpecFile)
+	pkgConfigFiles, err := doublestar.Glob(fsys, searchPattern)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't search for package configs matching %s/%s", fsys.Path(), searchPattern,
+		)
+	}
+
+	pkgs := make([]*FSPkg, 0, len(pkgConfigFiles))
+	for _, pkgConfigFilePath := range pkgConfigFiles {
+		if filepath.Base(pkgConfigFilePath) != PkgSpecFile {
+			continue
+		}
+
+		pkg, err := LoadFSPkg(fsys, filepath.Dir(pkgConfigFilePath))
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgConfigFilePath)
+		}
+		pkgs = append(pkgs, pkg)
+	}
+	return pkgs, nil
+}
+
+func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
+	p.RepoPath = repo.Config.Repository.Path
+	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
+		return errors.Errorf(
+			"package at %s is not within the scope of repo %s at %s",
+			p.FS.Path(), repo.Path(), repo.FS.Path(),
+		)
+	}
+	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
+	p.Repo = repo
+	return nil
 }
 
 func CompareFSPkgs(p, q *FSPkg) int {
@@ -52,6 +89,13 @@ func CompareFSPkgs(p, q *FSPkg) int {
 		return repoVersionComparison
 	}
 	return CompareEQ
+}
+
+// Pkg
+
+// Path returns the Pallet package path of the Pkg instance.
+func (p Pkg) Path() string {
+	return filepath.Join(p.RepoPath, p.Subdir)
 }
 
 // PkgConfig

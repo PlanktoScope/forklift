@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
@@ -20,7 +21,7 @@ func SplitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err e
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
 		return "", "", errors.Errorf(
-			"pallet repository %s does not begin with github.com, but support for non-Github "+
+			"pallet repository %s does not begin with github.com, but support for non-GitHub "+
 				"repositories is not yet implemented",
 			repoPath,
 		)
@@ -28,10 +29,140 @@ func SplitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err e
 	const splitIndex = 3
 	if len(pathParts) < splitIndex {
 		return "", "", errors.Errorf(
-			"pallet repository %s does not appear to be within a Github Git repository", repoPath,
+			"pallet repository %s does not appear to be within a GitHub Git repository", repoPath,
 		)
 	}
 	return strings.Join(pathParts[0:splitIndex], sep), strings.Join(pathParts[splitIndex:], sep), nil
+}
+
+// FSRepo
+
+// LoadFSRepo loads a FSRepo from the specified directory path in the provided base filesystem.
+// In the loaded FSRepo's embedded [Repo], the VCS repository path and Pallet repository
+// subdirectory are initialized from the Pallet repository path declared in the repository's
+// configuration file, while the Pallet repository version is *not* initialized.
+func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
+	r = &FSRepo{}
+	if r.FS, err = fsys.Sub(subdirPath); err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
+		)
+	}
+	if r.Repo.Config, err = LoadRepoConfig(r.FS, RepoSpecFile); err != nil {
+		return nil, errors.Wrapf(err, "couldn't load repo config")
+	}
+	if r.VCSRepoPath, r.Subdir, err = SplitRepoPathSubdir(r.Config.Repository.Path); err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't parse path of Pallet repo %s", r.Config.Repository.Path,
+		)
+	}
+	return r, nil
+}
+
+// LoadFSRepoContaining loads the FSRepo containing the specified sub-directory path in the provided
+// base filesystem.
+// In the loaded FSRepo's embedded [Repo], the VCS repository path and Pallet repository
+// subdirectory are initialized from the Pallet repository path declared in the repository's
+// configuration file, while the Pallet repository version is *not* initialized.
+func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
+	repoCandidatePath := subdirPath
+	for {
+		if repo, err := LoadFSRepo(fsys, repoCandidatePath); err == nil {
+			return repo, nil
+		}
+		repoCandidatePath = filepath.Dir(repoCandidatePath)
+		if repoCandidatePath == "/" || repoCandidatePath == "." {
+			// we can't go up anymore!
+			return nil, errors.Errorf(
+				"no repository config file found in any parent directory of %s", subdirPath,
+			)
+		}
+	}
+}
+
+// LoadFSRepos loads all FSRepos from the provided base filesystem matching the specified search
+// pattern, modifying each FSRepo with the the optional processor function if a non-nil function is
+// provided. The search pattern should be a [doublestar] pattern, such as `**`, matching repo
+// directories to search for.
+// With a nil processor function, in the embedded [Repo] of each loaded FSRepo, the VCS repository
+// path and Pallet repository subdirectory are initialized from the Pallet repository path declared
+// in the repository's configuration file, while the Pallet repository version is not initialized.
+// After the processor is applied to each repository, all repositories are checked to enforce that
+// multiple copies of the same repository with the same version are not allowed to be in the
+// provided filesystem.
+func LoadFSRepos(
+	fsys PathedFS, searchPattern string, processor func(repo *FSRepo) error,
+) ([]*FSRepo, error) {
+	searchPattern = filepath.Join(searchPattern, RepoSpecFile)
+	repoConfigFiles, err := doublestar.Glob(fsys, searchPattern)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't search for repo config files matching %s/%s", fsys.Path(), searchPattern,
+		)
+	}
+
+	orderedRepos := make([]*FSRepo, 0, len(repoConfigFiles))
+	repos := make(map[string]*FSRepo)
+	for _, repoConfigFilePath := range repoConfigFiles {
+		if filepath.Base(repoConfigFilePath) != RepoSpecFile {
+			continue
+		}
+		repo, err := LoadFSRepo(fsys, filepath.Dir(repoConfigFilePath))
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't load repo from %s/%s", fsys.Path(), repoConfigFilePath,
+			)
+		}
+		if processor != nil {
+			if err = processor(repo); err != nil {
+				return nil, errors.Wrap(err, "couldn't run processors on loaded repo")
+			}
+		}
+
+		repoPath := repo.Config.Repository.Path
+		if prevRepo, ok := repos[repoPath]; ok {
+			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.Version == repo.Version &&
+				prevRepo.FS.Path() == repo.FS.Path() {
+				return nil, errors.Errorf(
+					"the same version of repository %s was found in multiple different locations: %s, %s",
+					repoPath, prevRepo.FS.Path(), repo.FS.Path(),
+				)
+			}
+		}
+		orderedRepos = append(orderedRepos, repo)
+		repos[repoPath] = repo
+	}
+
+	return orderedRepos, nil
+}
+
+// LoadFSPkg loads a package at the specified filesystem path from the FSRepo instance
+// The loaded package is fully initialized.
+func (r *FSRepo) LoadFSPkg(pkgSubdir string) (pkg *FSPkg, err error) {
+	if pkg, err = LoadFSPkg(r.FS, pkgSubdir); err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load package %s from repo %s", pkgSubdir, r.Path(),
+		)
+	}
+	if err = pkg.AttachFSRepo(r); err != nil {
+		return nil, errors.Wrap(err, "couldn't attach repo to package")
+	}
+	return pkg, nil
+}
+
+// LoadFSPkgs loads all packages in the FSRepo instance.
+// The loaded packages are fully initialized.
+func (r *FSRepo) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
+	pkgs, err := LoadFSPkgs(r.FS, searchPattern)
+	if err != nil {
+		return nil, err
+	}
+	for _, pkg := range pkgs {
+		if err = pkg.AttachFSRepo(r); err != nil {
+			return nil, errors.Wrap(err, "couldn't attach repo to package")
+		}
+	}
+	return pkgs, nil
 }
 
 // Repo
@@ -41,11 +172,24 @@ func (r Repo) Path() string {
 	return filepath.Join(r.VCSRepoPath, r.Subdir)
 }
 
+// GetPkgSubdir returns the Pallet package subdirectory within the repo for the provided Pallet
+// package path.
+func (r Repo) GetPkgSubdir(pkgPath string) string {
+	return strings.TrimPrefix(pkgPath, fmt.Sprintf("%s/", r.Path()))
+}
+
 // FromSameVCSRepo determines whether the candidate Pallet repository is provided by the same VCS
 // repo as the Repo instance.
 func (r Repo) FromSameVCSRepo(candidate Repo) bool {
 	return r.VCSRepoPath == candidate.VCSRepoPath && r.Version == candidate.Version
 }
+
+// The result of comparison functions is one of these values.
+const (
+	CompareLT = -1
+	CompareEQ = 0
+	CompareGT = 1
+)
 
 // CompareRepoPaths returns an integer comparing two [Repo] instances according to their paths. The
 // result will be 0 if the r and s have the same paths; -1 if r has a path which alphabetically
@@ -81,40 +225,6 @@ func CompareRepos(r, s Repo) int {
 		return result
 	}
 	return CompareEQ
-}
-
-// FSRepo
-
-// LoadFSRepo loads a FSRepo from the specified directory path in the provided base filesystem.
-// The base path should correspond to the location of the base filesystem. In the loaded FSRepo's
-// embedded [Repo], the VCS repository path is not initialized, nor is the Pallet repository
-// subdirectory initialized, nor is the Pallet repository version initialized.
-func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
-	r = &FSRepo{}
-	if r.FS, err = fsys.Sub(subdirPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
-		)
-	}
-	if r.Repo.Config, err = LoadRepoConfig(r.FS, RepoSpecFile); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load repo config")
-	}
-	return r, nil
-}
-
-// LoadPkg loads a package from the FSRepo instance, and initializes the package's RepoPath, Subdir,
-// and Repo fields.
-func (r *FSRepo) LoadPkg(pkgSubdir string) (p *FSPkg, err error) {
-	if p, err = LoadFSPkg(r.FS, pkgSubdir); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load package %s from repo %s", pkgSubdir, r.Path(),
-		)
-	}
-	p.RepoPath = r.Config.Repository.Path
-	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", r.FS.Path()))
-	p.Repo = r
-
-	return p, nil
 }
 
 // RepoConfig
