@@ -11,6 +11,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Paths
+
+// SplitRepoPathSubdir splits paths of form github.com/user-name/git-repo-name/pallets-repo-subdir
+// into github.com/user-name/git-repo-name and pallets-repo-subdir.
+func SplitRepoPathSubdir(repoPath string) (vcsRepoPath, repoSubdir string, err error) {
+	const sep = "/"
+	pathParts := strings.Split(repoPath, sep)
+	if pathParts[0] != "github.com" {
+		return "", "", errors.Errorf(
+			"pallet repository %s does not begin with github.com, but support for non-Github "+
+				"repositories is not yet implemented",
+			repoPath,
+		)
+	}
+	const splitIndex = 3
+	if len(pathParts) < splitIndex {
+		return "", "", errors.Errorf(
+			"pallet repository %s does not appear to be within a Github Git repository", repoPath,
+		)
+	}
+	return strings.Join(pathParts[0:splitIndex], sep), strings.Join(pathParts[splitIndex:], sep), nil
+}
+
 // Repo
 
 // Path returns the Pallet repository path of the Repo instance.
@@ -66,17 +89,17 @@ func CompareRepos(r, s Repo) int {
 // The base path should correspond to the location of the base filesystem. In the loaded FSRepo's
 // embedded [Repo], the VCS repository path is not initialized, nor is the Pallet repository
 // subdirectory initialized, nor is the Pallet repository version initialized.
-func LoadFSRepo(fsys PathedFS, subdirPath string) (p *FSRepo, err error) {
-	p = &FSRepo{}
-	if p.FS, err = fsys.Sub(subdirPath); err != nil {
+func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
+	r = &FSRepo{}
+	if r.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if p.Repo.Config, err = LoadRepoConfig(p.FS, RepoSpecFile); err != nil {
+	if r.Repo.Config, err = LoadRepoConfig(r.FS, RepoSpecFile); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load repo config")
 	}
-	return p, nil
+	return r, nil
 }
 
 // LoadPkg loads a package from the FSRepo instance, and initializes the package's RepoPath, Subdir,
@@ -97,7 +120,6 @@ func (r *FSRepo) LoadPkg(pkgSubdir string) (p *FSPkg, err error) {
 // RepoConfig
 
 // LoadRepoConfig loads a RepoConfig from the specified file path in the provided base filesystem.
-// The base path should correspond to the location of the base filesystem.
 func LoadRepoConfig(fsys PathedFS, filePath string) (RepoConfig, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {

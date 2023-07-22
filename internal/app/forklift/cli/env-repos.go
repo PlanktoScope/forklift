@@ -16,7 +16,7 @@ import (
 // Print
 
 func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
-	repos, err := forklift.ListVersionedRepos(env.FS)
+	repos, err := env.ListVersionedRepos()
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
@@ -34,13 +34,7 @@ func PrintRepoInfo(
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	repoPath string,
 ) error {
-	reposFS, err := forklift.VersionedReposFS(env.FS)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't open directory for Pallet repositories in environment %s", env.FS.Path(),
-		)
-	}
-	versionedRepo, err := forklift.LoadVersionedRepo(reposFS, repoPath)
+	versionedRepo, err := env.LoadVersionedRepo(repoPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't load Pallet repo versioning config %s from environment %s",
@@ -91,7 +85,7 @@ func printVersionedRepo(indent int, repo forklift.VersionedRepo) {
 // Download
 
 func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (changed bool, err error) {
-	repos, err := forklift.ListVersionedRepos(env.FS)
+	repos, err := env.ListVersionedRepos()
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}

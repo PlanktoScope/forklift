@@ -20,13 +20,7 @@ import (
 
 func PrintEnvInfo(indent int, env *forklift.FSEnv) error {
 	IndentedPrintf(indent, "Environment: %s\n", env.FS.Path())
-	// TODO: LoadEnvConfig should be implemented like LoadRepoConfig, and there should be a LoadFSEnv
-	config, err := forklift.LoadEnvConfig(env.FS.Path())
-	if err != nil {
-		return errors.Wrap(err, "couldn't load the environment config")
-	}
-
-	IndentedPrintf(indent, "Description: %s\n", config.Environment.Description)
+	IndentedPrintf(indent, "Description: %s\n", env.Config.Environment.Description)
 
 	ref, err := git.Head(env.FS.Path())
 	if err != nil {
@@ -152,7 +146,7 @@ func CheckEnv(
 	indent int,
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	depls, err := forklift.ListDepls(env.FS, cache, replacementRepos)
+	depls, err := env.ListDepls(cache, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",
@@ -347,7 +341,7 @@ func PlanEnv(
 	indent int,
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	depls, err := forklift.ListDepls(env.FS, cache, replacementRepos)
+	depls, err := env.ListDepls(cache, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",
@@ -441,7 +435,7 @@ func ApplyEnv(
 	indent int,
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) error {
-	depls, err := forklift.ListDepls(env.FS, cache, replacementRepos)
+	depls, err := env.ListDepls(cache, replacementRepos)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",

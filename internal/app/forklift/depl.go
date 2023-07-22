@@ -4,20 +4,12 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
-	"strings"
 
-	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
-
-const deplsDirName = "deployments"
-
-func DeplsFS(envFS fs.FS) (fs.FS, error) {
-	return fs.Sub(envFS, deplsDirName)
-}
 
 // Depl
 
@@ -275,104 +267,21 @@ func splitMultiPathServiceResources(
 	return split
 }
 
-// Loading
+// DeplConfig
 
-func LoadDepl(
-	envFS fs.FS, cache *FSCache, replacementRepos map[string]*pallets.FSRepo, deplName string,
-) (*Depl, error) {
-	deplsFS, err := DeplsFS(envFS)
+// loadDeplConfig loads a DeplConfig from the specified file path in the provided base filesystem.
+func loadDeplConfig(fsys pallets.PathedFS, filePath string) (DeplConfig, error) {
+	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't open directory for Pallet package deployments in local environment",
+		return DeplConfig{}, errors.Wrapf(
+			err, "couldn't read deployment config file %s/%s", fsys.Path(), filePath,
 		)
-	}
-	reposFS, err := VersionedReposFS(envFS)
-	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't open directory for Pallet repositories in local environment",
-		)
-	}
-
-	depl := &Depl{
-		Name: deplName,
-	}
-	if depl.Config, err = loadDeplConfig(
-		deplsFS, fmt.Sprintf("%s.deploy.yml", deplName),
-	); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package deployment config for %s", deplName)
-	}
-
-	pkgPath := depl.Config.Package
-	repo, ok := FindExternalRepoOfPkg(replacementRepos, pkgPath)
-	if ok {
-		pkg, perr := FindExternalPkg(repo, pkgPath)
-		if perr != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
-			)
-		}
-		depl.Pkg = AsVersionedPkg(pkg)
-		return depl, nil
-	}
-
-	if depl.Pkg, err = LoadVersionedPkg(reposFS, cache, pkgPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
-		)
-	}
-
-	return depl, nil
-}
-
-func loadDeplConfig(deplsFS fs.FS, filePath string) (DeplConfig, error) {
-	bytes, err := fs.ReadFile(deplsFS, filePath)
-	if err != nil {
-		return DeplConfig{}, errors.Wrapf(err, "couldn't read deployment config file %s", filePath)
 	}
 	config := DeplConfig{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return DeplConfig{}, errors.Wrap(err, "couldn't parse deployment config")
 	}
 	return config, nil
-}
-
-// Listing
-
-func ListDepls(
-	envFS fs.FS, cache *FSCache, replacementRepos map[string]*pallets.FSRepo,
-) ([]*Depl, error) {
-	deplsFS, err := DeplsFS(envFS)
-	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't open directory for Pallet package deployments in local environment",
-		)
-	}
-	files, err := doublestar.Glob(deplsFS, "*.deploy.yml")
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't search for Pallet package deployment configs")
-	}
-
-	deplNames := make([]string, 0, len(files))
-	deplMap := make(map[string]*Depl)
-	for _, filePath := range files {
-		deplName := strings.TrimSuffix(filePath, ".deploy.yml")
-		if _, ok := deplMap[deplName]; ok {
-			return nil, errors.Errorf(
-				"package deployment %s repeatedly specified by the local environment", deplName,
-			)
-		}
-		deplNames = append(deplNames, deplName)
-		deplMap[deplName], err = LoadDepl(envFS, cache, replacementRepos, deplName)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load package deployment specification %s", deplName)
-		}
-	}
-
-	orderedDepls := make([]*Depl, 0, len(deplNames))
-	for _, deplName := range deplNames {
-		orderedDepls = append(orderedDepls, deplMap[deplName])
-	}
-	return orderedDepls, nil
 }
 
 // Constraint-checking

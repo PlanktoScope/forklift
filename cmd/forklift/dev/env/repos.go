@@ -12,6 +12,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
+	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // cache-repo
@@ -132,7 +133,7 @@ func splitRemoteRepoRelease(
 	if err != nil {
 		return "", "", "", err
 	}
-	vcsRepoPath, repoSubdir, err = forklift.SplitRepoPathSubdir(remote)
+	vcsRepoPath, repoSubdir, err = pallets.SplitRepoPathSubdir(remote)
 	if err != nil {
 		return "", "", "", err
 	}

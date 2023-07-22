@@ -8,7 +8,8 @@ const (
 	CompareGT = 1
 )
 
-// A Repo is a Pallet repository.
+// A Repo is a Pallets repository, a collection of Pallets packages which are tested, released,
+// distributed, and upgraded together.
 type Repo struct {
 	// VCSRepoPath is the path of the VCS repository path which provides the Pallet repository.
 	VCSRepoPath string

@@ -2,54 +2,12 @@ package forklift
 
 import (
 	"fmt"
-	"io/fs"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
-
-// Loading
-
-func LoadVersionedPkg(reposFS fs.FS, cache *FSCache, pkgPath string) (p *VersionedPkg, err error) {
-	p = &VersionedPkg{}
-	if p.VersionedRepo, err = findVersionedRepoOfPkg(reposFS, pkgPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't find repo providing package %s in local environment", pkgPath,
-		)
-	}
-	version, err := p.VersionedRepo.Config.Version()
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't determine version of repo %s in local environment", p.VersionedRepo.Path(),
-		)
-	}
-	if p.FSPkg, err = cache.FindPkg(pkgPath, version); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't find package %s@%s in cache", pkgPath, version,
-		)
-	}
-
-	return p, nil
-}
-
-func findVersionedRepoOfPkg(reposFS fs.FS, pkgPath string) (VersionedRepo, error) {
-	repoCandidatePath := filepath.Dir(pkgPath)
-	for repoCandidatePath != "." {
-		repo, err := LoadVersionedRepo(reposFS, repoCandidatePath)
-		if err == nil {
-			return repo, nil
-		}
-		repoCandidatePath = filepath.Dir(repoCandidatePath)
-	}
-	return VersionedRepo{}, errors.Errorf(
-		"no repository config file found in %s or any parent directory in local environment",
-		filepath.Dir(pkgPath),
-	)
-}
-
-// Listing
 
 func ListVersionedPkgs(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, repos []VersionedRepo,
@@ -62,7 +20,7 @@ func ListVersionedPkgs(
 		if externalRepo, ok := replacementRepos[repo.Path()]; ok {
 			pkgs, paths, err = listVersionedPkgsOfExternalRepo(externalRepo)
 		} else {
-			pkgs, paths, err = listVersionedPkgsOfCachedRepo(cache, repo)
+			pkgs, paths, err = repo.listVersionedPkgs(cache)
 		}
 
 		for k, v := range pkgs {
@@ -81,6 +39,7 @@ func ListVersionedPkgs(
 	return orderedPkgs, nil
 }
 
+// TODO: move this into a method on pallets.FSRepo
 func listVersionedPkgsOfExternalRepo(
 	externalRepo *pallets.FSRepo,
 ) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
@@ -108,17 +67,14 @@ func listVersionedPkgsOfExternalRepo(
 	return pkgMap, versionedPkgPaths, nil
 }
 
-func listVersionedPkgsOfCachedRepo(
-	cache *FSCache, repo VersionedRepo,
+func (r VersionedRepo) listVersionedPkgs(
+	cache *FSCache,
 ) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
-	repoVersion, err := repo.Config.Version()
+	repoVersion, err := r.Config.Version()
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "couldn't determine version of repo %s", repo.Path())
+		return nil, nil, errors.Wrapf(err, "couldn't determine version of repo %s", r.Path())
 	}
-	repoCachePath := filepath.Join(
-		fmt.Sprintf("%s@%s", repo.VCSRepoPath, repoVersion),
-		repo.RepoSubdir,
-	)
+	repoCachePath := filepath.Join(fmt.Sprintf("%s@%s", r.VCSRepoPath, repoVersion), r.RepoSubdir)
 	pkgs, err := cache.ListPkgs(repoCachePath)
 	if err != nil {
 		return nil, nil, errors.Wrapf(

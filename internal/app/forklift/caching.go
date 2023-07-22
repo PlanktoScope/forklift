@@ -22,10 +22,10 @@ func (c *FSCache) Remove() error {
 	return os.RemoveAll(c.FS.Path())
 }
 
-// FSCache: Loading Repos
+// FSCache: Repositories
 
 func (c *FSCache) FindRepo(repoPath string, version string) (*pallets.FSRepo, error) {
-	vcsRepoPath, _, err := SplitRepoPathSubdir(repoPath)
+	vcsRepoPath, _, err := pallets.SplitRepoPathSubdir(repoPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
 	}
@@ -112,8 +112,6 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 	return vcsRepoPath, version, nil
 }
 
-// FSCache: Listing Repos
-
 func (c *FSCache) ListRepos() ([]*pallets.FSRepo, error) {
 	repoConfigFiles, err := doublestar.Glob(c.FS, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
 	if err != nil {
@@ -151,10 +149,10 @@ func (c *FSCache) ListRepos() ([]*pallets.FSRepo, error) {
 	return orderedRepos, nil
 }
 
-// FSCache: Loading Pkgs
+// FSCache: Packages
 
 func (c *FSCache) FindPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
-	vcsRepoPath, _, err := SplitRepoPathSubdir(pkgPath)
+	vcsRepoPath, _, err := pallets.SplitRepoPathSubdir(pkgPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse path of Pallet package %s", pkgPath)
 	}
@@ -231,8 +229,6 @@ func (c *FSCache) findRepoContaining(subdirPath string) (*pallets.FSRepo, error)
 		"no repository config file found in any parent directory of %s", subdirPath,
 	)
 }
-
-// FSCache: Listing Pkgs
 
 func (c *FSCache) ListPkgs(cachedPrefix string) ([]*pallets.FSPkg, error) {
 	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)

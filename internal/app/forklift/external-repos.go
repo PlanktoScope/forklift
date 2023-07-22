@@ -25,6 +25,7 @@ func FindExternalRepoOfPkg(
 
 // Listing
 
+// TODO: move this into pallets
 func ListExternalRepos(fsys pallets.PathedFS) ([]*pallets.FSRepo, error) {
 	repoConfigFiles, err := doublestar.Glob(fsys, fmt.Sprintf("**/%s", pallets.RepoSpecFile))
 	if err != nil {
@@ -67,8 +68,7 @@ func loadExternalRepo(fsys pallets.PathedFS, subdirPath string) (*pallets.FSRepo
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't load repo config from %s", subdirPath)
 	}
-	// TODO: move SplitRepoPathSubdir into pkg/pallets
-	if repo.VCSRepoPath, repo.Subdir, err = SplitRepoPathSubdir(
+	if repo.VCSRepoPath, repo.Subdir, err = pallets.SplitRepoPathSubdir(
 		repo.Config.Repository.Path,
 	); err != nil {
 		return nil, errors.Wrapf(

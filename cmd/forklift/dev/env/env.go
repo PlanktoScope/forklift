@@ -42,7 +42,9 @@ func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
 			err, "The current working directory %s is not part of a Forklift environment.", cwdPath,
 		)
 	}
-	if env, err = forklift.LoadFSEnv(envPath); err != nil {
+	if env, err = forklift.LoadFSEnv(
+		pallets.AttachPath(os.DirFS(envPath), envPath), ".",
+	); err != nil {
 		return nil, errors.Wrap(err, "couldn't load environment")
 	}
 	return env, nil

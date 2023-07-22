@@ -1,6 +1,7 @@
 package pallets
 
-// A Pkg is a Pallet package.
+// A Pkg is a Pallet package, a configuration of a software application which can be deployed on a
+// Docker host.
 type Pkg struct {
 	// Path is the Pallet repository path of the Pallet repository path which provides the package.
 	RepoPath string

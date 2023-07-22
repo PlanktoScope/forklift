@@ -57,7 +57,6 @@ func CompareFSPkgs(p, q *FSPkg) int {
 // PkgConfig
 
 // LoadPkgConfig loads a PkgConfig from the specified file path in the provided base filesystem.
-// The base path should correspond to the location of the base filesystem.
 func LoadPkgConfig(fsys PathedFS, filePath string) (PkgConfig, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {

@@ -44,7 +44,7 @@ func listRequiredImages(
 	indent int,
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) ([]string, error) {
-	depls, err := forklift.ListDepls(env.FS, cache, replacementRepos)
+	depls, err := env.ListDepls(cache, replacementRepos)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",

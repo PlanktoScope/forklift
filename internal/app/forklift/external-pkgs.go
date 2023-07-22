@@ -12,6 +12,7 @@ import (
 
 // Loading
 
+// TODO: move this into a method on FSRepo
 func FindExternalPkg(repo *pallets.FSRepo, pkgPath string) (*pallets.FSPkg, error) {
 	pkgInnermostDir := filepath.Base(pkgPath)
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
@@ -69,6 +70,7 @@ func AsVersionedPkg(pkg *pallets.FSPkg) *VersionedPkg {
 
 // Listing
 
+// TODO: move this into a method on FSRepo
 func ListExternalPkgs(repo *pallets.FSRepo, cachedPrefix string) ([]*pallets.FSPkg, error) {
 	searchPattern := fmt.Sprintf("**/%s", pallets.PkgSpecFile)
 	if cachedPrefix != "" {
