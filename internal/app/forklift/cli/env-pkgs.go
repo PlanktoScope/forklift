@@ -28,7 +28,7 @@ func PrintEnvPkgs(
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
-		return forklift.CompareCachedPkgs(pkgs[i], pkgs[j]) < 0
+		return pallets.CompareFSPkgs(pkgs[i], pkgs[j]) < 0
 	})
 	for _, pkg := range pkgs {
 		IndentedPrintf(indent, "%s\n", pkg.Path())

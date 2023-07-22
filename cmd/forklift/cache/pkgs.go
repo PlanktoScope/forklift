@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
@@ -29,7 +28,7 @@ func lsPkgAction(c *cli.Context) error {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
-		return forklift.CompareCachedPkgs(pkgs[i], pkgs[j]) < 0
+		return pallets.CompareFSPkgs(pkgs[i], pkgs[j]) < 0
 	})
 	for _, pkg := range pkgs {
 		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)

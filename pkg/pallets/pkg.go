@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,6 +34,24 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 		return nil, errors.Wrapf(err, "couldn't load package config")
 	}
 	return p, nil
+}
+
+func CompareFSPkgs(p, q *FSPkg) int {
+	repoPathComparison := CompareRepoPaths(p.Repo.Repo, q.Repo.Repo)
+	if repoPathComparison != CompareEQ {
+		return repoPathComparison
+	}
+	if p.Subdir != q.Subdir {
+		if p.Subdir < q.Subdir {
+			return CompareLT
+		}
+		return CompareGT
+	}
+	repoVersionComparison := semver.Compare(p.Repo.Version, q.Repo.Version)
+	if repoVersionComparison != CompareEQ {
+		return repoVersionComparison
+	}
+	return CompareEQ
 }
 
 // PkgConfig
