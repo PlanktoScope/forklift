@@ -60,6 +60,8 @@ func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 	return pkgs, nil
 }
 
+// AttachFSRepo updates the FSPkg instance's RepoPath, Subdir, Pkg.Repo, and Repo fields based on
+// the provided repo.
 func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
 	p.RepoPath = repo.Config.Repository.Path
 	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
@@ -69,6 +71,7 @@ func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
 		)
 	}
 	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
+	p.Pkg.Repo = &repo.Repo
 	p.Repo = repo
 	return nil
 }
@@ -87,8 +90,17 @@ func (p *FSPkg) Check() (errs []error) {
 	return errs
 }
 
-func CompareFSPkgs(p, q *FSPkg) int {
-	repoPathComparison := CompareRepoPaths(p.Repo.Repo, q.Repo.Repo)
+// ComparePkgs returns an integer comparing two [Pkg] instances according to their respective
+// repositories' paths, their respective package subdirectories, and their respective repositories'
+// versions. The result will be 0 if the p and q have the same repositories' paths, package
+// subdirectories, and versions; -1 if r has a repository with a path which alphabetically comes
+// before the path of the repository of s, or if the repositories' paths are the same but r has a
+// lower package subdirectory than s, or if the package paths are the same but r has a lower version
+// than s; or +1 if r has a repository with a path which alphabetically comes after the path of s,
+// or if the repositories' paths are the same but r has a higher package subdirectory than s, or if
+// the package paths are the same but r has a lower version than s.
+func ComparePkgs(p, q Pkg) int {
+	repoPathComparison := CompareRepoPaths(*p.Repo, *q.Repo)
 	if repoPathComparison != CompareEQ {
 		return repoPathComparison
 	}

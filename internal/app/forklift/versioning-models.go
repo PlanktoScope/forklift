@@ -1,9 +1,5 @@
 package forklift
 
-import (
-	"github.com/PlanktoScope/forklift/pkg/pallets"
-)
-
 // A VersionLock is a specification of a particular version of a Pallet repository or package.
 type VersionLock struct {
 	// Config is the Pallet version lock specification.
@@ -29,30 +25,3 @@ type VersionLockConfig struct {
 }
 
 const Timestamp = "20060102150405"
-
-// Repos
-
-const (
-	// RepoRequirementsDirName is the directory in a Forklift environment which contains Pallet
-	// repository requirement configurations.
-	// TODO: move repositories to requirements/repositories, to allow for a future
-	// requirements/environments subdirectory
-	RepoRequirementsDirName = "repositories"
-)
-
-// TODO: make a FSRepoRequirement which has a getter for the version requirement
-
-// A RepoVersionRequirement is a requirement for a Pallet repository in an environment.
-type RepoVersionRequirement struct {
-	VCSRepoPath string
-	RepoSubdir  string
-	VersionLock VersionLock
-}
-
-// Pkgs
-
-type VersionedPkg struct {
-	*pallets.FSPkg
-	// TODO: can we replace this with a VersionLock?
-	RepoVersionRequirement RepoVersionRequirement
-}

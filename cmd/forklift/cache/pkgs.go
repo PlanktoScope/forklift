@@ -30,7 +30,7 @@ func lsPkgAction(c *cli.Context) error {
 		return errors.Wrapf(err, "couldn't identify Pallet packages")
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
-		return pallets.CompareFSPkgs(pkgs[i], pkgs[j]) < 0
+		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
 	})
 	for _, pkg := range pkgs {
 		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)

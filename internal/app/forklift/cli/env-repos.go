@@ -16,12 +16,12 @@ import (
 // Print
 
 func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
-	repos, err := env.ListRepoVersionRequirements()
+	repos, err := env.LoadFSRepoRequirements("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	sort.Slice(repos, func(i, j int) bool {
-		return forklift.CompareRepoVersionRequirements(repos[i], repos[j]) < 0
+		return forklift.CompareRepoRequirements(repos[i].RepoRequirement, repos[j].RepoRequirement) < 0
 	})
 	for _, repo := range repos {
 		IndentedPrintf(indent, "%s\n", repo.Path())
@@ -34,7 +34,7 @@ func PrintRepoInfo(
 	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
 	repoPath string,
 ) error {
-	versionedRepo, err := env.LoadRepoVersionRequirement(repoPath)
+	versionedRepo, err := env.LoadFSRepoRequirement(repoPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't load Pallet repo versioning config %s from environment %s",
@@ -43,7 +43,7 @@ func PrintRepoInfo(
 	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
 	// we don't need error-checking for every subsequent access of the version
-	printRepoVersionRequirement(indent, versionedRepo)
+	printRepoRequirement(indent, versionedRepo.RepoRequirement)
 	fmt.Println()
 
 	var cachedRepo *pallets.FSRepo
@@ -70,7 +70,7 @@ func PrintRepoInfo(
 	return nil
 }
 
-func printRepoVersionRequirement(indent int, repo forklift.RepoVersionRequirement) {
+func printRepoRequirement(indent int, repo forklift.RepoRequirement) {
 	IndentedPrintf(indent, "Pallet repository: %s\n", repo.Path())
 	indent++
 	IndentedPrintf(indent, "Locked version: %s\n", repo.VersionLock.Version)
@@ -80,13 +80,13 @@ func printRepoVersionRequirement(indent int, repo forklift.RepoVersionRequiremen
 // Download
 
 func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (changed bool, err error) {
-	repos, err := env.ListRepoVersionRequirements()
+	repos, err := env.LoadFSRepoRequirements("**")
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	changed = false
 	for _, repo := range repos {
-		downloaded, err := downloadRepo(indent, cache.FS.Path(), repo)
+		downloaded, err := downloadRepo(indent, cache.FS.Path(), repo.RepoRequirement)
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(
@@ -99,7 +99,7 @@ func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (ch
 }
 
 func downloadRepo(
-	indent int, cachePath string, repo forklift.RepoVersionRequirement,
+	indent int, cachePath string, repo forklift.RepoRequirement,
 ) (downloaded bool, err error) {
 	if !repo.VersionLock.Config.IsCommitLocked() {
 		return false, errors.Errorf(
@@ -151,7 +151,7 @@ func downloadRepo(
 	return true, nil
 }
 
-func validateCommit(versionedRepo forklift.RepoVersionRequirement, gitRepo *git.Repo) error {
+func validateCommit(versionedRepo forklift.RepoRequirement, gitRepo *git.Repo) error {
 	// Check commit time
 	commitTimestamp, err := forklift.GetCommitTimestamp(
 		gitRepo, versionedRepo.VersionLock.Config.Commit,

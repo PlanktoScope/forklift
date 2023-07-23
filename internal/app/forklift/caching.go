@@ -212,3 +212,40 @@ func (c *FSCache) loadFSRepoContaining(subdirPath string) (repo *pallets.FSRepo,
 	}
 	return repo, nil
 }
+
+// FSCache: Versioned Packages
+
+// TODO: rename this method
+func (c *FSCache) listVersionedPkgs(
+	requirement RepoRequirement,
+) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
+	repoCachePath := filepath.Join(
+		fmt.Sprintf("%s@%s", requirement.VCSRepoPath, requirement.VersionLock.Version),
+		requirement.RepoSubdir,
+	)
+	pkgs, err := c.LoadFSPkgs(repoCachePath)
+	if err != nil {
+		return nil, nil, errors.Wrapf(
+			err, "couldn't list packages from repo cached at %s", repoCachePath,
+		)
+	}
+
+	pkgMap = make(map[string]*pallets.FSPkg)
+	for _, pkg := range pkgs {
+		versionedPkgPath := fmt.Sprintf(
+			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,
+		)
+		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
+			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
+				return nil, nil, errors.Errorf(
+					"package repeatedly defined in the same version of the same cached Github repo: %s, %s",
+					prevPkg.FS.Path(), pkg.FS.Path(),
+				)
+			}
+		}
+		versionedPkgPaths = append(versionedPkgPaths, versionedPkgPath)
+		pkgMap[versionedPkgPath] = pkg
+	}
+
+	return pkgMap, versionedPkgPaths, nil
+}

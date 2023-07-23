@@ -10,9 +10,11 @@ import (
 func AsVersionedPkg(pkg *pallets.FSPkg) *VersionedPkg {
 	return &VersionedPkg{
 		FSPkg: pkg,
-		RepoVersionRequirement: RepoVersionRequirement{
-			VCSRepoPath: pkg.Repo.VCSRepoPath,
-			RepoSubdir:  pkg.Repo.Subdir,
+		RepoRequirement: &FSRepoRequirement{
+			RepoRequirement: RepoRequirement{
+				VCSRepoPath: pkg.Repo.VCSRepoPath,
+				RepoSubdir:  pkg.Repo.Subdir,
+			},
 		},
 	}
 }

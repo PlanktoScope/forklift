@@ -186,9 +186,9 @@ func updateLocalRepoMirror(remote, cachedPath string) error {
 
 func determinePalletRepoConfigs(
 	remoteReleases []string, cachePath string,
-) (map[string]forklift.RepoVersionRequirement, error) {
-	vcsRepoConfigs := make(map[string]forklift.RepoVersionRequirement)
-	palletRepoConfigs := make(map[string]forklift.RepoVersionRequirement)
+) (map[string]forklift.RepoRequirement, error) {
+	vcsRepoConfigs := make(map[string]forklift.RepoRequirement)
+	palletRepoConfigs := make(map[string]forklift.RepoRequirement)
 	for _, remoteRelease := range remoteReleases {
 		vcsRepoPath, repoSubdir, versionQuery, err := splitRemoteRepoRelease(remoteRelease)
 		if err != nil {
@@ -220,25 +220,25 @@ func determinePalletRepoConfigs(
 
 func resolveVCSRepoVersionQuery(
 	cachePath, vcsRepoPath, versionQuery string,
-) (forklift.RepoVersionRequirement, error) {
-	repo := forklift.RepoVersionRequirement{
+) (forklift.RepoRequirement, error) {
+	repo := forklift.RepoRequirement{
 		VCSRepoPath: vcsRepoPath,
 	}
 	if versionQuery == "" {
-		return forklift.RepoVersionRequirement{}, errors.New(
+		return forklift.RepoRequirement{}, errors.New(
 			"support for empty version queries is not yet implemented!",
 		)
 	}
 	localPath := filepath.Join(cachePath, vcsRepoPath)
 	gitRepo, err := git.Open(localPath)
 	if err != nil {
-		return forklift.RepoVersionRequirement{}, errors.Wrapf(
+		return forklift.RepoRequirement{}, errors.Wrapf(
 			err, "couldn't open local mirror of %s", vcsRepoPath,
 		)
 	}
 	commit, err := queryRefs(gitRepo, versionQuery)
 	if err != nil {
-		return forklift.RepoVersionRequirement{}, err
+		return forklift.RepoRequirement{}, err
 	}
 	if commit == "" {
 		commit, err = gitRepo.GetCommitFullHash(versionQuery)
@@ -247,12 +247,12 @@ func resolveVCSRepoVersionQuery(
 		}
 	}
 	if commit == "" {
-		return forklift.RepoVersionRequirement{}, errors.Errorf(
+		return forklift.RepoRequirement{}, errors.Errorf(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
 	if repo.VersionLock.Config, err = lockCommit(gitRepo, commit); err != nil {
-		return forklift.RepoVersionRequirement{}, err
+		return forklift.RepoRequirement{}, err
 	}
 	return repo, nil
 }

@@ -58,87 +58,48 @@ func (e *FSEnv) Remove() error {
 	return os.RemoveAll(e.FS.Path())
 }
 
-// FSEnv: Versioned Repositories
+// FSEnv: Repo Requirements
 
-func (e *FSEnv) GetRepoVersionRequirementsFS() (pallets.PathedFS, error) {
+func (e *FSEnv) GetRepoRequirementsFS() (pallets.PathedFS, error) {
 	return e.FS.Sub(RepoRequirementsDirName)
 }
 
-func (e *FSEnv) LoadRepoVersionRequirement(repoPath string) (RepoVersionRequirement, error) {
-	vcsRepoPath, repoSubdir, err := pallets.SplitRepoPathSubdir(repoPath)
+func (e *FSEnv) LoadFSRepoRequirement(repoPath string) (r *FSRepoRequirement, err error) {
+	reposFS, err := e.GetRepoRequirementsFS()
 	if err != nil {
-		return RepoVersionRequirement{}, errors.Wrapf(
-			err, "couldn't parse path of version-locked Pallet repo %s", repoPath,
-		)
-	}
-	repo := RepoVersionRequirement{
-		VCSRepoPath: vcsRepoPath,
-		RepoSubdir:  repoSubdir,
-	}
-
-	reposFS, err := e.GetRepoVersionRequirementsFS()
-	if err != nil {
-		return RepoVersionRequirement{}, errors.Wrap(
+		return nil, errors.Wrap(
 			err, "couldn't open directory for versioned Pallet repositories from environment",
 		)
 	}
-	if repo.VersionLock, err = loadVersionLock(
-		reposFS, filepath.Join(repoPath, VersionLockSpecFile),
-	); err != nil {
-		return RepoVersionRequirement{}, errors.Wrapf(
-			err, "couldn't load repo version config for %s", repoPath,
-		)
+	if r, err = loadFSRepoRequirement(reposFS, repoPath); err != nil {
+		return nil, errors.Wrap(err, "couldn't load repo r")
 	}
-
-	return repo, nil
+	return r, nil
 }
 
-// TODO: rename this method
-func (e *FSEnv) ListRepoVersionRequirements() ([]RepoVersionRequirement, error) {
-	reposFS, err := e.GetRepoVersionRequirementsFS()
+// LoadFSRepoRequirements loads all FSRepoRequirements from the environment matching the specified
+// search pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching the
+// repo paths to search for.
+func (e *FSEnv) LoadFSRepoRequirements(searchPattern string) ([]*FSRepoRequirement, error) {
+	reposFS, err := e.GetRepoRequirementsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for Pallet repositories in local environment",
 		)
 	}
-	files, err := doublestar.Glob(reposFS, "**/forklift-repo.yml")
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't search for Pallet repo versioning configs")
-	}
-
-	repoPaths := make([]string, 0, len(files))
-	repoMap := make(map[string]RepoVersionRequirement)
-	for _, filePath := range files {
-		repoPath := filepath.Dir(filePath)
-		if _, ok := repoMap[repoPath]; ok {
-			return nil, errors.Errorf(
-				"versioned repository %s repeatedly defined in the local environment", repoPath,
-			)
-		}
-		repoPaths = append(repoPaths, repoPath)
-		repoMap[repoPath], err = e.LoadRepoVersionRequirement(repoPath)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load versioned repo from %s", repoPath)
-		}
-	}
-
-	orderedRepos := make([]RepoVersionRequirement, 0, len(repoPaths))
-	for _, repoPath := range repoPaths {
-		orderedRepos = append(orderedRepos, repoMap[repoPath])
-	}
-	return orderedRepos, nil
+	return loadFSRepoRequirements(reposFS, searchPattern)
 }
 
 // FSEnv: Versioned Packages
 
 func (e *FSEnv) LoadVersionedPkg(cache *FSCache, pkgPath string) (p *VersionedPkg, err error) {
 	p = &VersionedPkg{}
-	if p.RepoVersionRequirement, err = e.findRepoVersionRequirementOfPkg(pkgPath); err != nil {
+	if p.RepoRequirement, err = e.loadFSRepoRequirementOfPkg(pkgPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't find repo providing package %s in local environment", pkgPath,
 		)
 	}
-	version := p.RepoVersionRequirement.VersionLock.Version
+	version := p.RepoRequirement.VersionLock.Version
 	if p.FSPkg, err = cache.LoadFSPkg(pkgPath, version); err != nil {
 		return nil, errors.Wrapf(err, "couldn't find package %s@%s in cache", pkgPath, version)
 	}
@@ -146,17 +107,16 @@ func (e *FSEnv) LoadVersionedPkg(cache *FSCache, pkgPath string) (p *VersionedPk
 	return p, nil
 }
 
-// TODO: rename this method
-func (e *FSEnv) findRepoVersionRequirementOfPkg(pkgPath string) (RepoVersionRequirement, error) {
+func (e *FSEnv) loadFSRepoRequirementOfPkg(pkgPath string) (*FSRepoRequirement, error) {
 	repoCandidatePath := filepath.Dir(pkgPath)
 	for repoCandidatePath != "." {
-		repo, err := e.LoadRepoVersionRequirement(repoCandidatePath)
+		repo, err := e.LoadFSRepoRequirement(repoCandidatePath)
 		if err == nil {
 			return repo, nil
 		}
 		repoCandidatePath = filepath.Dir(repoCandidatePath)
 	}
-	return RepoVersionRequirement{}, errors.Errorf(
+	return nil, errors.Errorf(
 		"no repository config file found in %s or any parent directory in local environment",
 		filepath.Dir(pkgPath),
 	)
