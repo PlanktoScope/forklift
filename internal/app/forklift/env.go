@@ -82,10 +82,9 @@ func (e *FSEnv) LoadRepoVersionRequirement(repoPath string) (RepoVersionRequirem
 			err, "couldn't open directory for versioned Pallet repositories from environment",
 		)
 	}
-	repo.Config, err = loadVersionLockConfig(
-		reposFS, filepath.Join(repoPath, "forklift-repo.yml"),
-	)
-	if err != nil {
+	if repo.VersionLock, err = loadVersionLock(
+		reposFS, filepath.Join(repoPath, VersionLockSpecFile),
+	); err != nil {
 		return RepoVersionRequirement{}, errors.Wrapf(
 			err, "couldn't load repo version config for %s", repoPath,
 		)
@@ -139,17 +138,9 @@ func (e *FSEnv) LoadVersionedPkg(cache *FSCache, pkgPath string) (p *VersionedPk
 			err, "couldn't find repo providing package %s in local environment", pkgPath,
 		)
 	}
-	version, err := p.RepoVersionRequirement.Config.Version()
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't determine version of repo %s in local environment",
-			p.RepoVersionRequirement.Path(),
-		)
-	}
+	version := p.RepoVersionRequirement.VersionLock.Version
 	if p.FSPkg, err = cache.LoadFSPkg(pkgPath, version); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't find package %s@%s in cache", pkgPath, version,
-		)
+		return nil, errors.Wrapf(err, "couldn't find package %s@%s in cache", pkgPath, version)
 	}
 
 	return p, nil

@@ -103,7 +103,7 @@ func addRepoAction(c *cli.Context) error {
 		path := filepath.Join(
 			env.FS.Path(), "repositories", config.VCSRepoPath, config.RepoSubdir, "forklift-repo.yml",
 		)
-		marshaled, err := yaml.Marshal(config.Config)
+		marshaled, err := yaml.Marshal(config.VersionLock.Config)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't marshal config for %s", path)
 		}
@@ -208,13 +208,9 @@ func determinePalletRepoConfigs(
 
 		config := vcsRepoConfigs[vcsRepoRelease]
 		config.RepoSubdir = repoSubdir
-		versionString, err := config.Config.Version()
-		if err != nil {
-			return nil, errors.Wrapf(err, "constructed invalid version string from %+v", config.Config)
-		}
-		fmt.Printf("Resolved %s as %s", remoteRelease, versionString)
-		if config.Config.BaseVersion != "" {
-			fmt.Printf(", version %s", config.Config.BaseVersion)
+		fmt.Printf("Resolved %s as %s", remoteRelease, config.VersionLock.Version)
+		if config.VersionLock.Config.BaseVersion != "" {
+			fmt.Printf(", version %s", config.VersionLock.Config.BaseVersion)
 		}
 		fmt.Println()
 		palletRepoConfigs[remoteRelease] = config
@@ -255,7 +251,7 @@ func resolveVCSRepoVersionQuery(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
-	if repo.Config, err = lockCommit(gitRepo, commit); err != nil {
+	if repo.VersionLock.Config, err = lockCommit(gitRepo, commit); err != nil {
 		return forklift.RepoVersionRequirement{}, err
 	}
 	return repo, nil

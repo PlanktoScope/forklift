@@ -43,10 +43,6 @@ func PrintRepoInfo(
 	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
 	// we don't need error-checking for every subsequent access of the version
-	version, err := versionedRepo.Config.Version()
-	if err != nil {
-		return errors.Wrapf(err, "couldn't determine configured version of Pallet repo %s", repoPath)
-	}
 	printRepoVersionRequirement(indent, versionedRepo)
 	fmt.Println()
 
@@ -55,6 +51,7 @@ func PrintRepoInfo(
 	if ok {
 		cachedRepo = replacementRepo
 	} else {
+		version := versionedRepo.VersionLock.Version
 		if cachedRepo, err = cache.LoadFSRepo(repoPath, version); err != nil {
 			return errors.Wrapf(
 				err,
@@ -76,8 +73,7 @@ func PrintRepoInfo(
 func printRepoVersionRequirement(indent int, repo forklift.RepoVersionRequirement) {
 	IndentedPrintf(indent, "Pallet repository: %s\n", repo.Path())
 	indent++
-	version, _ := repo.Config.Version() // assume that the validity of the version was already checked
-	IndentedPrintf(indent, "Locked version: %s\n", version)
+	IndentedPrintf(indent, "Locked version: %s\n", repo.VersionLock.Version)
 	IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
 }
 
@@ -94,7 +90,8 @@ func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (ch
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(
-				err, "couldn't download %s at commit %s", repo.Path(), repo.Config.ShortCommit(),
+				err, "couldn't download %s at commit %s",
+				repo.Path(), repo.VersionLock.Config.ShortCommit(),
 			)
 		}
 	}
@@ -104,16 +101,13 @@ func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (ch
 func downloadRepo(
 	indent int, cachePath string, repo forklift.RepoVersionRequirement,
 ) (downloaded bool, err error) {
-	if !repo.Config.IsCommitLocked() {
+	if !repo.VersionLock.Config.IsCommitLocked() {
 		return false, errors.Errorf(
 			"the local environment's versioning config for repository %s has no commit lock", repo.Path(),
 		)
 	}
 	vcsRepoPath := repo.VCSRepoPath
-	version, err := repo.Config.Version()
-	if err != nil {
-		return false, errors.Wrapf(err, "couldn't determine version for %s", vcsRepoPath)
-	}
+	version := repo.VersionLock.Version
 	path := filepath.Join(cachePath, fmt.Sprintf("%s@%s", repo.VCSRepoPath, version))
 	if forklift.Exists(path) {
 		// TODO: perform a disk checksum
@@ -127,7 +121,7 @@ func downloadRepo(
 	}
 
 	// Validate commit
-	shortCommit := repo.Config.ShortCommit()
+	shortCommit := repo.VersionLock.Config.ShortCommit()
 	if err = validateCommit(repo, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(path); cerr != nil {
@@ -143,7 +137,7 @@ func downloadRepo(
 	}
 
 	// Checkout commit
-	if err = gitRepo.Checkout(repo.Config.Commit); err != nil {
+	if err = gitRepo.Checkout(repo.VersionLock.Config.Commit); err != nil {
 		if cerr := os.RemoveAll(path); cerr != nil {
 			IndentedPrintf(
 				indent, "Error: couldn't clean up %s! You will need to delete it yourself.\n", path,
@@ -159,16 +153,18 @@ func downloadRepo(
 
 func validateCommit(versionedRepo forklift.RepoVersionRequirement, gitRepo *git.Repo) error {
 	// Check commit time
-	commitTimestamp, err := forklift.GetCommitTimestamp(gitRepo, versionedRepo.Config.Commit)
+	commitTimestamp, err := forklift.GetCommitTimestamp(
+		gitRepo, versionedRepo.VersionLock.Config.Commit,
+	)
 	if err != nil {
 		return err
 	}
-	versionedTimestamp := versionedRepo.Config.Timestamp
+	versionedTimestamp := versionedRepo.VersionLock.Config.Timestamp
 	if commitTimestamp != versionedTimestamp {
 		return errors.Errorf(
 			"commit %s was made at %s, while the repository versioning config file expects it to have "+
 				"been made at %s",
-			versionedRepo.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
+			versionedRepo.VersionLock.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
 		)
 	}
 
