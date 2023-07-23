@@ -68,6 +68,9 @@ type RepoReq struct {
 
 // A PkgReq is a requirement for a Pallet package at a specific version.
 type PkgReq struct {
+	// PkgSubdir is the Pallet package subdirectory of the repository which should provide the
+	// required package.
 	PkgSubdir string
-	Repo      RepoReq
+	// Repo is the Pallet repository which should provide the required package.
+	Repo RepoReq
 }

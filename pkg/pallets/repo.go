@@ -173,6 +173,12 @@ func (r Repo) Path() string {
 	return filepath.Join(r.VCSRepoPath, r.Subdir)
 }
 
+// CoversPath checks whether the provided path is within the scope of the repository.
+// Usually the provided path should be a Pallet package path.
+func (r Repo) CoversPath(path string) bool {
+	return strings.HasPrefix(path, fmt.Sprintf("%s/", r.Path()))
+}
+
 // GetPkgSubdir returns the Pallet package subdirectory within the repo for the provided Pallet
 // package path.
 func (r Repo) GetPkgSubdir(pkgPath string) string {

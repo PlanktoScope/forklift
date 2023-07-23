@@ -76,21 +76,21 @@ func loadFSRepoReqs(fsys pallets.PathedFS, searchPattern string) ([]*FSRepoReq, 
 		)
 	}
 
-	requirements := make([]*FSRepoReq, 0, len(repoReqFiles))
+	reqs := make([]*FSRepoReq, 0, len(repoReqFiles))
 	for _, repoReqConfigFilePath := range repoReqFiles {
 		if filepath.Base(repoReqConfigFilePath) != VersionLockSpecFile {
 			continue
 		}
 
-		requirement, err := loadFSRepoReq(fsys, filepath.Dir(repoReqConfigFilePath))
+		req, err := loadFSRepoReq(fsys, filepath.Dir(repoReqConfigFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't load repo requirement from %s", repoReqConfigFilePath,
 			)
 		}
-		requirements = append(requirements, requirement)
+		reqs = append(reqs, req)
 	}
-	return requirements, nil
+	return reqs, nil
 }
 
 // Path returns the Pallet repository path of the required repository.

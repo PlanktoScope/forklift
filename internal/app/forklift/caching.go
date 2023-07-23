@@ -4,12 +4,36 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
+
+// FSPkgLoader
+
+// LoadFSPkgFromPkgReq loads the required package from the cache.
+func LoadFSPkgFromPkgReq(loader FSPkgLoader, req PkgReq) (*pallets.FSPkg, error) {
+	pkg, err := loader.LoadFSPkg(req.Path(), req.Repo.VersionLock.Version)
+	return pkg, errors.Wrapf(
+		err, "couldn't load required package %s@%s", req.Path(), req.Repo.VersionLock.Version,
+	)
+}
+
+// LoadFSPkgsFromPkgReqs loads the required packages from the cache.
+func LoadFSPkgsFromPkgReqs(loader FSPkgLoader, reqs []PkgReq) (p []*pallets.FSPkg, err error) {
+	for _, req := range reqs {
+		fsPkg, err := LoadFSPkgFromPkgReq(loader, req)
+		if err != nil {
+			return nil, err
+		}
+		p = append(p, fsPkg)
+	}
+	return p, nil
+}
 
 // FSCache
 
@@ -33,7 +57,7 @@ func (c *FSCache) TrimCachePathPrefix(path string) string {
 	return strings.TrimPrefix(path, fmt.Sprintf("%s/", c.FS.Path()))
 }
 
-// FSCache: Repositories
+// FSCache: FSRepoLoader
 
 // LoadFSRepo loads the FSRepo with the specified path and version.
 // The loaded FSRepo instance is fully initialized.
@@ -125,7 +149,7 @@ func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err err
 	return vcsRepoPath, version, nil
 }
 
-// FSCache: Packages
+// FSCache: FSPkgLoader
 
 // LoadFSPkg loads the FSPkg with the specified path and version.
 // The loaded FSPkg instance is fully initialized.
@@ -213,60 +237,102 @@ func (c *FSCache) loadFSRepoContaining(subdirPath string) (repo *pallets.FSRepo,
 	return repo, nil
 }
 
-// LoadFSPkgFromPkgReq loads the required package from the cache.
-func (c *FSCache) LoadFSPkgFromPkgReq(requirement PkgReq) (*pallets.FSPkg, error) {
-	pkg, err := c.LoadFSPkg(requirement.Path(), requirement.Repo.VersionLock.Version)
-	return pkg, errors.Wrapf(
-		err, "couldn't load required package %s@%s",
-		requirement.Path(), requirement.Repo.VersionLock.Version,
-	)
+// OverriddenCache
+
+// LoadFSRepo loads the FSRepo with the specified path and version.
+// The loaded FSRepo instance is fully initialized.
+// If the repo path matches of the overriding FSRepos in the OverriddenCache instance,
+// regardless of version, it is returned; otherwise, the repo is loaded from the underlying cache.
+func (c *OverriddenCache) LoadFSRepo(repoPath string, version string) (*pallets.FSRepo, error) {
+	if repo, ok := c.Overrides[repoPath]; ok {
+		return repo, nil
+	}
+	return c.LoadFSRepo(repoPath, version)
 }
 
-// LoadFSPkgsFromPkgReqs loads the required packages from the cache.
-func (c *FSCache) LoadFSPkgsFromPkgReqs(requirements []PkgReq) (p []*pallets.FSPkg, err error) {
-	for _, requirement := range requirements {
-		fsPkg, err := c.LoadFSPkgFromPkgReq(requirement)
+// LoadFSRepos loads all FSRepos from the cache matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching repo directories to
+// search for.
+// The loaded FSRepo instances are fully initialized.
+// If a matching repo is one of the overriding FSRepos in the OverriddenCache instance,
+// regardless of version, it is included, and repos with the same path from the underlying cache are
+// excluded regardless of version; otherwise, the repo is loaded from the underlying cache.
+func (c *OverriddenCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
+	repos := make([]*pallets.FSRepo, 0, len(c.Overrides))
+	for _, repo := range c.Overrides {
+		match, err := doublestar.Match(searchPattern, repo.Path())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "couldn't match with search pattern %s", searchPattern)
 		}
-		p = append(p, fsPkg)
+		if !match {
+			continue
+		}
+		repos = append(repos, repo)
 	}
-	return p, nil
+	cachedRepos, err := c.Cache.LoadFSRepos(searchPattern)
+	if err != nil {
+		return nil, err
+	}
+	for _, repo := range cachedRepos {
+		if _, ok := c.Overrides[repo.Path()]; ok {
+			// We already added the repo in the overrides
+			continue
+		}
+		repos = append(repos, repo)
+	}
+
+	sort.Slice(repos, func(i, j int) bool {
+		return pallets.CompareRepos(repos[i].Repo, repos[j].Repo) == pallets.CompareLT
+	})
+	return repos, nil
 }
 
-// FSCache: Versioned Packages
-
-// TODO: rename this method
-func (c *FSCache) listVersionedPkgs(
-	requirement RepoReq,
-) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
-	repoCachePath := filepath.Join(
-		fmt.Sprintf("%s@%s", requirement.VCSRepoPath, requirement.VersionLock.Version),
-		requirement.RepoSubdir,
-	)
-	pkgs, err := c.LoadFSPkgs(repoCachePath)
-	if err != nil {
-		return nil, nil, errors.Wrapf(
-			err, "couldn't list packages from repo cached at %s", repoCachePath,
-		)
-	}
-
-	pkgMap = make(map[string]*pallets.FSPkg)
-	for _, pkg := range pkgs {
-		versionedPkgPath := fmt.Sprintf(
-			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,
-		)
-		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
-			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
-				return nil, nil, errors.Errorf(
-					"package repeatedly defined in the same version of the same cached Github repo: %s, %s",
-					prevPkg.FS.Path(), pkg.FS.Path(),
-				)
-			}
+// LoadFSPkg loads the FSPkg with the specified path and version.
+// The loaded FSPkg instance is fully initialized.
+// If the package path is covered by one of the overriding FSRepos in the OverriddenCache instance,
+// regardless of version and regardless of whether that repo actually provides the package, that
+// repo is used to try to load the package; otherwise, the package is loaded from the underlying
+// cache.
+func (c *OverriddenCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
+	for _, repo := range c.Overrides {
+		if repo.CoversPath(pkgPath) {
+			return repo.LoadFSPkg(repo.GetPkgSubdir(pkgPath))
 		}
-		versionedPkgPaths = append(versionedPkgPaths, versionedPkgPath)
-		pkgMap[versionedPkgPath] = pkg
+	}
+	return c.LoadFSPkg(pkgPath, version)
+}
+
+// LoadFSPkgs loads all FSPkgs from the cache matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
+// to search for.
+// The loaded FSPkg instances are fully initialized.
+// If one of the overriding FSRepos in the OverriddenCache instance provides matching packages,
+// regardless of version, those packages are included; repos from the underlying cache with the same
+// path as any overriding repo will not be used for loading packages; packages from other repos are
+// loaded from the underlying cache.
+func (c *OverriddenCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
+	pkgs := make([]*pallets.FSPkg, 0, len(c.Overrides))
+	for _, repo := range c.Overrides {
+		repoPkgs, err := repo.LoadFSPkgs(searchPattern)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't load packages from overriding repo %s", repo.Path())
+		}
+		pkgs = append(pkgs, repoPkgs...)
+	}
+	cachedPkgs, err := c.Cache.LoadFSPkgs(searchPattern)
+	if err != nil {
+		return nil, err
+	}
+	for _, pkg := range cachedPkgs {
+		if _, ok := c.Overrides[pkg.Repo.Path()]; ok {
+			// We already added packages from the repo in the overrides
+			continue
+		}
+		pkgs = append(pkgs, pkg)
 	}
 
-	return pkgMap, versionedPkgPaths, nil
+	sort.Slice(pkgs, func(i, j int) bool {
+		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) == pallets.CompareLT
+	})
+	return pkgs, nil
 }

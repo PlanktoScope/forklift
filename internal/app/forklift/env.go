@@ -134,14 +134,14 @@ func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 // LoadRequiredFSPkg loads the specified package from the cache according to the versioning
 // requirement for the package's repository as configured in the environment.
 func LoadRequiredFSPkg(env *FSEnv, cache *FSCache, pkgPath string) (*pallets.FSPkg, PkgReq, error) {
-	requirement, err := env.LoadPkgReq(pkgPath)
+	req, err := env.LoadPkgReq(pkgPath)
 	if err != nil {
 		return nil, PkgReq{}, errors.Wrapf(
 			err, "couldn't determine package requirement for package %s", pkgPath,
 		)
 	}
-	fsPkg, err := cache.LoadFSPkgFromPkgReq(requirement)
-	return fsPkg, requirement, err
+	fsPkg, err := LoadFSPkgFromPkgReq(cache, req)
+	return fsPkg, req, err
 }
 
 // FSEnv: Deployments
@@ -150,6 +150,7 @@ func (e *FSEnv) GetDeplsFS() (pallets.PathedFS, error) {
 	return e.FS.Sub(DeplsDirName)
 }
 
+// TODO: delegate this functionality to an env-independent LoadDepl function
 func (e *FSEnv) LoadDepl(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, deplName string,
 ) (depl *Depl, err error) {
@@ -192,6 +193,9 @@ func (e *FSEnv) LoadDepl(
 }
 
 // TODO: rename this method
+// TODO: delegate this functionality to an env-independent LoadDepls function
+// TODO: take a search pattern
+// TODO: split off loading of deployment-required packages from the cache into a separate function
 func (e *FSEnv) ListDepls(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo,
 ) ([]*Depl, error) {
