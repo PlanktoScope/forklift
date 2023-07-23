@@ -61,7 +61,7 @@ func listRequiredImages(
 			continue
 		}
 
-		stackConfig, err := loadStackDefinition(depl.Pkg.FSPkg)
+		stackConfig, err := loadStackDefinition(depl.Pkg)
 		if err != nil {
 			return nil, err
 		}

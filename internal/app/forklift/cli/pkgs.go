@@ -4,10 +4,45 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
 // Print
+
+func PrintPkg(indent int, cache *forklift.FSCache, pkg *pallets.FSPkg) {
+	IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
+	indent++
+
+	printPkgRepo(indent, cache, pkg)
+	if cache.CoversPath(pkg.FS.Path()) {
+		IndentedPrintf(indent, "Path in cache: %s\n", cache.TrimCachePathPrefix(pkg.FS.Path()))
+	} else {
+		IndentedPrintf(indent, "External path (replacing cached package): %s\n", pkg.FS.Path())
+	}
+
+	PrintPkgSpec(indent, pkg.Config.Package)
+	fmt.Println()
+	PrintDeplSpec(indent, pkg.Config.Deployment)
+	fmt.Println()
+	PrintFeatureSpecs(indent, pkg.Config.Features)
+}
+
+func printPkgRepo(indent int, cache *forklift.FSCache, pkg *pallets.FSPkg) {
+	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
+	indent++
+
+	if cache.CoversPath(pkg.FS.Path()) {
+		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
+	} else {
+		IndentedPrintf(
+			indent, "External path (replacing cached repository): %s\n", pkg.Repo.FS.Path(),
+		)
+	}
+
+	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
+	IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+}
 
 func PrintPkgSpec(indent int, spec pallets.PkgSpec) {
 	IndentedPrintf(indent, "Description: %s\n", spec.Description)

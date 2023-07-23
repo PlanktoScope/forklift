@@ -1,5 +1,9 @@
 package forklift
 
+import (
+	"github.com/PlanktoScope/forklift/pkg/pallets"
+)
+
 const (
 	// DeplsDirName is the directory in a Forklift environment which contains deployment
 	// configurations.
@@ -13,8 +17,9 @@ const (
 type Depl struct {
 	Name   string
 	Config DeplConfig
-	// TODO: populate this with a Resolve() method
-	Pkg *VersionedPkg
+	PkgReq PkgReq
+	// TODO: can we remove Pkg?
+	Pkg *pallets.FSPkg
 }
 
 // A DeplConfig defines a Pallets package deployment.

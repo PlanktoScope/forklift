@@ -36,16 +36,10 @@ func processFullBaseArgs(c *cli.Context, ensureCache bool) (
 }
 
 func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
-	envPath, err := forklift.FindParentEnv(cwdPath)
-	if err != nil {
+	if env, err = forklift.LoadFSEnvContaining(cwdPath); err != nil {
 		return nil, errors.Wrapf(
-			err, "The current working directory %s is not part of a Forklift environment.", cwdPath,
+			err, "The current working directory %s is not part of a Forklift environment", cwdPath,
 		)
-	}
-	if env, err = forklift.LoadFSEnv(
-		pallets.AttachPath(os.DirFS(envPath), envPath), ".",
-	); err != nil {
-		return nil, errors.Wrap(err, "couldn't load environment")
 	}
 	return env, nil
 }

@@ -8,17 +8,17 @@ import (
 
 // TODO: rename this method
 func ListVersionedPkgs(
-	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, repos []*FSRepoRequirement,
+	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, requirements []*FSRepoReq,
 ) (orderedPkgs []*pallets.FSPkg, err error) {
 	versionedPkgPaths := make([]string, 0)
 	pkgMap := make(map[string]*pallets.FSPkg)
-	for _, repo := range repos {
+	for _, requirement := range requirements {
 		var pkgs map[string]*pallets.FSPkg
 		var paths []string
-		if externalRepo, ok := replacementRepos[repo.Path()]; ok {
+		if externalRepo, ok := replacementRepos[requirement.Path()]; ok {
 			pkgs, paths, err = listVersionedPkgsOfExternalRepo(externalRepo)
 		} else {
-			pkgs, paths, err = cache.listVersionedPkgs(repo.RepoRequirement)
+			pkgs, paths, err = cache.listVersionedPkgs(requirement.RepoReq)
 		}
 
 		for k, v := range pkgs {
@@ -26,7 +26,9 @@ func ListVersionedPkgs(
 		}
 		versionedPkgPaths = append(versionedPkgPaths, paths...)
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't list versioned packages of repo %s", repo.Path())
+			return nil, errors.Wrapf(
+				err, "couldn't list versioned packages of repo %s", requirement.Path(),
+			)
 		}
 	}
 

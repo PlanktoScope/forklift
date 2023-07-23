@@ -213,11 +213,32 @@ func (c *FSCache) loadFSRepoContaining(subdirPath string) (repo *pallets.FSRepo,
 	return repo, nil
 }
 
+// LoadFSPkgFromPkgReq loads the required package from the cache.
+func (c *FSCache) LoadFSPkgFromPkgReq(requirement PkgReq) (*pallets.FSPkg, error) {
+	pkg, err := c.LoadFSPkg(requirement.Path(), requirement.Repo.VersionLock.Version)
+	return pkg, errors.Wrapf(
+		err, "couldn't load required package %s@%s",
+		requirement.Path(), requirement.Repo.VersionLock.Version,
+	)
+}
+
+// LoadFSPkgsFromPkgReqs loads the required packages from the cache.
+func (c *FSCache) LoadFSPkgsFromPkgReqs(requirements []PkgReq) (p []*pallets.FSPkg, err error) {
+	for _, requirement := range requirements {
+		fsPkg, err := c.LoadFSPkgFromPkgReq(requirement)
+		if err != nil {
+			return nil, err
+		}
+		p = append(p, fsPkg)
+	}
+	return p, nil
+}
+
 // FSCache: Versioned Packages
 
 // TODO: rename this method
 func (c *FSCache) listVersionedPkgs(
-	requirement RepoRequirement,
+	requirement RepoReq,
 ) (pkgMap map[string]*pallets.FSPkg, versionedPkgPaths []string, err error) {
 	repoCachePath := filepath.Join(
 		fmt.Sprintf("%s@%s", requirement.VCSRepoPath, requirement.VersionLock.Version),

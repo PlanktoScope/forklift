@@ -19,10 +19,8 @@ func ToTimestamp(t time.Time) string {
 	return t.UTC().Format(Timestamp)
 }
 
-const shortCommitLength = 12
-
-// TODO: move this somewhere else?
 func ShortCommit(commit string) string {
+	const shortCommitLength = 12
 	return commit[:shortCommitLength]
 }
 

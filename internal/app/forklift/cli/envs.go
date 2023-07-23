@@ -477,7 +477,7 @@ func applyReconciliationChange(
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
 		IndentedPrintf(indent, "Adding package deployment %s...\n", change.Name)
-		if err := deployStack(indent+1, change.Depl.Pkg.FSPkg, change.Name, dc); err != nil {
+		if err := deployStack(indent+1, change.Depl.Pkg, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
@@ -489,7 +489,7 @@ func applyReconciliationChange(
 		return nil
 	case updateReconciliationChange:
 		IndentedPrintf(indent, "Updating package deployment %s...\n", change.Name)
-		if err := deployStack(indent+1, change.Depl.Pkg.FSPkg, change.Name, dc); err != nil {
+		if err := deployStack(indent+1, change.Depl.Pkg, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil

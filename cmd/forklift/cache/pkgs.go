@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
@@ -60,31 +59,6 @@ func showPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet package %s@%s", pkgPath, version)
 	}
-	printCachedPkg(0, cache, pkg)
+	fcli.PrintPkg(0, cache, pkg)
 	return nil
-}
-
-func printCachedPkg(indent int, cache *forklift.FSCache, pkg *pallets.FSPkg) {
-	fcli.IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
-	indent++
-
-	printCachedPkgRepo(indent, pkg)
-	fcli.IndentedPrintf(indent, "Path in cache: %s\n", cache.TrimCachePathPrefix(pkg.FS.Path()))
-	fmt.Println()
-	fcli.PrintPkgSpec(indent, pkg.Config.Package)
-	fmt.Println()
-	fcli.PrintDeplSpec(indent, pkg.Config.Deployment)
-	fmt.Println()
-	fcli.PrintFeatureSpecs(indent, pkg.Config.Features)
-}
-
-func printCachedPkgRepo(indent int, pkg *pallets.FSPkg) {
-	fcli.IndentedPrintf(
-		indent, "Provided by Pallet repository: %s\n", pkg.Repo.Config.Repository.Path,
-	)
-	indent++
-
-	fcli.IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
-	fcli.IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
-	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
 }

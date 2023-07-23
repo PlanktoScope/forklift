@@ -16,24 +16,7 @@ import (
 
 // FSEnv
 
-func FindParentEnv(cwd string) (path string, err error) {
-	envCandidatePath, err := filepath.Abs(cwd)
-	if err != nil {
-		return "", errors.Wrapf(err, "couldn't convert '%s' into an absolute path", cwd)
-	}
-	for envCandidatePath != "." && envCandidatePath != "/" {
-		f := os.DirFS(envCandidatePath)
-		_, err := fs.ReadFile(f, "forklift-env.yml")
-		if err == nil {
-			return envCandidatePath, nil
-		}
-		envCandidatePath = filepath.Dir(envCandidatePath)
-	}
-	return "", errors.Errorf(
-		"no environment config file found in any parent directory of %s", cwd,
-	)
-}
-
+// LoadFSEnv loads a FSEnv from the specified directory path in the provided base filesystem.
 func LoadFSEnv(fsys pallets.PathedFS, subdirPath string) (e *FSEnv, err error) {
 	e = &FSEnv{}
 	if e.FS, err = fsys.Sub(subdirPath); err != nil {
@@ -45,81 +28,120 @@ func LoadFSEnv(fsys pallets.PathedFS, subdirPath string) (e *FSEnv, err error) {
 		return nil, errors.Errorf("couldn't load env config")
 	}
 	return e, nil
-	// return &FSEnv{
-	// 	FS: pallets.AttachPath(os.DirFS(path), path),
-	// }, nil
 }
 
+// LoadFSEnvContaining loads the FSEnv containing the specified sub-directory path in the provided
+// base filesystem.
+// The sub-directory path does not have to actually exist.
+func LoadFSEnvContaining(path string) (*FSEnv, error) {
+	envCandidatePath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
+	}
+	for {
+		if fsEnv, err := LoadFSEnv(
+			pallets.AttachPath(os.DirFS(envCandidatePath), envCandidatePath), ".",
+		); err == nil {
+			return fsEnv, nil
+		}
+
+		envCandidatePath = filepath.Dir(envCandidatePath)
+		if envCandidatePath == "/" || envCandidatePath == "." {
+			// we can't go up anymore!
+			return nil, errors.Errorf(
+				"no environment config file found in any parent directory of %s", path,
+			)
+		}
+	}
+}
+
+// Exists checks whether the environment actually exists on the OS's filesystem.
 func (e *FSEnv) Exists() bool {
 	return Exists(e.FS.Path())
 }
 
+// Remove deletes the cache from the OS's filesystem, if it exists.
 func (e *FSEnv) Remove() error {
 	return os.RemoveAll(e.FS.Path())
 }
 
 // FSEnv: Repo Requirements
 
-func (e *FSEnv) GetRepoRequirementsFS() (pallets.PathedFS, error) {
-	return e.FS.Sub(RepoRequirementsDirName)
+// GetRepoReqsFS returns the [fs.FS] in the environment which contains repository requirement
+// configurations.
+func (e *FSEnv) GetRepoReqsFS() (pallets.PathedFS, error) {
+	return e.FS.Sub(RepoReqsDirName)
 }
 
-func (e *FSEnv) LoadFSRepoRequirement(repoPath string) (r *FSRepoRequirement, err error) {
-	reposFS, err := e.GetRepoRequirementsFS()
+// LoadFSRepoReq loads the FSRepoReq from the environment for the repository with the specified
+// Pallet repository path.
+func (e *FSEnv) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
+	reposFS, err := e.GetRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for versioned Pallet repositories from environment",
 		)
 	}
-	if r, err = loadFSRepoRequirement(reposFS, repoPath); err != nil {
+	if r, err = loadFSRepoReq(reposFS, repoPath); err != nil {
 		return nil, errors.Wrap(err, "couldn't load repo r")
 	}
 	return r, nil
 }
 
-// LoadFSRepoRequirements loads all FSRepoRequirements from the environment matching the specified
-// search pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching the
-// repo paths to search for.
-func (e *FSEnv) LoadFSRepoRequirements(searchPattern string) ([]*FSRepoRequirement, error) {
-	reposFS, err := e.GetRepoRequirementsFS()
+// loadFSRepoReqContaining loads the FSRepoReq containing the specified sub-directory path in the
+// environment.
+// The sub-directory path does not have to actually exist; however, it would usually be provided as
+// a Pallet package path.
+func (e *FSEnv) loadFSRepoReqContaining(subdirPath string) (*FSRepoReq, error) {
+	reposFS, err := e.GetRepoReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(
+			err, "couldn't open directory for versioned Pallet repositories from environment",
+		)
+	}
+	return loadFSRepoReqContaining(reposFS, subdirPath)
+}
+
+// LoadFSRepoReqs loads all FSRepoReqs from the environment matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching the repo paths to
+// search for.
+func (e *FSEnv) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
+	reposFS, err := e.GetRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for Pallet repositories in local environment",
 		)
 	}
-	return loadFSRepoRequirements(reposFS, searchPattern)
+	return loadFSRepoReqs(reposFS, searchPattern)
 }
 
-// FSEnv: Versioned Packages
+// FSEnv: Package Requirements
 
-func (e *FSEnv) LoadVersionedPkg(cache *FSCache, pkgPath string) (p *VersionedPkg, err error) {
-	p = &VersionedPkg{}
-	if p.RepoRequirement, err = e.loadFSRepoRequirementOfPkg(pkgPath); err != nil {
-		return nil, errors.Wrapf(
+// LoadPkgReq loads the PkgReq from the environment for the package with the specified Pallet
+// package path.
+func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
+	fsRepoReq, err := e.loadFSRepoReqContaining(pkgPath)
+	if err != nil {
+		return PkgReq{}, errors.Wrapf(
 			err, "couldn't find repo providing package %s in local environment", pkgPath,
 		)
 	}
-	version := p.RepoRequirement.VersionLock.Version
-	if p.FSPkg, err = cache.LoadFSPkg(pkgPath, version); err != nil {
-		return nil, errors.Wrapf(err, "couldn't find package %s@%s in cache", pkgPath, version)
-	}
-
-	return p, nil
+	r.Repo = fsRepoReq.RepoReq
+	r.PkgSubdir = fsRepoReq.GetPkgSubdir(pkgPath)
+	return r, nil
 }
 
-func (e *FSEnv) loadFSRepoRequirementOfPkg(pkgPath string) (*FSRepoRequirement, error) {
-	repoCandidatePath := filepath.Dir(pkgPath)
-	for repoCandidatePath != "." {
-		repo, err := e.LoadFSRepoRequirement(repoCandidatePath)
-		if err == nil {
-			return repo, nil
-		}
-		repoCandidatePath = filepath.Dir(repoCandidatePath)
+// LoadRequiredFSPkg loads the specified package from the cache according to the versioning
+// requirement for the package's repository as configured in the environment.
+func LoadRequiredFSPkg(env *FSEnv, cache *FSCache, pkgPath string) (*pallets.FSPkg, PkgReq, error) {
+	requirement, err := env.LoadPkgReq(pkgPath)
+	if err != nil {
+		return nil, PkgReq{}, errors.Wrapf(
+			err, "couldn't determine package requirement for package %s", pkgPath,
+		)
 	}
-	return nil, errors.Errorf(
-		"no repository config file found in %s or any parent directory in local environment",
-		filepath.Dir(pkgPath),
-	)
+	fsPkg, err := cache.LoadFSPkgFromPkgReq(requirement)
+	return fsPkg, requirement, err
 }
 
 // FSEnv: Deployments
@@ -156,11 +178,11 @@ func (e *FSEnv) LoadDepl(
 				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
 			)
 		}
-		depl.Pkg = AsVersionedPkg(pkg)
+		depl.Pkg = pkg
 		return depl, nil
 	}
 
-	if depl.Pkg, err = e.LoadVersionedPkg(cache, pkgPath); err != nil {
+	if depl.Pkg, depl.PkgReq, err = LoadRequiredFSPkg(e, cache, pkgPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
 		)

@@ -61,10 +61,11 @@ func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
 
 // LoadFSRepoContaining loads the FSRepo containing the specified sub-directory path in the provided
 // base filesystem.
+// The sub-directory path does not have to actually exist.
 // In the loaded FSRepo's embedded [Repo], the VCS repository path and Pallet repository
 // subdirectory are initialized from the Pallet repository path declared in the repository's
 // configuration file, while the Pallet repository version is *not* initialized.
-func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
+func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
 	repoCandidatePath := subdirPath
 	for {
 		if repo, err := LoadFSRepo(fsys, repoCandidatePath); err == nil {

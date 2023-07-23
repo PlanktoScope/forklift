@@ -186,9 +186,9 @@ func updateLocalRepoMirror(remote, cachedPath string) error {
 
 func determinePalletRepoConfigs(
 	remoteReleases []string, cachePath string,
-) (map[string]forklift.RepoRequirement, error) {
-	vcsRepoConfigs := make(map[string]forklift.RepoRequirement)
-	palletRepoConfigs := make(map[string]forklift.RepoRequirement)
+) (map[string]forklift.RepoReq, error) {
+	vcsRepoConfigs := make(map[string]forklift.RepoReq)
+	palletRepoConfigs := make(map[string]forklift.RepoReq)
 	for _, remoteRelease := range remoteReleases {
 		vcsRepoPath, repoSubdir, versionQuery, err := splitRemoteRepoRelease(remoteRelease)
 		if err != nil {
@@ -220,25 +220,25 @@ func determinePalletRepoConfigs(
 
 func resolveVCSRepoVersionQuery(
 	cachePath, vcsRepoPath, versionQuery string,
-) (forklift.RepoRequirement, error) {
-	repo := forklift.RepoRequirement{
+) (forklift.RepoReq, error) {
+	repo := forklift.RepoReq{
 		VCSRepoPath: vcsRepoPath,
 	}
 	if versionQuery == "" {
-		return forklift.RepoRequirement{}, errors.New(
+		return forklift.RepoReq{}, errors.New(
 			"support for empty version queries is not yet implemented!",
 		)
 	}
 	localPath := filepath.Join(cachePath, vcsRepoPath)
 	gitRepo, err := git.Open(localPath)
 	if err != nil {
-		return forklift.RepoRequirement{}, errors.Wrapf(
+		return forklift.RepoReq{}, errors.Wrapf(
 			err, "couldn't open local mirror of %s", vcsRepoPath,
 		)
 	}
 	commit, err := queryRefs(gitRepo, versionQuery)
 	if err != nil {
-		return forklift.RepoRequirement{}, err
+		return forklift.RepoReq{}, err
 	}
 	if commit == "" {
 		commit, err = gitRepo.GetCommitFullHash(versionQuery)
@@ -247,12 +247,12 @@ func resolveVCSRepoVersionQuery(
 		}
 	}
 	if commit == "" {
-		return forklift.RepoRequirement{}, errors.Errorf(
+		return forklift.RepoReq{}, errors.Errorf(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
 	if repo.VersionLock.Config, err = lockCommit(gitRepo, commit); err != nil {
-		return forklift.RepoRequirement{}, err
+		return forklift.RepoReq{}, err
 	}
 	return repo, nil
 }
