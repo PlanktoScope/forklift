@@ -203,38 +203,29 @@ const (
 	CompareGT = 1
 )
 
-// CompareRepoPaths returns an integer comparing two [Repo] instances according to their paths. The
-// result will be 0 if the r and s have the same paths; -1 if r has a path which alphabetically
-// comes before the path of s; or +1 if r has a path which alphabetically comes after the path of s.
-// A path comes before another path if the VCS repository component comes before, or if the VCS
-// repository components are equal but the subdirectory component comes before.
-func CompareRepoPaths(r, s Repo) int {
-	if r.VCSRepoPath != s.VCSRepoPath {
-		if r.VCSRepoPath < s.VCSRepoPath {
-			return CompareLT
-		}
-		return CompareGT
-	}
-	if r.Subdir != s.Subdir {
-		if r.Subdir < s.Subdir {
-			return CompareLT
-		}
-		return CompareGT
-	}
-	return CompareEQ
-}
-
 // CompareRepos returns an integer comparing two [Repo] instances according to their paths and
 // versions. The result will be 0 if the r and s have the same paths and versions; -1 if r has a
 // path which alphabetically comes before the path of s or if the paths are the same but r has a
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
 func CompareRepos(r, s Repo) int {
-	if result := CompareRepoPaths(r, s); result != CompareEQ {
+	if result := ComparePaths(r.Path(), s.Path()); result != CompareEQ {
 		return result
 	}
 	if result := semver.Compare(r.Version, s.Version); result != CompareEQ {
 		return result
+	}
+	return CompareEQ
+}
+
+// ComparePaths returns an integer comparing two paths. The result will be 0 if the r and s are
+// the same; -1 if r alphabetically comes before s; or +1 if r alphabetically comes after s.
+func ComparePaths(r, s string) int {
+	if r < s {
+		return CompareLT
+	}
+	if r > s {
+		return CompareGT
 	}
 	return CompareEQ
 }

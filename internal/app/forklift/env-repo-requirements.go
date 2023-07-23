@@ -5,6 +5,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
+	"golang.org/x/mod/semver"
 
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
@@ -80,18 +81,19 @@ func (r RepoRequirement) Path() string {
 	return filepath.Join(r.VCSRepoPath, r.RepoSubdir)
 }
 
+// CompareRepos returns an integer comparing two [RepoRequirement] instances according to their
+// paths and versions. The result will be 0 if the r and s have the same paths and versions; -1 if r
+// has a path which alphabetically comes before the path of s or if the paths are the same but r has
+// a lower version than s; or +1 if r has a path which alphabetically comes after the path of s or
+// if the paths are the same but r has a higher version than s.
 func CompareRepoRequirements(r, s RepoRequirement) int {
-	if r.VCSRepoPath != s.VCSRepoPath {
-		if r.VCSRepoPath < s.VCSRepoPath {
-			return pallets.CompareLT
-		}
-		return pallets.CompareGT
+	if result := pallets.ComparePaths(r.Path(), s.Path()); result != pallets.CompareEQ {
+		return result
 	}
-	if r.RepoSubdir != s.RepoSubdir {
-		if r.RepoSubdir < s.RepoSubdir {
-			return pallets.CompareLT
-		}
-		return pallets.CompareGT
+	if result := semver.Compare(
+		r.VersionLock.Version, s.VersionLock.Version,
+	); result != pallets.CompareEQ {
+		return result
 	}
 	return pallets.CompareEQ
 }

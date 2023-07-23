@@ -90,29 +90,17 @@ func (p *FSPkg) Check() (errs []error) {
 	return errs
 }
 
-// ComparePkgs returns an integer comparing two [Pkg] instances according to their respective
-// repositories' paths, their respective package subdirectories, and their respective repositories'
-// versions. The result will be 0 if the p and q have the same repositories' paths, package
-// subdirectories, and versions; -1 if r has a repository with a path which alphabetically comes
-// before the path of the repository of s, or if the repositories' paths are the same but r has a
-// lower package subdirectory than s, or if the package paths are the same but r has a lower version
-// than s; or +1 if r has a repository with a path which alphabetically comes after the path of s,
-// or if the repositories' paths are the same but r has a higher package subdirectory than s, or if
-// the package paths are the same but r has a lower version than s.
+// ComparePkgs returns an integer comparing two [Pkg] instances according to their paths, and their
+// respective repositories' versions. The result will be 0 if the p and q have the same paths and
+// versions; -1 if r has a path which alphabetically comes before the path of s, or if the paths are
+// the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
+// the path of s, or if the paths are the same but r has a lower version than s.
 func ComparePkgs(p, q Pkg) int {
-	repoPathComparison := CompareRepoPaths(*p.Repo, *q.Repo)
-	if repoPathComparison != CompareEQ {
-		return repoPathComparison
+	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
+		return result
 	}
-	if p.Subdir != q.Subdir {
-		if p.Subdir < q.Subdir {
-			return CompareLT
-		}
-		return CompareGT
-	}
-	repoVersionComparison := semver.Compare(p.Repo.Version, q.Repo.Version)
-	if repoVersionComparison != CompareEQ {
-		return repoVersionComparison
+	if result := semver.Compare(p.Repo.Version, q.Repo.Version); result != CompareEQ {
+		return result
 	}
 	return CompareEQ
 }
