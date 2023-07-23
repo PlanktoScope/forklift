@@ -74,3 +74,41 @@ type PkgReq struct {
 	// Repo is the Pallet repository which should provide the required package.
 	Repo RepoReq
 }
+
+// Deployment Configurations
+
+const (
+	// DeplsDirName is the directory in a Forklift environment which contains deployment
+	// configurations.
+	DeplsDirName = "deployments"
+	// DeplsFileExt is the file extension for deployment configuration files.
+	DeplSpecFileExt = ".deploy.yml"
+)
+
+// A ResolvedDepl is a deployment with a loaded package.
+type ResolvedDepl struct {
+	// Depl is the configured deployment of the package represented by Pkg.
+	Depl
+	// PkgReq is the package requirement for the deployment.
+	PkgReq PkgReq
+	// Pkg is the package to be deployed.
+	Pkg *pallets.FSPkg
+}
+
+// A Depl is a Pallets package deployment, a complete configuration of how a Pallet package is to be
+// deployed on a Docker host.
+type Depl struct {
+	// Name is the name of the package depoyment.
+	Name string
+	// Config is the Forklift package deployment specification for the deployment.
+	Config DeplConfig
+}
+
+// A DeplConfig defines a Pallets package deployment.
+type DeplConfig struct {
+	// Package is the Pallet package path of the package to deploy
+	Package string `yaml:"package,omitempty"`
+	// Features is a list of features from the Pallet package which should be enabled in the
+	// deployment.
+	Features []string `yaml:"features,omitempty"`
+}

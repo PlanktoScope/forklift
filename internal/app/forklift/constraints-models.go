@@ -5,8 +5,8 @@ import (
 )
 
 type DeplConflict struct {
-	First  *Depl
-	Second *Depl
+	First  *ResolvedDepl
+	Second *ResolvedDepl
 
 	// Possible conflicts
 	Name      bool
@@ -16,7 +16,7 @@ type DeplConflict struct {
 }
 
 type MissingDeplDependencies struct {
-	Depl *Depl
+	Depl *ResolvedDepl
 
 	Networks []pallets.MissingResourceDependency[pallets.NetworkResource]
 	Services []pallets.MissingResourceDependency[pallets.ServiceResource]

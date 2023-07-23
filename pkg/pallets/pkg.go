@@ -125,6 +125,116 @@ func (p Pkg) Check() (errs []error) {
 	return errs
 }
 
+// ResourceAttachmentSource returns the source path for resources under the Pkg instance.
+// The resulting slice is useful for constructing [AttachedResource] instances.
+func (p Pkg) ResourceAttachmentSource(parentSource []string) []string {
+	return append(parentSource, fmt.Sprintf("package %s", p.Path()))
+}
+
+// ProvidedListeners returns a slice of all host port listeners provided by a deployment of the
+// Pallet package with the specified features enabled.
+func (p Pkg) ProvidedListeners(
+	parentSource []string, enabledFeatures []string,
+) (provided []AttachedResource[ListenerResource]) {
+	parentSource = p.ResourceAttachmentSource(parentSource)
+	provided = append(provided, p.Config.Host.Provides.AttachedListeners(
+		p.Config.Host.ResourceAttachmentSource(parentSource),
+	)...)
+	provided = append(provided, p.Config.Deployment.Provides.AttachedListeners(
+		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	)...)
+
+	for _, featureName := range enabledFeatures {
+		feature := p.Config.Features[featureName]
+		provided = append(provided, feature.Provides.AttachedListeners(
+			feature.ResourceAttachmentSource(parentSource, featureName),
+		)...)
+	}
+	return provided
+}
+
+// RequiredNetworks returns a slice of all Docker networks required by a deployment of the Pallet
+// package with the specified features enabled.
+func (p Pkg) RequiredNetworks(
+	parentSource []string, enabledFeatures []string,
+) (required []AttachedResource[NetworkResource]) {
+	parentSource = p.ResourceAttachmentSource(parentSource)
+	required = append(required, p.Config.Deployment.Requires.AttachedNetworks(
+		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	)...)
+
+	for _, featureName := range enabledFeatures {
+		feature := p.Config.Features[featureName]
+		required = append(required, feature.Requires.AttachedNetworks(
+			feature.ResourceAttachmentSource(parentSource, featureName),
+		)...)
+	}
+	return required
+}
+
+// ProvidedNetworks returns a slice of all Docker networks provided by a deployment of the Pallet
+// package with the specified features enabled.
+func (p Pkg) ProvidedNetworks(
+	parentSource []string, enabledFeatures []string,
+) (provided []AttachedResource[NetworkResource]) {
+	parentSource = p.ResourceAttachmentSource(parentSource)
+	provided = append(provided, p.Config.Host.Provides.AttachedNetworks(
+		p.Config.Host.ResourceAttachmentSource(parentSource),
+	)...)
+	provided = append(provided, p.Config.Deployment.Provides.AttachedNetworks(
+		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	)...)
+
+	for _, featureName := range enabledFeatures {
+		feature := p.Config.Features[featureName]
+		provided = append(provided, feature.Provides.AttachedNetworks(
+			feature.ResourceAttachmentSource(parentSource, featureName),
+		)...)
+	}
+	return provided
+}
+
+// RequiredServices returns a slice of all network services required by a deployment of the Pallet
+// package with the specified features enabled.
+func (p Pkg) RequiredServices(
+	parentSource []string, enabledFeatures []string,
+) (required []AttachedResource[ServiceResource]) {
+	parentSource = p.ResourceAttachmentSource(parentSource)
+	required = append(required, p.Config.Deployment.Requires.AttachedServices(
+		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	)...)
+
+	for _, featureName := range enabledFeatures {
+		feature := p.Config.Features[featureName]
+		required = append(required, feature.Requires.AttachedServices(
+			feature.ResourceAttachmentSource(parentSource, featureName),
+		)...)
+	}
+	return required
+}
+
+// ProvidedServices returns a slice of all network services provided by a deployment of the Pallet
+// package with the specified features enabled.
+func (p Pkg) ProvidedServices(
+	parentSource []string, enabledFeatures []string,
+) (provided []AttachedResource[ServiceResource]) {
+	parentSource = p.ResourceAttachmentSource(parentSource)
+	provided = append(provided, p.Config.Host.Provides.AttachedServices(
+		p.Config.Host.ResourceAttachmentSource(parentSource),
+	)...)
+	provided = append(provided, p.Config.Deployment.Provides.AttachedServices(
+		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	)...)
+
+	for _, featureName := range enabledFeatures {
+		feature := p.Config.Features[featureName]
+		provided = append(provided, feature.Provides.AttachedServices(
+			feature.ResourceAttachmentSource(parentSource, featureName),
+		)...)
+	}
+	return provided
+}
+
 // PkgConfig
 
 // LoadPkgConfig loads a PkgConfig from the specified file path in the provided base filesystem.
@@ -147,6 +257,7 @@ func LoadPkgConfig(fsys PathedFS, filePath string) (PkgConfig, error) {
 // ResourceAttachmentSource returns the source path for resources under the PkgHostSpec instance,
 // adding a string to the provided list of source elements which describes the source of the
 // PkgHostSpec instance.
+// The resulting slice is useful for constructing [AttachedResource] instances.
 func (s PkgHostSpec) ResourceAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "host specification")
 }
@@ -156,6 +267,7 @@ func (s PkgHostSpec) ResourceAttachmentSource(parentSource []string) []string {
 // ResourceAttachmentSource returns the source path for resources under the PkgDeplSpec instance,
 // adding a string to the provided list of source elements which describes the source of the
 // PkgDeplSpec instance.
+// The resulting slice is useful for constructing [AttachedResource] instances.
 func (s PkgDeplSpec) ResourceAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "deployment specification")
 }
@@ -170,6 +282,7 @@ func (s PkgDeplSpec) DefinesStack() bool {
 // ResourceAttachmentSource returns the source path for resources under the PkgFeatureSpec instance,
 // adding a string to the provided list of source elements which describes the source of the
 // PkgFeatureSpec instance.
+// The resulting slice is useful for constructing [AttachedResource] instances.
 func (s PkgFeatureSpec) ResourceAttachmentSource(parentSource []string, featureName string) []string {
 	return append(parentSource, fmt.Sprintf("feature %s", featureName))
 }

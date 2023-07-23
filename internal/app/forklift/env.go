@@ -151,11 +151,14 @@ func (e *FSEnv) GetDeplsFS() (pallets.PathedFS, error) {
 }
 
 // TODO: delegate this functionality to an env-independent LoadDepl function
+// TODO: separate LoadDepl from ResolveDepl
 func (e *FSEnv) LoadDepl(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, deplName string,
-) (depl *Depl, err error) {
-	depl = &Depl{
-		Name: deplName,
+) (depl *ResolvedDepl, err error) {
+	depl = &ResolvedDepl{
+		Depl: Depl{
+			Name: deplName,
+		},
 	}
 
 	deplsFS, err := e.GetDeplsFS()
@@ -198,20 +201,20 @@ func (e *FSEnv) LoadDepl(
 // TODO: split off loading of deployment-required packages from the cache into a separate function
 func (e *FSEnv) ListDepls(
 	cache *FSCache, replacementRepos map[string]*pallets.FSRepo,
-) ([]*Depl, error) {
+) ([]*ResolvedDepl, error) {
 	fsys, err := e.GetDeplsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from environment",
 		)
 	}
-	files, err := doublestar.Glob(fsys, fmt.Sprintf("*%s", DeplsFileExt))
+	files, err := doublestar.Glob(fsys, fmt.Sprintf("**/*%s", DeplSpecFileExt))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for Pallet package deployment configs")
 	}
 
 	deplNames := make([]string, 0, len(files))
-	deplMap := make(map[string]*Depl)
+	deplMap := make(map[string]*ResolvedDepl)
 	for _, filePath := range files {
 		deplName := strings.TrimSuffix(filePath, ".deploy.yml")
 		if _, ok := deplMap[deplName]; ok {
@@ -226,7 +229,7 @@ func (e *FSEnv) ListDepls(
 		}
 	}
 
-	orderedDepls := make([]*Depl, 0, len(deplNames))
+	orderedDepls := make([]*ResolvedDepl, 0, len(deplNames))
 	for _, deplName := range deplNames {
 		orderedDepls = append(orderedDepls, deplMap[deplName])
 	}

@@ -60,7 +60,7 @@ func PrintDeplInfo(
 	return nil
 }
 
-func printDepl(indent int, cache *forklift.FSCache, depl *forklift.Depl) {
+func printDepl(indent int, cache *forklift.FSCache, depl *forklift.ResolvedDepl) {
 	IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
 	indent++
 
@@ -86,7 +86,7 @@ func printDepl(indent int, cache *forklift.FSCache, depl *forklift.Depl) {
 	printFeatures(indent+1, disabledFeatures)
 }
 
-func printDeplPkg(indent int, cache *forklift.FSCache, depl *forklift.Depl) {
+func printDeplPkg(indent int, cache *forklift.FSCache, depl *forklift.ResolvedDepl) {
 	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
 	indent++
 

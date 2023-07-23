@@ -231,3 +231,26 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 
 	return errs
 }
+
+// SplitServicesByPath produces a slice of network service resources from the input slice, where
+// each network service resource in the input slice with multiple paths results in multiple
+// corresponding network service resources with one path each.
+func SplitServicesByPath(
+	serviceResources []AttachedResource[ServiceResource],
+) (split []AttachedResource[ServiceResource]) {
+	split = make([]AttachedResource[ServiceResource], 0, len(serviceResources))
+	for _, service := range serviceResources {
+		if len(service.Resource.Paths) == 0 {
+			split = append(split, service)
+		}
+		for _, path := range service.Resource.Paths {
+			pathService := service.Resource
+			pathService.Paths = []string{path}
+			split = append(split, AttachedResource[ServiceResource]{
+				Resource: pathService,
+				Source:   service.Source,
+			})
+		}
+	}
+	return split
+}

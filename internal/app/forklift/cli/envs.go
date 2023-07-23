@@ -377,12 +377,14 @@ const (
 type reconciliationChange struct {
 	Name  string
 	Type  string
-	Depl  *forklift.Depl
+	Depl  *forklift.ResolvedDepl
 	Stack docker.Stack
 }
 
-func planReconciliation(depls []*forklift.Depl, stacks []docker.Stack) []reconciliationChange {
-	deplSet := make(map[string]*forklift.Depl)
+func planReconciliation(
+	depls []*forklift.ResolvedDepl, stacks []docker.Stack,
+) []reconciliationChange {
+	deplSet := make(map[string]*forklift.ResolvedDepl)
 	for _, depl := range depls {
 		deplSet[depl.Name] = depl
 	}
