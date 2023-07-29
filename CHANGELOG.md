@@ -7,9 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.8 - 2023-07-29
+
+### Added
+
 - `env check` and `dev env check` now checks resource constraints againt all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
 - `dev env` now allows specifying one or more directories containing Pallet repositories to replace any corresponding cached repositories, using the `--repo` flag (which can be specified repeatedly).
 - `env plan` and `dev env plan` now show the changes which will be made by `env apply` and `dev env apply`, respectively.
+- The (draft) implementation of the (draft) specification for the Pallets package management system is now available in the `/pkg/pallets` directory of this repository. Note that the specification and implementation will be changed to simplify terminology, so the API will definitely change.
+- Pallet package deployment specifications can now be defined in subdirectories under the `deployments` directory of a Forklift environment, instead of having to be defined only in the `deployments` directory.
+
+### Changed
+
+- A major internal refactoring was done. No breaking changes are expected, but breakage is still possible.
 
 ### 0.1.7 - 2023-06-01
 

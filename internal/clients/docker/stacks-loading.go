@@ -15,11 +15,11 @@ import (
 )
 
 // LoadStackDefinition parses the specified Docker Compose file and returns its Config and version.
-func LoadStackDefinition(parentFS fs.FS, filePath string) (*types.Config, error) {
+func LoadStackDefinition(f fs.FS, filePath string) (*types.Config, error) {
 	// This function is adapted from the github.com/docker/cli/cli/command/stack/loader package's
 	// LoadComposefile function, which is licensed under Apache-2.0. This function was changed by
 	// removing the need to pass in the command.Cli parameter and opts parameters.
-	configDetails, err := getConfigDetails(parentFS, filePath)
+	configDetails, err := getConfigDetails(f, filePath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't get config details")
 	}
@@ -49,14 +49,14 @@ func LoadStackDefinition(parentFS fs.FS, filePath string) (*types.Config, error)
 }
 
 // getConfigDetails parses the composefile and returns its ConfigDetails.
-func getConfigDetails(parentFS fs.FS, filePath string) (types.ConfigDetails, error) {
+func getConfigDetails(f fs.FS, filePath string) (types.ConfigDetails, error) {
 	// This function is adapted from the github.com/docker/cli/cli/command/stack/loader package's
 	// GetConfigDetails function, which is licensed under Apache-2.0. This function was changed to
 	// take a single compose file from a fs.FS.
 	details := types.ConfigDetails{
 		WorkingDir: filepath.Dir(filePath),
 	}
-	configFile, err := loadConfigFile(parentFS, filePath)
+	configFile, err := loadConfigFile(f, filePath)
 	if err != nil {
 		return types.ConfigDetails{}, err
 	}
@@ -93,8 +93,8 @@ func buildEnvironment(env []string) (map[string]string, error) {
 	return result, nil
 }
 
-func loadConfigFile(parentFS fs.FS, filePath string) (types.ConfigFile, error) {
-	file, err := parentFS.Open(filePath)
+func loadConfigFile(f fs.FS, filePath string) (types.ConfigFile, error) {
+	file, err := f.Open(filePath)
 	if err != nil {
 		return types.ConfigFile{}, errors.Wrapf(err, "couldn't open file %s", filePath)
 	}
