@@ -3,7 +3,7 @@ package pallets
 import (
 	"fmt"
 	"io/fs"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -37,7 +37,7 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 // The Pallet repository path, and the Pallet package subdirectory, and the pointer to the Pallet
 // repository are all left uninitialized.
 func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
-	searchPattern = filepath.Join(searchPattern, PkgDefFile)
+	searchPattern = path.Join(searchPattern, PkgDefFile)
 	pkgDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -47,11 +47,11 @@ func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 
 	pkgs := make([]*FSPkg, 0, len(pkgDefFiles))
 	for _, pkgDefFilePath := range pkgDefFiles {
-		if filepath.Base(pkgDefFilePath) != PkgDefFile {
+		if path.Base(pkgDefFilePath) != PkgDefFile {
 			continue
 		}
 
-		pkg, err := LoadFSPkg(fsys, filepath.Dir(pkgDefFilePath))
+		pkg, err := LoadFSPkg(fsys, path.Dir(pkgDefFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgDefFilePath)
 		}
@@ -109,7 +109,7 @@ func ComparePkgs(p, q Pkg) int {
 
 // Path returns the Pallet package path of the Pkg instance.
 func (p Pkg) Path() string {
-	return filepath.Join(p.RepoPath, p.Subdir)
+	return path.Join(p.RepoPath, p.Subdir)
 }
 
 // Check looks for errors in the construction of the package.
