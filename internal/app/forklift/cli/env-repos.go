@@ -103,27 +103,29 @@ func downloadRepo(
 	}
 	vcsRepoPath := repo.VCSRepoPath
 	version := repo.VersionLock.Version
-	path := filepath.Join(cachePath, fmt.Sprintf("%s@%s", repo.VCSRepoPath, version))
-	if forklift.Exists(path) {
+	repoCachePath := filepath.Join(
+		filepath.FromSlash(cachePath), fmt.Sprintf("%s@%s", repo.VCSRepoPath, version),
+	)
+	if forklift.Exists(repoCachePath) {
 		// TODO: perform a disk checksum
 		return false, nil
 	}
 
 	IndentedPrintf(indent, "Downloading %s@%s...\n", repo.VCSRepoPath, version)
-	gitRepo, err := git.Clone(vcsRepoPath, path)
+	gitRepo, err := git.Clone(vcsRepoPath, repoCachePath)
 	if err != nil {
-		return false, errors.Wrapf(err, "couldn't clone repo %s to %s", vcsRepoPath, path)
+		return false, errors.Wrapf(err, "couldn't clone repo %s to %s", vcsRepoPath, repoCachePath)
 	}
 
 	// Validate commit
 	shortCommit := repo.VersionLock.Def.ShortCommit()
 	if err = validateCommit(repo, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
-		if cerr := os.RemoveAll(path); cerr != nil {
+		if cerr := os.RemoveAll(repoCachePath); cerr != nil {
 			IndentedPrintf(
 				indent,
 				"Error: couldn't clean up %s after failed validation! You'll need to delete it yourself.\n",
-				path,
+				repoCachePath,
 			)
 		}
 		return false, errors.Wrapf(
@@ -133,14 +135,15 @@ func downloadRepo(
 
 	// Checkout commit
 	if err = gitRepo.Checkout(repo.VersionLock.Def.Commit); err != nil {
-		if cerr := os.RemoveAll(path); cerr != nil {
+		if cerr := os.RemoveAll(repoCachePath); cerr != nil {
 			IndentedPrintf(
-				indent, "Error: couldn't clean up %s! You will need to delete it yourself.\n", path,
+				indent, "Error: couldn't clean up %s! You will need to delete it yourself.\n",
+				repoCachePath,
 			)
 		}
 		return false, errors.Wrapf(err, "couldn't check out commit %s", shortCommit)
 	}
-	if err = os.RemoveAll(filepath.Join(path, ".git")); err != nil {
+	if err = os.RemoveAll(filepath.Join(repoCachePath, ".git")); err != nil {
 		return false, errors.Wrap(err, "couldn't detach from git")
 	}
 	return true, nil

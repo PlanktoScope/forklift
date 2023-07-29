@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"runtime"
 	"strings"
 
@@ -54,7 +54,7 @@ func getConfigDetails(f fs.FS, filePath string) (types.ConfigDetails, error) {
 	// GetConfigDetails function, which is licensed under Apache-2.0. This function was changed to
 	// take a single compose file from a fs.FS.
 	details := types.ConfigDetails{
-		WorkingDir: filepath.Dir(filePath),
+		WorkingDir: path.Dir(filePath),
 	}
 	configFile, err := loadConfigFile(f, filePath)
 	if err != nil {

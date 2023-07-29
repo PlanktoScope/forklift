@@ -29,6 +29,7 @@ func LoadFSEnv(fsys pallets.PathedFS, subdirPath string) (e *FSEnv, err error) {
 
 // LoadFSEnvContaining loads the FSEnv containing the specified sub-directory path in the provided
 // base filesystem.
+// The provided path should use the host OS's path separators.
 // The sub-directory path does not have to actually exist.
 func LoadFSEnvContaining(path string) (*FSEnv, error) {
 	envCandidatePath, err := filepath.Abs(path)

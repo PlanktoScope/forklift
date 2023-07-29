@@ -2,7 +2,7 @@ package forklift
 
 import (
 	"fmt"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -37,7 +37,7 @@ func LoadRequiredFSPkg(
 // vcsPath@version/repoSubdir/pkgSubdir
 // (e.g. github.com/PlanktoScope/pallets@v0.1.0/core/infrastructure/caddy-ingress).
 func (r PkgReq) GetCachePath() string {
-	return filepath.Join(r.Repo.GetCachePath(), r.PkgSubdir)
+	return path.Join(r.Repo.GetCachePath(), r.PkgSubdir)
 }
 
 // GetQueryPath returns the path of the package in version queries, which is of form
@@ -49,7 +49,7 @@ func (r PkgReq) GetQueryPath() string {
 
 // Path returns the Pallet package path of the required package.
 func (r PkgReq) Path() string {
-	return filepath.Join(r.Repo.Path(), r.PkgSubdir)
+	return path.Join(r.Repo.Path(), r.PkgSubdir)
 }
 
 // RepoReq
@@ -89,7 +89,7 @@ func loadFSRepoReqContaining(fsys pallets.PathedFS, subdirPath string) (*FSRepoR
 		if repo, err := loadFSRepoReq(fsys, repoCandidatePath); err == nil {
 			return repo, nil
 		}
-		repoCandidatePath = filepath.Dir(repoCandidatePath)
+		repoCandidatePath = path.Dir(repoCandidatePath)
 		if repoCandidatePath == "/" || repoCandidatePath == "." {
 			// we can't go up anymore!
 			return nil, errors.Errorf(
@@ -107,7 +107,7 @@ func loadFSRepoReqContaining(fsys pallets.PathedFS, subdirPath string) (*FSRepoR
 // path and Pallet repository subdirectory are initialized from the Pallet repository path declared
 // in the repository's configuration file, while the Pallet repository version is not initialized.
 func loadFSRepoReqs(fsys pallets.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
-	searchPattern = filepath.Join(searchPattern, VersionLockDefFile)
+	searchPattern = path.Join(searchPattern, VersionLockDefFile)
 	repoReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -118,11 +118,11 @@ func loadFSRepoReqs(fsys pallets.PathedFS, searchPattern string) ([]*FSRepoReq, 
 
 	reqs := make([]*FSRepoReq, 0, len(repoReqFiles))
 	for _, repoReqDefFilePath := range repoReqFiles {
-		if filepath.Base(repoReqDefFilePath) != VersionLockDefFile {
+		if path.Base(repoReqDefFilePath) != VersionLockDefFile {
 			continue
 		}
 
-		req, err := loadFSRepoReq(fsys, filepath.Dir(repoReqDefFilePath))
+		req, err := loadFSRepoReq(fsys, path.Dir(repoReqDefFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load repo requirement from %s", repoReqDefFilePath)
 		}
@@ -133,7 +133,7 @@ func loadFSRepoReqs(fsys pallets.PathedFS, searchPattern string) ([]*FSRepoReq, 
 
 // Path returns the Pallet repository path of the required repository.
 func (r RepoReq) Path() string {
-	return filepath.Join(r.VCSRepoPath, r.RepoSubdir)
+	return path.Join(r.VCSRepoPath, r.RepoSubdir)
 }
 
 // GetPkgSubdir returns the Pallet package subdirectory within the required repo for the provided
