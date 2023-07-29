@@ -110,6 +110,11 @@ func addRepoAction(c *cli.Context) error {
 		if err != nil {
 			return errors.Wrapf(err, "couldn't marshal config for %s", repoReqPath)
 		}
+		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
+			return errors.Wrapf(
+				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
+			)
+		}
 		const perm = 0o644 // owner rw, group r, public r
 		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
 			return errors.Wrapf(err, "couldn't save config to %s", filepath.FromSlash(repoReqPath))
