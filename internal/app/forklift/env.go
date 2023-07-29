@@ -21,7 +21,7 @@ func LoadFSEnv(fsys pallets.PathedFS, subdirPath string) (e *FSEnv, err error) {
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if e.Env.Config, err = loadEnvConfig(e.FS, EnvSpecFile); err != nil {
+	if e.Env.Def, err = loadEnvDef(e.FS, EnvDefFile); err != nil {
 		return nil, errors.Errorf("couldn't load env config")
 	}
 	return e, nil
@@ -156,19 +156,19 @@ func (e *FSEnv) LoadDepls(searchPattern string) ([]Depl, error) {
 	return loadDepls(fsys, searchPattern)
 }
 
-// EnvConfig
+// EnvDef
 
-// loadEnvConfig loads an EnvConfig from the specified file path in the provided base filesystem.
-func loadEnvConfig(fsys pallets.PathedFS, filePath string) (EnvConfig, error) {
+// loadEnvDef loads an EnvDef from the specified file path in the provided base filesystem.
+func loadEnvDef(fsys pallets.PathedFS, filePath string) (EnvDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return EnvConfig{}, errors.Wrapf(
+		return EnvDef{}, errors.Wrapf(
 			err, "couldn't read environment config file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := EnvConfig{}
+	config := EnvDef{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return EnvConfig{}, errors.Wrap(err, "couldn't parse environment config")
+		return EnvDef{}, errors.Wrap(err, "couldn't parse environment config")
 	}
 	return config, nil
 }

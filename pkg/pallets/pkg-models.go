@@ -17,17 +17,17 @@ type Pkg struct {
 	RepoPath string
 	// Subdir is the path of the package within the Pallet repository which provides the package.
 	Subdir string
-	// Config is the Pallet package specification for the package.
-	Config PkgConfig
+	// Def is the Pallet package definition for the package.
+	Def PkgDef
 	// Repo is a pointer to the [Repo] which provides the package.
 	Repo *Repo
 }
 
-// PkgSpecFile is the name of the file defining each Pallet package.
-const PkgSpecFile = "pallet-package.yml"
+// PkgDefFile is the name of the file defining each Pallet package.
+const PkgDefFile = "pallet-package.yml"
 
-// A PkgConfig defines a Pallet package.
-type PkgConfig struct {
+// A PkgDef defines a Pallet package.
+type PkgDef struct {
 	// Repository defines the basic metadata for the package.
 	Package PkgSpec `yaml:"package,omitempty"`
 	// Host contains information about the Docker host independent of any deployment of the package.

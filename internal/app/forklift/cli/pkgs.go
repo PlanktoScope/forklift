@@ -21,11 +21,11 @@ func PrintPkg(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
 		IndentedPrintf(indent, "External path (replacing cached package): %s\n", pkg.FS.Path())
 	}
 
-	PrintPkgSpec(indent, pkg.Config.Package)
+	PrintPkgSpec(indent, pkg.Def.Package)
 	fmt.Println()
-	PrintDeplSpec(indent, pkg.Config.Deployment)
+	PrintDeplSpec(indent, pkg.Def.Deployment)
 	fmt.Println()
-	PrintFeatureSpecs(indent, pkg.Config.Features)
+	PrintFeatureSpecs(indent, pkg.Def.Features)
 }
 
 func printPkgRepo(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
@@ -40,7 +40,7 @@ func printPkgRepo(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
 		)
 	}
 
-	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Config.Repository.Description)
+	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Def.Repository.Description)
 	IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
 }
 

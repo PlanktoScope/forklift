@@ -23,7 +23,7 @@ func ResolveDepl(
 	resolved = &ResolvedDepl{
 		Depl: depl,
 	}
-	pkgPath := resolved.Config.Package
+	pkgPath := resolved.Def.Package
 	if resolved.Pkg, resolved.PkgReq, err = LoadRequiredFSPkg(
 		pkgReqLoader, pkgLoader, pkgPath,
 	); err != nil {
@@ -53,10 +53,10 @@ func ResolveDepls(
 }
 
 func (d *ResolvedDepl) Check() (errs []error) {
-	if d.PkgReq.Path() != d.Config.Package {
+	if d.PkgReq.Path() != d.Def.Package {
 		errs = append(errs, errors.Errorf(
 			"required package %s does not match required package %s in deployment configuration",
-			d.PkgReq.Path(), d.Config.Package,
+			d.PkgReq.Path(), d.Def.Package,
 		))
 	}
 	if d.PkgReq.Path() != d.Pkg.Path() {
@@ -78,9 +78,9 @@ func (d *ResolvedDepl) Check() (errs []error) {
 // EnabledFeatures returns a map of the Pallet package features enabled by the deployment's
 // configuration, with feature names as the keys of the map.
 func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureSpec, err error) {
-	all := d.Pkg.Config.Features
+	all := d.Pkg.Def.Features
 	enabled = make(map[string]pallets.PkgFeatureSpec)
-	for _, name := range d.Config.Features {
+	for _, name := range d.Def.Features {
 		featureSpec, ok := all[name]
 		if !ok {
 			return nil, errors.Errorf("unrecognized feature %s", name)
@@ -93,9 +93,9 @@ func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureS
 // DisabledFeatures returns a map of the Pallet package features not enabled by the deployment's
 // configuration, with feature names as the keys of the map.
 func (d *ResolvedDepl) DisabledFeatures() map[string]pallets.PkgFeatureSpec {
-	all := d.Pkg.Config.Features
+	all := d.Pkg.Def.Features
 	enabled := make(map[string]struct{})
-	for _, name := range d.Config.Features {
+	for _, name := range d.Def.Features {
 		enabled[name] = struct{}{}
 	}
 	disabled := make(map[string]pallets.PkgFeatureSpec)
@@ -289,7 +289,7 @@ func CheckDeplDependencies(
 // is the specified name of the deployment followed by the deployment config file extension.
 func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
 	depl.Name = name
-	if depl.Config, err = loadDeplConfig(fsys, name+DeplSpecFileExt); err != nil {
+	if depl.Def, err = loadDeplDef(fsys, name+DeplDefFileExt); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load version depl config")
 	}
 	return depl, nil
@@ -300,8 +300,8 @@ func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
 func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
-	searchPattern = fmt.Sprintf("%s%s", searchPattern, DeplSpecFileExt)
-	deplConfigFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern = fmt.Sprintf("%s%s", searchPattern, DeplDefFileExt)
+	deplDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for Pallet package deployment configs matching %s/%s",
@@ -309,17 +309,17 @@ func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
 		)
 	}
 
-	depls := make([]Depl, 0, len(deplConfigFiles))
-	for _, deplConfigFilePath := range deplConfigFiles {
-		if !strings.HasSuffix(deplConfigFilePath, DeplSpecFileExt) {
+	depls := make([]Depl, 0, len(deplDefFiles))
+	for _, deplDefFilePath := range deplDefFiles {
+		if !strings.HasSuffix(deplDefFilePath, DeplDefFileExt) {
 			continue
 		}
 
-		deplName := strings.TrimSuffix(deplConfigFilePath, DeplSpecFileExt)
+		deplName := strings.TrimSuffix(deplDefFilePath, DeplDefFileExt)
 		depl, err := loadDepl(fsys, deplName)
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load package deployment config from %s", deplConfigFilePath,
+				err, "couldn't load package deployment config from %s", deplDefFilePath,
 			)
 		}
 		depls = append(depls, depl)
@@ -335,19 +335,19 @@ func (d *Depl) ResourceAttachmentSource() []string {
 	}
 }
 
-// DeplConfig
+// DeplDef
 
-// loadDeplConfig loads a DeplConfig from the specified file path in the provided base filesystem.
-func loadDeplConfig(fsys pallets.PathedFS, filePath string) (DeplConfig, error) {
+// loadDeplDef loads a DeplDef from the specified file path in the provided base filesystem.
+func loadDeplDef(fsys pallets.PathedFS, filePath string) (DeplDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return DeplConfig{}, errors.Wrapf(
+		return DeplDef{}, errors.Wrapf(
 			err, "couldn't read deployment config file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := DeplConfig{}
+	config := DeplDef{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return DeplConfig{}, errors.Wrap(err, "couldn't parse deployment config")
+		return DeplDef{}, errors.Wrap(err, "couldn't parse deployment config")
 	}
 	return config, nil
 }

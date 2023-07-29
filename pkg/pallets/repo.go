@@ -47,12 +47,12 @@ func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if r.Repo.Config, err = LoadRepoConfig(r.FS, RepoSpecFile); err != nil {
+	if r.Repo.Def, err = LoadRepoDef(r.FS, RepoDefFile); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load repo config")
 	}
-	if r.VCSRepoPath, r.Subdir, err = SplitRepoPathSubdir(r.Config.Repository.Path); err != nil {
+	if r.VCSRepoPath, r.Subdir, err = SplitRepoPathSubdir(r.Def.Repository.Path); err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't parse path of Pallet repo %s", r.Config.Repository.Path,
+			err, "couldn't parse path of Pallet repo %s", r.Def.Repository.Path,
 		)
 	}
 	return r, nil
@@ -93,24 +93,24 @@ func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
 func LoadFSRepos(
 	fsys PathedFS, searchPattern string, processor func(repo *FSRepo) error,
 ) ([]*FSRepo, error) {
-	searchPattern = filepath.Join(searchPattern, RepoSpecFile)
-	repoConfigFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern = filepath.Join(searchPattern, RepoDefFile)
+	repoDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for repo config files matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
-	orderedRepos := make([]*FSRepo, 0, len(repoConfigFiles))
+	orderedRepos := make([]*FSRepo, 0, len(repoDefFiles))
 	repos := make(map[string]*FSRepo)
-	for _, repoConfigFilePath := range repoConfigFiles {
-		if filepath.Base(repoConfigFilePath) != RepoSpecFile {
+	for _, repoDefFilePath := range repoDefFiles {
+		if filepath.Base(repoDefFilePath) != RepoDefFile {
 			continue
 		}
-		repo, err := LoadFSRepo(fsys, filepath.Dir(repoConfigFilePath))
+		repo, err := LoadFSRepo(fsys, filepath.Dir(repoDefFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load repo from %s/%s", fsys.Path(), repoConfigFilePath,
+				err, "couldn't load repo from %s/%s", fsys.Path(), repoDefFilePath,
 			)
 		}
 		if processor != nil {
@@ -119,7 +119,7 @@ func LoadFSRepos(
 			}
 		}
 
-		repoPath := repo.Config.Repository.Path
+		repoPath := repo.Def.Repository.Path
 		if prevRepo, ok := repos[repoPath]; ok {
 			if prevRepo.FromSameVCSRepo(repo.Repo) && prevRepo.Version == repo.Version &&
 				prevRepo.FS.Path() == repo.FS.Path() {
@@ -180,13 +180,13 @@ func (r Repo) FromSameVCSRepo(candidate Repo) bool {
 
 // Check looks for errors in the construction of the repository.
 func (r Repo) Check() (errs []error) {
-	if r.Path() != r.Config.Repository.Path {
+	if r.Path() != r.Def.Repository.Path {
 		errs = append(errs, errors.Errorf(
 			"repo path %s is inconsistent with path %s specified in repo configuration",
-			r.Path(), r.Config.Repository.Path,
+			r.Path(), r.Def.Repository.Path,
 		))
 	}
-	errs = append(errs, ErrsWrap(r.Config.Check(), "invalid repo config")...)
+	errs = append(errs, ErrsWrap(r.Def.Check(), "invalid repo config")...)
 	return errs
 }
 
@@ -224,25 +224,25 @@ func ComparePaths(r, s string) int {
 	return CompareEQ
 }
 
-// RepoConfig
+// RepoDef
 
-// LoadRepoConfig loads a RepoConfig from the specified file path in the provided base filesystem.
-func LoadRepoConfig(fsys PathedFS, filePath string) (RepoConfig, error) {
+// LoadRepoDef loads a RepoDef from the specified file path in the provided base filesystem.
+func LoadRepoDef(fsys PathedFS, filePath string) (RepoDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return RepoConfig{}, errors.Wrapf(
+		return RepoDef{}, errors.Wrapf(
 			err, "couldn't read repo config file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := RepoConfig{}
+	config := RepoDef{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return RepoConfig{}, errors.Wrap(err, "couldn't parse repo config")
+		return RepoDef{}, errors.Wrap(err, "couldn't parse repo config")
 	}
 	return config, nil
 }
 
 // Check looks for errors in the construction of the repository configuration.
-func (c RepoConfig) Check() (errs []error) {
+func (c RepoDef) Check() (errs []error) {
 	return ErrsWrap(c.Repository.Check(), "invalid repo spec")
 }
 

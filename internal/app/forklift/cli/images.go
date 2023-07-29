@@ -55,15 +55,15 @@ func listRequiredImages(
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
-		if !depl.Pkg.Config.Deployment.DefinesStack() {
+		if !depl.Pkg.Def.Deployment.DefinesStack() {
 			continue
 		}
 
-		stackConfig, err := loadStackDefinition(depl.Pkg)
+		stackDef, err := loadStackDefinition(depl.Pkg)
 		if err != nil {
 			return nil, err
 		}
-		for _, service := range stackConfig.Services {
+		for _, service := range stackDef.Services {
 			BulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)
 			if _, ok := images[service.Image]; !ok {
 				images[service.Image] = struct{}{}
@@ -75,12 +75,12 @@ func listRequiredImages(
 }
 
 func loadStackDefinition(pkg *pallets.FSPkg) (*dct.Config, error) {
-	definitionFile := pkg.Config.Deployment.DefinitionFile
-	stackConfig, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
+	definitionFile := pkg.Def.Deployment.DefinitionFile
+	stackDef, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load Docker stack definition from %s/%s", pkg.FS.Path(), definitionFile,
 		)
 	}
-	return stackConfig, nil
+	return stackDef, nil
 }

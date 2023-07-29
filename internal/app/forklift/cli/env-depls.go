@@ -45,14 +45,14 @@ func PrintDeplInfo(
 	printDepl(indent, cache, resolved)
 	indent++
 
-	if resolved.Pkg.Config.Deployment.DefinesStack() {
+	if resolved.Pkg.Def.Deployment.DefinesStack() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker stack:")
-		stackConfig, err := loadStackDefinition(resolved.Pkg)
+		stackDef, err := loadStackDefinition(resolved.Pkg)
 		if err != nil {
 			return err
 		}
-		printDockerStackConfig(indent+1, *stackConfig)
+		printDockerStackDef(indent+1, *stackDef)
 	}
 
 	// TODO: print the state of the Docker stack associated with deplName - or maybe that should be
@@ -87,10 +87,10 @@ func printDepl(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDe
 }
 
 func printDeplPkg(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
+	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Def.Package)
 	indent++
 
-	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Config.Package.Description)
+	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
 	printPkgRepo(indent, cache, depl.Pkg)
 }
 
@@ -109,8 +109,8 @@ func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {
 	}
 }
 
-func printDockerStackConfig(indent int, stackConfig dct.Config) {
-	printDockerStackServices(indent, stackConfig.Services)
+func printDockerStackDef(indent int, stackDef dct.Config) {
+	printDockerStackServices(indent, stackDef.Services)
 	// TODO: also print networks, volumes, etc.
 }
 

@@ -24,7 +24,7 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if p.Pkg.Config, err = LoadPkgConfig(p.FS, PkgSpecFile); err != nil {
+	if p.Pkg.Def, err = LoadPkgDef(p.FS, PkgDefFile); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load package config")
 	}
 	return p, nil
@@ -37,23 +37,23 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 // The Pallet repository path, and the Pallet package subdirectory, and the pointer to the Pallet
 // repository are all left uninitialized.
 func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
-	searchPattern = filepath.Join(searchPattern, PkgSpecFile)
-	pkgConfigFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern = filepath.Join(searchPattern, PkgDefFile)
+	pkgDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for package configs matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
-	pkgs := make([]*FSPkg, 0, len(pkgConfigFiles))
-	for _, pkgConfigFilePath := range pkgConfigFiles {
-		if filepath.Base(pkgConfigFilePath) != PkgSpecFile {
+	pkgs := make([]*FSPkg, 0, len(pkgDefFiles))
+	for _, pkgDefFilePath := range pkgDefFiles {
+		if filepath.Base(pkgDefFilePath) != PkgDefFile {
 			continue
 		}
 
-		pkg, err := LoadFSPkg(fsys, filepath.Dir(pkgConfigFilePath))
+		pkg, err := LoadFSPkg(fsys, filepath.Dir(pkgDefFilePath))
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgConfigFilePath)
+			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgDefFilePath)
 		}
 		pkgs = append(pkgs, pkg)
 	}
@@ -63,7 +63,7 @@ func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 // AttachFSRepo updates the FSPkg instance's RepoPath, Subdir, Pkg.Repo, and Repo fields based on
 // the provided repo.
 func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
-	p.RepoPath = repo.Config.Repository.Path
+	p.RepoPath = repo.Def.Repository.Path
 	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
 		return errors.Errorf(
 			"package at %s is not within the scope of repo %s at %s",
@@ -114,8 +114,8 @@ func (p Pkg) Path() string {
 
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
-	// TODO: implement a check method on PkgConfig
-	// errs = append(errs, ErrsWrap(p.Config.Check(), "invalid package config")...)
+	// TODO: implement a check method on PkgDef
+	// errs = append(errs, ErrsWrap(p.Def.Check(), "invalid package config")...)
 	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
 		errs = append(errs, errors.Errorf(
 			"repo path %s of package is inconsistent with path %s of attached repo",
@@ -137,15 +137,15 @@ func (p Pkg) ProvidedListeners(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedResource[ListenerResource]) {
 	parentSource = p.ResourceAttachmentSource(parentSource)
-	provided = append(provided, p.Config.Host.Provides.AttachedListeners(
-		p.Config.Host.ResourceAttachmentSource(parentSource),
+	provided = append(provided, p.Def.Host.Provides.AttachedListeners(
+		p.Def.Host.ResourceAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, p.Config.Deployment.Provides.AttachedListeners(
-		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	provided = append(provided, p.Def.Deployment.Provides.AttachedListeners(
+		p.Def.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Config.Features[featureName]
+		feature := p.Def.Features[featureName]
 		provided = append(provided, feature.Provides.AttachedListeners(
 			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
@@ -159,12 +159,12 @@ func (p Pkg) RequiredNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedResource[NetworkResource]) {
 	parentSource = p.ResourceAttachmentSource(parentSource)
-	required = append(required, p.Config.Deployment.Requires.AttachedNetworks(
-		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	required = append(required, p.Def.Deployment.Requires.AttachedNetworks(
+		p.Def.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Config.Features[featureName]
+		feature := p.Def.Features[featureName]
 		required = append(required, feature.Requires.AttachedNetworks(
 			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
@@ -178,15 +178,15 @@ func (p Pkg) ProvidedNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedResource[NetworkResource]) {
 	parentSource = p.ResourceAttachmentSource(parentSource)
-	provided = append(provided, p.Config.Host.Provides.AttachedNetworks(
-		p.Config.Host.ResourceAttachmentSource(parentSource),
+	provided = append(provided, p.Def.Host.Provides.AttachedNetworks(
+		p.Def.Host.ResourceAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, p.Config.Deployment.Provides.AttachedNetworks(
-		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	provided = append(provided, p.Def.Deployment.Provides.AttachedNetworks(
+		p.Def.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Config.Features[featureName]
+		feature := p.Def.Features[featureName]
 		provided = append(provided, feature.Provides.AttachedNetworks(
 			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
@@ -200,12 +200,12 @@ func (p Pkg) RequiredServices(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedResource[ServiceResource]) {
 	parentSource = p.ResourceAttachmentSource(parentSource)
-	required = append(required, p.Config.Deployment.Requires.AttachedServices(
-		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	required = append(required, p.Def.Deployment.Requires.AttachedServices(
+		p.Def.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Config.Features[featureName]
+		feature := p.Def.Features[featureName]
 		required = append(required, feature.Requires.AttachedServices(
 			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
@@ -219,15 +219,15 @@ func (p Pkg) ProvidedServices(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedResource[ServiceResource]) {
 	parentSource = p.ResourceAttachmentSource(parentSource)
-	provided = append(provided, p.Config.Host.Provides.AttachedServices(
-		p.Config.Host.ResourceAttachmentSource(parentSource),
+	provided = append(provided, p.Def.Host.Provides.AttachedServices(
+		p.Def.Host.ResourceAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, p.Config.Deployment.Provides.AttachedServices(
-		p.Config.Deployment.ResourceAttachmentSource(parentSource),
+	provided = append(provided, p.Def.Deployment.Provides.AttachedServices(
+		p.Def.Deployment.ResourceAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Config.Features[featureName]
+		feature := p.Def.Features[featureName]
 		provided = append(provided, feature.Provides.AttachedServices(
 			feature.ResourceAttachmentSource(parentSource, featureName),
 		)...)
@@ -235,19 +235,19 @@ func (p Pkg) ProvidedServices(
 	return provided
 }
 
-// PkgConfig
+// PkgDef
 
-// LoadPkgConfig loads a PkgConfig from the specified file path in the provided base filesystem.
-func LoadPkgConfig(fsys PathedFS, filePath string) (PkgConfig, error) {
+// LoadPkgDef loads a PkgDef from the specified file path in the provided base filesystem.
+func LoadPkgDef(fsys PathedFS, filePath string) (PkgDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return PkgConfig{}, errors.Wrapf(
+		return PkgDef{}, errors.Wrapf(
 			err, "couldn't read package config file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := PkgConfig{}
+	config := PkgDef{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return PkgConfig{}, errors.Wrap(err, "couldn't parse package config")
+		return PkgDef{}, errors.Wrap(err, "couldn't parse package config")
 	}
 	return config, nil
 }

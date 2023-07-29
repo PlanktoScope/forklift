@@ -198,7 +198,7 @@ func (c *FSCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
 }
 
 func getPkgCachePath(pkg pallets.Pkg) string {
-	return fmt.Sprintf("%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir)
+	return fmt.Sprintf("%s@%s/%s", pkg.Repo.Def.Repository.Path, pkg.Repo.Version, pkg.Subdir)
 }
 
 // loadFSRepoContaining finds and loads the FSRepo which contains the provided subdirectory path.

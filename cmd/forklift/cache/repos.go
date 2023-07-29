@@ -33,7 +33,7 @@ func lsRepoAction(c *cli.Context) error {
 		return pallets.CompareRepos(repos[i].Repo, repos[j].Repo) < 0
 	})
 	for _, repo := range repos {
-		fmt.Printf("%s@%s\n", repo.Config.Repository.Path, repo.Version)
+		fmt.Printf("%s@%s\n", repo.Def.Repository.Path, repo.Version)
 	}
 	return nil
 }
@@ -65,12 +65,12 @@ func showRepoAction(c *cli.Context) error {
 }
 
 func printCachedRepo(indent int, cache *forklift.FSCache, repo *pallets.FSRepo) {
-	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Config.Repository.Path)
+	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Def.Repository.Path)
 	indent++
 
 	fcli.IndentedPrintf(indent, "Version: %s\n", repo.Version)
 	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
 	fcli.IndentedPrintf(indent, "Path in cache: %s\n", pallets.GetSubdirPath(cache, repo.FS.Path()))
-	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Config.Repository.Description)
+	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Def.Repository.Description)
 	// TODO: show the README file
 }

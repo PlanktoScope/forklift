@@ -20,7 +20,7 @@ import (
 
 func PrintEnvInfo(indent int, env *forklift.FSEnv) error {
 	IndentedPrintf(indent, "Environment: %s\n", env.FS.Path())
-	IndentedPrintf(indent, "Description: %s\n", env.Config.Environment.Description)
+	IndentedPrintf(indent, "Description: %s\n", env.Def.Environment.Description)
 
 	ref, err := git.Head(env.FS.Path())
 	if err != nil {
@@ -392,7 +392,7 @@ func planReconciliation(
 
 	changes := make([]reconciliationChange, 0, len(deplSet)+len(stackSet))
 	for name, depl := range deplSet {
-		definesStack := depl.Pkg.Config.Deployment.DefinesStack()
+		definesStack := depl.Pkg.Def.Deployment.DefinesStack()
 		stack, ok := stackSet[name]
 		if !ok {
 			if definesStack {
@@ -414,7 +414,7 @@ func planReconciliation(
 		}
 	}
 	for name, stack := range stackSet {
-		if depl, ok := deplSet[name]; ok && depl.Pkg.Config.Deployment.DefinesStack() {
+		if depl, ok := deplSet[name]; ok && depl.Pkg.Def.Deployment.DefinesStack() {
 			continue
 		}
 		changes = append(changes, reconciliationChange{
@@ -495,17 +495,17 @@ func applyReconciliationChange(
 }
 
 func deployStack(indent int, cachedPkg *pallets.FSPkg, name string, dc *docker.Client) error {
-	if !cachedPkg.Config.Deployment.DefinesStack() {
+	if !cachedPkg.Def.Deployment.DefinesStack() {
 		IndentedPrintln(indent, "No Docker stack to deploy!")
 		return nil
 	}
 
-	stackConfig, err := loadStackDefinition(cachedPkg)
+	stackDef, err := loadStackDefinition(cachedPkg)
 	if err != nil {
 		return err
 	}
 	if err = dc.DeployStack(
-		context.Background(), name, stackConfig, docker.NewOutStream(os.Stdout),
+		context.Background(), name, stackDef, docker.NewOutStream(os.Stdout),
 	); err != nil {
 		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
 	}

@@ -17,17 +17,17 @@ type Repo struct {
 	// Subdir is the path of the repository within the VCS repository which provides the Pallet
 	// repository.
 	Subdir string
-	// Config is the Pallet repository specification for the repository.
-	Config RepoConfig
+	// Def is the Pallet repository definition for the repository.
+	Def RepoDef
 	// Version is the Pallet repository version or pseudoversion of the repository.
 	Version string
 }
 
-// RepoSpecFile is the name of the file defining each Pallet repository.
-const RepoSpecFile = "pallet-repository.yml"
+// RepoDefFile is the name of the file defining each Pallet repository.
+const RepoDefFile = "pallet-repository.yml"
 
-// A RepoConfig defines a Pallet repository.
-type RepoConfig struct {
+// A RepoDef defines a Pallet repository.
+type RepoDef struct {
 	// Repository defines the basic metadata for the repository.
 	Repository RepoSpec `yaml:"repository"`
 }

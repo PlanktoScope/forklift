@@ -70,7 +70,7 @@ func loadFSRepoReq(fsys pallets.PathedFS, repoPath string) (r *FSRepoReq, err er
 			err, "couldn't parse path of requirement for Pallet repo %s", repoPath,
 		)
 	}
-	r.VersionLock, err = loadVersionLock(r.FS, VersionLockSpecFile)
+	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load version lock config of requirement for Pallet repo %s", repoPath,
@@ -107,7 +107,7 @@ func loadFSRepoReqContaining(fsys pallets.PathedFS, subdirPath string) (*FSRepoR
 // path and Pallet repository subdirectory are initialized from the Pallet repository path declared
 // in the repository's configuration file, while the Pallet repository version is not initialized.
 func loadFSRepoReqs(fsys pallets.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
-	searchPattern = filepath.Join(searchPattern, VersionLockSpecFile)
+	searchPattern = filepath.Join(searchPattern, VersionLockDefFile)
 	repoReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -117,16 +117,14 @@ func loadFSRepoReqs(fsys pallets.PathedFS, searchPattern string) ([]*FSRepoReq, 
 	}
 
 	reqs := make([]*FSRepoReq, 0, len(repoReqFiles))
-	for _, repoReqConfigFilePath := range repoReqFiles {
-		if filepath.Base(repoReqConfigFilePath) != VersionLockSpecFile {
+	for _, repoReqDefFilePath := range repoReqFiles {
+		if filepath.Base(repoReqDefFilePath) != VersionLockDefFile {
 			continue
 		}
 
-		req, err := loadFSRepoReq(fsys, filepath.Dir(repoReqConfigFilePath))
+		req, err := loadFSRepoReq(fsys, filepath.Dir(repoReqDefFilePath))
 		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't load repo requirement from %s", repoReqConfigFilePath,
-			)
+			return nil, errors.Wrapf(err, "couldn't load repo requirement from %s", repoReqDefFilePath)
 		}
 		reqs = append(reqs, req)
 	}

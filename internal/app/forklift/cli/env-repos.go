@@ -59,7 +59,7 @@ func PrintRepoInfo(
 	} else {
 		IndentedPrintf(indent+1, "External path (replacing cached repo): %s\n", cachedRepo.FS.Path())
 	}
-	IndentedPrintf(indent+1, "Description: %s\n", cachedRepo.Config.Repository.Description)
+	IndentedPrintf(indent+1, "Description: %s\n", cachedRepo.Def.Repository.Description)
 	// TODO: show the README file
 	return nil
 }
@@ -86,8 +86,7 @@ func DownloadRepos(
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(
-				err, "couldn't download %s at commit %s",
-				repo.Path(), repo.VersionLock.Config.ShortCommit(),
+				err, "couldn't download %s at commit %s", repo.Path(), repo.VersionLock.Def.ShortCommit(),
 			)
 		}
 	}
@@ -97,7 +96,7 @@ func DownloadRepos(
 func downloadRepo(
 	indent int, cachePath string, repo forklift.RepoReq,
 ) (downloaded bool, err error) {
-	if !repo.VersionLock.Config.IsCommitLocked() {
+	if !repo.VersionLock.Def.IsCommitLocked() {
 		return false, errors.Errorf(
 			"the local environment's versioning config for repository %s has no commit lock", repo.Path(),
 		)
@@ -117,7 +116,7 @@ func downloadRepo(
 	}
 
 	// Validate commit
-	shortCommit := repo.VersionLock.Config.ShortCommit()
+	shortCommit := repo.VersionLock.Def.ShortCommit()
 	if err = validateCommit(repo, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(path); cerr != nil {
@@ -133,7 +132,7 @@ func downloadRepo(
 	}
 
 	// Checkout commit
-	if err = gitRepo.Checkout(repo.VersionLock.Config.Commit); err != nil {
+	if err = gitRepo.Checkout(repo.VersionLock.Def.Commit); err != nil {
 		if cerr := os.RemoveAll(path); cerr != nil {
 			IndentedPrintf(
 				indent, "Error: couldn't clean up %s! You will need to delete it yourself.\n", path,
@@ -149,18 +148,16 @@ func downloadRepo(
 
 func validateCommit(req forklift.RepoReq, gitRepo *git.Repo) error {
 	// Check commit time
-	commitTimestamp, err := forklift.GetCommitTimestamp(
-		gitRepo, req.VersionLock.Config.Commit,
-	)
+	commitTimestamp, err := forklift.GetCommitTimestamp(gitRepo, req.VersionLock.Def.Commit)
 	if err != nil {
 		return err
 	}
-	versionedTimestamp := req.VersionLock.Config.Timestamp
+	versionedTimestamp := req.VersionLock.Def.Timestamp
 	if commitTimestamp != versionedTimestamp {
 		return errors.Errorf(
 			"commit %s was made at %s, while the repository versioning config file expects it to have "+
 				"been made at %s",
-			req.VersionLock.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
+			req.VersionLock.Def.ShortCommit(), commitTimestamp, versionedTimestamp,
 		)
 	}
 

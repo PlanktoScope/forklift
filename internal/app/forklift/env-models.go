@@ -16,15 +16,15 @@ type FSEnv struct {
 // An Env is a Forklift environment, a complete specification of all Pallet package deployments
 // which should be active on a Docker host.
 type Env struct {
-	// Config is the Forklift environment specification for the environment.
-	Config EnvConfig
+	// Def is the Forklift environment definition for the environment.
+	Def EnvDef
 }
 
-// EnvSpecFile is the name of the file defining each Forklift environment.
-const EnvSpecFile = "forklift-env.yml"
+// EnvDefFile is the name of the file defining each Forklift environment.
+const EnvDefFile = "forklift-env.yml"
 
-// A EnvConfig defines a Forklift environment.
-type EnvConfig struct {
+// A EnvDef defines a Forklift environment.
+type EnvDef struct {
 	// Environment defines the basic metadata for the environment.
 	Environment EnvSpec `yaml:"environment,omitempty"`
 }
@@ -42,7 +42,7 @@ const (
 	// configurations.
 	DeplsDirName = "deployments"
 	// DeplsFileExt is the file extension for deployment configuration files.
-	DeplSpecFileExt = ".deploy.yml"
+	DeplDefFileExt = ".deploy.yml"
 )
 
 // A ResolvedDepl is a deployment with a loaded package.
@@ -60,12 +60,12 @@ type ResolvedDepl struct {
 type Depl struct {
 	// Name is the name of the package depoyment.
 	Name string
-	// Config is the Forklift package deployment specification for the deployment.
-	Config DeplConfig
+	// Def is the Forklift package deployment definition for the deployment.
+	Def DeplDef
 }
 
-// A DeplConfig defines a Pallets package deployment.
-type DeplConfig struct {
+// A DeplDef defines a Pallets package deployment.
+type DeplDef struct {
 	// Package is the Pallet package path of the package to deploy
 	Package string `yaml:"package,omitempty"`
 	// Features is a list of features from the Pallet package which should be enabled in the
