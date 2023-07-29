@@ -32,7 +32,7 @@ func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
 func PrintRepoInfo(
 	indent int, env *forklift.FSEnv, cache forklift.PathedCache, repoPath string,
 ) error {
-	versionedRepo, err := env.LoadFSRepoReq(repoPath)
+	req, err := env.LoadFSRepoReq(repoPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't load Pallet repo versioning config %s from environment %s",
@@ -41,10 +41,10 @@ func PrintRepoInfo(
 	}
 	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
 	// we don't need error-checking for every subsequent access of the version
-	printRepoReq(indent, versionedRepo.RepoReq)
+	printRepoReq(indent, req.RepoReq)
 	fmt.Println()
 
-	version := versionedRepo.VersionLock.Version
+	version := req.VersionLock.Version
 	cachedRepo, err := cache.LoadFSRepo(repoPath, version)
 	if err != nil {
 		return errors.Wrapf(
@@ -147,20 +147,20 @@ func downloadRepo(
 	return true, nil
 }
 
-func validateCommit(versionedRepo forklift.RepoReq, gitRepo *git.Repo) error {
+func validateCommit(req forklift.RepoReq, gitRepo *git.Repo) error {
 	// Check commit time
 	commitTimestamp, err := forklift.GetCommitTimestamp(
-		gitRepo, versionedRepo.VersionLock.Config.Commit,
+		gitRepo, req.VersionLock.Config.Commit,
 	)
 	if err != nil {
 		return err
 	}
-	versionedTimestamp := versionedRepo.VersionLock.Config.Timestamp
+	versionedTimestamp := req.VersionLock.Config.Timestamp
 	if commitTimestamp != versionedTimestamp {
 		return errors.Errorf(
 			"commit %s was made at %s, while the repository versioning config file expects it to have "+
 				"been made at %s",
-			versionedRepo.VersionLock.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
+			req.VersionLock.Config.ShortCommit(), commitTimestamp, versionedTimestamp,
 		)
 	}
 

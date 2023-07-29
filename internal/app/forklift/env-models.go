@@ -41,7 +41,7 @@ const (
 	// RepoReqsDirName is the directory in a Forklift environment which contains Pallet
 	// repository requirement configurations.
 	// TODO: move repositories to requirements/repositories, to allow for a future
-	// requirements/environments subdirectory
+	// requirements/environments subdirectory.
 	RepoReqsDirName = "repositories"
 )
 
@@ -73,6 +73,11 @@ type PkgReq struct {
 	PkgSubdir string
 	// Repo is the Pallet repository which should provide the required package.
 	Repo RepoReq
+}
+
+// PkgReqLoader is a source of Pallet package requirements.
+type PkgReqLoader interface {
+	LoadPkgReq(pkgPath string) (PkgReq, error)
 }
 
 // Deployment Configurations

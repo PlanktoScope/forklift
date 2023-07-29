@@ -143,15 +143,16 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 // Check
 
 func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadResolvedDepls(loader)
+	depls, err := env.LoadDepls("**/*")
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s",
-			env.FS.Path(),
-		)
+		return err
+	}
+	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	if err != nil {
+		return err
 	}
 
-	conflicts, err := forklift.CheckDeplConflicts(depls)
+	conflicts, err := forklift.CheckDeplConflicts(resolved)
 	if err != nil {
 		return errors.Wrap(err, "couldn't check for conflicts among deployments")
 	}
@@ -167,7 +168,7 @@ func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 		}
 	}
 
-	missingDeps, err := forklift.CheckDeplDependencies(depls)
+	missingDeps, err := forklift.CheckDeplDependencies(resolved)
 	if err != nil {
 		return errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
 	}
@@ -335,13 +336,15 @@ func printDependencyCandidate[Resource any](
 // Plan
 
 func PlanEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadResolvedDepls(loader)
+	depls, err := env.LoadDepls("**/*")
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s",
-			env.FS.Path(),
-		)
+		return err
 	}
+	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	if err != nil {
+		return err
+	}
+
 	dc, err := docker.NewClient()
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
@@ -352,7 +355,7 @@ func PlanEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error
 	}
 
 	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(depls, stacks)
+	changes := planReconciliation(resolved, stacks)
 	sort.Slice(changes, func(i, j int) bool {
 		return changes[i].Name < changes[j].Name
 	})
@@ -428,13 +431,15 @@ func planReconciliation(
 // Apply
 
 func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadResolvedDepls(loader)
+	depls, err := env.LoadDepls("**/*")
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s",
-			env.FS.Path(),
-		)
+		return err
 	}
+	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	if err != nil {
+		return err
+	}
+
 	dc, err := docker.NewClient()
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
@@ -445,7 +450,7 @@ func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 	}
 
 	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(depls, stacks)
+	changes := planReconciliation(resolved, stacks)
 	sort.Slice(changes, func(i, j int) bool {
 		return changes[i].Name < changes[j].Name
 	})

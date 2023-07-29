@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
@@ -12,6 +14,43 @@ import (
 )
 
 // ResolvedDepl
+
+// ResolveDepl loads the Pallet package from the [FSPkgLoader] instance based on the requirements in
+// the provided deployment and the package requirement loader.
+func ResolveDepl(
+	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, depl Depl,
+) (resolved *ResolvedDepl, err error) {
+	resolved = &ResolvedDepl{
+		Depl: depl,
+	}
+	pkgPath := resolved.Config.Package
+	if resolved.Pkg, resolved.PkgReq, err = LoadRequiredFSPkg(
+		pkgReqLoader, pkgLoader, pkgPath,
+	); err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load package %s to resolved from package deployment %s",
+			pkgPath, depl.Name,
+		)
+	}
+	return resolved, nil
+}
+
+// ResolveDepls loads the Pallet packages from the [FSPkgLoader] instance based on the requirements
+// in the provided deployments and the package requirement loader.
+func ResolveDepls(
+	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, depls []Depl,
+) (resolved []*ResolvedDepl, err error) {
+	resolvedDepls := make([]*ResolvedDepl, 0, len(depls))
+	for _, depl := range depls {
+		resolved, err := ResolveDepl(pkgReqLoader, pkgLoader, depl)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
+		}
+		resolvedDepls = append(resolvedDepls, resolved)
+	}
+
+	return resolvedDepls, nil
+}
 
 func (d *ResolvedDepl) Check() (errs []error) {
 	if d.PkgReq.Path() != d.Config.Package {
@@ -254,6 +293,38 @@ func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
 		return Depl{}, errors.Wrapf(err, "couldn't load version depl config")
 	}
 	return depl, nil
+}
+
+// loadDepls loads all Pallet package deployment configurations from the provided base filesystem
+// matching the specified search pattern.
+// The search pattern should not include the file extension for deployment specification files - the
+// file extension will be appended to the search pattern by LoadDepls.
+func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
+	searchPattern = fmt.Sprintf("%s%s", searchPattern, DeplSpecFileExt)
+	deplConfigFiles, err := doublestar.Glob(fsys, searchPattern)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't search for Pallet package deployment configs matching %s/%s",
+			fsys.Path(), searchPattern,
+		)
+	}
+
+	depls := make([]Depl, 0, len(deplConfigFiles))
+	for _, deplConfigFilePath := range deplConfigFiles {
+		if !strings.HasSuffix(deplConfigFilePath, DeplSpecFileExt) {
+			continue
+		}
+
+		deplName := strings.TrimSuffix(deplConfigFilePath, DeplSpecFileExt)
+		depl, err := loadDepl(fsys, deplName)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't load package deployment config from %s", deplConfigFilePath,
+			)
+		}
+		depls = append(depls, depl)
+	}
+	return depls, nil
 }
 
 // ResourceAttachmentSource returns the source path for resources under the Depl instance.

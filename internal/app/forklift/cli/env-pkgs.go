@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"path/filepath"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -18,9 +19,14 @@ func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) 
 			err, "couldn't identify Pallet repositories in environment %s", env.FS.Path(),
 		)
 	}
-	pkgs, err := forklift.ListVersionedPkgsOfRepos(loader, reqs)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet packages")
+	pkgs := make([]*pallets.FSPkg, 0)
+	for _, req := range reqs {
+		repoCachePath := req.GetCachePath()
+		loaded, err := loader.LoadFSPkgs(filepath.Join(repoCachePath, "**"))
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load packages from repo cached at %s", repoCachePath)
+		}
+		pkgs = append(pkgs, loaded...)
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
 		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0

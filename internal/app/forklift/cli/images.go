@@ -40,16 +40,18 @@ func DownloadImages(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader
 func listRequiredImages(
 	indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader,
 ) ([]string, error) {
-	depls, err := env.LoadResolvedDepls(loader)
+	depls, err := env.LoadDepls("**/*")
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s",
-			env.FS.Path(),
-		)
+		return nil, err
 	}
-	orderedImages := make([]string, 0, len(depls))
+	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	if err != nil {
+		return nil, err
+	}
+
+	orderedImages := make([]string, 0, len(resolved))
 	images := make(map[string]struct{})
-	for _, depl := range depls {
+	for _, depl := range resolved {
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)

@@ -13,28 +13,6 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// FSPkgLoader
-
-// LoadFSPkgFromPkgReq loads the required package from the cache.
-func LoadFSPkgFromPkgReq(loader FSPkgLoader, req PkgReq) (*pallets.FSPkg, error) {
-	pkg, err := loader.LoadFSPkg(req.Path(), req.Repo.VersionLock.Version)
-	return pkg, errors.Wrapf(
-		err, "couldn't load required package %s@%s", req.Path(), req.Repo.VersionLock.Version,
-	)
-}
-
-// LoadFSPkgsFromPkgReqs loads the required packages from the cache.
-func LoadFSPkgsFromPkgReqs(loader FSPkgLoader, reqs []PkgReq) (p []*pallets.FSPkg, err error) {
-	for _, req := range reqs {
-		fsPkg, err := LoadFSPkgFromPkgReq(loader, req)
-		if err != nil {
-			return nil, err
-		}
-		p = append(p, fsPkg)
-	}
-	return p, nil
-}
-
 // FSCache
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
@@ -47,7 +25,7 @@ func (c *FSCache) Remove() error {
 	return os.RemoveAll(c.FS.Path())
 }
 
-// Path returns the path of the cache
+// Path returns the path of the cache's filesystem.
 func (c *FSCache) Path() string {
 	return c.FS.Path()
 }
@@ -106,7 +84,7 @@ func (c *FSCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
 // processLoadedFSRepo sets the Version field of the repo based on its path in the cache.
 func (c *FSCache) processLoadedFSRepo(repo *pallets.FSRepo) (err error) {
 	var vcsRepoPath string
-	if vcsRepoPath, repo.Version, err = splitRepoPathVersion(
+	if vcsRepoPath, repo.Version, err = getRepoPathVersion(
 		pallets.GetSubdirPath(c, repo.FS.Path()),
 	); err != nil {
 		return errors.Wrapf(
@@ -122,9 +100,9 @@ func (c *FSCache) processLoadedFSRepo(repo *pallets.FSRepo) (err error) {
 	return nil
 }
 
-// splitRepoPathVersion splits paths of form github.com/user-name/git-repo-name/etc@version into
+// getRepoPathVersion splits paths of form github.com/user-name/git-repo-name/etc@version into
 // github.com/user-name/git-repo-name and version.
-func splitRepoPathVersion(repoPath string) (vcsRepoPath, version string, err error) {
+func getRepoPathVersion(repoPath string) (vcsRepoPath, version string, err error) {
 	const sep = "/"
 	pathParts := strings.Split(repoPath, sep)
 	if pathParts[0] != "github.com" {
@@ -204,10 +182,8 @@ func (c *FSCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
 		if err = pkg.AttachFSRepo(repo); err != nil {
 			return nil, errors.Wrap(err, "couldn't attach repo to package")
 		}
-		versionedPkgPath := fmt.Sprintf(
-			"%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir,
-		)
-		if prevPkg, ok := pkgMap[versionedPkgPath]; ok {
+		pkgCachePath := getPkgCachePath(pkg.Pkg)
+		if prevPkg, ok := pkgMap[pkgCachePath]; ok {
 			if prevPkg.Repo.FromSameVCSRepo(pkg.Repo.Repo) && prevPkg.FS.Path() != pkg.FS.Path() {
 				return nil, errors.Errorf(
 					"the same version of package %s was found in multiple different locations: %s, %s",
@@ -215,10 +191,14 @@ func (c *FSCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
 				)
 			}
 		}
-		pkgMap[versionedPkgPath] = pkg
+		pkgMap[pkgCachePath] = pkg
 	}
 
 	return pkgs, nil
+}
+
+func getPkgCachePath(pkg pallets.Pkg) string {
+	return fmt.Sprintf("%s@%s/%s", pkg.Repo.Config.Repository.Path, pkg.Repo.Version, pkg.Subdir)
 }
 
 // loadFSRepoContaining finds and loads the FSRepo which contains the provided subdirectory path.
@@ -233,6 +213,11 @@ func (c *FSCache) loadFSRepoContaining(subdirPath string) (repo *pallets.FSRepo,
 }
 
 // LayeredCache
+
+// Path returns the path of the underlying cache.
+func (c *LayeredCache) Path() string {
+	return c.Underlay.Path()
+}
 
 // LoadFSRepo loads the FSRepo with the specified path and version.
 // The loaded FSRepo instance is fully initialized.
@@ -319,13 +304,11 @@ func (c *LayeredCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error
 	return pkgs, nil
 }
 
-// Path returns the path of the underlying cache
-func (c *LayeredCache) Path() string {
-	return c.Underlay.Path()
-}
-
 // RepoOverrideCache
 
+// NewRepoOverrideCache instantiates a new RepoOverrideCache with a given list of Pallet
+// repositories, and a map associating repository paths with lists of versions which the respective
+// repositories will be provided as.
 func NewRepoOverrideCache(
 	repos []*pallets.FSRepo, repoVersions map[string][]string,
 ) (*RepoOverrideCache, error) {
@@ -359,6 +342,7 @@ func NewRepoOverrideCache(
 	return c, nil
 }
 
+// SetVersions configures the cache to cover the specified versions of the specified repository.
 func (f *RepoOverrideCache) SetVersions(repoPath string, versions map[string]struct{}) {
 	if _, ok := f.repoVersionSets[repoPath]; !ok {
 		f.repoVersionSets[repoPath] = make(map[string]struct{})
@@ -404,40 +388,47 @@ func (f *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*pallet
 // The search pattern should be a [doublestar] pattern, such as `**`, matching repos to search for.
 // The loaded FSRepo instances are fully initialized.
 func (f *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
-	versionedRepos := make(map[string]*pallets.FSRepo)
-	versionedRepoPaths := make([]string, 0)
+	repos := make(map[string]*pallets.FSRepo) // indexed by repo cache path
+	repoCachePaths := make([]string, 0)
 	for _, repoPath := range f.repoPaths {
 		repo := f.repos[repoPath]
 		for _, version := range f.repoVersions[repoPath] {
-			vcsRepoPath, repoSubdir, err := pallets.SplitRepoPathSubdir(repoPath)
+			repoCachePath, err := getRepoCachePath(repoPath, version)
 			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
+				return nil, err
 			}
-			versionedRepoPath := fmt.Sprintf("%s@%s/%s", vcsRepoPath, version, repoSubdir)
-			versionedRepoPaths = append(versionedRepoPaths, versionedRepoPath)
-			versionedRepos[versionedRepoPath] = repo
+			repoCachePaths = append(repoCachePaths, repoCachePath)
+			repos[repoCachePath] = repo
 		}
 	}
 
-	matchingVersionedRepoPaths := make([]string, 0, len(versionedRepoPaths))
-	for _, path := range versionedRepoPaths {
-		ok, err := doublestar.Match(searchPattern, path)
+	matchingRepoCachePaths := make([]string, 0, len(repoCachePaths))
+	for _, cachePath := range repoCachePaths {
+		ok, err := doublestar.Match(searchPattern, cachePath)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't search for repositories using pattern %s", searchPattern,
 			)
 		}
 		if ok {
-			matchingVersionedRepoPaths = append(matchingVersionedRepoPaths, path)
+			matchingRepoCachePaths = append(matchingRepoCachePaths, cachePath)
 		}
 	}
-	sort.Strings(matchingVersionedRepoPaths)
+	sort.Strings(matchingRepoCachePaths)
 
-	matchingRepos := make([]*pallets.FSRepo, 0, len(matchingVersionedRepoPaths))
-	for _, path := range matchingVersionedRepoPaths {
-		matchingRepos = append(matchingRepos, versionedRepos[path])
+	matchingRepos := make([]*pallets.FSRepo, 0, len(matchingRepoCachePaths))
+	for _, cachePath := range matchingRepoCachePaths {
+		matchingRepos = append(matchingRepos, repos[cachePath])
 	}
 	return matchingRepos, nil
+}
+
+func getRepoCachePath(repoPath, version string) (string, error) {
+	vcsRepoPath, repoSubdir, err := pallets.SplitRepoPathSubdir(repoPath)
+	if err != nil {
+		return "", errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
+	}
+	return fmt.Sprintf("%s@%s/%s", vcsRepoPath, version, repoSubdir), nil
 }
 
 // IncludesFSPkg reports whether the RepoOverrideCache instance has a repository with the specified
@@ -482,42 +473,42 @@ func (f *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*pallets.
 // to search for.
 // The loaded FSPkg instances are fully initialized.
 func (f *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
-	versionedPkgs := make(map[string]*pallets.FSPkg)
-	versionedPkgPaths := make([]string, 0)
+	pkgs := make(map[string]*pallets.FSPkg) // indexed by package cache path
+	pkgCachePaths := make([]string, 0)
 	for _, repoPath := range f.repoPaths {
 		repo := f.repos[repoPath]
-		pkgs, err := repo.LoadFSPkgs("**")
+		loaded, err := repo.LoadFSPkgs("**")
 		if err != nil {
 			return nil, errors.Errorf("couldn't list packages in repo %s", repo.Path())
 		}
 		for _, version := range f.repoVersions[repoPath] {
-			vcsRepoPath, repoSubdir, err := pallets.SplitRepoPathSubdir(repoPath)
-			if err != nil {
-				return nil, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
-			}
-			for _, pkg := range pkgs {
-				versionedPkgPath := fmt.Sprintf("%s@%s/%s/%s", vcsRepoPath, version, repoSubdir, pkg.Subdir)
-				versionedPkgPaths = append(versionedPkgPaths, versionedPkgPath)
-				versionedPkgs[versionedPkgPath] = pkg
+			for _, pkg := range loaded {
+				repoCachePath, err := getRepoCachePath(repoPath, version)
+				if err != nil {
+					return nil, err
+				}
+				pkgCachePath := filepath.Join(repoCachePath, pkg.Subdir)
+				pkgCachePaths = append(pkgCachePaths, pkgCachePath)
+				pkgs[pkgCachePath] = pkg
 			}
 		}
 	}
 
-	matchingVersionedPkgPaths := make([]string, 0, len(versionedPkgPaths))
-	for _, path := range versionedPkgPaths {
-		ok, err := doublestar.Match(searchPattern, path)
+	matchingPkgCachePaths := make([]string, 0, len(pkgCachePaths))
+	for _, cachePath := range pkgCachePaths {
+		ok, err := doublestar.Match(searchPattern, cachePath)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't search for packages using pattern %s", searchPattern)
 		}
 		if ok {
-			matchingVersionedPkgPaths = append(matchingVersionedPkgPaths, path)
+			matchingPkgCachePaths = append(matchingPkgCachePaths, cachePath)
 		}
 	}
-	sort.Strings(matchingVersionedPkgPaths)
+	sort.Strings(matchingPkgCachePaths)
 
-	matchingPkgs := make([]*pallets.FSPkg, 0, len(matchingVersionedPkgPaths))
-	for _, path := range matchingVersionedPkgPaths {
-		matchingPkgs = append(matchingPkgs, versionedPkgs[path])
+	matchingPkgs := make([]*pallets.FSPkg, 0, len(matchingPkgCachePaths))
+	for _, cachePath := range matchingPkgCachePaths {
+		matchingPkgs = append(matchingPkgs, pkgs[cachePath])
 	}
 	return matchingPkgs, nil
 }

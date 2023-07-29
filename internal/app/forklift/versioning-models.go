@@ -9,7 +9,7 @@ type VersionLock struct {
 }
 
 // VersionLockSpecFile is the name of the file defining each version lock of a Pallet repository.
-// TODO: rename this to "forklift-version-lock.yml"
+// TODO: rename this to "forklift-version-lock.yml".
 const VersionLockSpecFile = "forklift-repo.yml"
 
 // A VersionLockConfig defines a requirement for a Pallet repository or package at a specific

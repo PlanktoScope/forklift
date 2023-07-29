@@ -14,14 +14,15 @@ import (
 // Print
 
 func PrintEnvDepls(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadResolvedDepls(loader)
+	depls, err := env.LoadDepls("**/*")
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify Pallet package deployments specified by environment %s",
-			env.FS.Path(),
-		)
+		return err
 	}
-	for _, depl := range depls {
+	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	if err != nil {
+		return err
+	}
+	for _, depl := range resolved {
 		IndentedPrintf(indent, "%s\n", depl.Name)
 	}
 	return nil

@@ -1,13 +1,10 @@
 package forklift
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
@@ -24,7 +21,7 @@ func LoadFSEnv(fsys pallets.PathedFS, subdirPath string) (e *FSEnv, err error) {
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if e.Env.Config, err = LoadEnvConfig(e.FS, EnvSpecFile); err != nil {
+	if e.Env.Config, err = loadEnvConfig(e.FS, EnvSpecFile); err != nil {
 		return nil, errors.Errorf("couldn't load env config")
 	}
 	return e, nil
@@ -67,19 +64,19 @@ func (e *FSEnv) Remove() error {
 
 // FSEnv: Repo Requirements
 
-// GetRepoReqsFS returns the [fs.FS] in the environment which contains repository requirement
+// getRepoReqsFS returns the [fs.FS] in the environment which contains repository requirement
 // configurations.
-func (e *FSEnv) GetRepoReqsFS() (pallets.PathedFS, error) {
+func (e *FSEnv) getRepoReqsFS() (pallets.PathedFS, error) {
 	return e.FS.Sub(RepoReqsDirName)
 }
 
 // LoadFSRepoReq loads the FSRepoReq from the environment for the repository with the specified
 // Pallet repository path.
 func (e *FSEnv) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
-	reposFS, err := e.GetRepoReqsFS()
+	reposFS, err := e.getRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(
-			err, "couldn't open directory for versioned Pallet repositories from environment",
+			err, "couldn't open directory for Pallet repository requirements from environment",
 		)
 	}
 	if r, err = loadFSRepoReq(reposFS, repoPath); err != nil {
@@ -88,25 +85,11 @@ func (e *FSEnv) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
 	return r, nil
 }
 
-// loadFSRepoReqContaining loads the FSRepoReq containing the specified sub-directory path in the
-// environment.
-// The sub-directory path does not have to actually exist; however, it would usually be provided as
-// a Pallet package path.
-func (e *FSEnv) loadFSRepoReqContaining(subdirPath string) (*FSRepoReq, error) {
-	reposFS, err := e.GetRepoReqsFS()
-	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't open directory for versioned Pallet repositories from environment",
-		)
-	}
-	return loadFSRepoReqContaining(reposFS, subdirPath)
-}
-
 // LoadFSRepoReqs loads all FSRepoReqs from the environment matching the specified search pattern.
 // The search pattern should be a [doublestar] pattern, such as `**`, matching the repo paths to
 // search for.
 func (e *FSEnv) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
-	reposFS, err := e.GetRepoReqsFS()
+	reposFS, err := e.getRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for Pallet repositories in local environment",
@@ -120,7 +103,13 @@ func (e *FSEnv) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
 // LoadPkgReq loads the PkgReq from the environment for the package with the specified Pallet
 // package path.
 func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-	fsRepoReq, err := e.loadFSRepoReqContaining(pkgPath)
+	reposFS, err := e.getRepoReqsFS()
+	if err != nil {
+		return PkgReq{}, errors.Wrap(
+			err, "couldn't open directory for Pallet repository requirements from environment",
+		)
+	}
+	fsRepoReq, err := loadFSRepoReqContaining(reposFS, pkgPath)
 	if err != nil {
 		return PkgReq{}, errors.Wrapf(
 			err, "couldn't find repo providing package %s in local environment", pkgPath,
@@ -131,32 +120,17 @@ func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 	return r, nil
 }
 
-// LoadRequiredFSPkg loads the specified package from the cache according to the versioning
-// requirement for the package's repository as configured in the environment.
-func LoadRequiredFSPkg(
-	env *FSEnv, loader FSPkgLoader, pkgPath string,
-) (*pallets.FSPkg, PkgReq, error) {
-	req, err := env.LoadPkgReq(pkgPath)
-	if err != nil {
-		return nil, PkgReq{}, errors.Wrapf(
-			err, "couldn't determine package requirement for package %s", pkgPath,
-		)
-	}
-	fsPkg, err := LoadFSPkgFromPkgReq(loader, req)
-	return fsPkg, req, err
-}
-
 // FSEnv: Deployments
 
-// GetDeplsFS returns the [fs.FS] in the environment which contains package deployment
+// getDeplsFS returns the [fs.FS] in the environment which contains package deployment
 // configurations.
-func (e *FSEnv) GetDeplsFS() (pallets.PathedFS, error) {
+func (e *FSEnv) getDeplsFS() (pallets.PathedFS, error) {
 	return e.FS.Sub(DeplsDirName)
 }
 
 // LoadDepl loads the Depl with the specified name from the environment.
 func (e *FSEnv) LoadDepl(name string) (depl Depl, err error) {
-	deplsFS, err := e.GetDeplsFS()
+	deplsFS, err := e.getDeplsFS()
 	if err != nil {
 		return Depl{}, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from environment",
@@ -168,83 +142,24 @@ func (e *FSEnv) LoadDepl(name string) (depl Depl, err error) {
 	return depl, nil
 }
 
-func ResolveDepl(env *FSEnv, loader FSPkgLoader, depl Depl) (resolved *ResolvedDepl, err error) {
-	resolved = &ResolvedDepl{
-		Depl: depl,
-	}
-	pkgPath := resolved.Config.Package
-	if resolved.Pkg, resolved.PkgReq, err = LoadRequiredFSPkg(env, loader, pkgPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load package %s to resolved from package deployment %s",
-			pkgPath, depl.Name,
-		)
-	}
-	return resolved, nil
-}
-
-// TODO: delegate some functionality to an env-independent LoadDepls function
-// TODO: take a search pattern
-func (e *FSEnv) LoadDepls() ([]Depl, error) {
-	fsys, err := e.GetDeplsFS()
+// LoadDepls loads all Pallet package deployment configurations matching the specified search
+// pattern.
+// The search pattern should not include the file extension for deployment specification files - the
+// file extension will be appended to the search pattern by LoadDepls.
+func (e *FSEnv) LoadDepls(searchPattern string) ([]Depl, error) {
+	fsys, err := e.getDeplsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from environment",
 		)
 	}
-	files, err := doublestar.Glob(fsys, fmt.Sprintf("**/*%s", DeplSpecFileExt))
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't search for Pallet package deployment configs")
-	}
-	deplNames := make([]string, 0, len(files))
-	deplMap := make(map[string]Depl)
-	for _, filePath := range files {
-		deplName := strings.TrimSuffix(filePath, ".deploy.yml")
-		if _, ok := deplMap[deplName]; ok {
-			return nil, errors.Errorf(
-				"package deployment %s repeatedly specified by the local environment", deplName,
-			)
-		}
-		deplNames = append(deplNames, deplName)
-		deplMap[deplName], err = e.LoadDepl(deplName)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load package deployment specification %s", deplName)
-		}
-	}
-
-	orderedDepls := make([]Depl, 0, len(deplNames))
-	for _, deplName := range deplNames {
-		orderedDepls = append(orderedDepls, deplMap[deplName])
-	}
-	return orderedDepls, nil
-}
-
-// TODO: delegate some functionality to an env-independent LoadDepls function
-// TODO: take a search pattern
-// TODO: make a ResolveDepls function separate from a LoadDepls method
-func (e *FSEnv) LoadResolvedDepls(loader FSPkgLoader) ([]*ResolvedDepl, error) {
-	depls, err := e.LoadDepls()
-	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't load pre-resolution package deployment configurations from environment",
-		)
-	}
-
-	resolvedDepls := make([]*ResolvedDepl, 0, len(depls))
-	for _, depl := range depls {
-		resolved, err := ResolveDepl(e, loader, depl)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
-		}
-		resolvedDepls = append(resolvedDepls, resolved)
-	}
-
-	return resolvedDepls, nil
+	return loadDepls(fsys, searchPattern)
 }
 
 // EnvConfig
 
-// LoadEnvConfig loads an EnvConfig from the specified file path in the provided base filesystem.
-func LoadEnvConfig(fsys pallets.PathedFS, filePath string) (EnvConfig, error) {
+// loadEnvConfig loads an EnvConfig from the specified file path in the provided base filesystem.
+func loadEnvConfig(fsys pallets.PathedFS, filePath string) (EnvConfig, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return EnvConfig{}, errors.Wrapf(

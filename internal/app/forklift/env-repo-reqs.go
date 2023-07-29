@@ -104,6 +104,18 @@ func (r RepoReq) GetPkgSubdir(pkgPath string) string {
 	return strings.TrimPrefix(pkgPath, fmt.Sprintf("%s/", r.Path()))
 }
 
+// GetCachePath returns the path of the repo in caches, which is of form vcsPath@version/repoSubdir
+// (e.g. github.com/PlanktoScope/pallets@v0.1.0/core).
+func (r RepoReq) GetCachePath() string {
+	return fmt.Sprintf("%s@%s/%s", r.VCSRepoPath, r.VersionLock.Version, r.RepoSubdir)
+}
+
+// GetQueryPath returns the path of the repo in version queries, which is of form
+// vcsPath/repoSubdir@version (e.g. github.com/PlanktoScope/pallets/core@v0.1.0).
+func (r RepoReq) GetQueryPath() string {
+	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
+}
+
 // CompareRepoReqs returns an integer comparing two [RepoReq] instances according to their paths and
 // versions. The result will be 0 if the r and s have the same paths and versions; -1 if r has a
 // path which alphabetically comes before the path of s or if the paths are the same but r has a
