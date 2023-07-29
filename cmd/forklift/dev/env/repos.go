@@ -211,7 +211,7 @@ func determinePalletRepoDefs(
 
 		config := vcsRepoDefs[vcsRepoRelease]
 		config.RepoSubdir = repoSubdir
-		fmt.Printf("Resolved %s as %s", remoteRelease, config.VersionLock.Version)
+		fmt.Printf("Resolved %s as %+v", remoteRelease, config.VersionLock.Version)
 		if config.VersionLock.Def.BaseVersion != "" {
 			fmt.Printf(", version %s", config.VersionLock.Def.BaseVersion)
 		}
@@ -255,6 +255,9 @@ func resolveVCSRepoVersionQuery(
 		)
 	}
 	if repo.VersionLock.Def, err = lockCommit(gitRepo, commit); err != nil {
+		return forklift.RepoReq{}, err
+	}
+	if repo.VersionLock.Version, err = repo.VersionLock.Def.Version(); err != nil {
 		return forklift.RepoReq{}, err
 	}
 	return repo, nil
