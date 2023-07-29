@@ -133,75 +133,58 @@ func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 
 // LoadRequiredFSPkg loads the specified package from the cache according to the versioning
 // requirement for the package's repository as configured in the environment.
-func LoadRequiredFSPkg(env *FSEnv, cache *FSCache, pkgPath string) (*pallets.FSPkg, PkgReq, error) {
+func LoadRequiredFSPkg(
+	env *FSEnv, loader FSPkgLoader, pkgPath string,
+) (*pallets.FSPkg, PkgReq, error) {
 	req, err := env.LoadPkgReq(pkgPath)
 	if err != nil {
 		return nil, PkgReq{}, errors.Wrapf(
 			err, "couldn't determine package requirement for package %s", pkgPath,
 		)
 	}
-	fsPkg, err := LoadFSPkgFromPkgReq(cache, req)
+	fsPkg, err := LoadFSPkgFromPkgReq(loader, req)
 	return fsPkg, req, err
 }
 
 // FSEnv: Deployments
 
+// GetDeplsFS returns the [fs.FS] in the environment which contains package deployment
+// configurations.
 func (e *FSEnv) GetDeplsFS() (pallets.PathedFS, error) {
 	return e.FS.Sub(DeplsDirName)
 }
 
-// TODO: delegate this functionality to an env-independent LoadDepl function
-// TODO: separate LoadDepl from ResolveDepl
-func (e *FSEnv) LoadDepl(
-	cache *FSCache, replacementRepos map[string]*pallets.FSRepo, deplName string,
-) (depl *ResolvedDepl, err error) {
-	depl = &ResolvedDepl{
-		Depl: Depl{
-			Name: deplName,
-		},
-	}
-
+// LoadDepl loads the Depl with the specified name from the environment.
+func (e *FSEnv) LoadDepl(name string) (depl Depl, err error) {
 	deplsFS, err := e.GetDeplsFS()
 	if err != nil {
-		return nil, errors.Wrap(
+		return Depl{}, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from environment",
 		)
 	}
-	if depl.Config, err = loadDeplConfig(
-		deplsFS, fmt.Sprintf("%s.deploy.yml", deplName),
-	); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package deployment config for %s", deplName)
+	if depl, err = loadDepl(deplsFS, name); err != nil {
+		return Depl{}, errors.Wrapf(err, "couldn't load package deployment for %s", name)
 	}
-
-	pkgPath := depl.Config.Package
-	repo, ok := FindExternalRepoOfPkg(replacementRepos, pkgPath)
-	if ok {
-		pkg, perr := repo.LoadFSPkg(repo.GetPkgSubdir(pkgPath))
-		if perr != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't find external package %s from replacement repo %s", pkgPath, repo.FS.Path(),
-			)
-		}
-		depl.Pkg = pkg
-		return depl, nil
-	}
-
-	if depl.Pkg, depl.PkgReq, err = LoadRequiredFSPkg(e, cache, pkgPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load versioned package %s to be deployed by local environment", pkgPath,
-		)
-	}
-
 	return depl, nil
 }
 
-// TODO: rename this method
-// TODO: delegate this functionality to an env-independent LoadDepls function
+func ResolveDepl(env *FSEnv, loader FSPkgLoader, depl Depl) (resolved *ResolvedDepl, err error) {
+	resolved = &ResolvedDepl{
+		Depl: depl,
+	}
+	pkgPath := resolved.Config.Package
+	if resolved.Pkg, resolved.PkgReq, err = LoadRequiredFSPkg(env, loader, pkgPath); err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load package %s to resolved from package deployment %s",
+			pkgPath, depl.Name,
+		)
+	}
+	return resolved, nil
+}
+
+// TODO: delegate some functionality to an env-independent LoadDepls function
 // TODO: take a search pattern
-// TODO: split off loading of deployment-required packages from the cache into a separate function
-func (e *FSEnv) ListDepls(
-	cache *FSCache, replacementRepos map[string]*pallets.FSRepo,
-) ([]*ResolvedDepl, error) {
+func (e *FSEnv) LoadDepls() ([]Depl, error) {
 	fsys, err := e.GetDeplsFS()
 	if err != nil {
 		return nil, errors.Wrap(
@@ -212,9 +195,8 @@ func (e *FSEnv) ListDepls(
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't search for Pallet package deployment configs")
 	}
-
 	deplNames := make([]string, 0, len(files))
-	deplMap := make(map[string]*ResolvedDepl)
+	deplMap := make(map[string]Depl)
 	for _, filePath := range files {
 		deplName := strings.TrimSuffix(filePath, ".deploy.yml")
 		if _, ok := deplMap[deplName]; ok {
@@ -223,17 +205,40 @@ func (e *FSEnv) ListDepls(
 			)
 		}
 		deplNames = append(deplNames, deplName)
-		deplMap[deplName], err = e.LoadDepl(cache, replacementRepos, deplName)
+		deplMap[deplName], err = e.LoadDepl(deplName)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load package deployment specification %s", deplName)
 		}
 	}
 
-	orderedDepls := make([]*ResolvedDepl, 0, len(deplNames))
+	orderedDepls := make([]Depl, 0, len(deplNames))
 	for _, deplName := range deplNames {
 		orderedDepls = append(orderedDepls, deplMap[deplName])
 	}
 	return orderedDepls, nil
+}
+
+// TODO: delegate some functionality to an env-independent LoadDepls function
+// TODO: take a search pattern
+// TODO: make a ResolveDepls function separate from a LoadDepls method
+func (e *FSEnv) LoadResolvedDepls(loader FSPkgLoader) ([]*ResolvedDepl, error) {
+	depls, err := e.LoadDepls()
+	if err != nil {
+		return nil, errors.Wrap(
+			err, "couldn't load pre-resolution package deployment configurations from environment",
+		)
+	}
+
+	resolvedDepls := make([]*ResolvedDepl, 0, len(depls))
+	for _, depl := range depls {
+		resolved, err := ResolveDepl(e, loader, depl)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
+		}
+		resolvedDepls = append(resolvedDepls, resolved)
+	}
+
+	return resolvedDepls, nil
 }
 
 // EnvConfig

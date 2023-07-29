@@ -14,25 +14,18 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context, ensureCache bool) (
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
+	env *forklift.FSEnv, cache *forklift.LayeredCache, override *forklift.RepoOverrideCache,
 	err error,
 ) {
 	if env, err = getEnv(c.String("cwd")); err != nil {
 		return nil, nil, nil, err
 	}
-	if replacementRepos, err = loadReplacementRepos(c.StringSlice("repo")); err != nil {
+	if cache, override, err = getCache(
+		c.String("workspace"), c.StringSlice("repo"), ensureCache,
+	); err != nil {
 		return nil, nil, nil, err
 	}
-	if cache, err = getCache(c.String("workspace")); err != nil && len(replacementRepos) == 0 {
-		return nil, nil, nil, err
-	}
-	if (ensureCache || len(replacementRepos) == 0) && !cache.Exists() {
-		return nil, nil, nil, errors.New(
-			"you first need to cache the repos specified by your environment with " +
-				"`forklift dev env cache-repo`",
-		)
-	}
-	return env, cache, replacementRepos, nil
+	return env, cache, override, nil
 }
 
 func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
@@ -44,8 +37,40 @@ func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
 	return env, nil
 }
 
-func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, err error) {
-	repos = make(map[string]*pallets.FSRepo)
+func getCache(
+	wpath string, repos []string, ensureCache bool,
+) (*forklift.LayeredCache, *forklift.RepoOverrideCache, error) {
+	cache := &forklift.LayeredCache{}
+	replacementRepos, err := loadReplacementRepos(repos)
+	if err != nil {
+		return nil, nil, err
+	}
+	override, err := forklift.NewRepoOverrideCache(replacementRepos, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	cache.Overlay = override
+
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, nil, err
+	}
+	fsCache, err := workspace.GetCache()
+	if err != nil && len(repos) == 0 {
+		return nil, nil, err
+	}
+	cache.Underlay = fsCache
+
+	if (ensureCache || len(repos) == 0) && !fsCache.Exists() {
+		return nil, nil, errors.New(
+			"you first need to cache the repos specified by your environment with " +
+				"`forklift dev env cache-repo`",
+		)
+	}
+	return cache, override, nil
+}
+
+func loadReplacementRepos(fsPaths []string) (repos []*pallets.FSRepo, err error) {
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {
@@ -63,23 +88,35 @@ func loadReplacementRepos(fsPaths []string) (repos map[string]*pallets.FSRepo, e
 		if len(externalRepos) == 0 {
 			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
 		}
-		for _, repo := range externalRepos {
-			repos[repo.Path()] = repo
-		}
+		repos = append(repos, externalRepos...)
 	}
 	return repos, nil
 }
 
-func getCache(wpath string) (*forklift.FSCache, error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
+func setOverrideCacheVersions(
+	env *forklift.FSEnv, overrideCache *forklift.RepoOverrideCache,
+) error {
+	reqs, err := env.LoadFSRepoReqs("**")
 	if err != nil {
-		return nil, err
+		return errors.Wrapf(
+			err, "couldn't identify Pallet repository requirements specified by environment %s",
+			env.FS.Path(),
+		)
 	}
-	cache, err := workspace.GetCache()
-	if err != nil {
-		return nil, err
+	repoVersions := make(map[string]map[string]struct{})
+	for _, req := range reqs {
+		repoPath := req.Path()
+		version := req.VersionLock.Version
+		if _, ok := repoVersions[repoPath]; !ok {
+			repoVersions[repoPath] = make(map[string]struct{})
+		}
+		repoVersions[repoPath][version] = struct{}{}
 	}
-	return cache, nil
+
+	for repoPath, versions := range repoVersions {
+		overrideCache.SetVersions(repoPath, versions)
+	}
+	return nil
 }
 
 // show
@@ -95,12 +132,15 @@ func showAction(c *cli.Context) error {
 // check
 
 func checkAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+		return err
+	}
 
-	if err := fcli.CheckEnv(0, env, cache, replacementRepos); err != nil {
+	if err := fcli.CheckEnv(0, env, cache); err != nil {
 		return err
 	}
 	return nil
@@ -109,12 +149,15 @@ func checkAction(c *cli.Context) error {
 // plan
 
 func planAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+		return err
+	}
 
-	if err := fcli.PlanEnv(0, env, cache, replacementRepos); err != nil {
+	if err := fcli.PlanEnv(0, env, cache); err != nil {
 		return err
 	}
 	return nil
@@ -123,12 +166,15 @@ func planAction(c *cli.Context) error {
 // apply
 
 func applyAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+		return err
+	}
 
-	if err := fcli.ApplyEnv(0, env, cache, replacementRepos); err != nil {
+	if err := fcli.ApplyEnv(0, env, cache); err != nil {
 		return err
 	}
 	fmt.Println()

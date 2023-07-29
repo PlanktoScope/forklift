@@ -17,7 +17,7 @@ func cacheImgAction(c *cli.Context) error {
 	}
 
 	fmt.Println("Downloading Docker container images specified by the local environment...")
-	if err := fcli.DownloadImages(0, env, cache, nil); err != nil {
+	if err := fcli.DownloadImages(0, env, cache); err != nil {
 		return err
 	}
 	fmt.Println()

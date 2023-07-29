@@ -14,7 +14,7 @@ func lsDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintEnvDepls(0, env, cache, nil)
+	return fcli.PrintEnvDepls(0, env, cache)
 }
 
 // show-depl
@@ -26,5 +26,5 @@ func showDeplAction(c *cli.Context) error {
 	}
 
 	deplName := c.Args().First()
-	return fcli.PrintDeplInfo(0, env, cache, nil, deplName)
+	return fcli.PrintDeplInfo(0, env, cache, deplName)
 }

@@ -24,7 +24,7 @@ func cacheRepoAction(c *cli.Context) error {
 	}
 
 	fmt.Printf("Downloading Pallet repositories specified by the development environment...\n")
-	changed, err := fcli.DownloadRepos(0, env, cache)
+	changed, err := fcli.DownloadRepos(0, env, cache.Underlay)
 	if err != nil {
 		return err
 	}
@@ -56,13 +56,16 @@ func lsRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
+		return err
+	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
 		return err
 	}
 
 	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, env, cache, replacementRepos, repoPath)
+	return fcli.PrintRepoInfo(0, env, cache, repoPath)
 }
 
 // add-repo
@@ -82,13 +85,13 @@ func addRepoAction(c *cli.Context) error {
 		return errors.Wrap(err, "one or more arguments is invalid")
 	}
 	fmt.Println("Updating local mirrors of remote Git repos...")
-	if err = updateLocalRepoMirrors(remoteReleases, cache.FS.Path()); err != nil {
+	if err = updateLocalRepoMirrors(remoteReleases, cache.Underlay.Path()); err != nil {
 		return errors.Wrap(err, "couldn't update local repo mirrors")
 	}
 
 	fmt.Println()
 	fmt.Println("Resolving version queries...")
-	palletRepoConfigs, err := determinePalletRepoConfigs(remoteReleases, cache.FS.Path())
+	palletRepoConfigs, err := determinePalletRepoConfigs(remoteReleases, cache.Underlay.Path())
 	if err != nil {
 		return errors.Wrap(err, "couldn't resolve version queries for pallet repos")
 	}

@@ -30,9 +30,7 @@ func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
 }
 
 func PrintRepoInfo(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-	repoPath string,
+	indent int, env *forklift.FSEnv, cache forklift.PathedCache, repoPath string,
 ) error {
 	versionedRepo, err := env.LoadFSRepoReq(repoPath)
 	if err != nil {
@@ -46,22 +44,18 @@ func PrintRepoInfo(
 	printRepoReq(indent, versionedRepo.RepoReq)
 	fmt.Println()
 
-	var cachedRepo *pallets.FSRepo
-	replacementRepo, ok := replacementRepos[repoPath]
-	if ok {
-		cachedRepo = replacementRepo
-	} else {
-		version := versionedRepo.VersionLock.Version
-		if cachedRepo, err = cache.LoadFSRepo(repoPath, version); err != nil {
-			return errors.Wrapf(
-				err,
-				"couldn't find Pallet repository %s@%s in cache, please update the local cache of repos",
-				repoPath, version,
-			)
-		}
+	version := versionedRepo.VersionLock.Version
+	cachedRepo, err := cache.LoadFSRepo(repoPath, version)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find Pallet repository %s@%s in cache, please update the local cache of repos",
+			repoPath, version,
+		)
 	}
-	if cache.CoversPath(cachedRepo.FS.Path()) {
-		IndentedPrintf(indent+1, "Path in cache: %s\n", cache.TrimCachePathPrefix(cachedRepo.FS.Path()))
+	if pallets.CoversPath(cache, cachedRepo.FS.Path()) {
+		IndentedPrintf(
+			indent+1, "Path in cache: %s\n", pallets.GetSubdirPath(cache, cachedRepo.FS.Path()),
+		)
 	} else {
 		IndentedPrintf(indent+1, "External path (replacing cached repo): %s\n", cachedRepo.FS.Path())
 	}
@@ -79,14 +73,16 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 
 // Download
 
-func DownloadRepos(indent int, env *forklift.FSEnv, cache *forklift.FSCache) (changed bool, err error) {
+func DownloadRepos(
+	indent int, env *forklift.FSEnv, cache forklift.PathedCache,
+) (changed bool, err error) {
 	repos, err := env.LoadFSRepoReqs("**")
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify Pallet repositories")
 	}
 	changed = false
 	for _, repo := range repos {
-		downloaded, err := downloadRepo(indent, cache.FS.Path(), repo.RepoReq)
+		downloaded, err := downloadRepo(indent, cache.Path(), repo.RepoReq)
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(

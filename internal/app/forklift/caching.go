@@ -47,14 +47,9 @@ func (c *FSCache) Remove() error {
 	return os.RemoveAll(c.FS.Path())
 }
 
-// CoversPath checks whether the provided path is within the scope of the cache.
-func (c *FSCache) CoversPath(path string) bool {
-	return strings.HasPrefix(path, fmt.Sprintf("%s/", c.FS.Path()))
-}
-
-// TrimCachePathPrefix removes the path of the cache from the start of the provided path.
-func (c *FSCache) TrimCachePathPrefix(path string) string {
-	return strings.TrimPrefix(path, fmt.Sprintf("%s/", c.FS.Path()))
+// Path returns the path of the cache
+func (c *FSCache) Path() string {
+	return c.FS.Path()
 }
 
 // FSCache: FSRepoLoader
@@ -112,7 +107,7 @@ func (c *FSCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
 func (c *FSCache) processLoadedFSRepo(repo *pallets.FSRepo) (err error) {
 	var vcsRepoPath string
 	if vcsRepoPath, repo.Version, err = splitRepoPathVersion(
-		c.TrimCachePathPrefix(repo.FS.Path()),
+		pallets.GetSubdirPath(c, repo.FS.Path()),
 	); err != nil {
 		return errors.Wrapf(
 			err, "couldn't parse path of cached repo configured at %s", repo.FS.Path(),
@@ -200,7 +195,7 @@ func (c *FSCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
 
 	pkgMap := make(map[string]*pallets.FSPkg)
 	for _, pkg := range pkgs {
-		repo, err := c.loadFSRepoContaining(c.TrimCachePathPrefix(pkg.FS.Path()))
+		repo, err := c.loadFSRepoContaining(pallets.GetSubdirPath(c, pkg.FS.Path()))
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't find the cached repo providing the package at %s", pkg.FS.Path(),
@@ -237,45 +232,39 @@ func (c *FSCache) loadFSRepoContaining(subdirPath string) (repo *pallets.FSRepo,
 	return repo, nil
 }
 
-// OverriddenCache
+// LayeredCache
 
 // LoadFSRepo loads the FSRepo with the specified path and version.
 // The loaded FSRepo instance is fully initialized.
-// If the repo path matches of the overriding FSRepos in the OverriddenCache instance,
-// regardless of version, it is returned; otherwise, the repo is loaded from the underlying cache.
-func (c *OverriddenCache) LoadFSRepo(repoPath string, version string) (*pallets.FSRepo, error) {
-	if repo, ok := c.Overrides[repoPath]; ok {
-		return repo, nil
+// If the overlay cache expects to have the repo, it will attempt to load the repo; otherwise, the
+// underlay cache will attempt to load the repo.
+func (c *LayeredCache) LoadFSRepo(repoPath string, version string) (*pallets.FSRepo, error) {
+	if c.Overlay.IncludesFSRepo(repoPath, version) {
+		repo, err := c.Overlay.LoadFSRepo(repoPath, version)
+		return repo, errors.Wrap(err, "couldn't load repo from overlay")
 	}
-	return c.LoadFSRepo(repoPath, version)
+	repo, err := c.Underlay.LoadFSRepo(repoPath, version)
+	return repo, errors.Wrap(err, "couldn't load repo from underlay")
 }
 
 // LoadFSRepos loads all FSRepos from the cache matching the specified search pattern.
 // The search pattern should be a [doublestar] pattern, such as `**`, matching repo directories to
 // search for.
 // The loaded FSRepo instances are fully initialized.
-// If a matching repo is one of the overriding FSRepos in the OverriddenCache instance,
-// regardless of version, it is included, and repos with the same path from the underlying cache are
-// excluded regardless of version; otherwise, the repo is loaded from the underlying cache.
-func (c *OverriddenCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
-	repos := make([]*pallets.FSRepo, 0, len(c.Overrides))
-	for _, repo := range c.Overrides {
-		match, err := doublestar.Match(searchPattern, repo.Path())
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't match with search pattern %s", searchPattern)
-		}
-		if !match {
-			continue
-		}
-		repos = append(repos, repo)
-	}
-	cachedRepos, err := c.Cache.LoadFSRepos(searchPattern)
+// All matching repos from the overlay cache will be included; all matching repos from the underlay
+// cache will also be included, except for those repos which the overlay cache expected to have.
+func (c *LayeredCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
+	repos, err := c.Overlay.LoadFSRepos(searchPattern)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't load repos from overlay")
 	}
-	for _, repo := range cachedRepos {
-		if _, ok := c.Overrides[repo.Path()]; ok {
-			// We already added the repo in the overrides
+
+	underlayRepos, err := c.Underlay.LoadFSRepos(searchPattern)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't load repos from underlay")
+	}
+	for _, repo := range underlayRepos {
+		if c.Overlay.IncludesFSRepo(repo.Path(), repo.Version) {
 			continue
 		}
 		repos = append(repos, repo)
@@ -289,43 +278,36 @@ func (c *OverriddenCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, 
 
 // LoadFSPkg loads the FSPkg with the specified path and version.
 // The loaded FSPkg instance is fully initialized.
-// If the package path is covered by one of the overriding FSRepos in the OverriddenCache instance,
-// regardless of version and regardless of whether that repo actually provides the package, that
-// repo is used to try to load the package; otherwise, the package is loaded from the underlying
-// cache.
-func (c *OverriddenCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
-	for _, repo := range c.Overrides {
-		if repo.CoversPath(pkgPath) {
-			return repo.LoadFSPkg(repo.GetPkgSubdir(pkgPath))
-		}
+// If the overlay cache expects to have the package, it will attempt to load the package; otherwise,
+// the underlay cache will attempt to load the package.
+func (c *LayeredCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
+	if c.Overlay.IncludesFSPkg(pkgPath, version) {
+		pkg, err := c.Overlay.LoadFSPkg(pkgPath, version)
+		return pkg, errors.Wrap(err, "couldn't load package from overlay")
 	}
-	return c.LoadFSPkg(pkgPath, version)
+	pkg, err := c.Underlay.LoadFSPkg(pkgPath, version)
+	return pkg, errors.Wrap(err, "couldn't load package from underlay")
 }
 
 // LoadFSPkgs loads all FSPkgs from the cache matching the specified search pattern.
 // The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
 // to search for.
 // The loaded FSPkg instances are fully initialized.
-// If one of the overriding FSRepos in the OverriddenCache instance provides matching packages,
-// regardless of version, those packages are included; repos from the underlying cache with the same
-// path as any overriding repo will not be used for loading packages; packages from other repos are
-// loaded from the underlying cache.
-func (c *OverriddenCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
-	pkgs := make([]*pallets.FSPkg, 0, len(c.Overrides))
-	for _, repo := range c.Overrides {
-		repoPkgs, err := repo.LoadFSPkgs(searchPattern)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load packages from overriding repo %s", repo.Path())
-		}
-		pkgs = append(pkgs, repoPkgs...)
-	}
-	cachedPkgs, err := c.Cache.LoadFSPkgs(searchPattern)
+// All matching packages from the overlay cache will be included; all matching packages from the
+// underlay cache will also be included, except for those packages which the overlay cache expected
+// to have.
+func (c *LayeredCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
+	pkgs, err := c.Overlay.LoadFSPkgs(searchPattern)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't load packages from overlay")
 	}
-	for _, pkg := range cachedPkgs {
-		if _, ok := c.Overrides[pkg.Repo.Path()]; ok {
-			// We already added packages from the repo in the overrides
+
+	underlayPkgs, err := c.Underlay.LoadFSPkgs(searchPattern)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't load packages from underlay")
+	}
+	for _, pkg := range underlayPkgs {
+		if c.Overlay.IncludesFSPkg(pkg.Path(), pkg.Repo.Version) {
 			continue
 		}
 		pkgs = append(pkgs, pkg)
@@ -335,4 +317,207 @@ func (c *OverriddenCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, er
 		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) == pallets.CompareLT
 	})
 	return pkgs, nil
+}
+
+// Path returns the path of the underlying cache
+func (c *LayeredCache) Path() string {
+	return c.Underlay.Path()
+}
+
+// RepoOverrideCache
+
+func NewRepoOverrideCache(
+	repos []*pallets.FSRepo, repoVersions map[string][]string,
+) (*RepoOverrideCache, error) {
+	c := &RepoOverrideCache{
+		repos:           make(map[string]*pallets.FSRepo),
+		repoPaths:       make([]string, 0, len(repos)),
+		repoVersions:    make(map[string][]string),
+		repoVersionSets: make(map[string]map[string]struct{}),
+	}
+	for _, repo := range repos {
+		repoPath := repo.Path()
+		if _, ok := c.repos[repoPath]; ok {
+			return nil, errors.Errorf("repo %s was provided multiple times", repoPath)
+		}
+		c.repos[repoPath] = repo
+		c.repoPaths = append(c.repoPaths, repoPath)
+		if repoVersions == nil {
+			continue
+		}
+
+		c.repoVersions[repoPath] = append(c.repoVersions[repoPath], repoVersions[repoPath]...)
+		sort.Strings(c.repoVersions[repoPath])
+		if _, ok := c.repoVersionSets[repoPath]; !ok {
+			c.repoVersionSets[repoPath] = make(map[string]struct{})
+		}
+		for _, version := range repoVersions[repoPath] {
+			c.repoVersionSets[repoPath][version] = struct{}{}
+		}
+	}
+	sort.Strings(c.repoPaths)
+	return c, nil
+}
+
+func (f *RepoOverrideCache) SetVersions(repoPath string, versions map[string]struct{}) {
+	if _, ok := f.repoVersionSets[repoPath]; !ok {
+		f.repoVersionSets[repoPath] = make(map[string]struct{})
+	}
+	sortedVersions := make([]string, 0, len(versions))
+	for version := range versions {
+		sortedVersions = append(sortedVersions, version)
+		f.repoVersionSets[repoPath][version] = struct{}{}
+	}
+	sort.Strings(sortedVersions)
+	f.repoVersions[repoPath] = sortedVersions
+}
+
+// RepoOverrideCache: OverlayCache
+
+// IncludesFSRepo reports whether the RepoOverrideCache instance has a repository with the
+// specified path and version.
+func (f *RepoOverrideCache) IncludesFSRepo(repoPath string, version string) bool {
+	_, ok := f.repos[repoPath]
+	if !ok {
+		return false
+	}
+	_, ok = f.repoVersionSets[repoPath][version]
+	return ok
+}
+
+// LoadFSRepo loads the FSRepo with the specified path, if the version matches any of versions for
+// the repo in the cache.
+// The loaded FSRepo instance is fully initialized.
+func (f *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*pallets.FSRepo, error) {
+	repo, ok := f.repos[repoPath]
+	if !ok {
+		return nil, errors.Errorf("couldn't find a repo with path %s", repoPath)
+	}
+	_, ok = f.repoVersionSets[repoPath][version]
+	if !ok {
+		return nil, errors.Errorf("found repo %s, but not with version %s", repoPath, version)
+	}
+	return repo, nil
+}
+
+// LoadFSRepos loads all FSRepos matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching repos to search for.
+// The loaded FSRepo instances are fully initialized.
+func (f *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*pallets.FSRepo, error) {
+	versionedRepos := make(map[string]*pallets.FSRepo)
+	versionedRepoPaths := make([]string, 0)
+	for _, repoPath := range f.repoPaths {
+		repo := f.repos[repoPath]
+		for _, version := range f.repoVersions[repoPath] {
+			vcsRepoPath, repoSubdir, err := pallets.SplitRepoPathSubdir(repoPath)
+			if err != nil {
+				return nil, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
+			}
+			versionedRepoPath := fmt.Sprintf("%s@%s/%s", vcsRepoPath, version, repoSubdir)
+			versionedRepoPaths = append(versionedRepoPaths, versionedRepoPath)
+			versionedRepos[versionedRepoPath] = repo
+		}
+	}
+
+	matchingVersionedRepoPaths := make([]string, 0, len(versionedRepoPaths))
+	for _, path := range versionedRepoPaths {
+		ok, err := doublestar.Match(searchPattern, path)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't search for repositories using pattern %s", searchPattern,
+			)
+		}
+		if ok {
+			matchingVersionedRepoPaths = append(matchingVersionedRepoPaths, path)
+		}
+	}
+	sort.Strings(matchingVersionedRepoPaths)
+
+	matchingRepos := make([]*pallets.FSRepo, 0, len(matchingVersionedRepoPaths))
+	for _, path := range matchingVersionedRepoPaths {
+		matchingRepos = append(matchingRepos, versionedRepos[path])
+	}
+	return matchingRepos, nil
+}
+
+// IncludesFSPkg reports whether the RepoOverrideCache instance has a repository with the specified
+// version which covers the specified package path.
+func (f *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
+	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
+	// But we probably don't need to worry about this for now.
+	for _, repo := range f.repos {
+		if !pallets.CoversPath(repo, pkgPath) {
+			continue
+		}
+		_, ok := f.repoVersionSets[repo.Path()][version]
+		return ok
+	}
+	return false
+}
+
+// LoadFSPkg loads the FSPkg with the specified path, if the version matches any of versions for
+// the package's repo in the cache.
+// The loaded FSPkg instance is fully initialized.
+func (f *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
+	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
+	// But we probably don't need to worry about this for now.
+	for _, repo := range f.repos {
+		if !pallets.CoversPath(repo, pkgPath) {
+			continue
+		}
+		_, ok := f.repoVersionSets[repo.Path()][version]
+		if !ok {
+			return nil, errors.Errorf(
+				"found repo %s providing package %s, but not at version %s",
+				repo.Path(), pkgPath, version,
+			)
+		}
+		return repo.LoadFSPkg(pallets.GetSubdirPath(repo, pkgPath))
+	}
+	return nil, errors.Errorf("couldn't find a repo providing package %s", pkgPath)
+}
+
+// LoadFSPkgs loads all FSPkgs matching the specified search pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
+// to search for.
+// The loaded FSPkg instances are fully initialized.
+func (f *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
+	versionedPkgs := make(map[string]*pallets.FSPkg)
+	versionedPkgPaths := make([]string, 0)
+	for _, repoPath := range f.repoPaths {
+		repo := f.repos[repoPath]
+		pkgs, err := repo.LoadFSPkgs("**")
+		if err != nil {
+			return nil, errors.Errorf("couldn't list packages in repo %s", repo.Path())
+		}
+		for _, version := range f.repoVersions[repoPath] {
+			vcsRepoPath, repoSubdir, err := pallets.SplitRepoPathSubdir(repoPath)
+			if err != nil {
+				return nil, errors.Wrapf(err, "couldn't parse path of Pallet repo %s", repoPath)
+			}
+			for _, pkg := range pkgs {
+				versionedPkgPath := fmt.Sprintf("%s@%s/%s/%s", vcsRepoPath, version, repoSubdir, pkg.Subdir)
+				versionedPkgPaths = append(versionedPkgPaths, versionedPkgPath)
+				versionedPkgs[versionedPkgPath] = pkg
+			}
+		}
+	}
+
+	matchingVersionedPkgPaths := make([]string, 0, len(versionedPkgPaths))
+	for _, path := range versionedPkgPaths {
+		ok, err := doublestar.Match(searchPattern, path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't search for packages using pattern %s", searchPattern)
+		}
+		if ok {
+			matchingVersionedPkgPaths = append(matchingVersionedPkgPaths, path)
+		}
+	}
+	sort.Strings(matchingVersionedPkgPaths)
+
+	matchingPkgs := make([]*pallets.FSPkg, 0, len(matchingVersionedPkgPaths))
+	for _, path := range matchingVersionedPkgPaths {
+		matchingPkgs = append(matchingPkgs, versionedPkgs[path])
+	}
+	return matchingPkgs, nil
 }

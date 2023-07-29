@@ -15,11 +15,8 @@ import (
 
 // Download
 
-func DownloadImages(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-) error {
-	orderedImages, err := listRequiredImages(indent, env, cache, replacementRepos)
+func DownloadImages(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
+	orderedImages, err := listRequiredImages(indent, env, loader)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -41,10 +38,9 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
+	indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader,
 ) ([]string, error) {
-	depls, err := env.ListDepls(cache, replacementRepos)
+	depls, err := env.LoadResolvedDepls(loader)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",

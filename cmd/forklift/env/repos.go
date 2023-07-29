@@ -49,5 +49,5 @@ func showRepoAction(c *cli.Context) error {
 	}
 
 	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, env, cache, nil, repoPath)
+	return fcli.PrintRepoInfo(0, env, cache, repoPath)
 }

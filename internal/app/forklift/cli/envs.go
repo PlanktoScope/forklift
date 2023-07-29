@@ -142,11 +142,8 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 
 // Check
 
-func CheckEnv(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-) error {
-	depls, err := env.ListDepls(cache, replacementRepos)
+func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
+	depls, err := env.LoadResolvedDepls(loader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",
@@ -337,11 +334,8 @@ func printDependencyCandidate[Resource any](
 
 // Plan
 
-func PlanEnv(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-) error {
-	depls, err := env.ListDepls(cache, replacementRepos)
+func PlanEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
+	depls, err := env.LoadResolvedDepls(loader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",
@@ -433,11 +427,8 @@ func planReconciliation(
 
 // Apply
 
-func ApplyEnv(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-) error {
-	depls, err := env.ListDepls(cache, replacementRepos)
+func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
+	depls, err := env.LoadResolvedDepls(loader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",

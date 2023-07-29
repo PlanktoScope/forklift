@@ -246,6 +246,16 @@ func CheckDeplDependencies(
 
 // Depl
 
+// loadDepl loads the Depl from a file path in the provided base filesystem, assuming the file path
+// is the specified name of the deployment followed by the deployment config file extension.
+func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
+	depl.Name = name
+	if depl.Config, err = loadDeplConfig(fsys, name+DeplSpecFileExt); err != nil {
+		return Depl{}, errors.Wrapf(err, "couldn't load version depl config")
+	}
+	return depl, nil
+}
+
 // ResourceAttachmentSource returns the source path for resources under the Depl instance.
 // The resulting slice is useful for constructing [pallets.AttachedResource] instances.
 func (d *Depl) ResourceAttachmentSource() []string {

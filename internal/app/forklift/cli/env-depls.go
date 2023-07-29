@@ -13,11 +13,8 @@ import (
 
 // Print
 
-func PrintEnvDepls(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-) error {
-	depls, err := env.ListDepls(cache, replacementRepos)
+func PrintEnvDepls(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
+	depls, err := env.LoadResolvedDepls(loader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't identify Pallet package deployments specified by environment %s",
@@ -31,24 +28,26 @@ func PrintEnvDepls(
 }
 
 func PrintDeplInfo(
-	indent int,
-	env *forklift.FSEnv, cache *forklift.FSCache, replacementRepos map[string]*pallets.FSRepo,
-	deplName string,
+	indent int, env *forklift.FSEnv, cache forklift.PathedCache, deplName string,
 ) error {
-	depl, err := env.LoadDepl(cache, replacementRepos, deplName)
+	depl, err := env.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find package deployment specification %s in environment %s",
 			deplName, env.FS.Path(),
 		)
 	}
-	printDepl(indent, cache, depl)
+	resolved, err := forklift.ResolveDepl(env, cache, depl)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
+	}
+	printDepl(indent, cache, resolved)
 	indent++
 
-	if depl.Pkg.Config.Deployment.DefinesStack() {
+	if resolved.Pkg.Config.Deployment.DefinesStack() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker stack:")
-		stackConfig, err := loadStackDefinition(depl.Pkg)
+		stackConfig, err := loadStackDefinition(resolved.Pkg)
 		if err != nil {
 			return err
 		}
@@ -60,7 +59,7 @@ func PrintDeplInfo(
 	return nil
 }
 
-func printDepl(indent int, cache *forklift.FSCache, depl *forklift.ResolvedDepl) {
+func printDepl(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
 	IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
 	indent++
 
@@ -86,7 +85,7 @@ func printDepl(indent int, cache *forklift.FSCache, depl *forklift.ResolvedDepl)
 	printFeatures(indent+1, disabledFeatures)
 }
 
-func printDeplPkg(indent int, cache *forklift.FSCache, depl *forklift.ResolvedDepl) {
+func printDeplPkg(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
 	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Config.Package)
 	indent++
 

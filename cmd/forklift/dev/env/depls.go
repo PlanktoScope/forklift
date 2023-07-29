@@ -9,22 +9,28 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+		return err
+	}
 
-	return fcli.PrintEnvDepls(0, env, cache, replacementRepos)
+	return fcli.PrintEnvDepls(0, env, cache)
 }
 
 // show-depl
 
 func showDeplAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
+		return err
+	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
 		return err
 	}
 
 	deplName := c.Args().First()
-	return fcli.PrintDeplInfo(0, env, cache, replacementRepos, deplName)
+	return fcli.PrintDeplInfo(0, env, cache, deplName)
 }

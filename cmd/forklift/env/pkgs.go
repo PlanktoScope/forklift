@@ -14,7 +14,7 @@ func lsPkgAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintEnvPkgs(0, env, cache, nil)
+	return fcli.PrintEnvPkgs(0, env, cache)
 }
 
 // show-pkg
@@ -26,5 +26,5 @@ func showPkgAction(c *cli.Context) error {
 	}
 
 	pkgPath := c.Args().First()
-	return fcli.PrintPkgInfo(0, env, cache, nil, pkgPath)
+	return fcli.PrintPkgInfo(0, env, cache, pkgPath)
 }

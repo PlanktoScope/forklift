@@ -1,9 +1,35 @@
 package pallets
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 )
+
+// Pather
+
+// CoversPath checks whether the provided path would be within a child directory of the Pather if
+// the Pather were a filesystem.
+func CoversPath(pather Pather, path string) bool {
+	if len(pather.Path()) == 0 {
+		return true
+	}
+	// TODO: handle "/", ".", and ".."
+	return strings.HasPrefix(path, fmt.Sprintf("%s/", pather.Path()))
+}
+
+// GetSubdirPath removes the path of the Pather instance from the start of the provided path,
+// resulting in the subdirectory path of the provided path under the path of the Pather instance.
+// If the Pather instance's path is not a parent directory of the provided path, the result is
+// unchanged from the provided path.
+func GetSubdirPath(pather Pather, path string) string {
+	if len(pather.Path()) == 0 {
+		return path
+	}
+	// TODO: handle "/", ".", and ".."...maybe use filepath.Rel?
+	return strings.TrimPrefix(path, fmt.Sprintf("%s/", pather.Path()))
+}
 
 // PathedFS
 

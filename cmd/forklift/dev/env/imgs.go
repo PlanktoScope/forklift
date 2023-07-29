@@ -11,13 +11,16 @@ import (
 // cache-img
 
 func cacheImgAction(c *cli.Context) error {
-	env, cache, replacementRepos, err := processFullBaseArgs(c, true)
+	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
+		return err
+	}
+	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
 		return err
 	}
 
 	fmt.Println("Downloading Docker container images specified by the development environment...")
-	if err := fcli.DownloadImages(0, env, cache, replacementRepos); err != nil {
+	if err := fcli.DownloadImages(0, env, cache); err != nil {
 		return err
 	}
 	fmt.Println()

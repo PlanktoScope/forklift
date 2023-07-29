@@ -10,13 +10,13 @@ import (
 
 // Print
 
-func PrintPkg(indent int, cache *forklift.FSCache, pkg *pallets.FSPkg) {
+func PrintPkg(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
 	IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
 	indent++
 
 	printPkgRepo(indent, cache, pkg)
-	if cache.CoversPath(pkg.FS.Path()) {
-		IndentedPrintf(indent, "Path in cache: %s\n", cache.TrimCachePathPrefix(pkg.FS.Path()))
+	if pallets.CoversPath(cache, pkg.FS.Path()) {
+		IndentedPrintf(indent, "Path in cache: %s\n", pallets.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
 		IndentedPrintf(indent, "External path (replacing cached package): %s\n", pkg.FS.Path())
 	}
@@ -28,11 +28,11 @@ func PrintPkg(indent int, cache *forklift.FSCache, pkg *pallets.FSPkg) {
 	PrintFeatureSpecs(indent, pkg.Config.Features)
 }
 
-func printPkgRepo(indent int, cache *forklift.FSCache, pkg *pallets.FSPkg) {
+func printPkgRepo(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
 	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
 	indent++
 
-	if cache.CoversPath(pkg.FS.Path()) {
+	if pallets.CoversPath(cache, pkg.FS.Path()) {
 		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
 	} else {
 		IndentedPrintf(

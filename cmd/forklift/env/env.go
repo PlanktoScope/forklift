@@ -185,7 +185,7 @@ func checkAction(c *cli.Context) error {
 		return err
 	}
 
-	if err := fcli.CheckEnv(0, env, cache, nil); err != nil {
+	if err := fcli.CheckEnv(0, env, cache); err != nil {
 		return err
 	}
 	return nil
@@ -199,7 +199,7 @@ func planAction(c *cli.Context) error {
 		return err
 	}
 
-	if err := fcli.PlanEnv(0, env, cache, nil); err != nil {
+	if err := fcli.PlanEnv(0, env, cache); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
@@ -215,7 +215,7 @@ func applyAction(c *cli.Context) error {
 		return err
 	}
 
-	if err := fcli.ApplyEnv(0, env, cache, nil); err != nil {
+	if err := fcli.ApplyEnv(0, env, cache); err != nil {
 		return errors.Wrap(
 			err, "couldn't deploy local environment (have you run `forklift env cache` recently?)",
 		)
