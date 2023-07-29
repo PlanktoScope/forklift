@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.9 - 2023-07-29
+
+### Fixed
+
+- Fixed regression from v0.1.8 where the `dev env add-repo` would not properly print out the resolved versions of repo version queries.
+
 ## 0.1.8 - 2023-07-29
 
 ### Added
