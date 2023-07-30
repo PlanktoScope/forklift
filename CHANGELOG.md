@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `cache show-repo`, `env show-repo`, and `dev env show-repo` now print the Pallet repository's readme file, hard-wrapped to a max line length of 100 characters.
+
 ### Fixed
 
 - The `dev env add-repo` subcommand now makes any directories it needs to make in order to write repository requirement definition files to the appropriate locations.

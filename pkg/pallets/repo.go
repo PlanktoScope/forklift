@@ -165,6 +165,16 @@ func (r *FSRepo) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
 	return pkgs, nil
 }
 
+// LoadReadme loads the readme file defined by the repository.
+func (r *FSRepo) LoadReadme() ([]byte, error) {
+	readmePath := r.Def.Repository.ReadmeFile
+	bytes, err := fs.ReadFile(r.FS, readmePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't read repo readme %s/%s", r.FS.Path(), readmePath)
+	}
+	return bytes, nil
+}
+
 // Repo
 
 // Path returns the Pallet repository path of the Repo instance.
