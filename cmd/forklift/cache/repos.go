@@ -60,17 +60,27 @@ func showRepoAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find Pallet repository %s@%s", repoPath, version)
 	}
-	printCachedRepo(0, cache, repo)
-	return nil
+	return printCachedRepo(0, cache, repo)
 }
 
-func printCachedRepo(indent int, cache *forklift.FSCache, repo *pallets.FSRepo) {
-	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Def.Repository.Path)
+func printCachedRepo(indent int, cache *forklift.FSCache, repo *pallets.FSRepo) error {
+	fcli.IndentedPrintf(indent, "Cached Pallet repository: %s\n", repo.Path())
 	indent++
 
 	fcli.IndentedPrintf(indent, "Version: %s\n", repo.Version)
 	fcli.IndentedPrintf(indent, "Provided by Git repository: %s\n", repo.VCSRepoPath)
 	fcli.IndentedPrintf(indent, "Path in cache: %s\n", pallets.GetSubdirPath(cache, repo.FS.Path()))
 	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Def.Repository.Description)
-	// TODO: show the README file
+
+	readme, err := repo.LoadReadme()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load readme file for Pallet repository %s@%s from cache",
+			repo.Path(), repo.Version,
+		)
+	}
+	fcli.IndentedPrintln(indent, "Readme:")
+	const widthLimit = 100
+	fcli.PrintReadme(indent+1, readme, widthLimit)
+	return nil
 }

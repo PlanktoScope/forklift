@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -39,10 +40,9 @@ func PrintRepoInfo(
 			repoPath, env.FS.Path(),
 		)
 	}
-	// TODO: maybe the version should be computed and error-handled when the repo is loaded, so that
-	// we don't need error-checking for every subsequent access of the version
 	printRepoReq(indent, req.RepoReq)
 	fmt.Println()
+	indent++
 
 	version := req.VersionLock.Version
 	cachedRepo, err := cache.LoadFSRepo(repoPath, version)
@@ -54,13 +54,22 @@ func PrintRepoInfo(
 	}
 	if pallets.CoversPath(cache, cachedRepo.FS.Path()) {
 		IndentedPrintf(
-			indent+1, "Path in cache: %s\n", pallets.GetSubdirPath(cache, cachedRepo.FS.Path()),
+			indent, "Path in cache: %s\n", pallets.GetSubdirPath(cache, cachedRepo.FS.Path()),
 		)
 	} else {
-		IndentedPrintf(indent+1, "External path (replacing cached repo): %s\n", cachedRepo.FS.Path())
+		IndentedPrintf(indent, "External path (replacing cached repo): %s\n", cachedRepo.FS.Path())
 	}
-	IndentedPrintf(indent+1, "Description: %s\n", cachedRepo.Def.Repository.Description)
-	// TODO: show the README file
+	IndentedPrintf(indent, "Description: %s\n", cachedRepo.Def.Repository.Description)
+
+	readme, err := cachedRepo.LoadReadme()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load readme file for Pallet repository %s@%s from cache", repoPath, version,
+		)
+	}
+	IndentedPrintln(indent, "Readme:")
+	const widthLimit = 100
+	PrintReadme(indent+1, readme, widthLimit)
 	return nil
 }
 
@@ -69,6 +78,24 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 	indent++
 	IndentedPrintf(indent, "Locked version: %s\n", req.VersionLock.Version)
 	IndentedPrintf(indent, "Provided by Git repository: %s\n", req.VCSRepoPath)
+}
+
+func PrintReadme(indent int, readme []byte, widthLimit int) {
+	lines := strings.Split(string(readme), "\n")
+	for _, line := range lines {
+		line = strings.TrimRight(line, "\r")
+		if line == "" {
+			IndentedPrintln(indent)
+		}
+		for len(line) > 0 {
+			if len(line) < widthLimit { // we've printed everything!
+				IndentedPrintln(indent, line)
+				break
+			}
+			IndentedPrintln(indent, line[:widthLimit])
+			line = line[widthLimit:]
+		}
+	}
 }
 
 // Download
