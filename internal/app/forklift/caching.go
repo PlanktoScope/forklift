@@ -3,6 +3,7 @@ package forklift
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -17,12 +18,12 @@ import (
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSCache) Exists() bool {
-	return Exists(c.FS.Path())
+	return Exists(filepath.FromSlash(c.FS.Path()))
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.
 func (c *FSCache) Remove() error {
-	return os.RemoveAll(c.FS.Path())
+	return os.RemoveAll(filepath.FromSlash(c.FS.Path()))
 }
 
 // Path returns the path of the cache's filesystem.
@@ -131,7 +132,7 @@ func (c *FSCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse path of Pallet package %s", pkgPath)
 	}
-	pkgInnermostDir := filepath.Base(pkgPath)
+	pkgInnermostDir := path.Base(pkgPath)
 	// The package subdirectory path in the package path (under the VCS repo path) might not match the
 	// filesystem directory path with the pallet-package.yml file, so we must check every
 	// directory whose name matches the last part of the package path to look for the package
@@ -487,7 +488,7 @@ func (f *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, 
 				if err != nil {
 					return nil, err
 				}
-				pkgCachePath := filepath.Join(repoCachePath, pkg.Subdir)
+				pkgCachePath := path.Join(repoCachePath, pkg.Subdir)
 				pkgCachePaths = append(pkgCachePaths, pkgCachePath)
 				pkgs[pkgCachePath] = pkg
 			}

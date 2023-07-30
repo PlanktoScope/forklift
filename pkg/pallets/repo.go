@@ -2,7 +2,7 @@ package pallets
 
 import (
 	"io/fs"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -70,7 +70,7 @@ func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
 		if repo, err := LoadFSRepo(fsys, repoCandidatePath); err == nil {
 			return repo, nil
 		}
-		repoCandidatePath = filepath.Dir(repoCandidatePath)
+		repoCandidatePath = path.Dir(repoCandidatePath)
 		if repoCandidatePath == "/" || repoCandidatePath == "." {
 			// we can't go up anymore!
 			return nil, errors.Errorf(
@@ -93,7 +93,7 @@ func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
 func LoadFSRepos(
 	fsys PathedFS, searchPattern string, processor func(repo *FSRepo) error,
 ) ([]*FSRepo, error) {
-	searchPattern = filepath.Join(searchPattern, RepoDefFile)
+	searchPattern = path.Join(searchPattern, RepoDefFile)
 	repoDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -104,10 +104,10 @@ func LoadFSRepos(
 	orderedRepos := make([]*FSRepo, 0, len(repoDefFiles))
 	repos := make(map[string]*FSRepo)
 	for _, repoDefFilePath := range repoDefFiles {
-		if filepath.Base(repoDefFilePath) != RepoDefFile {
+		if path.Base(repoDefFilePath) != RepoDefFile {
 			continue
 		}
-		repo, err := LoadFSRepo(fsys, filepath.Dir(repoDefFilePath))
+		repo, err := LoadFSRepo(fsys, path.Dir(repoDefFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't load repo from %s/%s", fsys.Path(), repoDefFilePath,
@@ -169,7 +169,7 @@ func (r *FSRepo) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
 
 // Path returns the Pallet repository path of the Repo instance.
 func (r Repo) Path() string {
-	return filepath.Join(r.VCSRepoPath, r.Subdir)
+	return path.Join(r.VCSRepoPath, r.Subdir)
 }
 
 // FromSameVCSRepo determines whether the candidate Pallet repository is provided by the same VCS

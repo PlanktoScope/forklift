@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- The `dev env add-repo` subcommand now makes any directories it needs to make in order to write repository requirement definition files to the appropriate locations.
+- File path separators should no longer be obviously incorrect on Windows systems (though they may still be incorrect, since Forklift is not tested on Windows).
+
 ## 0.1.9 - 2023-07-29
 
 ### Fixed

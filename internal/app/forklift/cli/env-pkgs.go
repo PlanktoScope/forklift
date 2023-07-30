@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"path/filepath"
+	"path"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) 
 	pkgs := make([]*pallets.FSPkg, 0)
 	for _, req := range reqs {
 		repoCachePath := req.GetCachePath()
-		loaded, err := loader.LoadFSPkgs(filepath.Join(repoCachePath, "**"))
+		loaded, err := loader.LoadFSPkgs(path.Join(repoCachePath, "**"))
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load packages from repo cached at %s", repoCachePath)
 		}

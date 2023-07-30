@@ -3,6 +3,7 @@ package env
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -102,17 +103,21 @@ func addRepoAction(c *cli.Context) error {
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", remoteRelease)
 		}
-		// TODO: write configs as files
-		path := filepath.Join(
+		repoReqPath := path.Join(
 			env.FS.Path(), "repositories", config.VCSRepoPath, config.RepoSubdir, "forklift-repo.yml",
 		)
 		marshaled, err := yaml.Marshal(config.VersionLock.Def)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't marshal config for %s", path)
+			return errors.Wrapf(err, "couldn't marshal config for %s", repoReqPath)
+		}
+		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
+			return errors.Wrapf(
+				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
+			)
 		}
 		const perm = 0o644 // owner rw, group r, public r
-		if err := os.WriteFile(path, marshaled, perm); err != nil {
-			return errors.Wrapf(err, "couldn't save config to %s", path)
+		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
+			return errors.Wrapf(err, "couldn't save config to %s", filepath.FromSlash(repoReqPath))
 		}
 	}
 	fmt.Println("Done!")
@@ -155,7 +160,7 @@ func updateLocalRepoMirrors(remoteReleases []string, cachePath string) error {
 		}
 
 		if err = updateLocalRepoMirror(
-			vcsRepoPath, filepath.Join(cachePath, vcsRepoPath),
+			vcsRepoPath, path.Join(cachePath, vcsRepoPath),
 		); err != nil {
 			return errors.Wrapf(
 				err, "couldn't update local mirror of %s", vcsRepoPath,
@@ -167,6 +172,8 @@ func updateLocalRepoMirrors(remoteReleases []string, cachePath string) error {
 }
 
 func updateLocalRepoMirror(remote, cachedPath string) error {
+	remote = filepath.FromSlash(remote)
+	cachedPath = filepath.FromSlash(cachedPath)
 	if _, err := os.Stat(cachedPath); err == nil {
 		fmt.Printf("Fetching updates for %s...\n", cachedPath)
 		if _, err = git.Fetch(cachedPath); err == nil {
@@ -232,7 +239,7 @@ func resolveVCSRepoVersionQuery(
 			"support for empty version queries is not yet implemented!",
 		)
 	}
-	localPath := filepath.Join(cachePath, vcsRepoPath)
+	localPath := filepath.FromSlash(path.Join(cachePath, vcsRepoPath))
 	gitRepo, err := git.Open(localPath)
 	if err != nil {
 		return forklift.RepoReq{}, errors.Wrapf(

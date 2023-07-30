@@ -3,7 +3,7 @@ package pallets
 import (
 	"fmt"
 	"io/fs"
-	"path/filepath"
+	"path"
 	"strings"
 )
 
@@ -27,7 +27,7 @@ func GetSubdirPath(pather Pather, path string) string {
 	if len(pather.Path()) == 0 {
 		return path
 	}
-	// TODO: handle "/", ".", and ".."...maybe use filepath.Rel?
+	// TODO: handle "/", ".", and ".."...maybe use path.Rel?
 	return strings.TrimPrefix(path, fmt.Sprintf("%s/", pather.Path()))
 }
 
@@ -59,6 +59,6 @@ func (f pathedFS) Sub(dir string) (PathedFS, error) {
 	subFS, err := fs.Sub(f.FS, dir)
 	return pathedFS{
 		FS:   subFS,
-		path: filepath.Join(f.path, dir),
+		path: path.Join(f.path, dir),
 	}, err
 }
