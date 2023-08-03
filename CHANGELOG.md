@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.1.10 - 2023-08-03
+
 ### Added
 
+- `env plan`, `dev env plan`, `env apply`, and `dev env apply` now return an error (and report the problems) if there are resource conflicts or missing resource dependencies (the same problems which would be reported by `env check` and `dev env check`).
 - `cache show-repo`, `env show-repo`, and `dev env show-repo` now print the Pallet repository's readme file, hard-wrapped to a max line length of 100 characters.
 
 ### Fixed
 
+- `env plan`, `dev env plan`, `env apply`, and `dev env apply` now account for the resource dependency relationships among package deployments when planning the sequence of changes to make to the Docker host, so that a Docker stack which requires a network provided by another Docker stack won't be deployed before that other Docker stack (since such a deployment would fail).
 - The `dev env add-repo` subcommand now makes any directories it needs to make in order to write repository requirement definition files to the appropriate locations.
 - File path separators should no longer be obviously incorrect on Windows systems (though they may still be incorrect, since Forklift is not tested on Windows).
 

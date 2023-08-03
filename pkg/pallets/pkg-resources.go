@@ -7,55 +7,55 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ProvidedResources
+// ProvidedRes
 
 const (
 	providesSourcePart = "provides resource"
 	requiresSourcePart = "requires resource"
 )
 
-// AttachedListeners returns a list of [AttachedResource] instances for each respective host port
-// listener in the ProvidedResources instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedResources instance.
-func (r ProvidedResources) AttachedListeners(source []string) []AttachedResource[ListenerResource] {
-	return attachResources(r.Listeners, append(source, providesSourcePart))
+// AttachedListeners returns a list of [AttachedRes] instances for each respective host port
+// listener in the ProvidedRes instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedRes instance.
+func (r ProvidedRes) AttachedListeners(source []string) []AttachedRes[ListenerRes] {
+	return attachRes(r.Listeners, append(source, providesSourcePart))
 }
 
-// AttachedNetworks returns a list of [AttachedResource] instances for each respective Docker
-// network in the ProvidedResources instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedResources instance.
-func (r ProvidedResources) AttachedNetworks(source []string) []AttachedResource[NetworkResource] {
-	return attachResources(r.Networks, append(source, providesSourcePart))
+// AttachedNetworks returns a list of [AttachedRes] instances for each respective Docker
+// network in the ProvidedRes instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedRes instance.
+func (r ProvidedRes) AttachedNetworks(source []string) []AttachedRes[NetworkRes] {
+	return attachRes(r.Networks, append(source, providesSourcePart))
 }
 
-// AttachedServices returns a list of [AttachedResource] instances for each respective network
-// service in the ProvidedResources instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedResources instance.
-func (r ProvidedResources) AttachedServices(source []string) []AttachedResource[ServiceResource] {
-	return attachResources(r.Services, append(source, providesSourcePart))
+// AttachedServices returns a list of [AttachedRes] instances for each respective network
+// service in the ProvidedRes instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedRes instance.
+func (r ProvidedRes) AttachedServices(source []string) []AttachedRes[ServiceRes] {
+	return attachRes(r.Services, append(source, providesSourcePart))
 }
 
-// RequiredResources
+// RequiredRes
 
-// AttachedNetworks returns a list of [AttachedResource] instances for each respective Docker
-// network resource requirement in the RequiredResources instance, adding a string to the provided
-// list of source elements which describes the source of the RequiredResources instance.
-func (r RequiredResources) AttachedNetworks(source []string) []AttachedResource[NetworkResource] {
-	return attachResources(r.Networks, append(source, requiresSourcePart))
+// AttachedNetworks returns a list of [AttachedRes] instances for each respective Docker
+// network resource requirement in the RequiredRes instance, adding a string to the provided
+// list of source elements which describes the source of the RequiredRes instance.
+func (r RequiredRes) AttachedNetworks(source []string) []AttachedRes[NetworkRes] {
+	return attachRes(r.Networks, append(source, requiresSourcePart))
 }
 
-// AttachedServices returns a list of [AttachedResource] instances for each respective network
-// service resource requirement in the RequiredResources instance, adding a string to the provided
-// list of source elements which describes the source of the RequiredResources instance.
-func (r RequiredResources) AttachedServices(source []string) []AttachedResource[ServiceResource] {
-	return attachResources(r.Services, append(source, requiresSourcePart))
+// AttachedServices returns a list of [AttachedRes] instances for each respective network
+// service resource requirement in the RequiredRes instance, adding a string to the provided
+// list of source elements which describes the source of the RequiredRes instance.
+func (r RequiredRes) AttachedServices(source []string) []AttachedRes[ServiceRes] {
+	return attachRes(r.Services, append(source, requiresSourcePart))
 }
 
-// ListenerResource
+// ListenerRes
 
-// CheckDependency checks whether the host port listener resource requirement, represented by the
-// ListenerResource instance, is satisfied by the candidate host port listener resource.
-func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []error) {
+// CheckDep checks whether the host port listener resource requirement, represented by the
+// ListenerRes instance, is satisfied by the candidate host port listener resource.
+func (r ListenerRes) CheckDep(candidate ListenerRes) (errs []error) {
 	if r.Port != candidate.Port {
 		errs = append(errs, fmt.Errorf("unmatched port '%d'", r.Port))
 	}
@@ -65,40 +65,40 @@ func (r ListenerResource) CheckDependency(candidate ListenerResource) (errs []er
 	return errs
 }
 
-// CheckConflict checks whether the host port listener resource, represented by the ListenerResource
+// CheckConflict checks whether the host port listener resource, represented by the ListenerRes
 // instance, conflicts with the candidate host port listener resource.
-func (r ListenerResource) CheckConflict(candidate ListenerResource) (errs []error) {
+func (r ListenerRes) CheckConflict(candidate ListenerRes) (errs []error) {
 	if r.Port == candidate.Port && r.Protocol == candidate.Protocol {
 		errs = append(errs, fmt.Errorf("same port/protocol '%d/%s'", r.Port, r.Protocol))
 	}
 	return errs
 }
 
-// NetworkResource
+// NetworkRes
 
-// CheckDependency checks whether the Docker network resource requirement, represented by the
-// NetworkResource instance, is satisfied by the candidate Docker network resource.
-func (r NetworkResource) CheckDependency(candidate NetworkResource) (errs []error) {
+// CheckDep checks whether the Docker network resource requirement, represented by the
+// NetworkRes instance, is satisfied by the candidate Docker network resource.
+func (r NetworkRes) CheckDep(candidate NetworkRes) (errs []error) {
 	if r.Name != candidate.Name {
 		errs = append(errs, fmt.Errorf("unmatched name '%s'", r.Name))
 	}
 	return errs
 }
 
-// CheckConflict checks whether the Docker network resource, represented by the NetworkResource
+// CheckConflict checks whether the Docker network resource, represented by the NetworkRes
 // instance, conflicts with the candidate Docker network resource.
-func (r NetworkResource) CheckConflict(candidate NetworkResource) (errs []error) {
+func (r NetworkRes) CheckConflict(candidate NetworkRes) (errs []error) {
 	if r.Name == candidate.Name {
 		errs = append(errs, fmt.Errorf("same name '%s'", r.Name))
 	}
 	return errs
 }
 
-// ServiceResource
+// ServiceRes
 
-// CheckDependency checks whether the network service resource requirement, represented by the
-// ServiceResource instance, is satisfied by the candidate network service resource.
-func (r ServiceResource) CheckDependency(candidate ServiceResource) (errs []error) {
+// CheckDep checks whether the network service resource requirement, represented by the
+// ServiceRes instance, is satisfied by the candidate network service resource.
+func (r ServiceRes) CheckDep(candidate ServiceRes) (errs []error) {
 	if r.Port != candidate.Port {
 		errs = append(errs, fmt.Errorf("unmatched port '%d'", r.Port))
 	}
@@ -163,9 +163,9 @@ func pathMatchesPrefix(path string, pathPrefixes map[string]struct{}) (match boo
 	return false, ""
 }
 
-// CheckConflict checks whether the network service resource, represented by the ServiceResource
+// CheckConflict checks whether the network service resource, represented by the ServiceRes
 // instance, conflicts with the candidate network service resource.
-func (r ServiceResource) CheckConflict(candidate ServiceResource) (errs []error) {
+func (r ServiceRes) CheckConflict(candidate ServiceRes) (errs []error) {
 	if r.Port != candidate.Port || r.Protocol != candidate.Protocol {
 		return nil
 	}
@@ -235,20 +235,18 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 // SplitServicesByPath produces a slice of network service resources from the input slice, where
 // each network service resource in the input slice with multiple paths results in multiple
 // corresponding network service resources with one path each.
-func SplitServicesByPath(
-	serviceResources []AttachedResource[ServiceResource],
-) (split []AttachedResource[ServiceResource]) {
-	split = make([]AttachedResource[ServiceResource], 0, len(serviceResources))
-	for _, service := range serviceResources {
-		if len(service.Resource.Paths) == 0 {
+func SplitServicesByPath(serviceRes []AttachedRes[ServiceRes]) (split []AttachedRes[ServiceRes]) {
+	split = make([]AttachedRes[ServiceRes], 0, len(serviceRes))
+	for _, service := range serviceRes {
+		if len(service.Res.Paths) == 0 {
 			split = append(split, service)
 		}
-		for _, path := range service.Resource.Paths {
-			pathService := service.Resource
+		for _, path := range service.Res.Paths {
+			pathService := service.Res
 			pathService.Paths = []string{path}
-			split = append(split, AttachedResource[ServiceResource]{
-				Resource: pathService,
-				Source:   service.Source,
+			split = append(split, AttachedRes[ServiceRes]{
+				Res:    pathService,
+				Source: service.Source,
 			})
 		}
 	}

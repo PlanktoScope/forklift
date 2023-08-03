@@ -137,13 +137,13 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		First:  d,
 		Second: candidate,
 		Name:   d.Name == candidate.Name,
-		Listeners: pallets.CheckResourcesConflicts(
+		Listeners: pallets.CheckResConflicts(
 			d.providedListeners(enabledFeatures), candidate.providedListeners(candidateEnabledFeatures),
 		),
-		Networks: pallets.CheckResourcesConflicts(
+		Networks: pallets.CheckResConflicts(
 			d.providedNetworks(enabledFeatures), candidate.providedNetworks(candidateEnabledFeatures),
 		),
-		Services: pallets.CheckResourcesConflicts(
+		Services: pallets.CheckResConflicts(
 			d.providedServices(enabledFeatures), candidate.providedServices(candidateEnabledFeatures),
 		),
 	}, nil
@@ -153,40 +153,40 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 // deployment, depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedListeners(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (provided []pallets.AttachedResource[pallets.ListenerResource]) {
-	return d.Pkg.ProvidedListeners(d.ResourceAttachmentSource(), sortKeys(enabledFeatures))
+) (provided []pallets.AttachedRes[pallets.ListenerRes]) {
+	return d.Pkg.ProvidedListeners(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // requiredNetworks returns a slice of all Docker networks required by the Pallet package
 // deployment, depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredNetworks(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (required []pallets.AttachedResource[pallets.NetworkResource]) {
-	return d.Pkg.RequiredNetworks(d.ResourceAttachmentSource(), sortKeys(enabledFeatures))
+) (required []pallets.AttachedRes[pallets.NetworkRes]) {
+	return d.Pkg.RequiredNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedNetworks returns a slice of all Docker networks provided by the Pallet package
 // deployment, depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedNetworks(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (provided []pallets.AttachedResource[pallets.NetworkResource]) {
-	return d.Pkg.ProvidedNetworks(d.ResourceAttachmentSource(), sortKeys(enabledFeatures))
+) (provided []pallets.AttachedRes[pallets.NetworkRes]) {
+	return d.Pkg.ProvidedNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // requiredServices returns a slice of all network services required by the Pallet package
 // deployment, depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredServices(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (required []pallets.AttachedResource[pallets.ServiceResource]) {
-	return d.Pkg.RequiredServices(d.ResourceAttachmentSource(), sortKeys(enabledFeatures))
+) (required []pallets.AttachedRes[pallets.ServiceRes]) {
+	return d.Pkg.RequiredServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedServices returns a slice of all network services provided by the Pallet package
 // deployment, depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedServices(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (provided []pallets.AttachedResource[pallets.ServiceResource]) {
-	return d.Pkg.ProvidedServices(d.ResourceAttachmentSource(), sortKeys(enabledFeatures))
+) (provided []pallets.AttachedRes[pallets.ServiceRes]) {
+	return d.Pkg.ProvidedServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // CheckAllConflicts produces a slice of reports of all resource conflicts between the ResolvedDepl
@@ -207,14 +207,14 @@ func (d *ResolvedDepl) CheckAllConflicts(
 	return conflicts, nil
 }
 
-// CheckMissingDependencies produces a report of all resource requirements from the ResolvedDepl
-// instance and which were not met by any candidate ResolvedDepl.
-func (d *ResolvedDepl) CheckMissingDependencies(
+// CheckDeps produces a report of all resource requirements from the ResolvedDepl
+// instance and which were and were not met by any candidate ResolvedDepl.
+func (d *ResolvedDepl) CheckDeps(
 	candidates []*ResolvedDepl,
-) (MissingDeplDependencies, error) {
+) (SatisfiedDeplDeps, MissingDeplDeps, error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
-		return MissingDeplDependencies{}, errors.Errorf(
+		return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Errorf(
 			"couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
@@ -222,7 +222,7 @@ func (d *ResolvedDepl) CheckMissingDependencies(
 	for _, candidate := range candidates {
 		f, err := candidate.EnabledFeatures()
 		if err != nil {
-			return MissingDeplDependencies{}, errors.Errorf(
+			return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Errorf(
 				"couldn't determine enabled features of deployment %s", candidate.Name,
 			)
 		}
@@ -230,8 +230,8 @@ func (d *ResolvedDepl) CheckMissingDependencies(
 	}
 
 	var (
-		allProvidedNetworks []pallets.AttachedResource[pallets.NetworkResource]
-		allProvidedServices []pallets.AttachedResource[pallets.ServiceResource]
+		allProvidedNetworks []pallets.AttachedRes[pallets.NetworkRes]
+		allProvidedServices []pallets.AttachedRes[pallets.ServiceRes]
 	)
 	for i, candidate := range candidates {
 		allProvidedNetworks = append(
@@ -242,15 +242,21 @@ func (d *ResolvedDepl) CheckMissingDependencies(
 		)
 	}
 
-	return MissingDeplDependencies{
-		Depl: d,
-		Networks: pallets.CheckResourcesDependencies(
-			d.requiredNetworks(enabledFeatures), allProvidedNetworks,
-		),
-		Services: pallets.CheckResourcesDependencies(
-			pallets.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
-		),
-	}, nil
+	satisfiedNetworkDeps, missingNetworkDeps := pallets.CheckResDeps(
+		d.requiredNetworks(enabledFeatures), allProvidedNetworks,
+	)
+	satisfiedServiceDeps, missingServiceDeps := pallets.CheckResDeps(
+		pallets.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
+	)
+	return SatisfiedDeplDeps{
+			Depl:     d,
+			Networks: satisfiedNetworkDeps,
+			Services: satisfiedServiceDeps,
+		}, MissingDeplDeps{
+			Depl:     d,
+			Networks: missingNetworkDeps,
+			Services: missingServiceDeps,
+		}, nil
 }
 
 // CheckDeplConflicts produces a slice of reports of all resource conflicts among all provided
@@ -266,21 +272,23 @@ func CheckDeplConflicts(depls []*ResolvedDepl) (conflicts []DeplConflict, err er
 	return conflicts, nil
 }
 
-// CheckDeplDependencies produces a slice of reports of all unsatisfied resource dependencies among
-// all provided ResolvedDepl instances.
-func CheckDeplDependencies(
+// CheckDeplDeps produces reports of all satisfied and unsatisfied resource dependencies
+// among all provided ResolvedDepl instances.
+func CheckDeplDeps(
 	depls []*ResolvedDepl,
-) (missingDeps []MissingDeplDependencies, err error) {
+) (satisfiedDeps []SatisfiedDeplDeps, missingDeps []MissingDeplDeps, err error) {
 	for _, depl := range depls {
-		deplMissingDeps, err := depl.CheckMissingDependencies(depls)
+		satisfied, missing, err := depl.CheckDeps(depls)
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't check dependencies of deployment %s", depl.Name)
+			return nil, nil, errors.Wrapf(err, "couldn't check dependencies of deployment %s", depl.Name)
 		}
-		if deplMissingDeps.HasMissingDependency() {
-			missingDeps = append(missingDeps, deplMissingDeps)
+		if missing.HasMissingDep() {
+			missingDeps = append(missingDeps, missing)
+			continue
 		}
+		satisfiedDeps = append(satisfiedDeps, satisfied)
 	}
-	return missingDeps, nil
+	return satisfiedDeps, missingDeps, nil
 }
 
 // Depl
@@ -327,9 +335,9 @@ func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
 	return depls, nil
 }
 
-// ResourceAttachmentSource returns the source path for resources under the Depl instance.
-// The resulting slice is useful for constructing [pallets.AttachedResource] instances.
-func (d *Depl) ResourceAttachmentSource() []string {
+// ResAttachmentSource returns the source path for resources under the Depl instance.
+// The resulting slice is useful for constructing [pallets.AttachedRes] instances.
+func (d *Depl) ResAttachmentSource() []string {
 	return []string{
 		fmt.Sprintf("deployment %s", d.Name),
 	}
