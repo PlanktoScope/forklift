@@ -168,7 +168,7 @@ func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 		}
 	}
 
-	missingDeps, err := forklift.CheckDeplDependencies(resolved)
+	_, missingDeps, err := forklift.CheckDeplDependencies(resolved)
 	if err != nil {
 		return errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
 	}
@@ -336,31 +336,9 @@ func printDependencyCandidate[Resource any](
 // Plan
 
 func PlanEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadDepls("**/*")
+	_, _, err := computePlan(indent, env, loader)
 	if err != nil {
-		return err
-	}
-	resolved, err := forklift.ResolveDepls(env, loader, depls)
-	if err != nil {
-		return err
-	}
-
-	dc, err := docker.NewClient()
-	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker API client")
-	}
-	stacks, err := dc.ListStacks(context.Background())
-	if err != nil {
-		return errors.Wrapf(err, "couldn't list active Docker stacks")
-	}
-
-	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(resolved, stacks)
-	sort.Slice(changes, func(i, j int) bool {
-		return changes[i].Name < changes[j].Name
-	})
-	for _, change := range changes {
-		IndentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
+		return errors.Wrap(err, "couldn't compute plan for changes")
 	}
 	return nil
 }
@@ -378,8 +356,182 @@ type reconciliationChange struct {
 	Stack docker.Stack
 }
 
+func computePlan(
+	indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader,
+) ([]reconciliationChange, *docker.Client, error) {
+	depls, err := env.LoadDepls("**/*")
+	if err != nil {
+		return nil, nil, err
+	}
+	resolvedDepls, err := forklift.ResolveDepls(env, loader, depls)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dc, err := docker.NewClient()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't make Docker API client")
+	}
+	stacks, err := dc.ListStacks(context.Background())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "couldn't list active Docker stacks")
+	}
+
+	// TODO: warn on any resource conflicts and missing dependencies
+
+	IndentedPrintln(indent, "Resolving resource dependencies among package deployments...")
+	dependencies, err := resolveDependencies(resolvedDepls)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "couldn't resolve resource dependencies")
+	}
+	IndentedPrintln(indent, "Direct dependencies:")
+	printDigraph(indent+1, dependencies, "directly depends on")
+	IndentedPrintln(indent, "(In)direct dependencies:")
+	dependencies = computeTransitiveClosure(dependencies)
+	printDigraph(indent+1, dependencies, "(in)directly depends on")
+
+	// TODO: warn about any circular dependencies, until we can make a reconciliation plan where
+	// relevant resources (i.e. Docker networks) are created simultaneously so that circular
+	// dependencies don't prevent successful application. We can safely assume that clients of
+	// services can handle a transiently missing service (i.e. missing while only part of the circular
+	// dependency has been created so far).
+
+	fmt.Println()
+	IndentedPrintln(indent, "Determining package deployment changes...")
+	changes := planReconciliation(resolvedDepls, dependencies, stacks)
+	for _, change := range changes {
+		IndentedPrintf(
+			indent, "Will %s deployment %s as stack %s\n",
+			strings.ToLower(change.Type), change.Depl.Name, change.Name,
+		)
+	}
+	return changes, dc, nil
+}
+
+// resolveDependencies returns a map of sets, where each key is the name of a deployment and the
+// the value is the set of deployments providing its required resources.
+func resolveDependencies(depls []*forklift.ResolvedDepl) (map[string]map[string]struct{}, error) {
+	satisfiedDeps, _, err := forklift.CheckDeplDependencies(depls)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
+	}
+	dependencies := make(map[string]map[string]struct{})
+	for _, satisfied := range satisfiedDeps {
+		providers := make(map[string]struct{})
+		for _, network := range satisfied.Networks {
+			provider := strings.TrimPrefix(network.Provided.Source[0], "deployment ")
+			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
+				continue
+			}
+			providers[provider] = struct{}{}
+		}
+		for _, service := range satisfied.Services {
+			provider := strings.TrimPrefix(service.Provided.Source[0], "deployment ")
+			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
+				continue
+			}
+			providers[provider] = struct{}{}
+		}
+		dependencies[satisfied.Depl.Name] = providers
+	}
+	return dependencies, nil
+}
+
+func printDigraph(
+	indent int, digraph map[string]map[string]struct{}, edgeType string,
+) {
+	sortedNodes := make([]string, 0, len(digraph))
+	for node := range digraph {
+		sortedNodes = append(sortedNodes, node)
+	}
+	sort.Strings(sortedNodes)
+	for _, node := range sortedNodes {
+		upstreamNodes := make([]string, 0, len(digraph[node]))
+		for dep := range digraph[node] {
+			upstreamNodes = append(upstreamNodes, dep)
+		}
+		sort.Strings(upstreamNodes)
+		if len(upstreamNodes) > 0 {
+			IndentedPrintf(indent, "%s %s: %+v\n", node, edgeType, upstreamNodes)
+		}
+	}
+}
+
+// computeTransitiveClosure returns, given a set of direct dependencies for every deployment, a set
+// of all direct and indirect dependencies for every deployment. This is just the transitive closure
+// of the relation expressed by the digraph. Iff the digraph isn't a DAG (i.e. iff it has cycles),
+// then each node in the cycle will have an edge directed to itself.
+func computeTransitiveClosure(
+	digraph map[string]map[string]struct{},
+) map[string]map[string]struct{} {
+	// Seed the transitive closure with the initial digraph
+	closure := make(map[string]map[string]struct{})
+	prevChangedNodes := make(map[string]bool)
+	changedNodes := make(map[string]bool)
+	for node, upstreamNodes := range digraph {
+		closure[node] = make(map[string]struct{})
+		for upstreamNode := range upstreamNodes {
+			closure[node][upstreamNode] = struct{}{}
+		}
+		prevChangedNodes[node] = true
+		changedNodes[node] = true
+	}
+	// This algorithm is very asymptotically inefficient when long paths exist between nodes, but it's
+	// easy to understand, and performance is good enough for a typical use case in dependency
+	// resolution where dependency trees should be kept relatively shallow.
+	for {
+		converged := true
+		for node, upstreamNodes := range closure {
+			initial := len(upstreamNodes)
+			for upstreamNode := range upstreamNodes {
+				if !prevChangedNodes[upstreamNode] { // this is just a performance optimization
+					continue
+				}
+				// Add the dependency's own dependencies to the set of dependencies
+				transitiveNodes := closure[upstreamNode]
+				for transitiveNode := range transitiveNodes {
+					upstreamNodes[transitiveNode] = struct{}{}
+				}
+			}
+			final := len(upstreamNodes)
+			changedNodes[node] = initial != final
+			if changedNodes[node] {
+				converged = false
+			}
+		}
+		if converged {
+			return closure
+		}
+		prevChangedNodes = changedNodes
+		changedNodes = make(map[string]bool)
+	}
+}
+
+// invertDependencies produces a map associating every deployment to the set of deployments
+// depending on it. In other words, it reverses the edges of the DAG of dependencies among
+// deployments.
+func invertDependencies(
+	dependencies map[string]map[string]struct{},
+) map[string]map[string]struct{} {
+	dependents := make(map[string]map[string]struct{})
+	for depl, deps := range dependencies {
+		for dependency := range deps {
+			if _, ok := dependents[dependency]; !ok {
+				dependents[dependency] = make(map[string]struct{})
+			}
+			dependents[dependency][depl] = struct{}{}
+		}
+	}
+	return dependents
+}
+
+// planReconciliation produces a list of changes to make on the Docker host based on the desired
+// list of deployments, a transitive closure of dependencies among those deployments, a transitive
+// closure of the deployments depending on each deployment, and a list of
+// Docker stacks describing the current complete state of the Docker host.
 func planReconciliation(
-	depls []*forklift.ResolvedDepl, stacks []docker.Stack,
+	depls []*forklift.ResolvedDepl, dependencies map[string]map[string]struct{},
+	stacks []docker.Stack,
 ) []reconciliationChange {
 	deplSet := make(map[string]*forklift.ResolvedDepl)
 	for _, depl := range depls {
@@ -389,15 +541,17 @@ func planReconciliation(
 	for _, stack := range stacks {
 		stackSet[stack.Name] = stack
 	}
+	stackDeplNames := make(map[string]string)
 
 	changes := make([]reconciliationChange, 0, len(deplSet)+len(stackSet))
 	for name, depl := range deplSet {
+		stackDeplNames[getStackName(name)] = name
 		definesStack := depl.Pkg.Def.Deployment.DefinesStack()
-		stack, ok := stackSet[name]
+		stack, ok := stackSet[getStackName(name)]
 		if !ok {
 			if definesStack {
 				changes = append(changes, reconciliationChange{
-					Name: name,
+					Name: getStackName(name),
 					Type: addReconciliationChange,
 					Depl: depl,
 				})
@@ -406,7 +560,7 @@ func planReconciliation(
 		}
 		if definesStack {
 			changes = append(changes, reconciliationChange{
-				Name:  name,
+				Name:  getStackName(name),
 				Type:  updateReconciliationChange,
 				Depl:  depl,
 				Stack: stack,
@@ -414,8 +568,10 @@ func planReconciliation(
 		}
 	}
 	for name, stack := range stackSet {
-		if depl, ok := deplSet[name]; ok && depl.Pkg.Def.Deployment.DefinesStack() {
-			continue
+		if deplName, ok := stackDeplNames[name]; ok {
+			if depl, ok := deplSet[deplName]; ok && depl.Pkg.Def.Deployment.DefinesStack() {
+				continue
+			}
 		}
 		changes = append(changes, reconciliationChange{
 			Name:  name,
@@ -424,38 +580,94 @@ func planReconciliation(
 		})
 	}
 
-	// TODO: reorder reconciliation actions based on dependencies
+	dependents := invertDependencies(dependencies)
+	// Sequence the changes such that they can (hopefully) be carried out successfully
+	sort.Slice(changes, func(i, j int) bool {
+		return compareChanges(changes[i], changes[j], dependencies, dependents) == pallets.CompareLT
+	})
 	return changes
+}
+
+func getStackName(deplName string) string {
+	return strings.ReplaceAll(deplName, "/", "_")
+}
+
+// compareChanges returns a comparison for generating a total ordering of reconciliation changes
+// so that they are applied in a way that will (hopefully) succeed for all changes. Dependencies
+// should be a transitive closure of dependencies, and dependents should be a transitive closure of
+// dependents.
+func compareChanges(
+	r, s reconciliationChange, dependencies, dependents map[string]map[string]struct{},
+) int {
+	// Remove old resources first, in case additions/updates would add overlapping resources
+	if r.Type == removeReconciliationChange && s.Type != removeReconciliationChange {
+		return pallets.CompareLT
+	}
+	if r.Type != removeReconciliationChange && s.Type == removeReconciliationChange {
+		return pallets.CompareGT
+	}
+
+	// Now r and s are either both removals or both changes/additions
+	_, rDependsOnS := dependencies[r.Depl.Name][s.Depl.Name]
+	_, sDependsOnR := dependencies[s.Depl.Name][r.Depl.Name]
+	if rDependsOnS && !sDependsOnR {
+		if r.Type == removeReconciliationChange { // i.e. r and s are both removals
+			return pallets.CompareLT // removal r goes before removal s
+		}
+		return pallets.CompareGT // addition/update r goes after addition/update s
+	}
+	if !rDependsOnS && sDependsOnR {
+		if s.Type == removeReconciliationChange { // i.e. r and s are both removals
+			return pallets.CompareGT // removal r goes after removal s
+		}
+		return pallets.CompareLT // addition/update r goes before addition/update s
+	}
+	// Now r and s either are in a circular dependency or have no dependency relationships
+	if result := compareDeplsByDependencyCounts(
+		r.Depl.Name, s.Depl.Name, dependencies, dependents,
+	); result != pallets.CompareEQ {
+		return result
+	}
+	return compareDeplNames(r.Depl.Name, s.Depl.Name)
+}
+
+func compareDeplsByDependencyCounts(
+	r, s string, dependencies, dependents map[string]map[string]struct{},
+) int {
+	// Deployments with greater numbers of dependents go first (needed for correct ordering among
+	// unrelated deployments sorted by sort.Slice).
+	if len(dependents[r]) > len(dependents[s]) {
+		return pallets.CompareLT
+	}
+	if len(dependents[r]) < len(dependents[s]) {
+		return pallets.CompareGT
+	}
+	// Deployments with greater numbers of dependencies go first (for aesthetic reasons)
+	if len(dependencies[r]) > len(dependencies[s]) {
+		return pallets.CompareLT
+	}
+	if len(dependencies[r]) < len(dependencies[s]) {
+		return pallets.CompareGT
+	}
+	return pallets.CompareEQ
+}
+
+func compareDeplNames(r, s string) int {
+	if r < s {
+		return pallets.CompareLT
+	}
+	if r > s {
+		return pallets.CompareGT
+	}
+	return pallets.CompareEQ
 }
 
 // Apply
 
 func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadDepls("**/*")
+	changes, dc, err := computePlan(indent, env, loader)
 	if err != nil {
-		return err
-	}
-	resolved, err := forklift.ResolveDepls(env, loader, depls)
-	if err != nil {
-		return err
-	}
-
-	dc, err := docker.NewClient()
-	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker API client")
-	}
-	stacks, err := dc.ListStacks(context.Background())
-	if err != nil {
-		return errors.Wrapf(err, "couldn't list active Docker stacks")
-	}
-
-	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(resolved, stacks)
-	sort.Slice(changes, func(i, j int) bool {
-		return changes[i].Name < changes[j].Name
-	})
-	for _, change := range changes {
-		IndentedPrintf(indent, "Will %s %s\n", strings.ToLower(change.Type), change.Name)
+		return errors.Wrap(err, "couldn't compute plan for changes")
 	}
 
 	for _, change := range changes {
@@ -474,19 +686,25 @@ func applyReconciliationChange(
 	default:
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
-		IndentedPrintf(indent, "Adding package deployment %s...\n", change.Name)
+		IndentedPrintf(
+			indent, "Adding package deployment %s as stack %s...\n", change.Depl.Name, change.Name,
+		)
 		if err := deployStack(indent+1, change.Depl.Pkg, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
 	case removeReconciliationChange:
-		IndentedPrintf(indent, "Removing package deployment %s...\n", change.Name)
+		IndentedPrintf(
+			indent, "Removing package deployment %s as stack %s...\n", change.Depl.Name, change.Name,
+		)
 		if err := dc.RemoveStacks(context.Background(), []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
 	case updateReconciliationChange:
-		IndentedPrintf(indent, "Updating package deployment %s...\n", change.Name)
+		IndentedPrintf(
+			indent, "Updating package deployment %s as stack %s...\n", change.Depl.Name, change.Name,
+		)
 		if err := deployStack(indent+1, change.Depl.Pkg, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}

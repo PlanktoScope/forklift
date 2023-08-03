@@ -38,6 +38,15 @@ type DependencyChecker[Resource interface{}] interface {
 	CheckDependency(candidate Resource) []error
 }
 
+// A SatisfiedResourceDependency is a report of a resource requirement which is satisfied by a set
+// of resources.
+type SatisfiedResourceDependency[Resource interface{}] struct {
+	// Required is the resource requirement.
+	Required AttachedResource[Resource]
+	// Provided is the resource which satisfies the resource requirement.
+	Provided AttachedResource[Resource]
+}
+
 // A MissingResourceDependency is a report of a resource requirement which is not satisfied by any
 // resources.
 type MissingResourceDependency[Resource interface{}] struct {
@@ -48,7 +57,8 @@ type MissingResourceDependency[Resource interface{}] struct {
 	BestCandidates []ResourceDependencyCandidate[Resource]
 }
 
-// ResourceDependencyCandidate is a report of a resource which failed to satisfy a resource requirement.
+// ResourceDependencyCandidate is a report of a resource which either satisfied a resource
+// requirement or (if Errs contains errors) failed to satisfy that resource requirement.
 type ResourceDependencyCandidate[Resource interface{}] struct {
 	// Provided is the resource which did not satisfy the requirement.
 	Provided AttachedResource[Resource]

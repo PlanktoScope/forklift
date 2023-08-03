@@ -207,14 +207,14 @@ func (d *ResolvedDepl) CheckAllConflicts(
 	return conflicts, nil
 }
 
-// CheckMissingDependencies produces a report of all resource requirements from the ResolvedDepl
-// instance and which were not met by any candidate ResolvedDepl.
-func (d *ResolvedDepl) CheckMissingDependencies(
+// CheckDependencies produces a report of all resource requirements from the ResolvedDepl
+// instance and which were and were not met by any candidate ResolvedDepl.
+func (d *ResolvedDepl) CheckDependencies(
 	candidates []*ResolvedDepl,
-) (MissingDeplDependencies, error) {
+) (SatisfiedDeplDependencies, MissingDeplDependencies, error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
-		return MissingDeplDependencies{}, errors.Errorf(
+		return SatisfiedDeplDependencies{}, MissingDeplDependencies{}, errors.Errorf(
 			"couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
@@ -222,7 +222,7 @@ func (d *ResolvedDepl) CheckMissingDependencies(
 	for _, candidate := range candidates {
 		f, err := candidate.EnabledFeatures()
 		if err != nil {
-			return MissingDeplDependencies{}, errors.Errorf(
+			return SatisfiedDeplDependencies{}, MissingDeplDependencies{}, errors.Errorf(
 				"couldn't determine enabled features of deployment %s", candidate.Name,
 			)
 		}
@@ -242,15 +242,21 @@ func (d *ResolvedDepl) CheckMissingDependencies(
 		)
 	}
 
-	return MissingDeplDependencies{
-		Depl: d,
-		Networks: pallets.CheckResourcesDependencies(
-			d.requiredNetworks(enabledFeatures), allProvidedNetworks,
-		),
-		Services: pallets.CheckResourcesDependencies(
-			pallets.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
-		),
-	}, nil
+	satisfiedNetworkDeps, missingNetworkDeps := pallets.CheckResourcesDependencies(
+		d.requiredNetworks(enabledFeatures), allProvidedNetworks,
+	)
+	satisfiedServiceDeps, missingServiceDeps := pallets.CheckResourcesDependencies(
+		pallets.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
+	)
+	return SatisfiedDeplDependencies{
+			Depl:     d,
+			Networks: satisfiedNetworkDeps,
+			Services: satisfiedServiceDeps,
+		}, MissingDeplDependencies{
+			Depl:     d,
+			Networks: missingNetworkDeps,
+			Services: missingServiceDeps,
+		}, nil
 }
 
 // CheckDeplConflicts produces a slice of reports of all resource conflicts among all provided
@@ -266,21 +272,23 @@ func CheckDeplConflicts(depls []*ResolvedDepl) (conflicts []DeplConflict, err er
 	return conflicts, nil
 }
 
-// CheckDeplDependencies produces a slice of reports of all unsatisfied resource dependencies among
-// all provided ResolvedDepl instances.
+// CheckDeplDependencies produces reports of all satisfied and unsatisfied resource dependencies
+// among all provided ResolvedDepl instances.
 func CheckDeplDependencies(
 	depls []*ResolvedDepl,
-) (missingDeps []MissingDeplDependencies, err error) {
+) (satisfiedDeps []SatisfiedDeplDependencies, missingDeps []MissingDeplDependencies, err error) {
 	for _, depl := range depls {
-		deplMissingDeps, err := depl.CheckMissingDependencies(depls)
+		satisfied, missing, err := depl.CheckDependencies(depls)
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't check dependencies of deployment %s", depl.Name)
+			return nil, nil, errors.Wrapf(err, "couldn't check dependencies of deployment %s", depl.Name)
 		}
-		if deplMissingDeps.HasMissingDependency() {
-			missingDeps = append(missingDeps, deplMissingDeps)
+		if missing.HasMissingDependency() {
+			missingDeps = append(missingDeps, missing)
+			continue
 		}
+		satisfiedDeps = append(satisfiedDeps, satisfied)
 	}
-	return missingDeps, nil
+	return satisfiedDeps, missingDeps, nil
 }
 
 // Depl

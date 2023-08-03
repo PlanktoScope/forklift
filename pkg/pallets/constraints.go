@@ -16,7 +16,7 @@ func attachResources[Resource any](
 	return attached
 }
 
-// ResourceConflict
+// Resource conflicts
 
 // CheckResourcesConflicts identifies all resource conflicts between the first list of resources and
 // the second list of resources. It does not identify resource conflicts within the first list of
@@ -38,35 +38,44 @@ func CheckResourcesConflicts[Resource ConflictChecker[Resource]](
 	return conflicts
 }
 
-// MissingResourceDependency
+// Resource dependencies
 
 // CheckResourcesDependencies identifies all unsatisfied resource dependencies between the provided
 // list of resource requirements and the provided list of resources.
 func CheckResourcesDependencies[Resource DependencyChecker[Resource]](
 	required []AttachedResource[Resource], provided []AttachedResource[Resource],
-) (missingDeps []MissingResourceDependency[Resource]) {
+) (
+	satisfied []SatisfiedResourceDependency[Resource], missing []MissingResourceDependency[Resource],
+) {
 	for _, r := range required {
 		bestErrsCount := -1
 		bestCandidates := make([]ResourceDependencyCandidate[Resource], 0, len(provided))
-		for _, p := range provided {
+		for i, p := range provided {
 			errs := r.Resource.CheckDependency(p.Resource)
-			if bestErrsCount == -1 || len(errs) <= bestErrsCount {
-				if len(errs) < bestErrsCount {
-					bestCandidates = make([]ResourceDependencyCandidate[Resource], 0, len(provided))
-				}
-				bestErrsCount = len(errs)
-				bestCandidates = append(bestCandidates, ResourceDependencyCandidate[Resource]{
-					Provided: p,
-					Errs:     errs,
-				})
+			if bestErrsCount != -1 && len(errs) > bestErrsCount {
+				continue
 			}
+			if bestErrsCount == -1 || len(errs) < bestErrsCount {
+				// we've found a provided resource which is strictly better than all previous candidates
+				bestErrsCount = len(errs)
+				bestCandidates = make([]ResourceDependencyCandidate[Resource], 0, len(provided)-i)
+			}
+			bestCandidates = append(bestCandidates, ResourceDependencyCandidate[Resource]{
+				Provided: p,
+				Errs:     errs,
+			})
 		}
 		if bestErrsCount != 0 {
-			missingDeps = append(missingDeps, MissingResourceDependency[Resource]{
+			missing = append(missing, MissingResourceDependency[Resource]{
 				Required:       r,
 				BestCandidates: bestCandidates,
 			})
+			continue
 		}
+		satisfied = append(satisfied, SatisfiedResourceDependency[Resource]{
+			Required: r,
+			Provided: bestCandidates[0].Provided,
+		})
 	}
-	return missingDeps
+	return satisfied, missing
 }

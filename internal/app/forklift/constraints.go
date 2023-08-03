@@ -23,16 +23,30 @@ func (c DeplConflict) HasConflict() bool {
 		c.HasListenerConflict() || c.HasNetworkConflict() || c.HasServiceConflict()
 }
 
+// SatisfiedDeplDependencies
+
+func (d SatisfiedDeplDependencies) HasSatisfiedNetworkDependency() bool {
+	return len(d.Networks) > 0
+}
+
+func (d SatisfiedDeplDependencies) HasSatisfiedServiceDependency() bool {
+	return len(d.Services) > 0
+}
+
+func (d SatisfiedDeplDependencies) HasSatisfiedDependency() bool {
+	return d.HasSatisfiedNetworkDependency() || d.HasSatisfiedServiceDependency()
+}
+
 // MissingDeplDependencies
 
-func (c MissingDeplDependencies) HasMissingNetworkDependency() bool {
-	return len(c.Networks) > 0
+func (d MissingDeplDependencies) HasMissingNetworkDependency() bool {
+	return len(d.Networks) > 0
 }
 
-func (c MissingDeplDependencies) HasMissingServiceDependency() bool {
-	return len(c.Services) > 0
+func (d MissingDeplDependencies) HasMissingServiceDependency() bool {
+	return len(d.Services) > 0
 }
 
-func (c MissingDeplDependencies) HasMissingDependency() bool {
-	return c.HasMissingNetworkDependency() || c.HasMissingServiceDependency()
+func (d MissingDeplDependencies) HasMissingDependency() bool {
+	return d.HasMissingNetworkDependency() || d.HasMissingServiceDependency()
 }

@@ -15,6 +15,13 @@ type DeplConflict struct {
 	Services  []pallets.ResourceConflict[pallets.ServiceResource]
 }
 
+type SatisfiedDeplDependencies struct {
+	Depl *ResolvedDepl
+
+	Networks []pallets.SatisfiedResourceDependency[pallets.NetworkResource]
+	Services []pallets.SatisfiedResourceDependency[pallets.ServiceResource]
+}
+
 type MissingDeplDependencies struct {
 	Depl *ResolvedDepl
 
