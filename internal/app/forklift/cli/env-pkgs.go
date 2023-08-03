@@ -37,7 +37,9 @@ func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) 
 	return nil
 }
 
-func PrintPkgInfo(indent int, env *forklift.FSEnv, cache forklift.PathedCache, pkgPath string) error {
+func PrintPkgInfo(
+	indent int, env *forklift.FSEnv, cache forklift.PathedPalletCache, pkgPath string,
+) error {
 	pkg, _, err := forklift.LoadRequiredFSPkg(env, cache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(

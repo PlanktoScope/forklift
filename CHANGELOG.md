@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (Breaking change) Changed name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
 - (Breaking change) Changed name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
 - (Breaking change) Changed name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
-- (Breaking change) Changed name of pallet requirements directory in environmnts from `repositories` to `requirements/pallets`.
+- (Breaking change) Changed name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
 - (Breaking change) Changed name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
+- (Breaking change) Changed name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
 
 ### Removed
 

@@ -14,28 +14,28 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// FSCache
+// FSPalletCache
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
-func (c *FSCache) Exists() bool {
+func (c *FSPalletCache) Exists() bool {
 	return Exists(filepath.FromSlash(c.FS.Path()))
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.
-func (c *FSCache) Remove() error {
+func (c *FSPalletCache) Remove() error {
 	return os.RemoveAll(filepath.FromSlash(c.FS.Path()))
 }
 
 // Path returns the path of the cache's filesystem.
-func (c *FSCache) Path() string {
+func (c *FSPalletCache) Path() string {
 	return c.FS.Path()
 }
 
-// FSCache: FSPalletLoader
+// FSPalletCache: FSPalletLoader
 
 // LoadFSPallet loads the FSPallet with the specified path and version.
 // The loaded FSPallet instance is fully initialized.
-func (c *FSCache) LoadFSPallet(palletPath string, version string) (*pallets.FSPallet, error) {
+func (c *FSPalletCache) LoadFSPallet(palletPath string, version string) (*pallets.FSPallet, error) {
 	vcsRepoPath, _, err := pallets.SplitRepoPathSubdir(palletPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse pallet path %s", palletPath)
@@ -73,7 +73,7 @@ func (c *FSCache) LoadFSPallet(palletPath string, version string) (*pallets.FSPa
 // The search pattern should be a [doublestar] pattern, such as `**`, matching pallet directories to
 // search for.
 // The loaded FSPallet instances are fully initialized.
-func (c *FSCache) LoadFSPallets(searchPattern string) ([]*pallets.FSPallet, error) {
+func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*pallets.FSPallet, error) {
 	pallets, err := pallets.LoadFSPallets(c.FS, searchPattern, c.processLoadedFSPallet)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load pallets from cache")
@@ -83,7 +83,7 @@ func (c *FSCache) LoadFSPallets(searchPattern string) ([]*pallets.FSPallet, erro
 }
 
 // processLoadedFSPallet sets the Version field of the pallet based on its path in the cache.
-func (c *FSCache) processLoadedFSPallet(pallet *pallets.FSPallet) (err error) {
+func (c *FSPalletCache) processLoadedFSPallet(pallet *pallets.FSPallet) (err error) {
 	var vcsRepoPath string
 	if vcsRepoPath, pallet.Version, err = getRepoPathVersion(
 		pallets.GetSubdirPath(c, pallet.FS.Path()),
@@ -123,11 +123,11 @@ func getRepoPathVersion(palletPath string) (vcsRepoPath, version string, err err
 	return vcsRepoPath, version, nil
 }
 
-// FSCache: FSPkgLoader
+// FSPalletCache: FSPkgLoader
 
 // LoadFSPkg loads the FSPkg with the specified path and version.
 // The loaded FSPkg instance is fully initialized.
-func (c *FSCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
+func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
 	vcsRepoPath, _, err := pallets.SplitRepoPathSubdir(pkgPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse path of package %s", pkgPath)
@@ -166,7 +166,7 @@ func (c *FSCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, err
 // The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
 // to search for.
 // The loaded FSPkg instances are fully initialized.
-func (c *FSCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
+func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
 	pkgs, err := pallets.LoadFSPkgs(c.FS, searchPattern)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,9 @@ func getPkgCachePath(pkg pallets.Pkg) string {
 
 // loadFSPalletContaining finds and loads the FSPallet which contains the provided subdirectory
 // path.
-func (c *FSCache) loadFSPalletContaining(subdirPath string) (pallet *pallets.FSPallet, err error) {
+func (c *FSPalletCache) loadFSPalletContaining(
+	subdirPath string,
+) (pallet *pallets.FSPallet, err error) {
 	if pallet, err = pallets.LoadFSPalletContaining(c.FS, subdirPath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't find any pallet containing %s", subdirPath)
 	}
@@ -214,10 +216,10 @@ func (c *FSCache) loadFSPalletContaining(subdirPath string) (pallet *pallets.FSP
 	return pallet, nil
 }
 
-// LayeredCache
+// LayeredPalletCache
 
 // Path returns the path of the underlying cache.
-func (c *LayeredCache) Path() string {
+func (c *LayeredPalletCache) Path() string {
 	return c.Underlay.Path()
 }
 
@@ -225,7 +227,9 @@ func (c *LayeredCache) Path() string {
 // The loaded FSPallet instance is fully initialized.
 // If the overlay cache expects to have the pallet, it will attempt to load the pallet; otherwise,
 // the underlay cache will attempt to load the pallet.
-func (c *LayeredCache) LoadFSPallet(palletPath string, version string) (*pallets.FSPallet, error) {
+func (c *LayeredPalletCache) LoadFSPallet(
+	palletPath string, version string,
+) (*pallets.FSPallet, error) {
 	if c.Overlay.IncludesFSPallet(palletPath, version) {
 		pallet, err := c.Overlay.LoadFSPallet(palletPath, version)
 		return pallet, errors.Wrap(err, "couldn't load pallet from overlay")
@@ -241,7 +245,7 @@ func (c *LayeredCache) LoadFSPallet(palletPath string, version string) (*pallets
 // All matching pallets from the overlay cache will be included; all matching pallets from the
 // underlay cache will also be included, except for those pallets which the overlay cache expected
 // to have.
-func (c *LayeredCache) LoadFSPallets(searchPattern string) ([]*pallets.FSPallet, error) {
+func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*pallets.FSPallet, error) {
 	loadedPallets, err := c.Overlay.LoadFSPallets(searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load pallets from overlay")
@@ -270,7 +274,7 @@ func (c *LayeredCache) LoadFSPallets(searchPattern string) ([]*pallets.FSPallet,
 // The loaded FSPkg instance is fully initialized.
 // If the overlay cache expects to have the package, it will attempt to load the package; otherwise,
 // the underlay cache will attempt to load the package.
-func (c *LayeredCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
+func (c *LayeredPalletCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg, error) {
 	if c.Overlay.IncludesFSPkg(pkgPath, version) {
 		pkg, err := c.Overlay.LoadFSPkg(pkgPath, version)
 		return pkg, errors.Wrap(err, "couldn't load package from overlay")
@@ -286,7 +290,7 @@ func (c *LayeredCache) LoadFSPkg(pkgPath string, version string) (*pallets.FSPkg
 // All matching packages from the overlay cache will be included; all matching packages from the
 // underlay cache will also be included, except for those packages which the overlay cache expected
 // to have.
-func (c *LayeredCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
+func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*pallets.FSPkg, error) {
 	pkgs, err := c.Overlay.LoadFSPkgs(searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load packages from overlay")

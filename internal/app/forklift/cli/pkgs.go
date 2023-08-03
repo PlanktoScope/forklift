@@ -10,7 +10,7 @@ import (
 
 // Print
 
-func PrintPkg(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
+func PrintPkg(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) {
 	IndentedPrintf(indent, "Package: %s\n", pkg.Path())
 	indent++
 
@@ -28,7 +28,7 @@ func PrintPkg(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
 	PrintFeatureSpecs(indent, pkg.Def.Features)
 }
 
-func printPkgPallet(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
+func printPkgPallet(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) {
 	IndentedPrintf(indent, "Provided by pallet: %s\n", pkg.Pallet.Path())
 	indent++
 

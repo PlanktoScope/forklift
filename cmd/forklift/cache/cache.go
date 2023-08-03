@@ -18,12 +18,12 @@ var errMissingCache = errors.Errorf(
 		"`forklift env cache-pallet`",
 )
 
-func getCache(wpath string) (*forklift.FSCache, error) {
+func getCache(wpath string) (*forklift.FSPalletCache, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
-	cache, err := workspace.GetCache()
+	cache, err := workspace.GetPalletCache()
 	if err != nil {
 		return nil, err
 	}

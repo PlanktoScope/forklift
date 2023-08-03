@@ -16,9 +16,9 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// cache-pallet
+// cache-plt
 
-func cachePalletAction(c *cli.Context) error {
+func cachePltAction(c *cli.Context) error {
 	env, cache, _, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
@@ -38,9 +38,9 @@ func cachePalletAction(c *cli.Context) error {
 	return nil
 }
 
-// ls-pallet
+// ls-plt
 
-func lsPalletAction(c *cli.Context) error {
+func lsPltAction(c *cli.Context) error {
 	env, err := getEnv(c.String("cwd"))
 	if err != nil {
 		return err
@@ -48,9 +48,9 @@ func lsPalletAction(c *cli.Context) error {
 	return fcli.PrintEnvPallets(0, env)
 }
 
-// show-pallet
+// show-plt
 
-func showPalletAction(c *cli.Context) error {
+func showPltAction(c *cli.Context) error {
 	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
@@ -63,9 +63,9 @@ func showPalletAction(c *cli.Context) error {
 	return fcli.PrintPalletInfo(0, env, cache, palletPath)
 }
 
-// add-pallet
+// add-plt
 
-func addPalletAction(c *cli.Context) error {
+func addPltAction(c *cli.Context) error {
 	env, cache, _, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func addPalletAction(c *cli.Context) error {
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", remoteRelease)
 		}
-		reqsPalletsFS, err := env.GetReqsPalletsFS()
+		reqsPalletsFS, err := env.GetPalletReqsFS()
 		if err != nil {
 			return err
 		}

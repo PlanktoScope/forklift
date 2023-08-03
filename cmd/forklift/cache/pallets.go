@@ -13,9 +13,9 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// ls-pallet
+// ls-plt
 
-func lsPalletAction(c *cli.Context) error {
+func lsPltAction(c *cli.Context) error {
 	cache, err := getCache(c.String("workspace"))
 	if err != nil {
 		return err
@@ -38,9 +38,9 @@ func lsPalletAction(c *cli.Context) error {
 	return nil
 }
 
-// show-pallet
+// show-plt
 
-func showPalletAction(c *cli.Context) error {
+func showPltAction(c *cli.Context) error {
 	cache, err := getCache(c.String("workspace"))
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func showPalletAction(c *cli.Context) error {
 	return printCachedPallet(0, cache, pallet)
 }
 
-func printCachedPallet(indent int, cache *forklift.FSCache, pallet *pallets.FSPallet) error {
+func printCachedPallet(indent int, cache *forklift.FSPalletCache, pallet *pallets.FSPallet) error {
 	fcli.IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
 	indent++
 

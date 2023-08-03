@@ -14,7 +14,7 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context, ensureCache bool) (
-	env *forklift.FSEnv, cache *forklift.LayeredCache, override *forklift.PalletOverrideCache,
+	env *forklift.FSEnv, cache *forklift.LayeredPalletCache, override *forklift.PalletOverrideCache,
 	err error,
 ) {
 	if env, err = getEnv(c.String("cwd")); err != nil {
@@ -39,8 +39,8 @@ func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
 
 func getCache(
 	wpath string, pallets []string, ensureCache bool,
-) (*forklift.LayeredCache, *forklift.PalletOverrideCache, error) {
-	cache := &forklift.LayeredCache{}
+) (*forklift.LayeredPalletCache, *forklift.PalletOverrideCache, error) {
+	cache := &forklift.LayeredPalletCache{}
 	replacementPallets, err := loadReplacementPallets(pallets)
 	if err != nil {
 		return nil, nil, err
@@ -55,16 +55,16 @@ func getCache(
 	if err != nil {
 		return nil, nil, err
 	}
-	fsCache, err := workspace.GetCache()
+	fsCache, err := workspace.GetPalletCache()
 	if err != nil && len(pallets) == 0 {
 		return nil, nil, err
 	}
 	cache.Underlay = fsCache
 
-	if (ensureCache || len(pallets) == 0) && !fsCache.Exists() {
+	if ensureCache && !fsCache.Exists() {
 		return nil, nil, errors.New(
 			"you first need to cache the pallets specified by your environment with " +
-				"`forklift dev env cache-pallet`",
+				"`forklift dev env cache-pallets`",
 		)
 	}
 	return cache, override, nil

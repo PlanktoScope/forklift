@@ -14,7 +14,7 @@ var Cmd = &cli.Command{
 			Aliases:  []string{"list-pallets"},
 			Category: "Query the cache",
 			Usage:    "Lists cached pallets",
-			Action:   lsPalletAction,
+			Action:   lsPltAction,
 		},
 		{
 			Name:      "show-plt",
@@ -22,7 +22,7 @@ var Cmd = &cli.Command{
 			Category:  "Query the cache",
 			Usage:     "Describes a cached pallet",
 			ArgsUsage: "pallet_path@version",
-			Action:    showPalletAction,
+			Action:    showPltAction,
 		},
 		{
 			Name:     "ls-pkg",

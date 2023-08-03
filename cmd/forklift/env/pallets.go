@@ -8,9 +8,9 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
-// cache-pallet
+// cache-pallets
 
-func cachePalletAction(c *cli.Context) error {
+func cachePltAction(c *cli.Context) error {
 	env, cache, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
@@ -29,9 +29,9 @@ func cachePalletAction(c *cli.Context) error {
 	return nil
 }
 
-// ls-pallet
+// ls-pallets
 
-func lsPalletAction(c *cli.Context) error {
+func lsPltAction(c *cli.Context) error {
 	env, err := getEnv(c.String("workspace"))
 	if err != nil {
 		return err
@@ -40,9 +40,9 @@ func lsPalletAction(c *cli.Context) error {
 	return fcli.PrintEnvPallets(0, env)
 }
 
-// show-pallet
+// show-plt
 
-func showPalletAction(c *cli.Context) error {
+func showPltAction(c *cli.Context) error {
 	env, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err

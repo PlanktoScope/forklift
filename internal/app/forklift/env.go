@@ -72,9 +72,9 @@ func (e *FSEnv) getReqsFS() (pallets.PathedFS, error) {
 
 // FSEnv: Pallet Requirements
 
-// GetReqsPalletsFS returns the [fs.FS] in the environment which contains pallet requirement
+// GetPalletReqsFS returns the [fs.FS] in the environment which contains pallet requirement
 // definitions.
-func (e *FSEnv) GetReqsPalletsFS() (pallets.PathedFS, error) {
+func (e *FSEnv) GetPalletReqsFS() (pallets.PathedFS, error) {
 	fsys, err := e.getReqsFS()
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (e *FSEnv) GetReqsPalletsFS() (pallets.PathedFS, error) {
 // LoadFSPalletReq loads the FSPalletReq from the environment for the pallet with the specified
 // path.
 func (e *FSEnv) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error) {
-	palletsFS, err := e.GetReqsPalletsFS()
+	palletsFS, err := e.GetPalletReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from environment")
 	}
@@ -100,7 +100,7 @@ func (e *FSEnv) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error) {
 // The search pattern should be a [doublestar] pattern, such as `**`, matching the pallet paths to
 // search for.
 func (e *FSEnv) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
-	palletsFS, err := e.GetReqsPalletsFS()
+	palletsFS, err := e.GetPalletReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallets in local environment")
 	}
@@ -111,7 +111,7 @@ func (e *FSEnv) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
 
 // LoadPkgReq loads the PkgReq from the environment for the package with the specified package path.
 func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-	palletsFS, err := e.GetReqsPalletsFS()
+	palletsFS, err := e.GetPalletReqsFS()
 	if err != nil {
 		return PkgReq{}, errors.Wrap(
 			err, "couldn't open directory for pallet requirements from environment",

@@ -9,6 +9,7 @@ type FSWorkspace struct {
 }
 
 const (
-	currentEnvDirName = "env"
-	cacheDirName      = "cache" // TODO: have a cache of pallets, and a cache of envs
+	currentEnvDirName   = "env"
+	cacheDirName        = "cache"
+	cachePalletsDirName = "pallets"
 )

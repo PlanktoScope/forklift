@@ -23,7 +23,7 @@ var Cmd = &cli.Command{
 			Aliases:  []string{"cache-pallets"},
 			Category: "Use the environment",
 			Usage:    "Updates the cache with the pallets available in the development environment",
-			Action:   cachePalletAction,
+			Action:   cachePltAction,
 		},
 		{
 			Name:     "cache-img",
@@ -63,7 +63,7 @@ var Cmd = &cli.Command{
 			Aliases:  []string{"list-pallets"},
 			Category: "Query the environment",
 			Usage:    "Lists pallets specified by the environment",
-			Action:   lsPalletAction,
+			Action:   lsPltAction,
 		},
 		{
 			Name:      "show-plt",
@@ -71,7 +71,7 @@ var Cmd = &cli.Command{
 			Category:  "Query the environment",
 			Usage:     "Describes a pallet available in the development environment",
 			ArgsUsage: "pallet_path",
-			Action:    showPalletAction,
+			Action:    showPltAction,
 		},
 		{
 			Name:     "ls-pkg",
@@ -108,7 +108,7 @@ var Cmd = &cli.Command{
 			Category:  "Query the environment",
 			Usage:     "Adds pallets to the environment, tracking specified versions or branches",
 			ArgsUsage: "[pallet_path@version_query]...",
-			Action:    addPalletAction,
+			Action:    addPltAction,
 		},
 		// TODO: add an upgrade-pallet action?
 		// {

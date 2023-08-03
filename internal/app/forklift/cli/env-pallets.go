@@ -31,7 +31,7 @@ func PrintEnvPallets(indent int, env *forklift.FSEnv) error {
 }
 
 func PrintPalletInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedCache, palletPath string,
+	indent int, env *forklift.FSEnv, cache forklift.PathedPalletCache, palletPath string,
 ) error {
 	req, err := env.LoadFSPalletReq(palletPath)
 	if err != nil {
@@ -101,7 +101,7 @@ func PrintReadme(indent int, readme []byte, widthLimit int) {
 // Download
 
 func DownloadPallets(
-	indent int, env *forklift.FSEnv, cache forklift.PathedCache,
+	indent int, env *forklift.FSEnv, cache forklift.PathedPalletCache,
 ) (changed bool, err error) {
 	loadedPallets, err := env.LoadFSPalletReqs("**")
 	if err != nil {
