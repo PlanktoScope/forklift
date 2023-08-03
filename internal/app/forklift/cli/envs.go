@@ -168,7 +168,7 @@ func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 		}
 	}
 
-	_, missingDeps, err := forklift.CheckDeplDependencies(resolved)
+	_, missingDeps, err := forklift.CheckDeplDeps(resolved)
 	if err != nil {
 		return errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
 	}
@@ -176,7 +176,7 @@ func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 		IndentedPrintln(indent, "Found unmet resource dependencies among deployments:")
 	}
 	for _, missingDep := range missingDeps {
-		if err := printMissingDeplDependency(1, missingDep); err != nil {
+		if err := printMissingDeplDep(1, missingDep); err != nil {
 			return err
 		}
 	}
@@ -196,48 +196,48 @@ func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
 	}
 	if conflict.HasListenerConflict() {
 		IndentedPrintln(indent, "Conflicting host port listeners:")
-		if err := printResourceConflicts(indent+1, conflict.Listeners); err != nil {
+		if err := printResConflicts(indent+1, conflict.Listeners); err != nil {
 			return errors.Wrap(err, "couldn't print conflicting host port listeners")
 		}
 	}
 	if conflict.HasNetworkConflict() {
 		IndentedPrintln(indent, "Conflicting Docker networks:")
-		if err := printResourceConflicts(indent+1, conflict.Networks); err != nil {
+		if err := printResConflicts(indent+1, conflict.Networks); err != nil {
 			return errors.Wrap(err, "couldn't print conflicting docker networks")
 		}
 	}
 	if conflict.HasServiceConflict() {
 		IndentedPrintln(indent, "Conflicting network services:")
-		if err := printResourceConflicts(indent+1, conflict.Services); err != nil {
+		if err := printResConflicts(indent+1, conflict.Services); err != nil {
 			return errors.Wrap(err, "couldn't print conflicting network services")
 		}
 	}
 	return nil
 }
 
-func printResourceConflicts[Resource any](
-	indent int, conflicts []pallets.ResourceConflict[Resource],
+func printResConflicts[Res any](
+	indent int, conflicts []pallets.ResConflict[Res],
 ) error {
 	for _, resourceConflict := range conflicts {
-		if err := printResourceConflict(indent, resourceConflict); err != nil {
+		if err := printResConflict(indent, resourceConflict); err != nil {
 			return errors.Wrap(err, "couldn't print resource conflict")
 		}
 	}
 	return nil
 }
 
-func printResourceConflict[Resource any](
-	indent int, conflict pallets.ResourceConflict[Resource],
+func printResConflict[Res any](
+	indent int, conflict pallets.ResConflict[Res],
 ) error {
 	BulletedPrintf(indent, "Conflicting resource from %s:\n", conflict.First.Source[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResourceSource(indent+1, conflict.First.Source[1:])
-	if err := IndentedPrintYaml(resourceIndent+1, conflict.First.Resource); err != nil {
+	resourceIndent := printResSource(indent+1, conflict.First.Source[1:])
+	if err := IndentedPrintYaml(resourceIndent+1, conflict.First.Res); err != nil {
 		return errors.Wrap(err, "couldn't print first resource")
 	}
 	IndentedPrintf(indent, "Conflicting resource from %s:\n", conflict.Second.Source[0])
-	resourceIndent = printResourceSource(indent+1, conflict.Second.Source[1:])
-	if err := IndentedPrintYaml(resourceIndent+1, conflict.Second.Resource); err != nil {
+	resourceIndent = printResSource(indent+1, conflict.Second.Source[1:])
+	if err := IndentedPrintYaml(resourceIndent+1, conflict.Second.Res); err != nil {
 		return errors.Wrap(err, "couldn't print second resource")
 	}
 
@@ -252,7 +252,7 @@ func printResourceConflict[Resource any](
 	return nil
 }
 
-func printResourceSource(indent int, source []string) (finalIndent int) {
+func printResSource(indent int, source []string) (finalIndent int) {
 	for i, line := range source {
 		finalIndent = indent + i
 		IndentedPrintf(finalIndent, "%s:", line)
@@ -261,21 +261,21 @@ func printResourceSource(indent int, source []string) (finalIndent int) {
 	return finalIndent
 }
 
-func printMissingDeplDependency(indent int, deps forklift.MissingDeplDependencies) error {
+func printMissingDeplDep(indent int, deps forklift.MissingDeplDeps) error {
 	IndentedPrintf(indent, "For %s:\n", deps.Depl.Name)
 	indent++
 
-	if deps.HasMissingNetworkDependency() {
+	if deps.HasMissingNetworkDep() {
 		IndentedPrintln(indent, "Missing Docker networks:")
-		if err := printMissingDependencies(indent+1, deps.Networks); err != nil {
+		if err := printMissingDeps(indent+1, deps.Networks); err != nil {
 			return errors.Wrapf(
 				err, "couldn't print unmet Docker network dependencies of deployment %s", deps.Depl.Name,
 			)
 		}
 	}
-	if deps.HasMissingServiceDependency() {
+	if deps.HasMissingServiceDep() {
 		IndentedPrintln(indent, "Missing network services:")
-		if err := printMissingDependencies(indent+1, deps.Services); err != nil {
+		if err := printMissingDeps(indent+1, deps.Services); err != nil {
 			return errors.Wrapf(
 				err, "couldn't print unmet network service dependencies of deployment %s", deps.Depl.Name,
 			)
@@ -284,44 +284,38 @@ func printMissingDeplDependency(indent int, deps forklift.MissingDeplDependencie
 	return nil
 }
 
-func printMissingDependencies[Resource any](
-	indent int, missingDeps []pallets.MissingResourceDependency[Resource],
-) error {
+func printMissingDeps[Res any](indent int, missingDeps []pallets.MissingResDep[Res]) error {
 	for _, missingDep := range missingDeps {
-		if err := printMissingDependency(indent, missingDep); err != nil {
+		if err := printMissingDep(indent, missingDep); err != nil {
 			return errors.Wrap(err, "couldn't print unmet resource dependency")
 		}
 	}
 	return nil
 }
 
-func printMissingDependency[Resource any](
-	indent int, missingDep pallets.MissingResourceDependency[Resource],
-) error {
+func printMissingDep[Res any](indent int, missingDep pallets.MissingResDep[Res]) error {
 	BulletedPrintf(indent, "Resource required by %s:\n", missingDep.Required.Source[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResourceSource(indent+1, missingDep.Required.Source[1:])
-	if err := IndentedPrintYaml(resourceIndent+1, missingDep.Required.Resource); err != nil {
+	resourceIndent := printResSource(indent+1, missingDep.Required.Source[1:])
+	if err := IndentedPrintYaml(resourceIndent+1, missingDep.Required.Res); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}
 	IndentedPrintln(indent, "Best candidates to meet requirement:")
 	indent++
 
 	for _, candidate := range missingDep.BestCandidates {
-		if err := printDependencyCandidate(indent, candidate); err != nil {
+		if err := printDepCandidate(indent, candidate); err != nil {
 			return errors.Wrap(err, "couldn't print dependency candidate")
 		}
 	}
 	return nil
 }
 
-func printDependencyCandidate[Resource any](
-	indent int, candidate pallets.ResourceDependencyCandidate[Resource],
-) error {
+func printDepCandidate[Res any](indent int, candidate pallets.ResDepCandidate[Res]) error {
 	BulletedPrintf(indent, "Candidate resource from %s:\n", candidate.Provided.Source[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResourceSource(indent+1, candidate.Provided.Source[1:])
-	if err := IndentedPrintYaml(resourceIndent+1, candidate.Provided.Resource); err != nil {
+	resourceIndent := printResSource(indent+1, candidate.Provided.Source[1:])
+	if err := IndentedPrintYaml(resourceIndent+1, candidate.Provided.Res); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}
 
@@ -380,15 +374,15 @@ func computePlan(
 	// TODO: warn on any resource conflicts and missing dependencies
 
 	IndentedPrintln(indent, "Resolving resource dependencies among package deployments...")
-	dependencies, err := resolveDependencies(resolvedDepls)
+	deps, err := resolveDeps(resolvedDepls)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "couldn't resolve resource dependencies")
 	}
 	IndentedPrintln(indent, "Direct dependencies:")
-	printDigraph(indent+1, dependencies, "directly depends on")
+	printDigraph(indent+1, deps, "directly depends on")
 	IndentedPrintln(indent, "(In)direct dependencies:")
-	dependencies = computeTransitiveClosure(dependencies)
-	printDigraph(indent+1, dependencies, "(in)directly depends on")
+	deps = computeTransitiveClosure(deps)
+	printDigraph(indent+1, deps, "(in)directly depends on")
 
 	// TODO: warn about any circular dependencies, until we can make a reconciliation plan where
 	// relevant resources (i.e. Docker networks) are created simultaneously so that circular
@@ -398,7 +392,7 @@ func computePlan(
 
 	fmt.Println()
 	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(resolvedDepls, dependencies, stacks)
+	changes := planReconciliation(resolvedDepls, deps, stacks)
 	for _, change := range changes {
 		IndentedPrintf(
 			indent, "Will %s deployment %s as stack %s\n",
@@ -408,14 +402,14 @@ func computePlan(
 	return changes, dc, nil
 }
 
-// resolveDependencies returns a map of sets, where each key is the name of a deployment and the
+// resolveDeps returns a map of sets, where each key is the name of a deployment and the
 // the value is the set of deployments providing its required resources.
-func resolveDependencies(depls []*forklift.ResolvedDepl) (map[string]map[string]struct{}, error) {
-	satisfiedDeps, _, err := forklift.CheckDeplDependencies(depls)
+func resolveDeps(depls []*forklift.ResolvedDepl) (map[string]map[string]struct{}, error) {
+	satisfiedDeps, _, err := forklift.CheckDeplDeps(depls)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
 	}
-	dependencies := make(map[string]map[string]struct{})
+	deps := make(map[string]map[string]struct{})
 	for _, satisfied := range satisfiedDeps {
 		providers := make(map[string]struct{})
 		for _, network := range satisfied.Networks {
@@ -432,9 +426,9 @@ func resolveDependencies(depls []*forklift.ResolvedDepl) (map[string]map[string]
 			}
 			providers[provider] = struct{}{}
 		}
-		dependencies[satisfied.Depl.Name] = providers
+		deps[satisfied.Depl.Name] = providers
 	}
-	return dependencies, nil
+	return deps, nil
 }
 
 func printDigraph(
@@ -507,14 +501,12 @@ func computeTransitiveClosure(
 	}
 }
 
-// invertDependencies produces a map associating every deployment to the set of deployments
+// invertDeps produces a map associating every deployment to the set of deployments
 // depending on it. In other words, it reverses the edges of the DAG of dependencies among
 // deployments.
-func invertDependencies(
-	dependencies map[string]map[string]struct{},
-) map[string]map[string]struct{} {
+func invertDeps(deps map[string]map[string]struct{}) map[string]map[string]struct{} {
 	dependents := make(map[string]map[string]struct{})
-	for depl, deps := range dependencies {
+	for depl, deps := range deps {
 		for dependency := range deps {
 			if _, ok := dependents[dependency]; !ok {
 				dependents[dependency] = make(map[string]struct{})
@@ -530,7 +522,7 @@ func invertDependencies(
 // closure of the deployments depending on each deployment, and a list of
 // Docker stacks describing the current complete state of the Docker host.
 func planReconciliation(
-	depls []*forklift.ResolvedDepl, dependencies map[string]map[string]struct{},
+	depls []*forklift.ResolvedDepl, deps map[string]map[string]struct{},
 	stacks []docker.Stack,
 ) []reconciliationChange {
 	deplSet := make(map[string]*forklift.ResolvedDepl)
@@ -580,10 +572,10 @@ func planReconciliation(
 		})
 	}
 
-	dependents := invertDependencies(dependencies)
+	dependents := invertDeps(deps)
 	// Sequence the changes such that they can (hopefully) be carried out successfully
 	sort.Slice(changes, func(i, j int) bool {
-		return compareChanges(changes[i], changes[j], dependencies, dependents) == pallets.CompareLT
+		return compareChanges(changes[i], changes[j], deps, dependents) == pallets.CompareLT
 	})
 	return changes
 }
@@ -593,11 +585,11 @@ func getStackName(deplName string) string {
 }
 
 // compareChanges returns a comparison for generating a total ordering of reconciliation changes
-// so that they are applied in a way that will (hopefully) succeed for all changes. Dependencies
+// so that they are applied in a way that will (hopefully) succeed for all changes. Deps
 // should be a transitive closure of dependencies, and dependents should be a transitive closure of
 // dependents.
 func compareChanges(
-	r, s reconciliationChange, dependencies, dependents map[string]map[string]struct{},
+	r, s reconciliationChange, deps, dependents map[string]map[string]struct{},
 ) int {
 	// Remove old resources first, in case additions/updates would add overlapping resources
 	if r.Type == removeReconciliationChange && s.Type != removeReconciliationChange {
@@ -608,8 +600,8 @@ func compareChanges(
 	}
 
 	// Now r and s are either both removals or both changes/additions
-	_, rDependsOnS := dependencies[r.Depl.Name][s.Depl.Name]
-	_, sDependsOnR := dependencies[s.Depl.Name][r.Depl.Name]
+	_, rDependsOnS := deps[r.Depl.Name][s.Depl.Name]
+	_, sDependsOnR := deps[s.Depl.Name][r.Depl.Name]
 	if rDependsOnS && !sDependsOnR {
 		if r.Type == removeReconciliationChange { // i.e. r and s are both removals
 			return pallets.CompareLT // removal r goes before removal s
@@ -623,17 +615,15 @@ func compareChanges(
 		return pallets.CompareLT // addition/update r goes before addition/update s
 	}
 	// Now r and s either are in a circular dependency or have no dependency relationships
-	if result := compareDeplsByDependencyCounts(
-		r.Depl.Name, s.Depl.Name, dependencies, dependents,
+	if result := compareDeplsByDepCounts(
+		r.Depl.Name, s.Depl.Name, deps, dependents,
 	); result != pallets.CompareEQ {
 		return result
 	}
 	return compareDeplNames(r.Depl.Name, s.Depl.Name)
 }
 
-func compareDeplsByDependencyCounts(
-	r, s string, dependencies, dependents map[string]map[string]struct{},
-) int {
+func compareDeplsByDepCounts(r, s string, deps, dependents map[string]map[string]struct{}) int {
 	// Deployments with greater numbers of dependents go first (needed for correct ordering among
 	// unrelated deployments sorted by sort.Slice).
 	if len(dependents[r]) > len(dependents[s]) {
@@ -642,11 +632,11 @@ func compareDeplsByDependencyCounts(
 	if len(dependents[r]) < len(dependents[s]) {
 		return pallets.CompareGT
 	}
-	// Deployments with greater numbers of dependencies go first (for aesthetic reasons)
-	if len(dependencies[r]) > len(dependencies[s]) {
+	// Deployments with greater numbers of deps go first (for aesthetic reasons)
+	if len(deps[r]) > len(deps[s]) {
 		return pallets.CompareLT
 	}
-	if len(dependencies[r]) < len(dependencies[s]) {
+	if len(deps[r]) < len(deps[s]) {
 		return pallets.CompareGT
 	}
 	return pallets.CompareEQ

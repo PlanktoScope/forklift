@@ -68,7 +68,7 @@ type PkgHostSpec struct {
 	// Tags is a list of strings associated with the host.
 	Tags []string `yaml:"tags,omitempty"`
 	// Provides describes resources ambiently provided by the Docker host.
-	Provides ProvidedResources `yaml:"provides,omitempty"`
+	Provides ProvidedRes `yaml:"provides,omitempty"`
 }
 
 // PkgDeplSpec contains information about any deployment of the Pallet package.
@@ -80,9 +80,9 @@ type PkgDeplSpec struct {
 	Tags []string `yaml:"tags,omitempty"`
 	// Provides describes resource requirements which must be met for a deployment of the package to
 	// succeed.
-	Requires RequiredResources `yaml:"requires,omitempty"`
+	Requires RequiredRes `yaml:"requires,omitempty"`
 	// Provides describes resources provided by a successful deployment of the package.
-	Provides ProvidedResources `yaml:"provides,omitempty"`
+	Provides ProvidedRes `yaml:"provides,omitempty"`
 }
 
 // PkgFeatureSpec defines an optional feature of the Pallet package.
@@ -93,34 +93,34 @@ type PkgFeatureSpec struct {
 	Tags []string `yaml:"tags,omitempty"`
 	// Provides describes resource requirements which must be met for a deployment of the package to
 	// succeed, if the feature is enabled.
-	Requires RequiredResources `yaml:"requires,omitempty"`
+	Requires RequiredRes `yaml:"requires,omitempty"`
 	// Provides describes resources provided by a successful deployment of the package, if the feature
 	// is enabled.
-	Provides ProvidedResources `yaml:"provides,omitempty"`
+	Provides ProvidedRes `yaml:"provides,omitempty"`
 }
 
 // Resources
 
-// RequiredResources describes a set of resource requirements for some aspect of a Pallet package.
-type RequiredResources struct {
+// RequiredRes describes a set of resource requirements for some aspect of a Pallet package.
+type RequiredRes struct {
 	// Networks is a list of requirements for Docker networks.
-	Networks []NetworkResource `yaml:"networks,omitempty"`
+	Networks []NetworkRes `yaml:"networks,omitempty"`
 	// Services is a list of requirements for network services.
-	Services []ServiceResource `yaml:"services,omitempty"`
+	Services []ServiceRes `yaml:"services,omitempty"`
 }
 
-// ProvidedResources describes a set of resources provided by some aspect of a Pallet package.
-type ProvidedResources struct {
+// ProvidedRes describes a set of resources provided by some aspect of a Pallet package.
+type ProvidedRes struct {
 	// Listeners is a list of host port listeners.
-	Listeners []ListenerResource `yaml:"listeners,omitempty"`
+	Listeners []ListenerRes `yaml:"listeners,omitempty"`
 	// Networks is a list of Docker networks.
-	Networks []NetworkResource `yaml:"networks,omitempty"`
+	Networks []NetworkRes `yaml:"networks,omitempty"`
 	// Services is a list of network services.
-	Services []ServiceResource `yaml:"services,omitempty"`
+	Services []ServiceRes `yaml:"services,omitempty"`
 }
 
-// ListenerResource describes a host port listener.
-type ListenerResource struct {
+// ListenerRes describes a host port listener.
+type ListenerRes struct {
 	// Description is a short description of the host port listener to be shown to users.
 	Description string `yaml:"description,omitempty"`
 	// Port is the port number which the host port listener is bound to.
@@ -130,16 +130,16 @@ type ListenerResource struct {
 	Protocol string `yaml:"protocol,omitempty"`
 }
 
-// NetworkResource describes a Docker network.
-type NetworkResource struct {
+// NetworkRes describes a Docker network.
+type NetworkRes struct {
 	// Description is a short description of the Docker network to be shown to users.
 	Description string `yaml:"description,omitempty"`
 	// Name is the name of the Docker network.
 	Name string `yaml:"name,omitempty"`
 }
 
-// ServiceResource describes a network service.
-type ServiceResource struct {
+// ServiceRes describes a network service.
+type ServiceRes struct {
 	// Description is a short description of the network service to be shown to users.
 	Description string `yaml:"description,omitempty"`
 	// Port is the network port used for accessing the service.

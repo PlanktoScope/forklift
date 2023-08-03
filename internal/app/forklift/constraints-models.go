@@ -10,21 +10,21 @@ type DeplConflict struct {
 
 	// Possible conflicts
 	Name      bool
-	Listeners []pallets.ResourceConflict[pallets.ListenerResource]
-	Networks  []pallets.ResourceConflict[pallets.NetworkResource]
-	Services  []pallets.ResourceConflict[pallets.ServiceResource]
+	Listeners []pallets.ResConflict[pallets.ListenerRes]
+	Networks  []pallets.ResConflict[pallets.NetworkRes]
+	Services  []pallets.ResConflict[pallets.ServiceRes]
 }
 
-type SatisfiedDeplDependencies struct {
+type SatisfiedDeplDeps struct {
 	Depl *ResolvedDepl
 
-	Networks []pallets.SatisfiedResourceDependency[pallets.NetworkResource]
-	Services []pallets.SatisfiedResourceDependency[pallets.ServiceResource]
+	Networks []pallets.SatisfiedResDep[pallets.NetworkRes]
+	Services []pallets.SatisfiedResDep[pallets.ServiceRes]
 }
 
-type MissingDeplDependencies struct {
+type MissingDeplDeps struct {
 	Depl *ResolvedDepl
 
-	Networks []pallets.MissingResourceDependency[pallets.NetworkResource]
-	Services []pallets.MissingResourceDependency[pallets.ServiceResource]
+	Networks []pallets.MissingResDep[pallets.NetworkRes]
+	Services []pallets.MissingResDep[pallets.ServiceRes]
 }
