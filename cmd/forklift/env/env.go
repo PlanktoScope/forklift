@@ -30,8 +30,8 @@ func processFullBaseArgs(
 	}
 	if ensureCache && !cache.Exists() {
 		return nil, nil, errors.New(
-			"you first need to cache the repos specified by your environment with " +
-				"`forklift env cache-repo`",
+			"you first need to cache the pallets specified by your environment with " +
+				"`forklift env cache-pallet`",
 		)
 	}
 	return env, cache, nil
@@ -109,7 +109,7 @@ func cloneAction(c *cli.Context) error {
 			err, "couldn't check out release %s at %s", release, local,
 		)
 	}
-	fmt.Println("Done! Next, you'll probably want to run `forklift env cache-repo`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift env cache-pallet`.")
 	return nil
 }
 

@@ -61,7 +61,7 @@ func PrintDeplInfo(
 }
 
 func printDepl(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
+	IndentedPrintf(indent, "Package deployment: %s\n", depl.Name)
 	indent++
 
 	printDeplPkg(indent, cache, depl)
@@ -87,11 +87,11 @@ func printDepl(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDe
 }
 
 func printDeplPkg(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Def.Package)
+	IndentedPrintf(indent, "Deploys package: %s\n", depl.Def.Package)
 	indent++
 
 	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
-	printPkgRepo(indent, cache, depl.Pkg)
+	printPkgPallet(indent, cache, depl.Pkg)
 }
 
 func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {

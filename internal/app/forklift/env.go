@@ -63,61 +63,57 @@ func (e *FSEnv) Remove() error {
 	return os.RemoveAll(e.FS.Path())
 }
 
-// FSEnv: Repo Requirements
+// FSEnv: Pallet Requirements
 
-// getRepoReqsFS returns the [fs.FS] in the environment which contains repository requirement
+// getPalletReqsFS returns the [fs.FS] in the environment which contains pallet requirement
 // configurations.
-func (e *FSEnv) getRepoReqsFS() (pallets.PathedFS, error) {
-	return e.FS.Sub(RepoReqsDirName)
+func (e *FSEnv) getPalletReqsFS() (pallets.PathedFS, error) {
+	return e.FS.Sub(PalletReqsDirName)
 }
 
-// LoadFSRepoReq loads the FSRepoReq from the environment for the repository with the specified
-// Pallet repository path.
-func (e *FSEnv) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
-	reposFS, err := e.getRepoReqsFS()
+// LoadFSPalletReq loads the FSPalletReq from the environment for the pallet with the specified
+// path.
+func (e *FSEnv) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error) {
+	palletsFS, err := e.getPalletReqsFS()
 	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't open directory for Pallet repository requirements from environment",
-		)
+		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from environment")
 	}
-	if r, err = loadFSRepoReq(reposFS, repoPath); err != nil {
-		return nil, errors.Wrap(err, "couldn't load repo r")
+	if r, err = loadFSPalletReq(palletsFS, palletPath); err != nil {
+		return nil, errors.Wrapf(err, "couldn't load pallet %s", palletPath)
 	}
 	return r, nil
 }
 
-// LoadFSRepoReqs loads all FSRepoReqs from the environment matching the specified search pattern.
-// The search pattern should be a [doublestar] pattern, such as `**`, matching the repo paths to
+// LoadFSPalletReqs loads all FSPalletReqs from the environment matching the specified search
+// pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching the pallet paths to
 // search for.
-func (e *FSEnv) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
-	reposFS, err := e.getRepoReqsFS()
+func (e *FSEnv) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
+	palletsFS, err := e.getPalletReqsFS()
 	if err != nil {
-		return nil, errors.Wrap(
-			err, "couldn't open directory for Pallet repositories in local environment",
-		)
+		return nil, errors.Wrap(err, "couldn't open directory for pallets in local environment")
 	}
-	return loadFSRepoReqs(reposFS, searchPattern)
+	return loadFSPalletReqs(palletsFS, searchPattern)
 }
 
 // FSEnv: Package Requirements
 
-// LoadPkgReq loads the PkgReq from the environment for the package with the specified Pallet
-// package path.
+// LoadPkgReq loads the PkgReq from the environment for the package with the specified package path.
 func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-	reposFS, err := e.getRepoReqsFS()
+	palletsFS, err := e.getPalletReqsFS()
 	if err != nil {
 		return PkgReq{}, errors.Wrap(
-			err, "couldn't open directory for Pallet repository requirements from environment",
+			err, "couldn't open directory for pallet requirements from environment",
 		)
 	}
-	fsRepoReq, err := loadFSRepoReqContaining(reposFS, pkgPath)
+	fsPalletReq, err := loadFSPalletReqContaining(palletsFS, pkgPath)
 	if err != nil {
 		return PkgReq{}, errors.Wrapf(
-			err, "couldn't find repo providing package %s in local environment", pkgPath,
+			err, "couldn't find pallet providing package %s in local environment", pkgPath,
 		)
 	}
-	r.Repo = fsRepoReq.RepoReq
-	r.PkgSubdir = fsRepoReq.GetPkgSubdir(pkgPath)
+	r.Pallet = fsPalletReq.PalletReq
+	r.PkgSubdir = fsPalletReq.GetPkgSubdir(pkgPath)
 	return r, nil
 }
 
@@ -143,8 +139,7 @@ func (e *FSEnv) LoadDepl(name string) (depl Depl, err error) {
 	return depl, nil
 }
 
-// LoadDepls loads all Pallet package deployment configurations matching the specified search
-// pattern.
+// LoadDepls loads all package deployment configurations matching the specified search pattern.
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
 func (e *FSEnv) LoadDepls(searchPattern string) ([]Depl, error) {

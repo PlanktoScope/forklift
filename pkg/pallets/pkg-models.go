@@ -1,34 +1,34 @@
 package pallets
 
-// A FSPkg is a Pallet package stored at the root of a [fs.FS] filesystem.
+// A FSPkg is a Forklift package stored at the root of a [fs.FS] filesystem.
 type FSPkg struct {
-	// Pkg is the Pallet package at the root of the filesystem.
+	// Pkg is the Forklift package at the root of the filesystem.
 	Pkg
 	// FS is a filesystem which contains the package's contents.
 	FS PathedFS
-	// Repo is a pointer to the [FSRepo] instance which provides the package.
-	Repo *FSRepo
+	// Pallet is a pointer to the [FSPallet] instance which provides the package.
+	Pallet *FSPallet
 }
 
-// A Pkg is a Pallet package, a configuration of a software application which can be deployed on a
+// A Pkg is a Forklift package, a configuration of a software application which can be deployed on a
 // Docker host.
 type Pkg struct {
-	// Path is the Pallet repository path of the Pallet repository path which provides the package.
-	RepoPath string
-	// Subdir is the path of the package within the Pallet repository which provides the package.
+	// Path is the pallet path of the Forklift pallet which provides the package.
+	PalletPath string
+	// Subdir is the path of the package within the pallet which provides the package.
 	Subdir string
-	// Def is the Pallet package definition for the package.
+	// Def is the definition of the package.
 	Def PkgDef
-	// Repo is a pointer to the [Repo] which provides the package.
-	Repo *Repo
+	// Pallet is a pointer to the [Pallet] which provides the package.
+	Pallet *Pallet
 }
 
-// PkgDefFile is the name of the file defining each Pallet package.
-const PkgDefFile = "pallet-package.yml"
+// PkgDefFile is the name of the file defining each package.
+const PkgDefFile = "forklift-package.yml"
 
-// A PkgDef defines a Pallet package.
+// A PkgDef defines a package.
 type PkgDef struct {
-	// Repository defines the basic metadata for the package.
+	// Package defines the basic metadata for the package.
 	Package PkgSpec `yaml:"package,omitempty"`
 	// Host contains information about the Docker host independent of any deployment of the package.
 	Host PkgHostSpec `yaml:"host,omitempty"`
@@ -38,7 +38,7 @@ type PkgDef struct {
 	Features map[string]PkgFeatureSpec `yaml:"features,omitempty"`
 }
 
-// PkgSpec defines the basic metadata for a Pallet package.
+// PkgSpec defines the basic metadata for a package.
 type PkgSpec struct {
 	// Description is a short description of the package to be shown to users.
 	Description string `yaml:"description"`
@@ -54,7 +54,7 @@ type PkgSpec struct {
 	Sources []string `yaml:"sources,omitempty"`
 }
 
-// PkgMaintainer describes a maintainer of a Pallet package.
+// PkgMaintainer describes a maintainer of a package.
 type PkgMaintainer struct {
 	// Name is the maintainer's name.
 	Name string `yaml:"name,omitempty"`
@@ -63,7 +63,7 @@ type PkgMaintainer struct {
 }
 
 // PkgHostSpec contains information about the Docker host independent of any deployment of the
-// Pallet package.
+// package.
 type PkgHostSpec struct {
 	// Tags is a list of strings associated with the host.
 	Tags []string `yaml:"tags,omitempty"`
@@ -71,7 +71,7 @@ type PkgHostSpec struct {
 	Provides ProvidedRes `yaml:"provides,omitempty"`
 }
 
-// PkgDeplSpec contains information about any deployment of the Pallet package.
+// PkgDeplSpec contains information about any deployment of the package.
 type PkgDeplSpec struct {
 	// DefinitionFile is the name of a Docker Compose file specifying the Docker stack which will be
 	// deployed as part of a package deployment.
@@ -85,7 +85,7 @@ type PkgDeplSpec struct {
 	Provides ProvidedRes `yaml:"provides,omitempty"`
 }
 
-// PkgFeatureSpec defines an optional feature of the Pallet package.
+// PkgFeatureSpec defines an optional feature of the package.
 type PkgFeatureSpec struct {
 	// Description is a short description of the feature to be shown to users.
 	Description string `yaml:"description"`
@@ -101,7 +101,7 @@ type PkgFeatureSpec struct {
 
 // Resources
 
-// RequiredRes describes a set of resource requirements for some aspect of a Pallet package.
+// RequiredRes describes a set of resource requirements for some aspect of a package.
 type RequiredRes struct {
 	// Networks is a list of requirements for Docker networks.
 	Networks []NetworkRes `yaml:"networks,omitempty"`
@@ -109,7 +109,7 @@ type RequiredRes struct {
 	Services []ServiceRes `yaml:"services,omitempty"`
 }
 
-// ProvidedRes describes a set of resources provided by some aspect of a Pallet package.
+// ProvidedRes describes a set of resources provided by some aspect of a package.
 type ProvidedRes struct {
 	// Listeners is a list of host port listeners.
 	Listeners []ListenerRes `yaml:"listeners,omitempty"`

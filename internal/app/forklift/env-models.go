@@ -13,8 +13,8 @@ type FSEnv struct {
 	FS pallets.PathedFS
 }
 
-// An Env is a Forklift environment, a complete specification of all Pallet package deployments
-// which should be active on a Docker host.
+// An Env is a Forklift environment, a complete specification of all package deployments which
+// should be active on a Docker host.
 type Env struct {
 	// Def is the Forklift environment definition for the environment.
 	Def EnvDef
@@ -55,8 +55,8 @@ type ResolvedDepl struct {
 	Pkg *pallets.FSPkg
 }
 
-// A Depl is a Pallets package deployment, a complete configuration of how a Pallet package is to be
-// deployed on a Docker host.
+// A Depl is a package deployment, a complete configuration of how a package is to be deployed on a
+// Docker host.
 type Depl struct {
 	// Name is the name of the package depoyment.
 	Name string
@@ -64,54 +64,51 @@ type Depl struct {
 	Def DeplDef
 }
 
-// A DeplDef defines a Pallets package deployment.
+// A DeplDef defines a package deployment.
 type DeplDef struct {
-	// Package is the Pallet package path of the package to deploy
+	// Package is the package path of the package to deploy
 	Package string `yaml:"package,omitempty"`
-	// Features is a list of features from the Pallet package which should be enabled in the
-	// deployment.
+	// Features is a list of features from the package which should be enabled in the deployment.
 	Features []string `yaml:"features,omitempty"`
 }
 
 // Requirements
 
-// A PkgReq is a requirement for a Pallet package at a specific version.
+// A PkgReq is a requirement for a package at a specific version.
 type PkgReq struct {
-	// PkgSubdir is the Pallet package subdirectory of the repository which should provide the
-	// required package.
+	// PkgSubdir is the package subdirectory in the pallet which should provide the required package.
 	PkgSubdir string
-	// Repo is the Pallet repository which should provide the required package.
-	Repo RepoReq
+	// Pallet is the pallet which should provide the required package.
+	Pallet PalletReq
 }
 
-// PkgReqLoader is a source of Pallet package requirements.
+// PkgReqLoader is a source of package requirements.
 type PkgReqLoader interface {
 	LoadPkgReq(pkgPath string) (PkgReq, error)
 }
 
 const (
-	// RepoReqsDirName is the directory in a Forklift environment which contains Pallet
-	// repository requirement configurations.
-	// TODO: move repositories to requirements/repositories, to allow for a future
+	// PalletReqsDirName is the directory in a Forklift environment which contains pallet requirement
+	// configurations.
+	// TODO: move pallets to requirements/pallets, to allow for a future
 	// requirements/environments subdirectory.
-	RepoReqsDirName = "repositories"
+	PalletReqsDirName = "pallets"
 )
 
-// A FSRepoReq is a Pallet repository requirement stored at the root of a [fs.FS]
-// filesystem.
-type FSRepoReq struct {
-	// RepoReq is the Pallet repository requirement at the root of the filesystem.
-	RepoReq
-	// FS is a filesystem which contains the repository requirement's contents.
+// A FSPalletReq is a pallet requirement stored at the root of a [fs.FS] filesystem.
+type FSPalletReq struct {
+	// PalletReq is the pallet requirement at the root of the filesystem.
+	PalletReq
+	// FS is a filesystem which contains the pallet requirement's contents.
 	FS pallets.PathedFS
 }
 
-// A RepoReq is a requirement for a specific Pallet repository at a specific version.
-type RepoReq struct {
-	// VCSRepoPath is the VCS repository path of the required repository.
+// A PalletReq is a requirement for a specific pallet at a specific version.
+type PalletReq struct {
+	// VCSRepoPath is the VCS repository path of the required pallet.
 	VCSRepoPath string
-	// RepoSubdir is the Pallet repository subdirectory of the required repository.
-	RepoSubdir string
-	// VersionLock specifies the version of the required repository.
+	// PalletSubdir is the pallet subdirectory of the required pallet.
+	PalletSubdir string
+	// VersionLock specifies the version of the required pallet.
 	VersionLock VersionLock
 }

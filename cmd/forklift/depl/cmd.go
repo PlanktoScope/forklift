@@ -8,12 +8,12 @@ import (
 var Cmd = &cli.Command{
 	Name:    "depl",
 	Aliases: []string{"d", "deployments"},
-	Usage:   "Manages active Pallet package deployments in the local environment",
+	Usage:   "Manages active package deployments in the local environment",
 	Subcommands: []*cli.Command{
 		{
 			Name:     "ls-stack",
 			Category: "Query the active deployment",
-			Aliases:  []string{"ls-s", "list-stacks"},
+			Aliases:  []string{"list-stacks"},
 			Usage:    "Lists running Docker stacks",
 			Action:   lsStackAction,
 		},

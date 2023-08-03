@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
+- Changed name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
+- Changed name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
+- Changed name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
+- Changed name of pallet requirements directory in environmnts from `repositories` to `pallets`.
+- Changed name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
+
+### Removed
+
+- Removed one-letter abbreviations in all aliases.
+
 ## 0.1.10 - 2023-08-03
 
 ### Added

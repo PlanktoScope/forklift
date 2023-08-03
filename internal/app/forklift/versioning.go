@@ -78,12 +78,12 @@ func loadVersionLockDef(fsys pallets.PathedFS, filePath string) (VersionLockDef,
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return VersionLockDef{}, errors.Wrapf(
-			err, "couldn't read version lock config file %s/%s", fsys.Path(), filePath,
+			err, "couldn't read version lock definition file %s/%s", fsys.Path(), filePath,
 		)
 	}
 	config := VersionLockDef{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return VersionLockDef{}, errors.Wrap(err, "couldn't parse repository version config")
+		return VersionLockDef{}, errors.Wrap(err, "couldn't parse version lock definition")
 	}
 	return config, nil
 }
@@ -103,13 +103,13 @@ func (c VersionLockDef) IsVersion() bool {
 func (c VersionLockDef) ParseVersion() (semver.Version, error) {
 	if !strings.HasPrefix(c.BaseVersion, "v") {
 		return semver.Version{}, errors.Errorf(
-			"invalid repo version `%s` doesn't start with `v`", c.BaseVersion,
+			"invalid version `%s` doesn't start with `v`", c.BaseVersion,
 		)
 	}
 	version, err := semver.Parse(strings.TrimPrefix(c.BaseVersion, "v"))
 	if err != nil {
 		return semver.Version{}, errors.Errorf(
-			"repo version `%s` couldn't be parsed as a semantic version", c.BaseVersion,
+			"version `%s` couldn't be parsed as a semantic version", c.BaseVersion,
 		)
 	}
 	return version, nil
@@ -118,10 +118,10 @@ func (c VersionLockDef) ParseVersion() (semver.Version, error) {
 func (c VersionLockDef) Pseudoversion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
 	if c.Commit == "" {
-		return "", errors.Errorf("repo version missing commit hash")
+		return "", errors.Errorf("version missing commit hash")
 	}
 	if c.Timestamp == "" {
-		return "", errors.Errorf("repo version missing commit timestamp")
+		return "", errors.Errorf("version missing commit timestamp")
 	}
 	revisionID := ShortCommit(c.Commit)
 	if c.BaseVersion == "" {
@@ -144,7 +144,7 @@ func (c VersionLockDef) Version() (string, error) {
 	if c.IsVersion() {
 		version, err := c.ParseVersion()
 		if err != nil {
-			return "", errors.Wrap(err, "invalid repo version")
+			return "", errors.Wrap(err, "invalid version")
 		}
 		return version.String(), nil
 	}

@@ -8,16 +8,16 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
-// cache-repo
+// cache-pallet
 
-func cacheRepoAction(c *cli.Context) error {
+func cachePalletAction(c *cli.Context) error {
 	env, cache, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Downloading Pallet repositories specified by the local environment...")
-	changed, err := fcli.DownloadRepos(0, env, cache)
+	fmt.Println("Downloading pallets specified by the local environment...")
+	changed, err := fcli.DownloadPallets(0, env, cache)
 	if err != nil {
 		return err
 	}
@@ -29,25 +29,25 @@ func cacheRepoAction(c *cli.Context) error {
 	return nil
 }
 
-// ls-repo
+// ls-pallet
 
-func lsRepoAction(c *cli.Context) error {
+func lsPalletAction(c *cli.Context) error {
 	env, err := getEnv(c.String("workspace"))
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintEnvRepos(0, env)
+	return fcli.PrintEnvPallets(0, env)
 }
 
-// show-repo
+// show-pallet
 
-func showRepoAction(c *cli.Context) error {
+func showPalletAction(c *cli.Context) error {
 	env, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
 
-	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, env, cache, repoPath)
+	palletPath := c.Args().First()
+	return fcli.PrintPalletInfo(0, env, cache, palletPath)
 }

@@ -26,7 +26,7 @@ var app = &cli.App{
 	// TODO: see if there's a way to get the version from a build tag, so that we don't have to update
 	// this manually
 	Version: "v0.1.10",
-	Usage:   "Manages Pallet repositories and package deployments",
+	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
 		env.Cmd,
 		cache.Cmd,
@@ -36,7 +36,7 @@ var app = &cli.App{
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:    "workspace",
-			Aliases: []string{"w"},
+			Aliases: []string{"ws"},
 			Value:   filepath.Join(defaultWorkspaceBase, ".forklift"),
 			Usage:   "Path of the forklift workspace",
 			EnvVars: []string{"FORKLIFT_WORKSPACE"},

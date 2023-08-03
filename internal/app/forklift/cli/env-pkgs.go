@@ -13,18 +13,18 @@ import (
 // Print
 
 func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	reqs, err := env.LoadFSRepoReqs("**")
+	reqs, err := env.LoadFSPalletReqs("**")
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet repositories in environment %s", env.FS.Path(),
+			err, "couldn't identify pallets in environment %s", env.FS.Path(),
 		)
 	}
 	pkgs := make([]*pallets.FSPkg, 0)
 	for _, req := range reqs {
-		repoCachePath := req.GetCachePath()
-		loaded, err := loader.LoadFSPkgs(path.Join(repoCachePath, "**"))
+		palletCachePath := req.GetCachePath()
+		loaded, err := loader.LoadFSPkgs(path.Join(palletCachePath, "**"))
 		if err != nil {
-			return errors.Wrapf(err, "couldn't load packages from repo cached at %s", repoCachePath)
+			return errors.Wrapf(err, "couldn't load packages from pallet cached at %s", palletCachePath)
 		}
 		pkgs = append(pkgs, loaded...)
 	}
