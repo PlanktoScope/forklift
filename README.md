@@ -1,13 +1,13 @@
 # forklift
-Experimental prototype of tooling to manage local installations of Pallet packages
+A software distribution and configuration management system to simplify maintenance and customization of software in embedded computers at scale.
 
 ## Introduction
 
-A forklift is a tool for moving pallets of packages:
+An industrial forklift is a tool for moving pallets of packages:
 
 ![Photograph of a forklift being used to move stacks of cardboard boxes on a pallet](https://images.rawpixel.com/image_1000/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTExL2ZsNDk3OTgwOTA2MjctaW1hZ2UuanBn.jpg)
 
-This repository provides `forklift`, a Git-based command-line tool for applying, removing, upgrading, and downgrading [Pallet](https://github.com/PlanktoScope/pallets) package deployments on a Docker Swarm Mode environment.
+This repository provides a [reference specification](reference.md) of _Forklift_, a declarative software package management system for uniformly distributing, deploying, and configuring software as Docke Compose applications. This repository also provides `forklift`, a Git-based command-line tool for applying, removing, upgrading, and downgrading Forklift package deployments on a Docker host.
 
 ## Usage
 
