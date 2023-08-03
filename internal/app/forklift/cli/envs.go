@@ -152,39 +152,39 @@ func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 		return err
 	}
 
-	conflicts, err := forklift.CheckDeplConflicts(resolved)
+	conflicts, err := checkDeplConflicts(indent, resolved)
 	if err != nil {
-		return errors.Wrap(err, "couldn't check for conflicts among deployments")
+		return err
+	}
+	_, missingDeps, err := checkDeplDeps(indent, resolved)
+	if err != nil {
+		return err
+	}
+	if len(conflicts) > 0 || len(missingDeps) > 0 {
+		return errors.New("environment failed resource constraint checks")
+	}
+	return nil
+}
+
+func checkDeplConflicts(
+	indent int, depls []*forklift.ResolvedDepl,
+) ([]forklift.DeplConflict, error) {
+	conflicts, err := forklift.CheckDeplConflicts(depls)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't check for conflicts among deployments")
 	}
 	if len(conflicts) > 0 {
 		IndentedPrintln(indent, "Found resource conflicts among deployments:")
 	}
 	for _, conflict := range conflicts {
 		if err = printDeplConflict(1, conflict); err != nil {
-			return errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "couldn't print resource conflicts among deployments %s and %s",
 				conflict.First.Name, conflict.Second.Name,
 			)
 		}
 	}
-
-	_, missingDeps, err := forklift.CheckDeplDeps(resolved)
-	if err != nil {
-		return errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
-	}
-	if len(missingDeps) > 0 {
-		IndentedPrintln(indent, "Found unmet resource dependencies among deployments:")
-	}
-	for _, missingDep := range missingDeps {
-		if err := printMissingDeplDep(1, missingDep); err != nil {
-			return err
-		}
-	}
-
-	if len(conflicts) > 0 || len(missingDeps) > 0 {
-		return errors.New("environment failed constraint checks")
-	}
-	return nil
+	return conflicts, nil
 }
 
 func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
@@ -259,6 +259,23 @@ func printResSource(indent int, source []string) (finalIndent int) {
 		fmt.Println()
 	}
 	return finalIndent
+}
+
+func checkDeplDeps(
+	indent int, depls []*forklift.ResolvedDepl,
+) (satisfied []forklift.SatisfiedDeplDeps, missing []forklift.MissingDeplDeps, err error) {
+	if satisfied, missing, err = forklift.CheckDeplDeps(depls); err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't check dependencies among deployments")
+	}
+	if len(missing) > 0 {
+		IndentedPrintln(indent, "Found unmet resource dependencies among deployments:")
+	}
+	for _, missingDep := range missing {
+		if err := printMissingDeplDep(1, missingDep); err != nil {
+			return nil, nil, err
+		}
+	}
+	return satisfied, missing, nil
 }
 
 func printMissingDeplDep(indent int, deps forklift.MissingDeplDeps) error {
@@ -357,7 +374,7 @@ func computePlan(
 	if err != nil {
 		return nil, nil, err
 	}
-	resolvedDepls, err := forklift.ResolveDepls(env, loader, depls)
+	resolved, err := forklift.ResolveDepls(env, loader, depls)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -371,13 +388,20 @@ func computePlan(
 		return nil, nil, errors.Wrapf(err, "couldn't list active Docker stacks")
 	}
 
-	// TODO: warn on any resource conflicts and missing dependencies
+	conflicts, err := checkDeplConflicts(indent, resolved)
+	if err != nil {
+		return nil, nil, err
+	}
+	satisfiedDeps, missingDeps, err := checkDeplDeps(indent, resolved)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(conflicts) > 0 || len(missingDeps) > 0 {
+		return nil, nil, errors.New("environment failed resource constraint checks")
+	}
 
 	IndentedPrintln(indent, "Resolving resource dependencies among package deployments...")
-	deps, err := resolveDeps(resolvedDepls)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "couldn't resolve resource dependencies")
-	}
+	deps := resolveDeps(satisfiedDeps)
 	IndentedPrintln(indent, "Direct dependencies:")
 	printDigraph(indent+1, deps, "directly depends on")
 	IndentedPrintln(indent, "(In)direct dependencies:")
@@ -392,7 +416,7 @@ func computePlan(
 
 	fmt.Println()
 	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(resolvedDepls, deps, stacks)
+	changes := planReconciliation(resolved, deps, stacks)
 	for _, change := range changes {
 		IndentedPrintf(
 			indent, "Will %s deployment %s as stack %s\n",
@@ -404,11 +428,7 @@ func computePlan(
 
 // resolveDeps returns a map of sets, where each key is the name of a deployment and the
 // the value is the set of deployments providing its required resources.
-func resolveDeps(depls []*forklift.ResolvedDepl) (map[string]map[string]struct{}, error) {
-	satisfiedDeps, _, err := forklift.CheckDeplDeps(depls)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't check for unmet dependencies among deployments")
-	}
+func resolveDeps(satisfiedDeps []forklift.SatisfiedDeplDeps) map[string]map[string]struct{} {
 	deps := make(map[string]map[string]struct{})
 	for _, satisfied := range satisfiedDeps {
 		providers := make(map[string]struct{})
@@ -428,7 +448,7 @@ func resolveDeps(depls []*forklift.ResolvedDepl) (map[string]map[string]struct{}
 		}
 		deps[satisfied.Depl.Name] = providers
 	}
-	return deps, nil
+	return deps
 }
 
 func printDigraph(
