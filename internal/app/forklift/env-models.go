@@ -74,6 +74,9 @@ type DeplDef struct {
 
 // Requirements
 
+// ReqsDirName is the directory in a Forklift environment which contains requirement configurations.
+const ReqsDirName = "requirements"
+
 // A PkgReq is a requirement for a package at a specific version.
 type PkgReq struct {
 	// PkgSubdir is the package subdirectory in the pallet which should provide the required package.
@@ -88,11 +91,9 @@ type PkgReqLoader interface {
 }
 
 const (
-	// PalletReqsDirName is the directory in a Forklift environment which contains pallet requirement
-	// configurations.
-	// TODO: move pallets to requirements/pallets, to allow for a future
-	// requirements/environments subdirectory.
-	PalletReqsDirName = "pallets"
+	// ReqsPalletsDirName is the subdirectory in the requirements directory of a Forklift environment
+	// which contains pallet requirement configurations.
+	ReqsPalletsDirName = "pallets"
 )
 
 // A FSPalletReq is a pallet requirement stored at the root of a [fs.FS] filesystem.

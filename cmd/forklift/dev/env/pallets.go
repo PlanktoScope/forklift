@@ -97,9 +97,12 @@ func addPalletAction(c *cli.Context) error {
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", remoteRelease)
 		}
+		reqsPalletsFS, err := env.GetReqsPalletsFS()
+		if err != nil {
+			return err
+		}
 		palletReqPath := path.Join(
-			env.FS.Path(), "pallets",
-			config.VCSRepoPath, config.PalletSubdir, forklift.VersionLockDefFile,
+			reqsPalletsFS.Path(), config.VCSRepoPath, config.PalletSubdir, forklift.VersionLockDefFile,
 		)
 		marshaled, err := yaml.Marshal(config.VersionLock.Def)
 		if err != nil {

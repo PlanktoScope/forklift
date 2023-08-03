@@ -63,18 +63,29 @@ func (e *FSEnv) Remove() error {
 	return os.RemoveAll(e.FS.Path())
 }
 
+// FSEnv: Requirements
+
+// getReqsFS returns the [fs.FS] in the environment which contains requirement definitions.
+func (e *FSEnv) getReqsFS() (pallets.PathedFS, error) {
+	return e.FS.Sub(ReqsDirName)
+}
+
 // FSEnv: Pallet Requirements
 
-// getPalletReqsFS returns the [fs.FS] in the environment which contains pallet requirement
-// configurations.
-func (e *FSEnv) getPalletReqsFS() (pallets.PathedFS, error) {
-	return e.FS.Sub(PalletReqsDirName)
+// GetReqsPalletsFS returns the [fs.FS] in the environment which contains pallet requirement
+// definitions.
+func (e *FSEnv) GetReqsPalletsFS() (pallets.PathedFS, error) {
+	fsys, err := e.getReqsFS()
+	if err != nil {
+		return nil, err
+	}
+	return fsys.Sub(ReqsPalletsDirName)
 }
 
 // LoadFSPalletReq loads the FSPalletReq from the environment for the pallet with the specified
 // path.
 func (e *FSEnv) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error) {
-	palletsFS, err := e.getPalletReqsFS()
+	palletsFS, err := e.GetReqsPalletsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from environment")
 	}
@@ -89,7 +100,7 @@ func (e *FSEnv) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error) {
 // The search pattern should be a [doublestar] pattern, such as `**`, matching the pallet paths to
 // search for.
 func (e *FSEnv) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
-	palletsFS, err := e.getPalletReqsFS()
+	palletsFS, err := e.GetReqsPalletsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallets in local environment")
 	}
@@ -100,7 +111,7 @@ func (e *FSEnv) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
 
 // LoadPkgReq loads the PkgReq from the environment for the package with the specified package path.
 func (e *FSEnv) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-	palletsFS, err := e.getPalletReqsFS()
+	palletsFS, err := e.GetReqsPalletsFS()
 	if err != nil {
 		return PkgReq{}, errors.Wrap(
 			err, "couldn't open directory for pallet requirements from environment",
