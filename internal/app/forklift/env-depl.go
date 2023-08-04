@@ -15,8 +15,8 @@ import (
 
 // ResolvedDepl
 
-// ResolveDepl loads the Pallet package from the [FSPkgLoader] instance based on the requirements in
-// the provided deployment and the package requirement loader.
+// ResolveDepl loads the package from the [FSPkgLoader] instance based on the requirements in the
+// provided deployment and the package requirement loader.
 func ResolveDepl(
 	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, depl Depl,
 ) (resolved *ResolvedDepl, err error) {
@@ -35,8 +35,8 @@ func ResolveDepl(
 	return resolved, nil
 }
 
-// ResolveDepls loads the Pallet packages from the [FSPkgLoader] instance based on the requirements
-// in the provided deployments and the package requirement loader.
+// ResolveDepls loads the packages from the [FSPkgLoader] instance based on the requirements in the
+// provided deployments and the package requirement loader.
 func ResolveDepls(
 	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, depls []Depl,
 ) (resolved []*ResolvedDepl, err error) {
@@ -65,18 +65,18 @@ func (d *ResolvedDepl) Check() (errs []error) {
 		))
 	}
 	// An empty version is treated as "any version" for this check, so that packages loaded from
-	// overriding repos (where versioning is ignored) will not fail this version check:
-	if d.Pkg.Repo.Version != "" && d.PkgReq.Repo.VersionLock.Version != d.Pkg.Repo.Version {
+	// overriding pallets (where versioning is ignored) will not fail this version check:
+	if d.Pkg.Pallet.Version != "" && d.PkgReq.Pallet.VersionLock.Version != d.Pkg.Pallet.Version {
 		errs = append(errs, errors.Errorf(
 			"resolved package version %s does not match required package version %s",
-			d.Pkg.Repo.Version, d.PkgReq.Repo.VersionLock.Version,
+			d.Pkg.Pallet.Version, d.PkgReq.Pallet.VersionLock.Version,
 		))
 	}
 	return errs
 }
 
-// EnabledFeatures returns a map of the Pallet package features enabled by the deployment's
-// configuration, with feature names as the keys of the map.
+// EnabledFeatures returns a map of the package features enabled by the deployment's configuration,
+// with feature names as the keys of the map.
 func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureSpec, err error) {
 	all := d.Pkg.Def.Features
 	enabled = make(map[string]pallets.PkgFeatureSpec)
@@ -90,7 +90,7 @@ func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureS
 	return enabled, nil
 }
 
-// DisabledFeatures returns a map of the Pallet package features not enabled by the deployment's
+// DisabledFeatures returns a map of the package features not enabled by the deployment's
 // configuration, with feature names as the keys of the map.
 func (d *ResolvedDepl) DisabledFeatures() map[string]pallets.PkgFeatureSpec {
 	all := d.Pkg.Def.Features
@@ -149,40 +149,40 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 	}, nil
 }
 
-// providedListeners returns a slice of all host port listeners provided by the Pallet package
-// deployment, depending on the enabled features, with feature names as the keys of the map.
+// providedListeners returns a slice of all host port listeners provided by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedListeners(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (provided []pallets.AttachedRes[pallets.ListenerRes]) {
 	return d.Pkg.ProvidedListeners(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
-// requiredNetworks returns a slice of all Docker networks required by the Pallet package
-// deployment, depending on the enabled features, with feature names as the keys of the map.
+// requiredNetworks returns a slice of all Docker networks required by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredNetworks(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (required []pallets.AttachedRes[pallets.NetworkRes]) {
 	return d.Pkg.RequiredNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
-// providedNetworks returns a slice of all Docker networks provided by the Pallet package
-// deployment, depending on the enabled features, with feature names as the keys of the map.
+// providedNetworks returns a slice of all Docker networks provided by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedNetworks(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (provided []pallets.AttachedRes[pallets.NetworkRes]) {
 	return d.Pkg.ProvidedNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
-// requiredServices returns a slice of all network services required by the Pallet package
-// deployment, depending on the enabled features, with feature names as the keys of the map.
+// requiredServices returns a slice of all network services required by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredServices(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (required []pallets.AttachedRes[pallets.ServiceRes]) {
 	return d.Pkg.RequiredServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
-// providedServices returns a slice of all network services provided by the Pallet package
-// deployment, depending on the enabled features, with feature names as the keys of the map.
+// providedServices returns a slice of all network services provided by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedServices(
 	enabledFeatures map[string]pallets.PkgFeatureSpec,
 ) (provided []pallets.AttachedRes[pallets.ServiceRes]) {
@@ -303,8 +303,8 @@ func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
 	return depl, nil
 }
 
-// loadDepls loads all Pallet package deployment configurations from the provided base filesystem
-// matching the specified search pattern.
+// loadDepls loads all package deployment configurations from the provided base filesystem matching
+// the specified search pattern.
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
 func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
@@ -312,7 +312,7 @@ func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
 	deplDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't search for Pallet package deployment configs matching %s/%s",
+			err, "couldn't search for package deployment configs matching %s/%s",
 			fsys.Path(), searchPattern,
 		)
 	}

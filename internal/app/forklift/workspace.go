@@ -49,16 +49,32 @@ func (w *FSWorkspace) GetCurrentEnv() (*FSEnv, error) {
 	}, nil
 }
 
-func (w *FSWorkspace) GetCachePath() string {
+func (w *FSWorkspace) getCachePath() string {
 	return path.Join(w.FS.Path(), cacheDirName)
 }
 
-func (w *FSWorkspace) GetCache() (*FSCache, error) {
-	pathedFS, err := w.FS.Sub(cacheDirName)
+func (w *FSWorkspace) getCacheFS() (pallets.PathedFS, error) {
+	fsys, err := w.FS.Sub(cacheDirName)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get cache from workspace")
 	}
-	return &FSCache{
+	return fsys, nil
+}
+
+func (w *FSWorkspace) GetPalletCachePath() string {
+	return path.Join(w.getCachePath(), cachePalletsDirName)
+}
+
+func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
+	fsys, err := w.getCacheFS()
+	if err != nil {
+		return nil, err
+	}
+	pathedFS, err := fsys.Sub(cachePalletsDirName)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get pallets cache from workspace")
+	}
+	return &FSPalletCache{
 		FS: pathedFS,
 	}, nil
 }

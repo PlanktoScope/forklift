@@ -10,11 +10,11 @@ import (
 
 // Print
 
-func PrintPkg(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
-	IndentedPrintf(indent, "Pallet package: %s\n", pkg.Path())
+func PrintPkg(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) {
+	IndentedPrintf(indent, "Package: %s\n", pkg.Path())
 	indent++
 
-	printPkgRepo(indent, cache, pkg)
+	printPkgPallet(indent, cache, pkg)
 	if pallets.CoversPath(cache, pkg.FS.Path()) {
 		IndentedPrintf(indent, "Path in cache: %s\n", pallets.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
@@ -28,20 +28,20 @@ func PrintPkg(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
 	PrintFeatureSpecs(indent, pkg.Def.Features)
 }
 
-func printPkgRepo(indent int, cache forklift.PathedCache, pkg *pallets.FSPkg) {
-	IndentedPrintf(indent, "Provided by Pallet repository: %s\n", pkg.Repo.Path())
+func printPkgPallet(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) {
+	IndentedPrintf(indent, "Provided by pallet: %s\n", pkg.Pallet.Path())
 	indent++
 
 	if pallets.CoversPath(cache, pkg.FS.Path()) {
-		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
+		IndentedPrintf(indent, "Version: %s\n", pkg.Pallet.Version)
 	} else {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Repo.FS.Path(),
+			indent, "External path (replacing cached repository): %s\n", pkg.Pallet.FS.Path(),
 		)
 	}
 
-	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Def.Repository.Description)
-	IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Repo.VCSRepoPath)
+	IndentedPrintf(indent, "Description: %s\n", pkg.Pallet.Def.Pallet.Description)
+	IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Pallet.VCSRepoPath)
 }
 
 func PrintPkgSpec(indent int, spec pallets.PkgSpec) {

@@ -15,8 +15,8 @@ import (
 // FSPkg
 
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
-// In the loaded FSPkg's embedded [Pkg], the Pallet repository path is not initialized, nor is the
-// Pallet package subdirectory initialized, nor is the pointer to the Pallet repository initialized.
+// In the loaded FSPkg's embedded [Pkg], the pallet path is not initialized, nor is the pallet
+// subdirectory initialized, nor is the pointer to the pallet initialized.
 func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 	p = &FSPkg{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
@@ -34,8 +34,8 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 // pattern, modifying each FSPkg with the the optional processor function if a non-nil function is
 // provided. The search pattern should be a [doublestar] pattern, such as `**`, matching package
 // directories to search for.
-// The Pallet repository path, and the Pallet package subdirectory, and the pointer to the Pallet
-// repository are all left uninitialized.
+// The pallet path, and the package subdirectory, and the pointer to the pallet are all left
+// uninitialized.
 func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 	searchPattern = path.Join(searchPattern, PkgDefFile)
 	pkgDefFiles, err := doublestar.Glob(fsys, searchPattern)
@@ -60,29 +60,29 @@ func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 	return pkgs, nil
 }
 
-// AttachFSRepo updates the FSPkg instance's RepoPath, Subdir, Pkg.Repo, and Repo fields based on
-// the provided repo.
-func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
-	p.RepoPath = repo.Def.Repository.Path
-	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
+// AttachFSPallet updates the FSPkg instance's PalletPath, Subdir, Pkg.Pallet, and Pallet fields
+// based on the provided pallet.
+func (p *FSPkg) AttachFSPallet(pallet *FSPallet) error {
+	p.PalletPath = pallet.Def.Pallet.Path
+	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", pallet.FS.Path())) {
 		return errors.Errorf(
-			"package at %s is not within the scope of repo %s at %s",
-			p.FS.Path(), repo.Path(), repo.FS.Path(),
+			"package at %s is not within the scope of pallet %s at %s",
+			p.FS.Path(), pallet.Path(), pallet.FS.Path(),
 		)
 	}
-	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
-	p.Pkg.Repo = &repo.Repo
-	p.Repo = repo
+	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", pallet.FS.Path()))
+	p.Pkg.Pallet = &pallet.Pallet
+	p.Pallet = pallet
 	return nil
 }
 
 // Check looks for errors in the construction of the package.
 func (p *FSPkg) Check() (errs []error) {
-	if p.Repo != nil {
-		if p.Pkg.Repo != &p.Repo.Repo {
+	if p.Pallet != nil {
+		if p.Pkg.Pallet != &p.Pallet.Pallet {
 			errs = append(errs, errors.New(
-				"inconsistent pointers to the repository between the package as a FSPkg and the package "+
-					"as a Pkg",
+				"inconsistent pointers to the pallet between the package as a FSPkg and the package as a"+
+					"Pkg",
 			))
 		}
 	}
@@ -91,7 +91,7 @@ func (p *FSPkg) Check() (errs []error) {
 }
 
 // ComparePkgs returns an integer comparing two [Pkg] instances according to their paths, and their
-// respective repositories' versions. The result will be 0 if the p and q have the same paths and
+// respective pallets' versions. The result will be 0 if the p and q have the same paths and
 // versions; -1 if r has a path which alphabetically comes before the path of s, or if the paths are
 // the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
 // the path of s, or if the paths are the same but r has a lower version than s.
@@ -99,7 +99,7 @@ func ComparePkgs(p, q Pkg) int {
 	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
 		return result
 	}
-	if result := semver.Compare(p.Repo.Version, q.Repo.Version); result != CompareEQ {
+	if result := semver.Compare(p.Pallet.Version, q.Pallet.Version); result != CompareEQ {
 		return result
 	}
 	return CompareEQ
@@ -107,19 +107,19 @@ func ComparePkgs(p, q Pkg) int {
 
 // Pkg
 
-// Path returns the Pallet package path of the Pkg instance.
+// Path returns the package path of the Pkg instance.
 func (p Pkg) Path() string {
-	return path.Join(p.RepoPath, p.Subdir)
+	return path.Join(p.PalletPath, p.Subdir)
 }
 
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
 	// TODO: implement a check method on PkgDef
 	// errs = append(errs, ErrsWrap(p.Def.Check(), "invalid package config")...)
-	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
+	if p.Pallet != nil && p.PalletPath != p.Pallet.Path() {
 		errs = append(errs, errors.Errorf(
-			"repo path %s of package is inconsistent with path %s of attached repo",
-			p.RepoPath, p.Repo.Path(),
+			"pallet path %s of package is inconsistent with path %s of attached pallet",
+			p.PalletPath, p.Pallet.Path(),
 		))
 	}
 	return errs
@@ -132,7 +132,7 @@ func (p Pkg) ResAttachmentSource(parentSource []string) []string {
 }
 
 // ProvidedListeners returns a slice of all host port listeners provided by a deployment of the
-// Pallet package with the specified features enabled.
+// package with the specified features enabled.
 func (p Pkg) ProvidedListeners(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ListenerRes]) {
@@ -153,8 +153,8 @@ func (p Pkg) ProvidedListeners(
 	return provided
 }
 
-// RequiredNetworks returns a slice of all Docker networks required by a deployment of the Pallet
-// package with the specified features enabled.
+// RequiredNetworks returns a slice of all Docker networks required by a deployment of the package
+// with the specified features enabled.
 func (p Pkg) RequiredNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[NetworkRes]) {
@@ -172,8 +172,8 @@ func (p Pkg) RequiredNetworks(
 	return required
 }
 
-// ProvidedNetworks returns a slice of all Docker networks provided by a deployment of the Pallet
-// package with the specified features enabled.
+// ProvidedNetworks returns a slice of all Docker networks provided by a deployment of the package
+// with the specified features enabled.
 func (p Pkg) ProvidedNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[NetworkRes]) {
@@ -194,8 +194,8 @@ func (p Pkg) ProvidedNetworks(
 	return provided
 }
 
-// RequiredServices returns a slice of all network services required by a deployment of the Pallet
-// package with the specified features enabled.
+// RequiredServices returns a slice of all network services required by a deployment of the package
+// with the specified features enabled.
 func (p Pkg) RequiredServices(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[ServiceRes]) {
@@ -213,8 +213,8 @@ func (p Pkg) RequiredServices(
 	return required
 }
 
-// ProvidedServices returns a slice of all network services provided by a deployment of the Pallet
-// package with the specified features enabled.
+// ProvidedServices returns a slice of all network services provided by a deployment of the package
+// with the specified features enabled.
 func (p Pkg) ProvidedServices(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ServiceRes]) {

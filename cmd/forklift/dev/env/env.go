@@ -14,14 +14,14 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context, ensureCache bool) (
-	env *forklift.FSEnv, cache *forklift.LayeredCache, override *forklift.RepoOverrideCache,
+	env *forklift.FSEnv, cache *forklift.LayeredPalletCache, override *forklift.PalletOverrideCache,
 	err error,
 ) {
 	if env, err = getEnv(c.String("cwd")); err != nil {
 		return nil, nil, nil, err
 	}
 	if cache, override, err = getCache(
-		c.String("workspace"), c.StringSlice("repo"), ensureCache,
+		c.String("workspace"), c.StringSlice("pallets"), ensureCache,
 	); err != nil {
 		return nil, nil, nil, err
 	}
@@ -38,14 +38,14 @@ func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
 }
 
 func getCache(
-	wpath string, repos []string, ensureCache bool,
-) (*forklift.LayeredCache, *forklift.RepoOverrideCache, error) {
-	cache := &forklift.LayeredCache{}
-	replacementRepos, err := loadReplacementRepos(repos)
+	wpath string, pallets []string, ensureCache bool,
+) (*forklift.LayeredPalletCache, *forklift.PalletOverrideCache, error) {
+	cache := &forklift.LayeredPalletCache{}
+	replacementPallets, err := loadReplacementPallets(pallets)
 	if err != nil {
 		return nil, nil, err
 	}
-	override, err := forklift.NewRepoOverrideCache(replacementRepos, nil)
+	override, err := forklift.NewPalletOverrideCache(replacementPallets, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,66 +55,65 @@ func getCache(
 	if err != nil {
 		return nil, nil, err
 	}
-	fsCache, err := workspace.GetCache()
-	if err != nil && len(repos) == 0 {
+	fsCache, err := workspace.GetPalletCache()
+	if err != nil && len(pallets) == 0 {
 		return nil, nil, err
 	}
 	cache.Underlay = fsCache
 
-	if (ensureCache || len(repos) == 0) && !fsCache.Exists() {
+	if ensureCache && !fsCache.Exists() {
 		return nil, nil, errors.New(
-			"you first need to cache the repos specified by your environment with " +
-				"`forklift dev env cache-repo`",
+			"you first need to cache the pallets specified by your environment with " +
+				"`forklift dev env cache-pallets`",
 		)
 	}
 	return cache, override, nil
 }
 
-func loadReplacementRepos(fsPaths []string) (repos []*pallets.FSRepo, err error) {
+func loadReplacementPallets(fsPaths []string) (replacements []*pallets.FSPallet, err error) {
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
 		}
 		if !forklift.Exists(replacementPath) {
-			return nil, errors.Errorf("couldn't find repository replacement path %s", replacementPath)
+			return nil, errors.Errorf("couldn't find pallet replacement path %s", replacementPath)
 		}
-		externalRepos, err := pallets.LoadFSRepos(
+		externalPallets, err := pallets.LoadFSPallets(
 			pallets.AttachPath(os.DirFS(replacementPath), replacementPath), "**", nil,
 		)
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)
+			return nil, errors.Wrapf(err, "couldn't list replacement pallets in path %s", replacementPath)
 		}
-		if len(externalRepos) == 0 {
-			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
+		if len(externalPallets) == 0 {
+			return nil, errors.Errorf("no replacement pallets found in path %s", replacementPath)
 		}
-		repos = append(repos, externalRepos...)
+		replacements = append(replacements, externalPallets...)
 	}
-	return repos, nil
+	return replacements, nil
 }
 
 func setOverrideCacheVersions(
-	env *forklift.FSEnv, overrideCache *forklift.RepoOverrideCache,
+	env *forklift.FSEnv, overrideCache *forklift.PalletOverrideCache,
 ) error {
-	reqs, err := env.LoadFSRepoReqs("**")
+	reqs, err := env.LoadFSPalletReqs("**")
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify Pallet repository requirements specified by environment %s",
-			env.FS.Path(),
+			err, "couldn't identify pallet requirements specified by environment %s", env.FS.Path(),
 		)
 	}
-	repoVersions := make(map[string]map[string]struct{})
+	palletVersions := make(map[string]map[string]struct{})
 	for _, req := range reqs {
-		repoPath := req.Path()
+		palletPath := req.Path()
 		version := req.VersionLock.Version
-		if _, ok := repoVersions[repoPath]; !ok {
-			repoVersions[repoPath] = make(map[string]struct{})
+		if _, ok := palletVersions[palletPath]; !ok {
+			palletVersions[palletPath] = make(map[string]struct{})
 		}
-		repoVersions[repoPath][version] = struct{}{}
+		palletVersions[palletPath][version] = struct{}{}
 	}
 
-	for repoPath, versions := range repoVersions {
-		overrideCache.SetVersions(repoPath, versions)
+	for palletPath, versions := range palletVersions {
+		overrideCache.SetVersions(palletPath, versions)
 	}
 	return nil
 }

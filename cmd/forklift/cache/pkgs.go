@@ -26,13 +26,13 @@ func lsPkgAction(c *cli.Context) error {
 	// TODO: add a --pattern cli flag for the pattern
 	pkgs, err := cache.LoadFSPkgs("**")
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify Pallet packages")
+		return errors.Wrapf(err, "couldn't identify packages")
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
 		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
 	})
 	for _, pkg := range pkgs {
-		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)
+		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Pallet.Version)
 	}
 	return nil
 }
@@ -52,12 +52,12 @@ func showPkgAction(c *cli.Context) error {
 	pkgPath, version, ok := strings.Cut(versionedPkgPath, "@")
 	if !ok {
 		return errors.Errorf(
-			"Couldn't parse Pallet package path %s as repo_path@version", versionedPkgPath,
+			"Couldn't parse package query %s as package_path@version", versionedPkgPath,
 		)
 	}
 	pkg, err := cache.LoadFSPkg(pkgPath, version)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't find Pallet package %s@%s", pkgPath, version)
+		return errors.Wrapf(err, "couldn't resolve package query %s@%s", pkgPath, version)
 	}
 	fcli.PrintPkg(0, cache, pkg)
 	return nil

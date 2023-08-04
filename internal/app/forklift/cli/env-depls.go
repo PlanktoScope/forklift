@@ -29,7 +29,7 @@ func PrintEnvDepls(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader)
 }
 
 func PrintDeplInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedCache, deplName string,
+	indent int, env *forklift.FSEnv, cache forklift.PathedPalletCache, deplName string,
 ) error {
 	depl, err := env.LoadDepl(deplName)
 	if err != nil {
@@ -60,8 +60,8 @@ func PrintDeplInfo(
 	return nil
 }
 
-func printDepl(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Pallet package deployment: %s\n", depl.Name)
+func printDepl(indent int, cache forklift.PathedPalletCache, depl *forklift.ResolvedDepl) {
+	IndentedPrintf(indent, "Package deployment: %s\n", depl.Name)
 	indent++
 
 	printDeplPkg(indent, cache, depl)
@@ -86,12 +86,12 @@ func printDepl(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDe
 	printFeatures(indent+1, disabledFeatures)
 }
 
-func printDeplPkg(indent int, cache forklift.PathedCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Deploys Pallet package: %s\n", depl.Def.Package)
+func printDeplPkg(indent int, cache forklift.PathedPalletCache, depl *forklift.ResolvedDepl) {
+	IndentedPrintf(indent, "Deploys package: %s\n", depl.Def.Package)
 	indent++
 
 	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
-	printPkgRepo(indent, cache, depl.Pkg)
+	printPkgPallet(indent, cache, depl.Pkg)
 }
 
 func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {

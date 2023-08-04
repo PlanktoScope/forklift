@@ -16,16 +16,16 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/pallets"
 )
 
-// cache-repo
+// cache-plt
 
-func cacheRepoAction(c *cli.Context) error {
+func cachePltAction(c *cli.Context) error {
 	env, cache, _, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Downloading Pallet repositories specified by the development environment...\n")
-	changed, err := fcli.DownloadRepos(0, env, cache.Underlay)
+	fmt.Printf("Downloading pallets specified by the development environment...\n")
+	changed, err := fcli.DownloadPallets(0, env, cache.Underlay)
 	if err != nil {
 		return err
 	}
@@ -34,29 +34,23 @@ func cacheRepoAction(c *cli.Context) error {
 		return nil
 	}
 
-	// TODO: download all Docker images used by packages in the repo - either by inspecting the
-	// Docker stack definitions or by allowing packages to list Docker images used.
-	fmt.Println(
-		// TODO: add a command to check if resource constraints are all satisfied, and show the command
-		// to run for that (`forklift dev env check`)
-		"Done! Next, you might want to run `sudo -E forklift dev env apply`.",
-	)
+	fmt.Println("Done! Next, you might want to run `sudo -E forklift dev env apply`.")
 	return nil
 }
 
-// ls-repo
+// ls-plt
 
-func lsRepoAction(c *cli.Context) error {
+func lsPltAction(c *cli.Context) error {
 	env, err := getEnv(c.String("cwd"))
 	if err != nil {
 		return err
 	}
-	return fcli.PrintEnvRepos(0, env)
+	return fcli.PrintEnvPallets(0, env)
 }
 
-// show-repo
+// show-plt
 
-func showRepoAction(c *cli.Context) error {
+func showPltAction(c *cli.Context) error {
 	env, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
@@ -65,13 +59,13 @@ func showRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, env, cache, repoPath)
+	palletPath := c.Args().First()
+	return fcli.PrintPalletInfo(0, env, cache, palletPath)
 }
 
-// add-repo
+// add-plt
 
-func addRepoAction(c *cli.Context) error {
+func addPltAction(c *cli.Context) error {
 	env, cache, _, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
@@ -79,7 +73,7 @@ func addRepoAction(c *cli.Context) error {
 
 	remoteReleases := c.Args().Slice()
 	if len(remoteReleases) == 0 {
-		return errors.Errorf("at least one repository must be specified")
+		return errors.Errorf("at least one pallet must be specified")
 	}
 
 	if err = validateRemoteReleases(remoteReleases); err != nil {
@@ -92,32 +86,36 @@ func addRepoAction(c *cli.Context) error {
 
 	fmt.Println()
 	fmt.Println("Resolving version queries...")
-	palletRepoDefs, err := determinePalletRepoDefs(remoteReleases, cache.Underlay.Path())
+	palletDefs, err := determinePalletDefs(remoteReleases, cache.Underlay.Path())
 	if err != nil {
-		return errors.Wrap(err, "couldn't resolve version queries for pallet repos")
+		return errors.Wrap(err, "couldn't resolve version queries for pallets")
 	}
 	fmt.Println()
 	fmt.Printf("Saving configurations to %s...\n", env.FS.Path())
 	for _, remoteRelease := range remoteReleases {
-		config, ok := palletRepoDefs[remoteRelease]
+		config, ok := palletDefs[remoteRelease]
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", remoteRelease)
 		}
-		repoReqPath := path.Join(
-			env.FS.Path(), "repositories", config.VCSRepoPath, config.RepoSubdir, "forklift-repo.yml",
+		reqsPalletsFS, err := env.GetPalletReqsFS()
+		if err != nil {
+			return err
+		}
+		palletReqPath := path.Join(
+			reqsPalletsFS.Path(), config.VCSRepoPath, config.PalletSubdir, forklift.VersionLockDefFile,
 		)
 		marshaled, err := yaml.Marshal(config.VersionLock.Def)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't marshal config for %s", repoReqPath)
+			return errors.Wrapf(err, "couldn't marshal config for %s", palletReqPath)
 		}
-		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
+		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(palletReqPath))); err != nil {
 			return errors.Wrapf(
-				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
+				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(palletReqPath)),
 			)
 		}
 		const perm = 0o644 // owner rw, group r, public r
-		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
-			return errors.Wrapf(err, "couldn't save config to %s", filepath.FromSlash(repoReqPath))
+		if err := os.WriteFile(filepath.FromSlash(palletReqPath), marshaled, perm); err != nil {
+			return errors.Wrapf(err, "couldn't save config to %s", filepath.FromSlash(palletReqPath))
 		}
 	}
 	fmt.Println("Done!")
@@ -136,16 +134,16 @@ func validateRemoteReleases(remoteReleases []string) error {
 
 func splitRemoteRepoRelease(
 	remoteRepoRelease string,
-) (vcsRepoPath, repoSubdir, versionQuery string, err error) {
+) (vcsRepoPath, palletSubdir, versionQuery string, err error) {
 	remote, versionQuery, err := git.ParseRemoteRelease(remoteRepoRelease)
 	if err != nil {
 		return "", "", "", err
 	}
-	vcsRepoPath, repoSubdir, err = pallets.SplitRepoPathSubdir(remote)
+	vcsRepoPath, palletSubdir, err = pallets.SplitRepoPathSubdir(remote)
 	if err != nil {
 		return "", "", "", err
 	}
-	return vcsRepoPath, repoSubdir, versionQuery, nil
+	return vcsRepoPath, palletSubdir, versionQuery, nil
 }
 
 func updateLocalRepoMirrors(remoteReleases []string, cachePath string) error {
@@ -162,9 +160,7 @@ func updateLocalRepoMirrors(remoteReleases []string, cachePath string) error {
 		if err = updateLocalRepoMirror(
 			vcsRepoPath, path.Join(cachePath, vcsRepoPath),
 		); err != nil {
-			return errors.Wrapf(
-				err, "couldn't update local mirror of %s", vcsRepoPath,
-			)
+			return errors.Wrapf(err, "couldn't update local mirror of %s", vcsRepoPath)
 		}
 		updatedRepos[vcsRepoPath] = struct{}{}
 	}
@@ -194,13 +190,13 @@ func updateLocalRepoMirror(remote, cachedPath string) error {
 	return err
 }
 
-func determinePalletRepoDefs(
+func determinePalletDefs(
 	remoteReleases []string, cachePath string,
-) (map[string]forklift.RepoReq, error) {
-	vcsRepoDefs := make(map[string]forklift.RepoReq)
-	palletRepoDefs := make(map[string]forklift.RepoReq)
+) (map[string]forklift.PalletReq, error) {
+	vcsRepoDefs := make(map[string]forklift.PalletReq)
+	palletDefs := make(map[string]forklift.PalletReq)
 	for _, remoteRelease := range remoteReleases {
-		vcsRepoPath, repoSubdir, versionQuery, err := splitRemoteRepoRelease(remoteRelease)
+		vcsRepoPath, palletSubdir, versionQuery, err := splitRemoteRepoRelease(remoteRelease)
 		if err != nil {
 			return nil, err
 		}
@@ -210,45 +206,45 @@ func determinePalletRepoDefs(
 				cachePath, vcsRepoPath, versionQuery,
 			); err != nil {
 				return nil, errors.Wrapf(
-					err, "couldn't resolve version query %s for pallet repo %s/%s",
-					versionQuery, vcsRepoPath, repoSubdir,
+					err, "couldn't resolve version query %s for pallet %s/%s",
+					versionQuery, vcsRepoPath, palletSubdir,
 				)
 			}
 		}
 
 		config := vcsRepoDefs[vcsRepoRelease]
-		config.RepoSubdir = repoSubdir
+		config.PalletSubdir = palletSubdir
 		fmt.Printf("Resolved %s as %+v", remoteRelease, config.VersionLock.Version)
 		if config.VersionLock.Def.BaseVersion != "" {
 			fmt.Printf(", version %s", config.VersionLock.Def.BaseVersion)
 		}
 		fmt.Println()
-		palletRepoDefs[remoteRelease] = config
+		palletDefs[remoteRelease] = config
 	}
-	return palletRepoDefs, nil
+	return palletDefs, nil
 }
 
 func resolveVCSRepoVersionQuery(
 	cachePath, vcsRepoPath, versionQuery string,
-) (forklift.RepoReq, error) {
-	repo := forklift.RepoReq{
+) (forklift.PalletReq, error) {
+	req := forklift.PalletReq{
 		VCSRepoPath: vcsRepoPath,
 	}
 	if versionQuery == "" {
-		return forklift.RepoReq{}, errors.New(
+		return forklift.PalletReq{}, errors.New(
 			"support for empty version queries is not yet implemented!",
 		)
 	}
 	localPath := filepath.FromSlash(path.Join(cachePath, vcsRepoPath))
 	gitRepo, err := git.Open(localPath)
 	if err != nil {
-		return forklift.RepoReq{}, errors.Wrapf(
+		return forklift.PalletReq{}, errors.Wrapf(
 			err, "couldn't open local mirror of %s", vcsRepoPath,
 		)
 	}
 	commit, err := queryRefs(gitRepo, versionQuery)
 	if err != nil {
-		return forklift.RepoReq{}, err
+		return forklift.PalletReq{}, err
 	}
 	if commit == "" {
 		commit, err = gitRepo.GetCommitFullHash(versionQuery)
@@ -257,17 +253,17 @@ func resolveVCSRepoVersionQuery(
 		}
 	}
 	if commit == "" {
-		return forklift.RepoReq{}, errors.Errorf(
+		return forklift.PalletReq{}, errors.Errorf(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
-	if repo.VersionLock.Def, err = lockCommit(gitRepo, commit); err != nil {
-		return forklift.RepoReq{}, err
+	if req.VersionLock.Def, err = lockCommit(gitRepo, commit); err != nil {
+		return forklift.PalletReq{}, err
 	}
-	if repo.VersionLock.Version, err = repo.VersionLock.Def.Version(); err != nil {
-		return forklift.RepoReq{}, err
+	if req.VersionLock.Version, err = req.VersionLock.Def.Version(); err != nil {
+		return forklift.PalletReq{}, err
 	}
-	return repo, nil
+	return req, nil
 }
 
 func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error) {

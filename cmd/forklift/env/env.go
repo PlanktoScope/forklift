@@ -17,7 +17,7 @@ var errMissingEnv = errors.Errorf(
 
 func processFullBaseArgs(
 	c *cli.Context, ensureCache bool,
-) (env *forklift.FSEnv, cache *forklift.FSCache, err error) {
+) (env *forklift.FSEnv, cache *forklift.FSPalletCache, err error) {
 	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return nil, nil, err
@@ -25,13 +25,13 @@ func processFullBaseArgs(
 	if env, err = workspace.GetCurrentEnv(); err != nil {
 		return nil, nil, errMissingEnv
 	}
-	if cache, err = workspace.GetCache(); err != nil {
+	if cache, err = workspace.GetPalletCache(); err != nil {
 		return nil, nil, err
 	}
 	if ensureCache && !cache.Exists() {
 		return nil, nil, errors.New(
-			"you first need to cache the repos specified by your environment with " +
-				"`forklift env cache-repo`",
+			"you first need to cache the pallets specified by your environment with " +
+				"`forklift env cache-pallets`",
 		)
 	}
 	return env, cache, nil
@@ -109,7 +109,7 @@ func cloneAction(c *cli.Context) error {
 			err, "couldn't check out release %s at %s", release, local,
 		)
 	}
-	fmt.Println("Done! Next, you'll probably want to run `forklift env cache-repo`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift env cache-pallets`.")
 	return nil
 }
 
