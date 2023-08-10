@@ -49,6 +49,7 @@ jobs:
           flags: ${{ runner.os }}
 
   release-test:
+    # FIXME: build for macOS on a macOS runner, because CGo is needed due to Docker Compose
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
