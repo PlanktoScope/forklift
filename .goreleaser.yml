@@ -7,14 +7,7 @@ builds:
   main: ./cmd/forklift
   binary: forklift
   env:
-    # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
-    # Compose CLI
-    - >-
-      {{- if eq .Os "darwin" }}
-        CGO_ENABLED=1
-      {{- else }}
-        CGO_ENABLED=0
-      {{- end }}
+    - CGO_ENABLED=0
   targets:
     - linux_amd64_v1
     - linux_arm64
@@ -22,6 +15,20 @@ builds:
     - darwin_amd64_v1
     - darwin_arm64
     - windows_amd64_v1
+  overrides:
+    - goos: darwin
+      goarch: amd64
+      goamd64: v1
+      env:
+        # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
+        # Compose CLI
+        - CGO_ENABLED=1
+    - goos: darwin
+      goarch: arm64
+      env:
+        # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
+        # Compose CLI
+        - CGO_ENABLED=1
 
 archives:
   - id: forklift
