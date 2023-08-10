@@ -7,7 +7,9 @@ builds:
   main: ./cmd/forklift
   binary: forklift
   env:
-    - CGO_ENABLED=0
+    # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
+    # Compose CLI
+    - CGO_ENABLED=1
   targets:
     - linux_amd64_v1
     - linux_arm64
