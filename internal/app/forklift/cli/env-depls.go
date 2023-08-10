@@ -45,7 +45,7 @@ func PrintDeplInfo(
 	printDepl(indent, cache, resolved)
 	indent++
 
-	if resolved.Pkg.Def.Deployment.DefinesStack() {
+	if resolved.Pkg.Def.Deployment.DefinesApp() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker stack:")
 		stackDef, err := loadStackDefinition(resolved.Pkg)

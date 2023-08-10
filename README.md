@@ -85,6 +85,7 @@ The following projects solve related problems with containers, though they make 
 - swarm-pack (an inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages: https://github.com/swarm-pack/swarm-pack
 - SwarmManagement uses a single YAML file for declarative configuration of an entire Docker Swarm: https://github.com/hansehe/SwarmManagement
 - Podman Quadlets enable management of containers, volumes, and networks using declarative systemd units: https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html
+- FetchIt enables Git-based management of containers in Podman: https://github.com/containers/fetchit
 - Projects developing GitOps tools such as ArgoCD, Flux, etc., store container environment configurations as Git repositories but are generally designed for Kubernetes: https://www.gitops.tech/
 
 ## Licensing

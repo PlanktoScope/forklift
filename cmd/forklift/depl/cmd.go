@@ -11,11 +11,18 @@ var Cmd = &cli.Command{
 	Usage:   "Manages active package deployments in the local environment",
 	Subcommands: []*cli.Command{
 		{
-			Name:     "ls-stack",
+			Name:     "ls-app",
 			Category: "Query the active deployment",
-			Aliases:  []string{"list-stacks"},
-			Usage:    "Lists running Docker stacks",
-			Action:   lsStackAction,
+			Aliases:  []string{"list-applications"},
+			Usage:    "Lists running Docker Compose applications",
+			Action:   lsAppAction,
+		},
+		{
+			Name:     "ls-con",
+			Category: "Query the acative deployment",
+			Aliases:  []string{"list-containers"},
+			Usage:    "Lists the containers associated with a package deployment",
+			Action:   lsConAction,
 		},
 		{
 			Name:     "rm",

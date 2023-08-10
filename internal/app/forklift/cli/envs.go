@@ -3,10 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
+	"github.com/docker/compose/v2/pkg/api"
 	ggit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 
@@ -361,10 +361,10 @@ const (
 )
 
 type reconciliationChange struct {
-	Name  string
-	Type  string
-	Depl  *forklift.ResolvedDepl
-	Stack docker.Stack
+	Name string
+	Type string
+	Depl *forklift.ResolvedDepl
+	App  api.Stack
 }
 
 func computePlan(
@@ -383,9 +383,9 @@ func computePlan(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't make Docker API client")
 	}
-	stacks, err := dc.ListStacks(context.Background())
+	apps, err := dc.ListApps(context.Background())
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "couldn't list active Docker stacks")
+		return nil, nil, errors.Wrapf(err, "couldn't list active Docker Compose apps")
 	}
 
 	conflicts, err := checkDeplConflicts(indent, resolved)
@@ -416,12 +416,9 @@ func computePlan(
 
 	fmt.Println()
 	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(resolved, deps, stacks)
+	changes := planReconciliation(resolved, deps, apps)
 	for _, change := range changes {
-		IndentedPrintf(
-			indent, "Will %s deployment %s as stack %s\n",
-			strings.ToLower(change.Type), change.Depl.Name, change.Name,
-		)
+		printReconciliationChange(indent, change)
 	}
 	return changes, dc, nil
 }
@@ -540,55 +537,55 @@ func invertDeps(deps map[string]map[string]struct{}) map[string]map[string]struc
 // planReconciliation produces a list of changes to make on the Docker host based on the desired
 // list of deployments, a transitive closure of dependencies among those deployments, a transitive
 // closure of the deployments depending on each deployment, and a list of
-// Docker stacks describing the current complete state of the Docker host.
+// Docker Compose apps describing the current complete state of the Docker host.
 func planReconciliation(
 	depls []*forklift.ResolvedDepl, deps map[string]map[string]struct{},
-	stacks []docker.Stack,
+	apps []api.Stack,
 ) []reconciliationChange {
 	deplSet := make(map[string]*forklift.ResolvedDepl)
 	for _, depl := range depls {
 		deplSet[depl.Name] = depl
 	}
-	stackSet := make(map[string]docker.Stack)
-	for _, stack := range stacks {
-		stackSet[stack.Name] = stack
+	appSet := make(map[string]api.Stack)
+	for _, app := range apps {
+		appSet[app.Name] = app
 	}
-	stackDeplNames := make(map[string]string)
+	appDeplNames := make(map[string]string)
 
-	changes := make([]reconciliationChange, 0, len(deplSet)+len(stackSet))
+	changes := make([]reconciliationChange, 0, len(deplSet)+len(appSet))
 	for name, depl := range deplSet {
-		stackDeplNames[getStackName(name)] = name
-		definesStack := depl.Pkg.Def.Deployment.DefinesStack()
-		stack, ok := stackSet[getStackName(name)]
+		appDeplNames[getAppName(name)] = name
+		definesApp := depl.Pkg.Def.Deployment.DefinesApp()
+		app, ok := appSet[getAppName(name)]
 		if !ok {
-			if definesStack {
+			if definesApp {
 				changes = append(changes, reconciliationChange{
-					Name: getStackName(name),
+					Name: getAppName(name),
 					Type: addReconciliationChange,
 					Depl: depl,
 				})
 			}
 			continue
 		}
-		if definesStack {
+		if definesApp {
 			changes = append(changes, reconciliationChange{
-				Name:  getStackName(name),
-				Type:  updateReconciliationChange,
-				Depl:  depl,
-				Stack: stack,
+				Name: getAppName(name),
+				Type: updateReconciliationChange,
+				Depl: depl,
+				App:  app,
 			})
 		}
 	}
-	for name, stack := range stackSet {
-		if deplName, ok := stackDeplNames[name]; ok {
-			if depl, ok := deplSet[deplName]; ok && depl.Pkg.Def.Deployment.DefinesStack() {
+	for name, app := range appSet {
+		if deplName, ok := appDeplNames[name]; ok {
+			if depl, ok := deplSet[deplName]; ok && depl.Pkg.Def.Deployment.DefinesApp() {
 				continue
 			}
 		}
 		changes = append(changes, reconciliationChange{
-			Name:  name,
-			Type:  removeReconciliationChange,
-			Stack: stack,
+			Name: name,
+			Type: removeReconciliationChange,
+			App:  app,
 		})
 	}
 
@@ -600,7 +597,7 @@ func planReconciliation(
 	return changes
 }
 
-func getStackName(deplName string) string {
+func getAppName(deplName string) string {
 	return strings.ReplaceAll(deplName, "/", "_")
 }
 
@@ -611,17 +608,49 @@ func getStackName(deplName string) string {
 func compareChanges(
 	r, s reconciliationChange, deps, dependents map[string]map[string]struct{},
 ) int {
-	// Remove old resources first, in case additions/updates would add overlapping resources
+	// Remove old resources first, in case additions/updates would add overlapping resources.
+	if result := compareReconciliationChangesByType(r, s); result != pallets.CompareEQ {
+		return result
+	}
+	// Now r.Depl and s.Depl are either both nil or both non-nil
+	if r.Depl == nil && s.Depl == nil {
+		return compareDeplNames(r.Name, s.Name)
+	}
+
+	// Now r and s are either both removals or both changes/additions
+	if result := compareReconciliationChangesByDeplDeps(r, s, deps); result != pallets.CompareEQ {
+		return result
+	}
+	// Now r and s either are in a circular dependency or have no dependency relationships
+	if result := compareDeplsByDepCounts(
+		r.Depl.Name, s.Depl.Name, deps, dependents,
+	); result != pallets.CompareEQ {
+		return result
+	}
+	return compareDeplNames(r.Depl.Name, s.Depl.Name)
+}
+
+func compareReconciliationChangesByType(r, s reconciliationChange) int {
 	if r.Type == removeReconciliationChange && s.Type != removeReconciliationChange {
 		return pallets.CompareLT
 	}
 	if r.Type != removeReconciliationChange && s.Type == removeReconciliationChange {
 		return pallets.CompareGT
 	}
+	return pallets.CompareEQ
+}
 
-	// Now r and s are either both removals or both changes/additions
-	_, rDependsOnS := deps[r.Depl.Name][s.Depl.Name]
-	_, sDependsOnR := deps[s.Depl.Name][r.Depl.Name]
+func compareReconciliationChangesByDeplDeps(
+	r, s reconciliationChange, deps map[string]map[string]struct{},
+) int {
+	rDependsOnS := false
+	if rDeps, ok := deps[r.Depl.Name]; ok {
+		_, rDependsOnS = rDeps[s.Depl.Name]
+	}
+	sDependsOnR := false
+	if sDeps, ok := deps[s.Depl.Name]; ok {
+		_, sDependsOnR = sDeps[r.Depl.Name]
+	}
 	if rDependsOnS && !sDependsOnR {
 		if r.Type == removeReconciliationChange { // i.e. r and s are both removals
 			return pallets.CompareLT // removal r goes before removal s
@@ -634,13 +663,7 @@ func compareChanges(
 		}
 		return pallets.CompareLT // addition/update r goes before addition/update s
 	}
-	// Now r and s either are in a circular dependency or have no dependency relationships
-	if result := compareDeplsByDepCounts(
-		r.Depl.Name, s.Depl.Name, deps, dependents,
-	); result != pallets.CompareEQ {
-		return result
-	}
-	return compareDeplNames(r.Depl.Name, s.Depl.Name)
+	return pallets.CompareEQ
 }
 
 func compareDeplsByDepCounts(r, s string, deps, dependents map[string]map[string]struct{}) int {
@@ -672,6 +695,20 @@ func compareDeplNames(r, s string) int {
 	return pallets.CompareEQ
 }
 
+func printReconciliationChange(indent int, change reconciliationChange) {
+	if change.Depl == nil {
+		IndentedPrintf(
+			indent, "Will %s Compose app %s (from unknown deployment)\n",
+			strings.ToLower(change.Type), change.Name,
+		)
+		return
+	}
+	IndentedPrintf(
+		indent, "Will %s deployment %s as Compose app %s\n",
+		strings.ToLower(change.Type), change.Depl.Name, change.Name,
+	)
+}
+
 // Apply
 
 func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
@@ -682,7 +719,9 @@ func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 
 	for _, change := range changes {
 		if err := applyReconciliationChange(0, change, dc); err != nil {
-			return errors.Wrapf(err, "couldn't apply '%s' change to stack %s", change.Type, change.Name)
+			return errors.Wrapf(
+				err, "couldn't apply '%s' change to Compose app %s", change.Type, change.Name,
+			)
 		}
 	}
 	return nil
@@ -697,45 +736,45 @@ func applyReconciliationChange(
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
 		IndentedPrintf(
-			indent, "Adding package deployment %s as stack %s...\n", change.Depl.Name, change.Name,
+			indent, "Adding package deployment %s as Compose app %s...\n", change.Depl.Name, change.Name,
 		)
-		if err := deployStack(indent+1, change.Depl.Pkg, change.Name, dc); err != nil {
+		if err := deployApp(indent+1, change.Depl, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
 	case removeReconciliationChange:
-		IndentedPrintf(
-			indent, "Removing package deployment %s as stack %s...\n", change.Depl.Name, change.Name,
-		)
-		if err := dc.RemoveStacks(context.Background(), []string{change.Name}); err != nil {
+		// Note: removeReconciliationChange has a nil Depl field
+		IndentedPrintf(indent, "Removing Compose app %s (unknown deployment)...\n", change.Name)
+		if err := dc.RemoveApps(context.Background(), []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
 	case updateReconciliationChange:
 		IndentedPrintf(
-			indent, "Updating package deployment %s as stack %s...\n", change.Depl.Name, change.Name,
+			indent, "Updating package deployment %s as Compose app %s...\n",
+			change.Depl.Name, change.Name,
 		)
-		if err := deployStack(indent+1, change.Depl.Pkg, change.Name, dc); err != nil {
+		if err := deployApp(indent+1, change.Depl, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
 	}
 }
 
-func deployStack(indent int, cachedPkg *pallets.FSPkg, name string, dc *docker.Client) error {
-	if !cachedPkg.Def.Deployment.DefinesStack() {
-		IndentedPrintln(indent, "No Docker stack to deploy!")
+func deployApp(indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client) error {
+	if !depl.Pkg.Def.Deployment.DefinesApp() {
+		IndentedPrintln(indent, "No Docker Compose app to deploy!")
 		return nil
 	}
 
-	stackDef, err := loadStackDefinition(cachedPkg)
+	appDef, err := docker.LoadAppDefinition(
+		depl.Pkg.FS, name, []string{depl.Pkg.Def.Deployment.DefinitionFile}, map[string]string{},
+	)
 	if err != nil {
 		return err
 	}
-	if err = dc.DeployStack(
-		context.Background(), name, stackDef, docker.NewOutStream(os.Stdout),
-	); err != nil {
-		return errors.Wrapf(err, "couldn't deploy stack '%s'", name)
+	if err = dc.DeployApp(context.Background(), appDef, 0); err != nil {
+		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
 	}
 	return nil
 }

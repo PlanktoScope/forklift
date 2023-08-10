@@ -123,14 +123,14 @@ func sortKeys[Value any](m map[string]Value) (sorted []string) {
 func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
-		return DeplConflict{}, errors.Errorf(
-			"couldn't determine enabled features of deployment %s", d.Name,
+		return DeplConflict{}, errors.Wrapf(
+			err, "couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
 	candidateEnabledFeatures, err := candidate.EnabledFeatures()
 	if err != nil {
-		return DeplConflict{}, errors.Errorf(
-			"couldn't determine enabled features of deployment %s", candidate.Name,
+		return DeplConflict{}, errors.Wrapf(
+			err, "couldn't determine enabled features of deployment %s", candidate.Name,
 		)
 	}
 	return DeplConflict{
@@ -214,16 +214,16 @@ func (d *ResolvedDepl) CheckDeps(
 ) (SatisfiedDeplDeps, MissingDeplDeps, error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
-		return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Errorf(
-			"couldn't determine enabled features of deployment %s", d.Name,
+		return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Wrapf(
+			err, "couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
 	candidateEnabledFeatures := make([]map[string]pallets.PkgFeatureSpec, 0, len(candidates))
 	for _, candidate := range candidates {
 		f, err := candidate.EnabledFeatures()
 		if err != nil {
-			return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Errorf(
-				"couldn't determine enabled features of deployment %s", candidate.Name,
+			return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Wrapf(
+				err, "couldn't determine enabled features of deployment %s", candidate.Name,
 			)
 		}
 		candidateEnabledFeatures = append(candidateEnabledFeatures, f)

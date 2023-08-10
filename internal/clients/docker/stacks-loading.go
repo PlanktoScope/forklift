@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"bytes"
 	"io/fs"
 	"os"
 	"path"
@@ -110,12 +109,6 @@ func loadConfigFile(f fs.FS, filePath string) (types.ConfigFile, error) {
 		Filename: filePath,
 		Config:   config,
 	}, nil
-}
-
-func loadFile(file fs.File) (bytes.Buffer, error) {
-	buf := bytes.Buffer{}
-	_, err := buf.ReadFrom(file)
-	return buf, errors.Wrap(err, "couldn't load file")
 }
 
 func getDictsFrom(configFiles []types.ConfigFile) []map[string]interface{} {

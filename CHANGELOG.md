@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `depl ls-con` command which either lists the containers for the specified package deployment or (if no package deployment name is specified) lists all containers.
+
 ### Changed
 
+- (Breaking change) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers).
 - (Breaking change) Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
 - (Breaking change) Changed name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
 - (Breaking change) Changed name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
