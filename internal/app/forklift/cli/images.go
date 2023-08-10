@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 
-	dct "github.com/docker/cli/cli/compose/types"
+	dct "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -59,11 +60,11 @@ func listRequiredImages(
 			continue
 		}
 
-		stackDef, err := loadStackDefinition(depl.Pkg)
+		appDef, err := loadAppDefinition(depl.Pkg)
 		if err != nil {
 			return nil, err
 		}
-		for _, service := range stackDef.Services {
+		for _, service := range appDef.Services {
 			BulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)
 			if _, ok := images[service.Image]; !ok {
 				images[service.Image] = struct{}{}
@@ -74,13 +75,16 @@ func listRequiredImages(
 	return orderedImages, nil
 }
 
-func loadStackDefinition(pkg *pallets.FSPkg) (*dct.Config, error) {
-	definitionFile := pkg.Def.Deployment.DefinitionFile
-	stackDef, err := docker.LoadStackDefinition(pkg.FS, definitionFile)
+func loadAppDefinition(pkg *pallets.FSPkg) (*dct.Project, error) {
+	appDef, err := docker.LoadAppDefinition(
+		pkg.FS, path.Base(pkg.Path()), pkg.Def.Deployment.DefinitionFiles, nil,
+	)
+	// TODO: also load the docker compose files for all features
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load Docker stack definition from %s/%s", pkg.FS.Path(), definitionFile,
+			err, "couldn't load Docker Compose app definition for a basic deployment of %s",
+			pkg.FS.Path(),
 		)
 	}
-	return stackDef, nil
+	return appDef, nil
 }

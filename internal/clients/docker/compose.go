@@ -73,6 +73,7 @@ func (c *Client) DeployApp(ctx context.Context, app *dct.Project, waitTimeout ti
 		},
 	}
 	return c.Compose.Up(ctx, app, options)
+	// FIXME: Up doesn't seem to prune networks which are no longer needed by the app!
 }
 
 // docker compose down

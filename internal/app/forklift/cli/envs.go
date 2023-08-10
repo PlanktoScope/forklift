@@ -768,7 +768,7 @@ func deployApp(indent int, depl *forklift.ResolvedDepl, name string, dc *docker.
 	}
 
 	appDef, err := docker.LoadAppDefinition(
-		depl.Pkg.FS, name, []string{depl.Pkg.Def.Deployment.DefinitionFile}, map[string]string{},
+		depl.Pkg.FS, name, depl.Pkg.Def.Deployment.DefinitionFiles, nil,
 	)
 	if err != nil {
 		return err

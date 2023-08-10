@@ -190,7 +190,8 @@ package:
 
 deployment:
   name: caddy-ingress
-  definition-file: docker-compose.yml
+  definition-files:
+    - docker-compose.yml
 
 features:
   service-proxy:
@@ -496,22 +497,24 @@ This optional section of the `forklift-package.yml` file specifies the Docker Co
 
 ```yaml
 deployment:
-  definition-file: docker-compose.yml
+  definition-files:
+    - docker-compose.yml
   provides:
     networks:
       - description: Overlay network for the Portainer server to connect to Portainer agents
         name: portainer-agent
 ```
 
-#### `definition-file` field
-This field of the `deployment` section is the filename of a Docker Compose file specifying the Docker Compose application which will be deployed when the package is deployed.
+#### `definition-files` field
+This field of the `deployment` section is an array of the string filenames of one or more Docker Compose files specifying the Docker Compose application which will be deployed when the package is deployed.
 - This field is optional.
-- The file must be a YAML file following the [Docker Compose file specification](https://docs.docker.com/compose/compose-file/).
-- The file must be located in the same directory as the `forklift-package.yml` file.
+- The filenames must be for YAML files following the [Docker Compose file specification](https://docs.docker.com/compose/compose-file/).
+- The files must be located in the same directory as the `forklift-package.yml` file, or in subdirectories.
 - It only makes sense to omit the Docker Compose file from a package if the package also specifies some host resources in the `host` section of the `forklift-package.yml` file; otherwise, the package would do nothing and have no effect.
 - Example:
   ```yaml
-  definition-file: docker-compose.yml
+  definition-files:
+    - docker-compose.yml
   ```
 
 #### `tags` field

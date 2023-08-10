@@ -42,6 +42,9 @@ func LoadAppDefinition(
 		})
 	}
 
+	if env == nil {
+		env = map[string]string{}
+	}
 	project, err := loader.Load(dct.ConfigDetails{
 		ConfigFiles: configs,
 		WorkingDir:  fsys.Path(),

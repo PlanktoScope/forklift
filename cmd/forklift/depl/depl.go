@@ -71,6 +71,8 @@ func rmAction(c *cli.Context) error {
 	sort.Slice(apps, func(i, j int) bool {
 		return apps[i].Name < apps[j].Name
 	})
+	// FIXME: instead of sorting alphabetically, we must sort by dependencies - preferably using
+	// Compose's dependency graph functionality
 
 	names := make([]string, 0, len(apps))
 	for _, app := range apps {

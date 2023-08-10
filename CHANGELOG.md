@@ -15,12 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - (Breaking change) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers).
 - (Breaking change) Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
-- (Breaking change) Changed name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
-- (Breaking change) Changed name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
-- (Breaking change) Changed name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
-- (Breaking change) Changed name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
-- (Breaking change) Changed name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
-- (Breaking change) Changed name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
+- (Breaking change) Changed the name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
+- (Breaking change) Changed the name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
+- (Breaking change) Changed the name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
+- (Breaking change) Changed the way the Docker Compose application is specified in the `deployment` section of a Pallet package definition, from a `definition-file` field for a single string to a `definition-files` field for a list of strings.
+- (Breaking change) Changed the name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
+- (Breaking change) Changed the name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
+- (Breaking change) Changed the name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
 
 ### Removed
 

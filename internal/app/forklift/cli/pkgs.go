@@ -68,7 +68,7 @@ func PrintPkgSpec(indent int, spec pallets.PkgSpec) {
 	}
 	fmt.Println()
 	for _, source := range spec.Sources {
-		BulletedPrintf(indent+1, "%s\n", source)
+		BulletedPrintln(indent+1, source)
 	}
 }
 
@@ -76,7 +76,7 @@ func printMaintainer(indent int, maintainer pallets.PkgMaintainer) {
 	if maintainer.Email != "" {
 		BulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
 	} else {
-		BulletedPrintf(indent, "%s\n", maintainer.Name)
+		BulletedPrintln(indent, maintainer.Name)
 	}
 }
 
@@ -84,13 +84,16 @@ func PrintDeplSpec(indent int, spec pallets.PkgDeplSpec) {
 	IndentedPrintf(indent, "Deployment:\n")
 	indent++
 
-	// TODO: actually display the definition file?
-	IndentedPrintf(indent, "Definition file: ")
-	if len(spec.DefinitionFile) == 0 {
-		fmt.Println("(none)")
+	// TODO: actually display the app definition?
+	IndentedPrintf(indent, "Definition files: ")
+	if len(spec.DefinitionFiles) == 0 {
+		fmt.Printf("(none)")
 		return
 	}
-	fmt.Println(spec.DefinitionFile)
+	fmt.Println()
+	for _, file := range spec.DefinitionFiles {
+		BulletedPrintln(indent+1, file)
+	}
 }
 
 func PrintFeatureSpecs(indent int, features map[string]pallets.PkgFeatureSpec) {
