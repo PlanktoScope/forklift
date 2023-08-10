@@ -12,10 +12,8 @@ builds:
     - linux_amd64_v1
     - linux_arm64
     - linux_arm_7
-    # Because darwin needs CGo and we'd need to run the build in a special Docker image or the macOS
-    # GitHub Actions runner, we'll just not build for darwin at the moment...
-    # - darwin_amd64_v1
-    # - darwin_arm64
+    - darwin_amd64_v1
+    - darwin_arm64
     - windows_amd64_v1
   overrides:
     - goos: darwin
@@ -25,12 +23,18 @@ builds:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
         # Compose CLI
         - CGO_ENABLED=1
+        # These toolchains are the ones provided by the goreleaser-cross Docker image:
+        - CC=o64-clang
+        - CXX=o64-clang++
     - goos: darwin
       goarch: arm64
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
         # Compose CLI
         - CGO_ENABLED=1
+        # These toolchains are the ones provided by the goreleaser-cross Docker image:
+        - CC=oa64-clang
+        - CXX=oa64-clang++
 
 archives:
   - id: forklift

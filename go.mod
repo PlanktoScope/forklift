@@ -193,3 +193,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+// godoc is used by Docker Compose; we need to copy its replace directive to this go.mod file so
+// that `go mod download` works correctly.
+replace github.com/cucumber/godog => github.com/laurazard/godog v0.0.0-20220922095256-4c4b17abdae7

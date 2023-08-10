@@ -1,8 +1,8 @@
 name: build
 
 on:
-  push: 
-    branches: 
+  push:
+    branches:
       - main
   pull_request:
     branches: [ main ]
@@ -26,6 +26,13 @@ jobs:
         uses: magnetikonline/action-golang-cache@v4
         with:
           go-version-file: go.mod
+
+      - name: Setup Docker image cache
+        uses: ScribeMD/docker-cache@0.3.4
+        with:
+          # The Makefile specifies the version of the goreleaser-cross docker image to use, so we
+          # use the Makefile for the hash key.
+          key: docker-${{ runner.os }}-${{ hashFiles('Makefile') }}
 
       - name: Build
         run: make ci
