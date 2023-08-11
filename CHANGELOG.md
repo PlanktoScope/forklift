@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers).
+- (Breaking change) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers). Note that this causes the compiled binaries to approximately double in size, from ~20-25 MB (on linux_amd64) to ~50-60 MB, because of all the unnecessary dependencies pulled in by the `github.comdocker/compose/v2` package; similarly, the compressed archives for the binaries double in size, from ~8 MB to ~17 MB. Hopefully we can return to more reasonable uncompressed binary sizes in the future.
 - (Breaking change) Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
 - (Breaking change) Changed the name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
 - (Breaking change) Changed the name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
