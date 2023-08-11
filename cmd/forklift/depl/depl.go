@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -11,23 +12,46 @@ import (
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 )
 
-// ls-stack
+// ls-app
 
-func lsStackAction(c *cli.Context) error {
+func lsAppAction(c *cli.Context) error {
 	client, err := docker.NewClient()
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
 
-	stacks, err := client.ListStacks(context.Background())
+	apps, err := client.ListApps(context.Background())
 	if err != nil {
-		return errors.Wrap(err, "couldn't list running Docker stacks")
+		return errors.Wrap(err, "couldn't list running Docker Compose apps")
 	}
-	sort.Slice(stacks, func(i, j int) bool {
-		return stacks[i].Name < stacks[j].Name
+	sort.Slice(apps, func(i, j int) bool {
+		return apps[i].Name < apps[j].Name
 	})
-	for _, stack := range stacks {
-		fmt.Printf("%s\n", stack.Name)
+	for _, app := range apps {
+		fmt.Printf("%+v\n", app.Name)
+	}
+	return nil
+}
+
+// ls-con
+
+func lsConAction(c *cli.Context) error {
+	client, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+
+	deplName := c.Args().Get(0)
+	deplName = strings.ReplaceAll(deplName, "/", "_")
+	containers, err := client.ListContainers(context.Background(), deplName)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list Docker containers for package deployment %s", deplName)
+	}
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].Names[0] < containers[j].Names[0]
+	})
+	for _, container := range containers {
+		fmt.Printf("%s\n", strings.TrimPrefix(container.Names[0], "/"))
 	}
 	return nil
 }
@@ -40,21 +64,23 @@ func rmAction(c *cli.Context) error {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
 
-	stacks, err := client.ListStacks(context.Background())
+	apps, err := client.ListApps(context.Background())
 	if err != nil {
-		return errors.Wrap(err, "couldn't list running Docker stacks")
+		return errors.Wrap(err, "couldn't list running Docker Compose apps")
 	}
-	sort.Slice(stacks, func(i, j int) bool {
-		return stacks[i].Name < stacks[j].Name
+	sort.Slice(apps, func(i, j int) bool {
+		return apps[i].Name < apps[j].Name
 	})
+	// FIXME: instead of sorting alphabetically, we must sort by dependencies - preferably using
+	// Compose's dependency graph functionality
 
-	stackNames := make([]string, 0, len(stacks))
-	for _, stack := range stacks {
-		stackNames = append(stackNames, stack.Name)
+	names := make([]string, 0, len(apps))
+	for _, app := range apps {
+		names = append(names, app.Name)
 	}
-	if err := client.RemoveStacks(context.Background(), stackNames); err != nil {
+	if err := client.RemoveApps(context.Background(), names); err != nil {
 		return errors.Wrap(
-			err, "couldn't fully remove all stacks (remaining resources must be manually removed)",
+			err, "couldn't fully remove all apps (remaining resources must be manually removed)",
 		)
 	}
 	fmt.Println("Done!")

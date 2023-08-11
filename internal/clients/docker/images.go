@@ -25,6 +25,8 @@ type Image struct {
 	Inspect    dt.ImageInspect
 }
 
+// docker image ls
+
 func (c *Client) ListImages(ctx context.Context, matchName string) ([]Image, error) {
 	listOptions := dt.ImageListOptions{}
 	if matchName != "" {

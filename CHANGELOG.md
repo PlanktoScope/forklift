@@ -7,19 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.2.0 - 2023-08-11
+
+### Added
+
+- Added `depl ls-con` command which either lists the containers for the specified package deployment or (if no package deployment name is specified) lists all containers.
+
 ### Changed
 
+- (Breaking change) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers). Note that this causes the compiled binaries to approximately double in size, from ~20-25 MB (on linux_amd64) to ~50-60 MB, because of all the unnecessary dependencies pulled in by the `github.comdocker/compose/v2` package; similarly, the compressed archives for the binaries double in size, from ~8 MB to ~17 MB. Hopefully we can return to more reasonable uncompressed binary sizes in the future.
 - (Breaking change) Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
-- (Breaking change) Changed name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
-- (Breaking change) Changed name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
-- (Breaking change) Changed name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
-- (Breaking change) Changed name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
-- (Breaking change) Changed name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
-- (Breaking change) Changed name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
+- (Breaking change) Changed the name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
+- (Breaking change) Changed the name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
+- (Breaking change) Changed the name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
+- (Breaking change) Changed the way the Docker Compose application is specified in the `deployment` section of a Pallet package definition, from a `definition-file` field for a single string to a `definition-files` field for a list of strings.
+- (Breaking change) Changed the name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
+- (Breaking change) Changed the name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
+- (Breaking change) Changed the name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
 
 ### Removed
 
 - (Breaking change) Removed one-letter abbreviations in all aliases.
+- (Breaking change) Temporarily removed the builds for macOS because CGo is needed for macOS and it would be annoying to make that work right now.
 
 ## 0.1.10 - 2023-08-03
 

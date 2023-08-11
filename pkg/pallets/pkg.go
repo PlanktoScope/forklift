@@ -272,9 +272,10 @@ func (s PkgDeplSpec) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "deployment specification")
 }
 
-// DefinesStack determines whether the PkgDeplSpec instance defines a Docker stack to be deployed.
-func (s PkgDeplSpec) DefinesStack() bool {
-	return s.DefinitionFile != ""
+// DefinesApp determines whether the PkgDeplSpec instance defines a Docker Compose app to be
+// deployed.
+func (s PkgDeplSpec) DefinesApp() bool {
+	return len(s.DefinitionFiles) > 0 && s.DefinitionFiles[0] != ""
 }
 
 // PkgFeatureSpec

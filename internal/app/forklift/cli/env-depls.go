@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	dct "github.com/docker/cli/cli/compose/types"
+	dct "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -45,18 +45,18 @@ func PrintDeplInfo(
 	printDepl(indent, cache, resolved)
 	indent++
 
-	if resolved.Pkg.Def.Deployment.DefinesStack() {
+	if resolved.Pkg.Def.Deployment.DefinesApp() {
 		fmt.Println()
-		IndentedPrintln(indent, "Deploys with Docker stack:")
-		stackDef, err := loadStackDefinition(resolved.Pkg)
+		IndentedPrintln(indent, "Deploys with Docker Compose app:")
+		appDef, err := loadAppDefinition(resolved.Pkg)
 		if err != nil {
 			return err
 		}
-		printDockerStackDef(indent+1, *stackDef)
+		printDockerAppDef(indent+1, appDef)
 	}
 
-	// TODO: print the state of the Docker stack associated with deplName - or maybe that should be
-	// a `forklift depl show-d deplName` command instead?
+	// TODO: print the state of the Docker Compose app associated with deplName - or maybe that should
+	// be a `forklift depl show-d deplName` command instead?
 	return nil
 }
 
@@ -109,12 +109,12 @@ func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {
 	}
 }
 
-func printDockerStackDef(indent int, stackDef dct.Config) {
-	printDockerStackServices(indent, stackDef.Services)
+func printDockerAppDef(indent int, appDef *dct.Project) {
+	printDockerAppServices(indent, appDef.Services)
 	// TODO: also print networks, volumes, etc.
 }
 
-func printDockerStackServices(indent int, services []dct.ServiceConfig) {
+func printDockerAppServices(indent int, services []dct.ServiceConfig) {
 	if len(services) == 0 {
 		return
 	}
