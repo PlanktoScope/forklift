@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.2.0 - 2023-08-11
+
 ### Added
 
 - Added `depl ls-con` command which either lists the containers for the specified package deployment or (if no package deployment name is specified) lists all containers.
