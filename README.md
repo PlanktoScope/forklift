@@ -1,5 +1,8 @@
 # forklift
-A software distribution and configuration management system to simplify maintenance and customization of software in embedded computers at scale.
+
+A GitOps-inspired software distribution and configuration system for operating customizable scientific instruments at scale.
+
+Note: this is still an experimental prototype and is not yet ready for general use.
 
 ## Introduction
 
@@ -7,7 +10,7 @@ An industrial forklift is a tool for moving pallets of packages:
 
 ![Photograph of a forklift being used to move stacks of cardboard boxes on a pallet](https://images.rawpixel.com/image_1000/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDIyLTExL2ZsNDk3OTgwOTA2MjctaW1hZ2UuanBn.jpg)
 
-This repository provides a [reference specification](reference.md) of _Forklift_, a declarative software package management system for uniformly distributing, deploying, and configuring software as Docke Compose applications. This repository also provides `forklift`, a Git-based command-line tool for applying, removing, upgrading, and downgrading Forklift package deployments on a Docker host.
+This repository provides a [reference specification](reference.md) of _Forklift_, a declarative software package management system for uniformly distributing, deploying, and configuring software as Docker Compose applications, mean to simplify deployment of software distributions on PlanktoScopes and other networked scientific instruments which may be operated as cattle (i.e. interchangeable units from a large, uniform pool of machines) or pets (i.e. with a custom unique configuration per machine). This repository also provides `forklift`, a Git-based command-line tool for applying, removing, upgrading, and downgrading Forklift package deployments on a Docker host.
 
 ## Usage
 

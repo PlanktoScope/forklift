@@ -76,7 +76,13 @@ build: install
 release: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --clean
 release: install
 	$(call print-target)
-	goreleaser --clean
+	docker run \
+		--rm \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/$(PACKAGE_NAME) \
+		-w /go/src/$(PACKAGE_NAME) \
+		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		--clean
 
 .PHONY: run
 run: ## go run
