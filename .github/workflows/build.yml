@@ -27,13 +27,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Setup Docker image cache
-        uses: ScribeMD/docker-cache@0.3.4
-        with:
-          # The Makefile specifies the version of the goreleaser-cross docker image to use, so we
-          # use the Makefile for the hash key.
-          key: docker-${{ runner.os }}-${{ hashFiles('Makefile') }}
-
       - name: Build
         run: make ci
 
@@ -56,7 +49,6 @@ jobs:
           flags: ${{ runner.os }}
 
   release-test:
-    # FIXME: build for macOS on a macOS runner, because CGo is needed due to Docker Compose
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
