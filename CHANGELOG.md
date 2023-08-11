@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.2.2 - 2023-08-11
+
+### Fixed
+
+- Updated the Makefile for the `make release` target to provide the `GITHUB_TOKEN` environment variable to the `goreleaser-cross` Docker container used for that Makefile target.
+
 ## 0.2.1 - 2023-08-11
 
 ### Fixed
 
-- Updated the Makefile for the `make release` target to also use the `goreleaser-cross` docker image which is used for the `make build` target.
+- Updated the Makefile for the `make release` target to also use the `goreleaser-cross` Docker image which is used for the `make build` target.
 
 ## 0.2.0 - 2023-08-11
 
