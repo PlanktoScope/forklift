@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bmatcuk/doublestar/v4 v4.6.0
-	github.com/compose-spec/compose-go v1.17.0
+	github.com/compose-spec/compose-go v1.18.2
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/compose/v2 v2.20.2
 	github.com/docker/distribution v2.8.2+incompatible
