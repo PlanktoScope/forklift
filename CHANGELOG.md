@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- (Breaking change) Renamed "Forklift pallet"/"pallet" to "Forklift repository"/"repository". All commands now use `repo` instead of `plt`. This partially reverts a change made in 0.2.0.
+- (Breaking change) Changed the name of repository definition files from `forklift-pallet.yml` to `forklift-repository.yml`. This partially reverts a change made in 0.2.0.
+- (Breaking change) Changed the name of the repository specification section in the repository definition file from `pallet` to `repository`. This reverts a change made in 0.2.0.
+- (Breaking change) Changed the name of the repository requirements directory in environments from `requirements/pallets` to `requirements/repositories`. This partially reverts a change made in 0.2.0.
+- (Breaking change) Changed the name of the repository cache directory in the workspace from `cache` to `cache/repositories`. This partially reverts a change made in 0.2.0.
+
 ## 0.2.2 - 2023-08-11
 
 ### Fixed
