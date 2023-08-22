@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // Print
@@ -18,18 +18,14 @@ func PrintEnvDepls(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader)
 	if err != nil {
 		return err
 	}
-	resolved, err := forklift.ResolveDepls(env, loader, depls)
-	if err != nil {
-		return err
-	}
-	for _, depl := range resolved {
+	for _, depl := range depls {
 		IndentedPrintf(indent, "%s\n", depl.Name)
 	}
 	return nil
 }
 
 func PrintDeplInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedPalletCache, deplName string,
+	indent int, env *forklift.FSEnv, cache forklift.PathedRepoCache, deplName string,
 ) error {
 	depl, err := env.LoadDepl(deplName)
 	if err != nil {
@@ -60,7 +56,7 @@ func PrintDeplInfo(
 	return nil
 }
 
-func printDepl(indent int, cache forklift.PathedPalletCache, depl *forklift.ResolvedDepl) {
+func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) {
 	IndentedPrintf(indent, "Package deployment: %s\n", depl.Name)
 	indent++
 
@@ -86,15 +82,15 @@ func printDepl(indent int, cache forklift.PathedPalletCache, depl *forklift.Reso
 	printFeatures(indent+1, disabledFeatures)
 }
 
-func printDeplPkg(indent int, cache forklift.PathedPalletCache, depl *forklift.ResolvedDepl) {
+func printDeplPkg(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) {
 	IndentedPrintf(indent, "Deploys package: %s\n", depl.Def.Package)
 	indent++
 
 	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
-	printPkgPallet(indent, cache, depl.Pkg)
+	printPkgRepo(indent, cache, depl.Pkg)
 }
 
-func printFeatures(indent int, features map[string]pallets.PkgFeatureSpec) {
+func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {
 	orderedNames := make([]string, 0, len(features))
 	for name := range features {
 		orderedNames = append(orderedNames, name)

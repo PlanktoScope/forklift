@@ -5,13 +5,14 @@ This document is a detailed reference for *Forklift*, the package management sys
 
 ## Introduction
 
-Forklift is a declarative software package management system for uniformly distributing, deploying, and configuring software as [Docker Compose applications](https://docs.docker.com/compose/) on single-host Docker environments. Its design is heavily inspired by the Go programming language's module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of Forklift are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
+Forklift is a declarative software package management system for uniformly distributing, deploying, and configuring software as [Docker Compose applications](https://docs.docker.com/compose/) on Docker hosts. Its design is heavily inspired by the Go programming language's module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of Forklift are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
 
-## Pallets, packages, and versions
 
-A Forklift *pallet* is a collection of software configuration packages which are tested, released, distributed, and upgraded together. Pallets are how PlanktoScopes manage software installations and configurations. Pallets may be downloaded directly from Git repositories hosted on GitHub. A pallet is identified by a [*pallet path*](#pallet-paths), which is declared in a `forklift-pallet.yml` file. The *pallet root directory* is the directory that contains the pallet's `forklift-pallet.yml` file.
+## Repositories, packages, and versions
 
-A Forklift *package* is a configuration of a software application which can be deployed on a Docker host. Each package within a pallet specifies the prerequisites and consequences of its deployment on the host. Typically, a package declares some or all of the following:
+A Forklift *repository* is a collection of software configuration packages which are tested, released, distributed, and upgraded together. Packages are how PlanktoScopes manage software installations and configurations. A Forklift repository is just a Git repository hosted at a stable location on the internet (e.g. on GitHub), with a special configuration file declaring the repository. A repository is identified by a [*repository path*](#repository-paths), which is declared in a `forklift-repository.yml` file at the root of the repository.
+
+A Forklift *package* is a configuration of a software application which can be deployed on a Docker host. Each package within a repository specifies the prerequisites and consequences of its deployment on the host. Typically, a package declares some or all of the following:
 
 - A Docker Compose application which will be deployed on the Docker host.
 - A set of optional [*features*](#package-features) which may be enabled for the deployment. Features control the functionalities or behavior of the *package deployment*, which is fully and uniquely specified by declaring the name of the deployment, the package to deploy, and the features to enable in the deployment. Thus, a single package may be instantiated in multiple distinct deployments (each with different configurations) on a Docker host. Features work by modifying the specification of the Docker Compose file.
@@ -19,20 +20,13 @@ A Forklift *package* is a configuration of a software application which can be d
 
 All of this information is declared in a `forklift-package.yml` file. The *package root directory* is the directory that contains the package's `forklift-package.yml` file.
 
-### Pallet paths
-A *pallet path* is the canonical name for a pallet, declared with the `path` field in the pallet's `forklift-pallet.yml` file. A pallet's path is the prefix for the package paths of packages provided by the pallet.
+### Repository paths
+A *repository path* is the canonical name for a Forklift repository, declared with the `path` field in the repository's `forklift-repository.yml` file. A repository's path is the prefix for the package paths of packages provided by the repository.
 
-A pallet path should communicate both what the pallet does and where to find it. Typically, a pallet path consists of a GitHub repository root path followed either by a subdirectory (if the collection contains multiple repositories) or by nothing at all (if the GitHub repository is a single pallet). `github.com/PlanktoScope/pallets/core` is an example of a pallet path in a GitHub repository with multiple pallets, while `github.com/PlanktoScope/forklift` is an example of a pallet path in a GitHub repository with a single pallet.
-
-- The *GitHub repository root path* is the portion of the pallet path that corresponds to the root directory of the GitHub repository where the pallet is maintained.
-  - As an example, the pallet `github.com/PlanktoScope/pallets/core` is under the GitHub repository root path `github.com/PlanktoScope/pallets`
-  - As another example, the pallet `github.com/PlanktoScope/forklift` is under the GitHub repository root path `github.com/PlanktoScope/forklift`.
-- If the pallet is not defined in the GitHub repository's root directory, the *pallet subdirectory* is the part of the pallet path that names the directory.
-  - As an example, the pallet `github.com/PlanktoScope/pallets/core` is in the `core` subdirectory of the GitHub repository with root path `github.com/PlanktoScope/pallets`, so it has the pallet subdirectory `core`, which in turn is the pallet's root directory.
-  - As another example, the pallet `github.com/PlanktoScope/forklift` is defined in the root directory of the GitHub repository `github.com/PlanktoScope/forklift`, so it has no pallet subdirectory, and the GitHub repository's root directory is also the pallet's root directory.
+A repository path should communicate both what the repository does and where to find it. A Forklift repository path is just the path of the Git repository which contains the Forklift repository. `github.com/PlanktoScope/device-pkgs` is an example of a repository path.
 
 ### Versions
-A *version* is a Git tag which identifies an immutable snapshot of all pallets in a GitHub repository and all packages in each pallet; thus, all pallets in any single commit of a GitHub repository will have always have identical versions, and all packages in a GitHub repository will always have the same version for a given Git commit. A version may be either a release or a pre-release. Once a Git tag is created, it should not be deleted or changed to a different revision. Versions should be authenticated to ensure safe, repeatable deployments. If a tag is modified, clients may see a security error when downloading it.
+A *version* is a Git tag which identifies an immutable snapshot of a repository and all packages in the repository; thus, all packages in any single commit of a repository will have always have identical versions, and all packages in a repository will always have the same version for a given Git commit. A version may be either a release or a pre-release. Once a Git tag is created, it should not be deleted or changed to a different revision. Versions should be authenticated to ensure safe, repeatable deployments. If a tag is modified, clients may see a security error when downloading it.
 
 Each version starts with the letter `v`, followed by either a semantic version or a calendar version. The [Semantic Versioning 2.0.0 specification](https://semver.org/spec/v2.0.0.html) expains how semantic versions should be formatted, interpreted, and compared; the [Calendar Versioning reference](https://calver.org/) describes a variety of ways that calendar versions may be constructed, but any calendar versioning scheme used must meet the following requirements:
 
@@ -41,7 +35,8 @@ Each version starts with the letter `v`, followed by either a semantic version o
 - The calendar version must conform to the semantic versioning specifications for precedence, so that versions can be compared and sequentially ordered.
 
 ### Package paths
-The path of a package is the pallet path joined with the subdirectory (relative to the pallet root) which contains the package's `forklift-package.yml` file. That subdirectory is the *package root directory*. For example, the pallet `github.com/PlanktoScope/pallets/core` contains a Forklift package in the subdirectory `infra/caddy-ingress`. The `infra/caddy-ingress` directory contains a `forklift-package.yml` file and thus is the root directory of a package which has a package path of `github.com/PlanktoScope/pallets/core/infra/caddy-ingress`. Note that the package path cannot be resolved as a web page URL (so for example <https://github.com/PlanktoScope/pallets/core/infra/caddy-ingress> gives a HTTP 404 Not Found error), because the package path is only resolvable in the context of a specific GitHub repository version.
+The path of a package is the repository path joined with the subdirectory (relative to the repository root) which contains the package's `forklift-package.yml` file. That subdirectory is the *package root directory*. For example, the repository `github.com/PlanktoScope/device-pkgs` contains a Forklift package in the subdirectory `core/infra/caddy-ingress`. The `core/infra/caddy-ingress` directory contains a `forklift-package.yml` file and thus is the root directory of a package which has a package path of `github.com/PlanktoScope/device-pkgs/core/infra/caddy-ingress`. Note that the package path is not necessarily resolveable as a web page URL (so for example <https://github.com/PlanktoScope/device-pkgs/core/infra/caddy-ingress> gives a HTTP 404 Not Found error), because the package path is only resolvable in the context of a specific GitHub repository version.
+
 
 ## Package deployments and constraints
 
@@ -50,8 +45,8 @@ Usually, multiple package deployments are simultaneously active on a Docker host
 - Adding new package deployments
 - Removing existing package deployments
 - Modifying the enabled features of existing package deployments
-- Upgrading the versions of the pallets providing deployed packages
-- Downgrading the versions of the pallets providing deployed packages
+- Upgrading the versions of the repositories providing deployed packages
+- Downgrading the versions of the repositories providing deployed packages
 
 Each such operation will modify the set of all active package deployments on the Docker host, and it will succeed if (and only if) all of the following constraints will be satisfied by the resulting set of all package deployments:
 
@@ -82,7 +77,7 @@ A package defines a set of named features in its `forklift-package.yml` metadata
 
 ### Versioning with constraints and features
 
-Usually, the following changes to a package are backwards-incompatible, in which case they will require incrementing the major component of the semantic version of the pallet providing that package, if pallet follows semantic versioning and the major component of the semantic version was already nonzero:
+Usually, the following changes to a package are backwards-incompatible, in which case they will require incrementing the major component of the semantic version of the repository providing that package, if the repository follows semantic versioning and the major component of the semantic version was already nonzero:
 
 - Changing the name to use for deploying the package
 - Making changes which may introduce conflicts between provided resources, for certain combinations of package deployments:
@@ -113,7 +108,7 @@ Usually, the following changes to a package are backwards-incompatible, in which
   - Removing a previously-provided functionality from the interface
 - Making a change to any user interfaces provided or by that package which would probably break users' existing mental models of how to use the interface.
 
-The following changes to a package are usually backwards-compatible, in which case they would only require incrementing the minor component of the semantic version of the pallet providing that package, if the pallet follows semantic versioning:
+The following changes to a package are usually backwards-compatible, in which case they would only require incrementing the minor component of the semantic version of the repository providing that package, if the repository follows semantic versioning:
 
 - Adding a new optional feature
 - Removing a resource requirement from any optional feature
@@ -121,58 +116,60 @@ The following changes to a package are usually backwards-compatible, in which ca
   - Removing a requirement from the interface
   - Adding new optional functionality to the interface
 
-It is the reponsibility of the package maintainer to document the package's external interfaces, to increment the relevant components of a pallet's semantic or calendar version as needed, and to help users migrate smoothly across version upgrades and downgrades.
+It is the reponsibility of the package maintainer to document the package's external interfaces, to increment the relevant components of a repository's semantic or calendar version as needed, and to help users migrate smoothly across version upgrades and downgrades.
 
-## Pallet definition
 
-The definition of a pallet is stored in a YAML file named `forklift-pallet.yml` in the pallet's root directory. Here is an example of a `forklift-pallet.yml` file:
+## Repository definition
+
+The definition of a repository is stored in a YAML file named `forklift-repository.yml` in the repository's root directory. Here is an example of a `forklift-repository.yml` file:
 
 ```yaml
-pallet:
-  path: github.com/PlanktoScope/pallets/core
-  description: Officially-maintained open-source PlanktoScope packages
+repository:
+  path: github.com/PlanktoScope/device-pkgs
+  description: Packages for the PlanktoScope software distribution
   readme-file: README.md
 ```
 
-Currently, all fields in the pallet metadata file are under a `pallet` section.
+Currently, all fields in the repository metadata file are under a `repository` section.
 
-### `pallet` section
+### `repository` section
 
-This section of the `forklift-pallet.yml` file contains some basic metadata to help describe and identify the pallet. Here is an example of a `pallet` section:
+This section of the `forklift-repository.yml` file contains some basic metadata to help describe and identify the repository. Here is an example of a `repository` section:
 
 ```yaml
-pallet:
-  path: github.com/PlanktoScope/pallets/testing
-  description: Unstable PlanktoScope packages for testing
+repository:
+  path: github.com/PlanktoScope/device-pkgs
+  description: Packages for the PlanktoScope software distribution
   readme-file: README.md
 ```
 
 #### `path` field
-This field of the `pallet` section is the pallet path.
+This field of the `repository` section is the repository path.
 - This field is required.
 - Example:
   ```yaml
-  path: github.com/PlanktoScope/pallets/community
+  path: github.com/PlanktoScope/device-pkgs
   ```
 
 #### `description` field
-This field of the `pallet` section is a short (one-sentence) description of the pallet to be shown to users.
+This field of the `repository` section is a short (one-sentence) description of the repository to be shown to users.
 - This field is required.
 - Example:
   ```yaml
-  description: Community-maintained open-source PlanktoScope packages
+  description: Packages for the PlanktoScope software distribution
   ```
 
 #### `readme-file` field
-This field of the `pallet` section is the filename of a readme file to be shown to users.
+This field of the `repository` section is the filename of a readme file to be shown to users.
 - This field is required.
-- The file must be located in the same directory as the `forklift-pallet.yml` file.
+- The file must be located in the same directory as the `forklift-repository.yml` file.
 - The file must be a text file.
 - It is recommended for this file to be named `README.md` and to be formatted in [GitHub-flavored Markdown](https://github.github.com/gfm/).
 - Example:
   ```yaml
   readme-file: README.md
   ```
+
 
 ## Package definition
 
@@ -914,6 +911,9 @@ A feature specification object consists of the following fields:
             - /admin/portainer/*
     ```
 
-## Environments
+
+## Pallets
+
+A Forklift *pallet* is a fully-specified configuration of the set of all package deployments which should be active on a Docker host. Only one pallet may be applied to a Docker host at any time.
 
 TODO

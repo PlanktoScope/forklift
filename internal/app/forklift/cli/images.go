@@ -11,7 +11,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // Download
@@ -75,7 +75,7 @@ func listRequiredImages(
 	return orderedImages, nil
 }
 
-func loadAppDefinition(pkg *pallets.FSPkg) (*dct.Project, error) {
+func loadAppDefinition(pkg *core.FSPkg) (*dct.Project, error) {
 	appDef, err := docker.LoadAppDefinition(
 		pkg.FS, path.Base(pkg.Path()), pkg.Def.Deployment.DefinitionFiles, nil,
 	)

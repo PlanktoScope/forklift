@@ -53,11 +53,11 @@ var Cmd = &cli.Command{
 		},
 		// remoteCmd,
 		{
-			Name:     "cache-plt",
-			Aliases:  []string{"cache-pallets"},
+			Name:     "cache-repo",
+			Aliases:  []string{"cache-repositories"},
 			Category: "Use the environment",
-			Usage:    "Updates the cache with the pallets available in the local environment",
-			Action:   cachePltAction,
+			Usage:    "Updates the cache with the repos available in the local environment",
+			Action:   cacheRepoAction,
 		},
 		{
 			Name:     "cache-img",
@@ -93,19 +93,19 @@ var Cmd = &cli.Command{
 			Action:   showAction,
 		},
 		{
-			Name:     "ls-plt",
-			Aliases:  []string{"list-pallets"},
+			Name:     "ls-repo",
+			Aliases:  []string{"list-repositories"},
 			Category: "Query the environment",
-			Usage:    "Lists pallets available in the local environment",
-			Action:   lsPltAction,
+			Usage:    "Lists repos available in the local environment",
+			Action:   lsRepoAction,
 		},
 		{
-			Name:      "show-plt",
-			Aliases:   []string{"show-pallet"},
+			Name:      "show-repo",
+			Aliases:   []string{"show-repository"},
 			Category:  "Query the environment",
-			Usage:     "Describes a pallet available in the local environment",
-			ArgsUsage: "pallet_path",
-			Action:    showPltAction,
+			Usage:     "Describes a repo available in the local environment",
+			ArgsUsage: "repo_path",
+			Action:    showRepoAction,
 		},
 		{
 			Name:     "ls-pkg",
@@ -138,26 +138,26 @@ var Cmd = &cli.Command{
 			Action:    showDeplAction,
 		},
 		// {
-		// 	Name:      "add-pallet",
-		// 	Aliases:   []string{"add-pallets"},
+		// 	Name:      "add-repo",
+		// 	Aliases:   []string{"add-repositories"},
 		// 	Category:  "Modify the environment",
-		// 	Usage:     "Adds pallets to the environment, tracking specified versions or branches",
-		// 	ArgsUsage: "[pallet_path@version_query]...",
+		// 	Usage:     "Adds repos to the environment, tracking specified versions or branches",
+		// 	ArgsUsage: "[repo_path@version_query]...",
 		// 	Action: func(c *cli.Context) error {
-		// 		fmt.Println("adding pallets", c.Args())
+		// 		fmt.Println("adding repos", c.Args())
 		// 		// TODO: implement version queries - see https://go.dev/ref/mod#vcs-branch
 		// 		return nil
 		// 	},
 		// },
-		// TODO: add an upgrade-pallet action
+		// TODO: add an upgrade-repo action
 		// {
-		// 	Name:      "rm-plt",
-		// 	Aliases:   []string{"remove-pallets"},
+		// 	Name:      "rm-repo",
+		// 	Aliases:   []string{"remove-repositories"},
 		// 	Category:  "Modify the environment",
-		// 	Usage:     "Removes a pallet from the environment",
-		// 	ArgsUsage: "pallet_path",
+		// 	Usage:     "Removes a repo from the environment",
+		// 	ArgsUsage: "repo_path",
 		// 	Action: func(c *cli.Context) error {
-		// 		fmt.Println("removing pallet", c.Args().First())
+		// 		fmt.Println("removing repo", c.Args().First())
 		// 		return nil
 		// 	},
 		// },

@@ -1,4 +1,4 @@
-package pallets
+package core
 
 // An AttachedRes is a binding between a resource and the source of that resource.
 type AttachedRes[Res interface{}] struct {

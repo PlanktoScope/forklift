@@ -1,4 +1,4 @@
-package pallets
+package core
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 // FSPkg
 
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
-// In the loaded FSPkg's embedded [Pkg], the pallet path is not initialized, nor is the pallet
-// subdirectory initialized, nor is the pointer to the pallet initialized.
+// In the loaded FSPkg's embedded [Pkg], the repo path is not initialized, nor is the repo
+// subdirectory initialized, nor is the pointer to the repo initialized.
 func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 	p = &FSPkg{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
@@ -31,10 +31,9 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 }
 
 // LoadFSPkgs loads all FSPkgs from the provided base filesystem matching the specified search
-// pattern, modifying each FSPkg with the the optional processor function if a non-nil function is
-// provided. The search pattern should be a [doublestar] pattern, such as `**`, matching package
+// pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching package
 // directories to search for.
-// The pallet path, and the package subdirectory, and the pointer to the pallet are all left
+// The repo path, and the package subdirectory, and the pointer to the repo are all left
 // uninitialized.
 func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 	searchPattern = path.Join(searchPattern, PkgDefFile)
@@ -60,29 +59,28 @@ func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 	return pkgs, nil
 }
 
-// AttachFSPallet updates the FSPkg instance's PalletPath, Subdir, Pkg.Pallet, and Pallet fields
-// based on the provided pallet.
-func (p *FSPkg) AttachFSPallet(pallet *FSPallet) error {
-	p.PalletPath = pallet.Def.Pallet.Path
-	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", pallet.FS.Path())) {
+// AttachFSRepo updates the FSPkg instance's RepoPath, Subdir, Pkg.Repo, and Repo fields
+// based on the provided repo.
+func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
+	p.RepoPath = repo.Def.Repo.Path
+	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
 		return errors.Errorf(
-			"package at %s is not within the scope of pallet %s at %s",
-			p.FS.Path(), pallet.Path(), pallet.FS.Path(),
+			"package at %s is not within the scope of repo %s at %s",
+			p.FS.Path(), repo.Path(), repo.FS.Path(),
 		)
 	}
-	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", pallet.FS.Path()))
-	p.Pkg.Pallet = &pallet.Pallet
-	p.Pallet = pallet
+	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
+	p.Pkg.Repo = &repo.Repo
+	p.Repo = repo
 	return nil
 }
 
 // Check looks for errors in the construction of the package.
 func (p *FSPkg) Check() (errs []error) {
-	if p.Pallet != nil {
-		if p.Pkg.Pallet != &p.Pallet.Pallet {
+	if p.Repo != nil {
+		if p.Pkg.Repo != &p.Repo.Repo {
 			errs = append(errs, errors.New(
-				"inconsistent pointers to the pallet between the package as a FSPkg and the package as a"+
-					"Pkg",
+				"inconsistent pointers to the repo between the package as a FSPkg and the package as a Pkg",
 			))
 		}
 	}
@@ -91,7 +89,7 @@ func (p *FSPkg) Check() (errs []error) {
 }
 
 // ComparePkgs returns an integer comparing two [Pkg] instances according to their paths, and their
-// respective pallets' versions. The result will be 0 if the p and q have the same paths and
+// respective repos' versions. The result will be 0 if the p and q have the same paths and
 // versions; -1 if r has a path which alphabetically comes before the path of s, or if the paths are
 // the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
 // the path of s, or if the paths are the same but r has a lower version than s.
@@ -99,7 +97,7 @@ func ComparePkgs(p, q Pkg) int {
 	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
 		return result
 	}
-	if result := semver.Compare(p.Pallet.Version, q.Pallet.Version); result != CompareEQ {
+	if result := semver.Compare(p.Repo.Version, q.Repo.Version); result != CompareEQ {
 		return result
 	}
 	return CompareEQ
@@ -109,17 +107,17 @@ func ComparePkgs(p, q Pkg) int {
 
 // Path returns the package path of the Pkg instance.
 func (p Pkg) Path() string {
-	return path.Join(p.PalletPath, p.Subdir)
+	return path.Join(p.RepoPath, p.Subdir)
 }
 
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
 	// TODO: implement a check method on PkgDef
 	// errs = append(errs, ErrsWrap(p.Def.Check(), "invalid package config")...)
-	if p.Pallet != nil && p.PalletPath != p.Pallet.Path() {
+	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
 		errs = append(errs, errors.Errorf(
-			"pallet path %s of package is inconsistent with path %s of attached pallet",
-			p.PalletPath, p.Pallet.Path(),
+			"repo path %s of package is inconsistent with path %s of attached repo",
+			p.RepoPath, p.Repo.Path(),
 		))
 	}
 	return errs

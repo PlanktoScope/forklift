@@ -7,29 +7,29 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // Print
 
 func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	reqs, err := env.LoadFSPalletReqs("**")
+	reqs, err := env.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify pallets in environment %s", env.FS.Path(),
+			err, "couldn't identify repos in environment %s", env.FS.Path(),
 		)
 	}
-	pkgs := make([]*pallets.FSPkg, 0)
+	pkgs := make([]*core.FSPkg, 0)
 	for _, req := range reqs {
-		palletCachePath := req.GetCachePath()
-		loaded, err := loader.LoadFSPkgs(path.Join(palletCachePath, "**"))
+		repoCachePath := req.GetCachePath()
+		loaded, err := loader.LoadFSPkgs(path.Join(repoCachePath, "**"))
 		if err != nil {
-			return errors.Wrapf(err, "couldn't load packages from pallet cached at %s", palletCachePath)
+			return errors.Wrapf(err, "couldn't load packages from repo cached at %s", repoCachePath)
 		}
 		pkgs = append(pkgs, loaded...)
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
-		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
+		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
 	})
 	for _, pkg := range pkgs {
 		IndentedPrintf(indent, "%s\n", pkg.Path())
@@ -38,7 +38,7 @@ func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) 
 }
 
 func PrintPkgInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedPalletCache, pkgPath string,
+	indent int, env *forklift.FSEnv, cache forklift.PathedRepoCache, pkgPath string,
 ) error {
 	pkg, _, err := forklift.LoadRequiredFSPkg(env, cache, pkgPath)
 	if err != nil {

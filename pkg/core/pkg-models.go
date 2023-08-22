@@ -1,4 +1,4 @@
-package pallets
+package core
 
 // A FSPkg is a Forklift package stored at the root of a [fs.FS] filesystem.
 type FSPkg struct {
@@ -6,21 +6,21 @@ type FSPkg struct {
 	Pkg
 	// FS is a filesystem which contains the package's contents.
 	FS PathedFS
-	// Pallet is a pointer to the [FSPallet] instance which provides the package.
-	Pallet *FSPallet
+	// Repo is a pointer to the [FSRepo] instance which provides the package.
+	Repo *FSRepo
 }
 
 // A Pkg is a Forklift package, a configuration of a software application which can be deployed on a
 // Docker host.
 type Pkg struct {
-	// Path is the pallet path of the Forklift pallet which provides the package.
-	PalletPath string
-	// Subdir is the path of the package within the pallet which provides the package.
+	// Path is the path of the Forklift repository which provides the package.
+	RepoPath string
+	// Subdir is the path of the package within the repository which provides the package.
 	Subdir string
 	// Def is the definition of the package.
 	Def PkgDef
-	// Pallet is a pointer to the [Pallet] which provides the package.
-	Pallet *Pallet
+	// Repo is a pointer to the [Repo] which provides the package.
+	Repo *Repo
 }
 
 // PkgDefFile is the name of the file defining each package.

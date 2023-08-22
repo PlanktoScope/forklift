@@ -14,16 +14,16 @@ import (
 )
 
 var errMissingCache = errors.Errorf(
-	"you first need to cache the pallets specified by your environment with " +
-		"`forklift env cache-pallet`",
+	"you first need to cache the repos specified by your environment with " +
+		"`forklift env cache-repo`",
 )
 
-func getCache(wpath string) (*forklift.FSPalletCache, error) {
+func getCache(wpath string) (*forklift.FSRepoCache, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
-	cache, err := workspace.GetPalletCache()
+	cache, err := workspace.GetRepoCache()
 	if err != nil {
 		return nil, err
 	}

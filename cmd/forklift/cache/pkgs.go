@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // ls-pkg
@@ -29,10 +29,10 @@ func lsPkgAction(c *cli.Context) error {
 		return errors.Wrapf(err, "couldn't identify packages")
 	}
 	sort.Slice(pkgs, func(i, j int) bool {
-		return pallets.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
+		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
 	})
 	for _, pkg := range pkgs {
-		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Pallet.Version)
+		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)
 	}
 	return nil
 }

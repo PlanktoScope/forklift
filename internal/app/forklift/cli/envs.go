@@ -13,7 +13,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // Print
@@ -216,7 +216,7 @@ func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
 }
 
 func printResConflicts[Res any](
-	indent int, conflicts []pallets.ResConflict[Res],
+	indent int, conflicts []core.ResConflict[Res],
 ) error {
 	for _, resourceConflict := range conflicts {
 		if err := printResConflict(indent, resourceConflict); err != nil {
@@ -227,7 +227,7 @@ func printResConflicts[Res any](
 }
 
 func printResConflict[Res any](
-	indent int, conflict pallets.ResConflict[Res],
+	indent int, conflict core.ResConflict[Res],
 ) error {
 	BulletedPrintf(indent, "Conflicting resource from %s:\n", conflict.First.Source[0])
 	indent++ // because the bullet adds an indentation level
@@ -301,7 +301,7 @@ func printMissingDeplDep(indent int, deps forklift.MissingDeplDeps) error {
 	return nil
 }
 
-func printMissingDeps[Res any](indent int, missingDeps []pallets.MissingResDep[Res]) error {
+func printMissingDeps[Res any](indent int, missingDeps []core.MissingResDep[Res]) error {
 	for _, missingDep := range missingDeps {
 		if err := printMissingDep(indent, missingDep); err != nil {
 			return errors.Wrap(err, "couldn't print unmet resource dependency")
@@ -310,7 +310,7 @@ func printMissingDeps[Res any](indent int, missingDeps []pallets.MissingResDep[R
 	return nil
 }
 
-func printMissingDep[Res any](indent int, missingDep pallets.MissingResDep[Res]) error {
+func printMissingDep[Res any](indent int, missingDep core.MissingResDep[Res]) error {
 	BulletedPrintf(indent, "Resource required by %s:\n", missingDep.Required.Source[0])
 	indent++ // because the bullet adds an indentation level
 	resourceIndent := printResSource(indent+1, missingDep.Required.Source[1:])
@@ -328,7 +328,7 @@ func printMissingDep[Res any](indent int, missingDep pallets.MissingResDep[Res])
 	return nil
 }
 
-func printDepCandidate[Res any](indent int, candidate pallets.ResDepCandidate[Res]) error {
+func printDepCandidate[Res any](indent int, candidate core.ResDepCandidate[Res]) error {
 	BulletedPrintf(indent, "Candidate resource from %s:\n", candidate.Provided.Source[0])
 	indent++ // because the bullet adds an indentation level
 	resourceIndent := printResSource(indent+1, candidate.Provided.Source[1:])
@@ -592,7 +592,7 @@ func planReconciliation(
 	dependents := invertDeps(deps)
 	// Sequence the changes such that they can (hopefully) be carried out successfully
 	sort.Slice(changes, func(i, j int) bool {
-		return compareChanges(changes[i], changes[j], deps, dependents) == pallets.CompareLT
+		return compareChanges(changes[i], changes[j], deps, dependents) == core.CompareLT
 	})
 	return changes
 }
@@ -609,7 +609,7 @@ func compareChanges(
 	r, s reconciliationChange, deps, dependents map[string]map[string]struct{},
 ) int {
 	// Remove old resources first, in case additions/updates would add overlapping resources.
-	if result := compareReconciliationChangesByType(r, s); result != pallets.CompareEQ {
+	if result := compareReconciliationChangesByType(r, s); result != core.CompareEQ {
 		return result
 	}
 	// Now r.Depl and s.Depl are either both nil or both non-nil
@@ -618,13 +618,13 @@ func compareChanges(
 	}
 
 	// Now r and s are either both removals or both changes/additions
-	if result := compareReconciliationChangesByDeplDeps(r, s, deps); result != pallets.CompareEQ {
+	if result := compareReconciliationChangesByDeplDeps(r, s, deps); result != core.CompareEQ {
 		return result
 	}
 	// Now r and s either are in a circular dependency or have no dependency relationships
 	if result := compareDeplsByDepCounts(
 		r.Depl.Name, s.Depl.Name, deps, dependents,
-	); result != pallets.CompareEQ {
+	); result != core.CompareEQ {
 		return result
 	}
 	return compareDeplNames(r.Depl.Name, s.Depl.Name)
@@ -632,12 +632,12 @@ func compareChanges(
 
 func compareReconciliationChangesByType(r, s reconciliationChange) int {
 	if r.Type == removeReconciliationChange && s.Type != removeReconciliationChange {
-		return pallets.CompareLT
+		return core.CompareLT
 	}
 	if r.Type != removeReconciliationChange && s.Type == removeReconciliationChange {
-		return pallets.CompareGT
+		return core.CompareGT
 	}
-	return pallets.CompareEQ
+	return core.CompareEQ
 }
 
 func compareReconciliationChangesByDeplDeps(
@@ -653,46 +653,46 @@ func compareReconciliationChangesByDeplDeps(
 	}
 	if rDependsOnS && !sDependsOnR {
 		if r.Type == removeReconciliationChange { // i.e. r and s are both removals
-			return pallets.CompareLT // removal r goes before removal s
+			return core.CompareLT // removal r goes before removal s
 		}
-		return pallets.CompareGT // addition/update r goes after addition/update s
+		return core.CompareGT // addition/update r goes after addition/update s
 	}
 	if !rDependsOnS && sDependsOnR {
 		if s.Type == removeReconciliationChange { // i.e. r and s are both removals
-			return pallets.CompareGT // removal r goes after removal s
+			return core.CompareGT // removal r goes after removal s
 		}
-		return pallets.CompareLT // addition/update r goes before addition/update s
+		return core.CompareLT // addition/update r goes before addition/update s
 	}
-	return pallets.CompareEQ
+	return core.CompareEQ
 }
 
 func compareDeplsByDepCounts(r, s string, deps, dependents map[string]map[string]struct{}) int {
 	// Deployments with greater numbers of dependents go first (needed for correct ordering among
 	// unrelated deployments sorted by sort.Slice).
 	if len(dependents[r]) > len(dependents[s]) {
-		return pallets.CompareLT
+		return core.CompareLT
 	}
 	if len(dependents[r]) < len(dependents[s]) {
-		return pallets.CompareGT
+		return core.CompareGT
 	}
 	// Deployments with greater numbers of deps go first (for aesthetic reasons)
 	if len(deps[r]) > len(deps[s]) {
-		return pallets.CompareLT
+		return core.CompareLT
 	}
 	if len(deps[r]) < len(deps[s]) {
-		return pallets.CompareGT
+		return core.CompareGT
 	}
-	return pallets.CompareEQ
+	return core.CompareEQ
 }
 
 func compareDeplNames(r, s string) int {
 	if r < s {
-		return pallets.CompareLT
+		return core.CompareLT
 	}
 	if r > s {
-		return pallets.CompareGT
+		return core.CompareGT
 	}
-	return pallets.CompareEQ
+	return core.CompareEQ
 }
 
 func printReconciliationChange(indent int, change reconciliationChange) {

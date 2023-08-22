@@ -2,7 +2,7 @@
 package forklift
 
 import (
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // A FSEnv is a Forklift environment configuration stored at the root of a [fs.FS] filesystem.
@@ -10,7 +10,7 @@ type FSEnv struct {
 	// Env is the Forklift environment at the root of the filesystem.
 	Env
 	// FS is a filesystem which contains the environment's contents.
-	FS pallets.PathedFS
+	FS core.PathedFS
 }
 
 // An Env is a Forklift environment, a complete specification of all package deployments which
@@ -52,7 +52,7 @@ type ResolvedDepl struct {
 	// PkgReq is the package requirement for the deployment.
 	PkgReq PkgReq
 	// Pkg is the package to be deployed.
-	Pkg *pallets.FSPkg
+	Pkg *core.FSPkg
 }
 
 // A Depl is a package deployment, a complete configuration of how a package is to be deployed on a
@@ -79,10 +79,10 @@ const ReqsDirName = "requirements"
 
 // A PkgReq is a requirement for a package at a specific version.
 type PkgReq struct {
-	// PkgSubdir is the package subdirectory in the pallet which should provide the required package.
+	// PkgSubdir is the package subdirectory in the repo which should provide the required package.
 	PkgSubdir string
-	// Pallet is the pallet which should provide the required package.
-	Pallet PalletReq
+	// Repo is the repo which should provide the required package.
+	Repo RepoReq
 }
 
 // PkgReqLoader is a source of package requirements.
@@ -91,25 +91,23 @@ type PkgReqLoader interface {
 }
 
 const (
-	// ReqsPalletsDirName is the subdirectory in the requirements directory of a Forklift environment
-	// which contains pallet requirement configurations.
-	ReqsPalletsDirName = "pallets"
+	// ReqsReposDirName is the subdirectory in the requirements directory of a Forklift environment
+	// which contains repo requirement configurations.
+	ReqsReposDirName = "repositories"
 )
 
-// A FSPalletReq is a pallet requirement stored at the root of a [fs.FS] filesystem.
-type FSPalletReq struct {
-	// PalletReq is the pallet requirement at the root of the filesystem.
-	PalletReq
-	// FS is a filesystem which contains the pallet requirement's contents.
-	FS pallets.PathedFS
+// A FSRepoReq is a repo requirement stored at the root of a [fs.FS] filesystem.
+type FSRepoReq struct {
+	// RepoReq is the repo requirement at the root of the filesystem.
+	RepoReq
+	// FS is a filesystem which contains the repo requirement's contents.
+	FS core.PathedFS
 }
 
-// A PalletReq is a requirement for a specific pallet at a specific version.
-type PalletReq struct {
-	// VCSRepoPath is the VCS repository path of the required pallet.
-	VCSRepoPath string
-	// PalletSubdir is the pallet subdirectory of the required pallet.
-	PalletSubdir string
-	// VersionLock specifies the version of the required pallet.
+// A RepoReq is a requirement for a specific repo at a specific version.
+type RepoReq struct {
+	// RepoPath is the repository path of the required repo.
+	RepoPath string
+	// VersionLock specifies the version of the required repo.
 	VersionLock VersionLock
 }

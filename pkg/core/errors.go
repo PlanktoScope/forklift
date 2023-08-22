@@ -1,4 +1,4 @@
-package pallets
+package core
 
 import (
 	"github.com/pkg/errors"

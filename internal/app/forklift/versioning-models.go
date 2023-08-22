@@ -1,6 +1,6 @@
 package forklift
 
-// A VersionLock is a specification of a particular version of a pallet or package.
+// A VersionLock is a specification of a particular version of a repo or package.
 type VersionLock struct {
 	// Def is the version lock definition.
 	Def VersionLockDef
@@ -8,10 +8,10 @@ type VersionLock struct {
 	Version string
 }
 
-// VersionLockDefFile is the name of the file defining each version lock of a pallet.
+// VersionLockDefFile is the name of the file defining each version lock of a repo.
 const VersionLockDefFile = "forklift-version-lock.yml"
 
-// A VersionLockDef defines a requirement for a pallet or package at a specific
+// A VersionLockDef defines a requirement for a repo or package at a specific
 // version.
 type VersionLockDef struct {
 	// BaseVersion specifies the VCS repository tag for the version, if it exists.

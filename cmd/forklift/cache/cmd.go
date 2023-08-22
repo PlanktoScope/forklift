@@ -7,28 +7,28 @@ import (
 
 var Cmd = &cli.Command{
 	Name:  "cache",
-	Usage: "Manages the local cache of pallets and packages",
+	Usage: "Manages the local cache of repos and packages",
 	Subcommands: []*cli.Command{
 		{
-			Name:     "ls-plt",
-			Aliases:  []string{"list-pallets"},
+			Name:     "ls-repo",
+			Aliases:  []string{"list-repositories"},
 			Category: "Query the cache",
-			Usage:    "Lists cached pallets",
-			Action:   lsPltAction,
+			Usage:    "Lists cached repos",
+			Action:   lsRepoAction,
 		},
 		{
-			Name:      "show-plt",
-			Aliases:   []string{"show-pallet"},
+			Name:      "show-repo",
+			Aliases:   []string{"show-repository"},
 			Category:  "Query the cache",
-			Usage:     "Describes a cached pallet",
-			ArgsUsage: "pallet_path@version",
-			Action:    showPltAction,
+			Usage:     "Describes a cached repo",
+			ArgsUsage: "repo_path@version",
+			Action:    showRepoAction,
 		},
 		{
 			Name:     "ls-pkg",
 			Aliases:  []string{"list-packages"},
 			Category: "Query the cache",
-			Usage:    "Lists packages offered by cached pallets",
+			Usage:    "Lists packages offered by cached repos",
 			Action:   lsPkgAction,
 		},
 		{
@@ -58,7 +58,7 @@ var Cmd = &cli.Command{
 			Name:     "rm",
 			Aliases:  []string{"remove"},
 			Category: "Modify the cache",
-			Usage:    "Removes the locally-cached pallets and Docker container images",
+			Usage:    "Removes the locally-cached repos and Docker container images",
 			Action:   rmAction,
 		},
 	},

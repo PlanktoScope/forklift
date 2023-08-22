@@ -5,18 +5,18 @@ import (
 	"sort"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // Print
 
-func PrintPkg(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) {
+func PrintPkg(indent int, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
 	IndentedPrintf(indent, "Package: %s\n", pkg.Path())
 	indent++
 
-	printPkgPallet(indent, cache, pkg)
-	if pallets.CoversPath(cache, pkg.FS.Path()) {
-		IndentedPrintf(indent, "Path in cache: %s\n", pallets.GetSubdirPath(cache, pkg.FS.Path()))
+	printPkgRepo(indent, cache, pkg)
+	if core.CoversPath(cache, pkg.FS.Path()) {
+		IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
 		IndentedPrintf(indent, "External path (replacing cached package): %s\n", pkg.FS.Path())
 	}
@@ -28,23 +28,22 @@ func PrintPkg(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) 
 	PrintFeatureSpecs(indent, pkg.Def.Features)
 }
 
-func printPkgPallet(indent int, cache forklift.PathedPalletCache, pkg *pallets.FSPkg) {
-	IndentedPrintf(indent, "Provided by pallet: %s\n", pkg.Pallet.Path())
+func printPkgRepo(indent int, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
+	IndentedPrintf(indent, "Provided by repo: %s\n", pkg.Repo.Path())
 	indent++
 
-	if pallets.CoversPath(cache, pkg.FS.Path()) {
-		IndentedPrintf(indent, "Version: %s\n", pkg.Pallet.Version)
+	if core.CoversPath(cache, pkg.FS.Path()) {
+		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
 	} else {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Pallet.FS.Path(),
+			indent, "External path (replacing cached repository): %s\n", pkg.Repo.FS.Path(),
 		)
 	}
 
-	IndentedPrintf(indent, "Description: %s\n", pkg.Pallet.Def.Pallet.Description)
-	IndentedPrintf(indent, "Provided by Git repository: %s\n", pkg.Pallet.VCSRepoPath)
+	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Def.Repo.Description)
 }
 
-func PrintPkgSpec(indent int, spec pallets.PkgSpec) {
+func PrintPkgSpec(indent int, spec core.PkgSpec) {
 	IndentedPrintf(indent, "Description: %s\n", spec.Description)
 
 	IndentedPrint(indent, "Maintainers:")
@@ -72,7 +71,7 @@ func PrintPkgSpec(indent int, spec pallets.PkgSpec) {
 	}
 }
 
-func printMaintainer(indent int, maintainer pallets.PkgMaintainer) {
+func printMaintainer(indent int, maintainer core.PkgMaintainer) {
 	if maintainer.Email != "" {
 		BulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
 	} else {
@@ -80,7 +79,7 @@ func printMaintainer(indent int, maintainer pallets.PkgMaintainer) {
 	}
 }
 
-func PrintDeplSpec(indent int, spec pallets.PkgDeplSpec) {
+func PrintDeplSpec(indent int, spec core.PkgDeplSpec) {
 	IndentedPrintf(indent, "Deployment:\n")
 	indent++
 
@@ -96,7 +95,7 @@ func PrintDeplSpec(indent int, spec pallets.PkgDeplSpec) {
 	}
 }
 
-func PrintFeatureSpecs(indent int, features map[string]pallets.PkgFeatureSpec) {
+func PrintFeatureSpecs(indent int, features map[string]core.PkgFeatureSpec) {
 	IndentedPrint(indent, "Optional features:")
 	names := make([]string, 0, len(features))
 	for name := range features {

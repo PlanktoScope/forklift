@@ -12,22 +12,22 @@ var Cmd = &cli.Command{
 	Subcommands: []*cli.Command{
 		{
 			Name:     "ls-app",
-			Category: "Query the active deployment",
 			Aliases:  []string{"list-applications"},
+			Category: "Query the active deployment",
 			Usage:    "Lists running Docker Compose applications",
 			Action:   lsAppAction,
 		},
 		{
 			Name:     "ls-con",
-			Category: "Query the acative deployment",
 			Aliases:  []string{"list-containers"},
+			Category: "Query the active deployment",
 			Usage:    "Lists the containers associated with a package deployment",
 			Action:   lsConAction,
 		},
 		{
 			Name:     "rm",
-			Category: "Modify the active deployment",
 			Aliases:  []string{"remove"},
+			Category: "Modify the active deployment",
 			Usage:    "Removes all Docker stacks",
 			Action:   rmAction,
 		},

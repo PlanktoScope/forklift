@@ -11,19 +11,18 @@ var Cmd = &cli.Command{
 	Usage:   "Facilitates development and maintenance of a Forklift environment",
 	Flags: []cli.Flag{
 		&cli.StringSliceFlag{
-			Name:    "plt",
-			Aliases: []string{"pallets"},
-			Usage: "Replaces version-locked pallets from the cache with the corresponding pallets in " +
+			Name: "repos",
+			Usage: "Replaces version-locked repos from the cache with the corresponding repos in " +
 				"the specified directory paths",
 		},
 	},
 	Subcommands: []*cli.Command{
 		{
-			Name:     "cache-plt",
-			Aliases:  []string{"cache-pallets"},
+			Name:     "cache-repo",
+			Aliases:  []string{"cache-repositories"},
 			Category: "Use the environment",
-			Usage:    "Updates the cache with the pallets available in the development environment",
-			Action:   cachePltAction,
+			Usage:    "Updates the cache with the repos available in the development environment",
+			Action:   cacheRepoAction,
 		},
 		{
 			Name:     "cache-img",
@@ -59,19 +58,19 @@ var Cmd = &cli.Command{
 			Action:   showAction,
 		},
 		{
-			Name:     "ls-plt",
-			Aliases:  []string{"list-pallets"},
+			Name:     "ls-repo",
+			Aliases:  []string{"list-repositories"},
 			Category: "Query the environment",
-			Usage:    "Lists pallets specified by the environment",
-			Action:   lsPltAction,
+			Usage:    "Lists repos specified by the environment",
+			Action:   lsRepoAction,
 		},
 		{
-			Name:      "show-plt",
-			Aliases:   []string{"show-pallet"},
+			Name:      "show-repo",
+			Aliases:   []string{"show-repository"},
 			Category:  "Query the environment",
-			Usage:     "Describes a pallet available in the development environment",
-			ArgsUsage: "pallet_path",
-			Action:    showPltAction,
+			Usage:     "Describes a repo available in the development environment",
+			ArgsUsage: "repo_path",
+			Action:    showRepoAction,
 		},
 		{
 			Name:     "ls-pkg",
@@ -89,10 +88,11 @@ var Cmd = &cli.Command{
 			Action:    showPkgAction,
 		},
 		{
-			Name:    "ls-depl",
-			Aliases: []string{"list-deployments"},
-			Usage:   "Lists package deployments specified by the development environment",
-			Action:  lsDeplAction,
+			Name:     "ls-depl",
+			Aliases:  []string{"list-deployments"},
+			Category: "Query the environment",
+			Usage:    "Lists package deployments specified by the development environment",
+			Action:   lsDeplAction,
 		},
 		{
 			Name:      "show-depl",
@@ -103,22 +103,22 @@ var Cmd = &cli.Command{
 			Action:    showDeplAction,
 		},
 		{
-			Name:      "add-plt",
-			Aliases:   []string{"add-pallets"},
-			Category:  "Query the environment",
-			Usage:     "Adds pallets to the environment, tracking specified versions or branches",
-			ArgsUsage: "[pallet_path@version_query]...",
-			Action:    addPltAction,
+			Name:      "add-repo",
+			Aliases:   []string{"add-repositories"},
+			Category:  "Modify the environment",
+			Usage:     "Adds repos to the environment, tracking specified versions or branches",
+			ArgsUsage: "[repo_path@version_query]...",
+			Action:    addRepoAction,
 		},
-		// TODO: add an upgrade-pallet action?
+		// TODO: add an upgrade-repo action?
 		// {
-		// 	Name:      "rm-plt",
-		// 	Aliases:   []string{"remove-pallets},
+		// 	Name:      "rm-repo",
+		// 	Aliases:   []string{"remove-repositories},
 		// 	Category:  "Modify the environment",
-		// 	Usage:     "Removes a pallet from the environment",
-		// 	ArgsUsage: "pallet_path",
+		// 	Usage:     "Removes a repo from the environment",
+		// 	ArgsUsage: "repo_path",
 		// 	Action: func(c *cli.Context) error {
-		// 		fmt.Println("removing pallet", c.Args().First())
+		// 		fmt.Println("removing repo", c.Args().First())
 		// 		return nil
 		// 	},
 		// },

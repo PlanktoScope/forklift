@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // ResolvedDepl
@@ -28,8 +28,7 @@ func ResolveDepl(
 		pkgReqLoader, pkgLoader, pkgPath,
 	); err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load package %s to resolved from package deployment %s",
-			pkgPath, depl.Name,
+			err, "couldn't load package %s to resolved from package deployment %s", pkgPath, depl.Name,
 		)
 	}
 	return resolved, nil
@@ -65,11 +64,11 @@ func (d *ResolvedDepl) Check() (errs []error) {
 		))
 	}
 	// An empty version is treated as "any version" for this check, so that packages loaded from
-	// overriding pallets (where versioning is ignored) will not fail this version check:
-	if d.Pkg.Pallet.Version != "" && d.PkgReq.Pallet.VersionLock.Version != d.Pkg.Pallet.Version {
+	// overriding repos (where versioning is ignored) will not fail this version check:
+	if d.Pkg.Repo.Version != "" && d.PkgReq.Repo.VersionLock.Version != d.Pkg.Repo.Version {
 		errs = append(errs, errors.Errorf(
 			"resolved package version %s does not match required package version %s",
-			d.Pkg.Pallet.Version, d.PkgReq.Pallet.VersionLock.Version,
+			d.Pkg.Repo.Version, d.PkgReq.Repo.VersionLock.Version,
 		))
 	}
 	return errs
@@ -77,9 +76,9 @@ func (d *ResolvedDepl) Check() (errs []error) {
 
 // EnabledFeatures returns a map of the package features enabled by the deployment's configuration,
 // with feature names as the keys of the map.
-func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureSpec, err error) {
+func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec, err error) {
 	all := d.Pkg.Def.Features
-	enabled = make(map[string]pallets.PkgFeatureSpec)
+	enabled = make(map[string]core.PkgFeatureSpec)
 	for _, name := range d.Def.Features {
 		featureSpec, ok := all[name]
 		if !ok {
@@ -92,13 +91,13 @@ func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]pallets.PkgFeatureS
 
 // DisabledFeatures returns a map of the package features not enabled by the deployment's
 // configuration, with feature names as the keys of the map.
-func (d *ResolvedDepl) DisabledFeatures() map[string]pallets.PkgFeatureSpec {
+func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
 	all := d.Pkg.Def.Features
 	enabled := make(map[string]struct{})
 	for _, name := range d.Def.Features {
 		enabled[name] = struct{}{}
 	}
-	disabled := make(map[string]pallets.PkgFeatureSpec)
+	disabled := make(map[string]core.PkgFeatureSpec)
 	for name := range all {
 		if _, ok := enabled[name]; ok {
 			continue
@@ -137,13 +136,13 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		First:  d,
 		Second: candidate,
 		Name:   d.Name == candidate.Name,
-		Listeners: pallets.CheckResConflicts(
+		Listeners: core.CheckResConflicts(
 			d.providedListeners(enabledFeatures), candidate.providedListeners(candidateEnabledFeatures),
 		),
-		Networks: pallets.CheckResConflicts(
+		Networks: core.CheckResConflicts(
 			d.providedNetworks(enabledFeatures), candidate.providedNetworks(candidateEnabledFeatures),
 		),
-		Services: pallets.CheckResConflicts(
+		Services: core.CheckResConflicts(
 			d.providedServices(enabledFeatures), candidate.providedServices(candidateEnabledFeatures),
 		),
 	}, nil
@@ -152,40 +151,40 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 // providedListeners returns a slice of all host port listeners provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedListeners(
-	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (provided []pallets.AttachedRes[pallets.ListenerRes]) {
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (provided []core.AttachedRes[core.ListenerRes]) {
 	return d.Pkg.ProvidedListeners(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // requiredNetworks returns a slice of all Docker networks required by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredNetworks(
-	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (required []pallets.AttachedRes[pallets.NetworkRes]) {
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (required []core.AttachedRes[core.NetworkRes]) {
 	return d.Pkg.RequiredNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedNetworks returns a slice of all Docker networks provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedNetworks(
-	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (provided []pallets.AttachedRes[pallets.NetworkRes]) {
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (provided []core.AttachedRes[core.NetworkRes]) {
 	return d.Pkg.ProvidedNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // requiredServices returns a slice of all network services required by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredServices(
-	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (required []pallets.AttachedRes[pallets.ServiceRes]) {
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (required []core.AttachedRes[core.ServiceRes]) {
 	return d.Pkg.RequiredServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedServices returns a slice of all network services provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedServices(
-	enabledFeatures map[string]pallets.PkgFeatureSpec,
-) (provided []pallets.AttachedRes[pallets.ServiceRes]) {
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (provided []core.AttachedRes[core.ServiceRes]) {
 	return d.Pkg.ProvidedServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -218,7 +217,7 @@ func (d *ResolvedDepl) CheckDeps(
 			err, "couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
-	candidateEnabledFeatures := make([]map[string]pallets.PkgFeatureSpec, 0, len(candidates))
+	candidateEnabledFeatures := make([]map[string]core.PkgFeatureSpec, 0, len(candidates))
 	for _, candidate := range candidates {
 		f, err := candidate.EnabledFeatures()
 		if err != nil {
@@ -230,8 +229,8 @@ func (d *ResolvedDepl) CheckDeps(
 	}
 
 	var (
-		allProvidedNetworks []pallets.AttachedRes[pallets.NetworkRes]
-		allProvidedServices []pallets.AttachedRes[pallets.ServiceRes]
+		allProvidedNetworks []core.AttachedRes[core.NetworkRes]
+		allProvidedServices []core.AttachedRes[core.ServiceRes]
 	)
 	for i, candidate := range candidates {
 		allProvidedNetworks = append(
@@ -242,11 +241,11 @@ func (d *ResolvedDepl) CheckDeps(
 		)
 	}
 
-	satisfiedNetworkDeps, missingNetworkDeps := pallets.CheckResDeps(
+	satisfiedNetworkDeps, missingNetworkDeps := core.CheckResDeps(
 		d.requiredNetworks(enabledFeatures), allProvidedNetworks,
 	)
-	satisfiedServiceDeps, missingServiceDeps := pallets.CheckResDeps(
-		pallets.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
+	satisfiedServiceDeps, missingServiceDeps := core.CheckResDeps(
+		core.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
 	)
 	return SatisfiedDeplDeps{
 			Depl:     d,
@@ -295,7 +294,7 @@ func CheckDeplDeps(
 
 // loadDepl loads the Depl from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the deployment followed by the deployment config file extension.
-func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
+func loadDepl(fsys core.PathedFS, name string) (depl Depl, err error) {
 	depl.Name = name
 	if depl.Def, err = loadDeplDef(fsys, name+DeplDefFileExt); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load version depl config")
@@ -307,8 +306,8 @@ func loadDepl(fsys pallets.PathedFS, name string) (depl Depl, err error) {
 // the specified search pattern.
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
-func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
-	searchPattern = fmt.Sprintf("%s%s", searchPattern, DeplDefFileExt)
+func loadDepls(fsys core.PathedFS, searchPattern string) ([]Depl, error) {
+	searchPattern += DeplDefFileExt
 	deplDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -336,7 +335,7 @@ func loadDepls(fsys pallets.PathedFS, searchPattern string) ([]Depl, error) {
 }
 
 // ResAttachmentSource returns the source path for resources under the Depl instance.
-// The resulting slice is useful for constructing [pallets.AttachedRes] instances.
+// The resulting slice is useful for constructing [core.AttachedRes] instances.
 func (d *Depl) ResAttachmentSource() []string {
 	return []string{
 		fmt.Sprintf("deployment %s", d.Name),
@@ -346,7 +345,7 @@ func (d *Depl) ResAttachmentSource() []string {
 // DeplDef
 
 // loadDeplDef loads a DeplDef from the specified file path in the provided base filesystem.
-func loadDeplDef(fsys pallets.PathedFS, filePath string) (DeplDef, error) {
+func loadDeplDef(fsys core.PathedFS, filePath string) (DeplDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return DeplDef{}, errors.Wrapf(
