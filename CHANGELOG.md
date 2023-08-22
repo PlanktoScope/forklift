@@ -48,7 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - (Breaking change) Removed one-letter abbreviations in all aliases.
-- (Breaking change) Temporarily removed the builds for macOS because CGo is needed for macOS and it would be annoying to make that work right now.
 
 ## 0.1.10 - 2023-08-03
 
