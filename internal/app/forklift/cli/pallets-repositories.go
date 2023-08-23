@@ -16,8 +16,8 @@ import (
 
 // Print
 
-func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
-	loadedRepos, err := env.LoadFSRepoReqs("**")
+func PrintPalletRepos(indent int, pallet *forklift.FSPallet) error {
+	loadedRepos, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify repos")
 	}
@@ -31,13 +31,13 @@ func PrintEnvRepos(indent int, env *forklift.FSEnv) error {
 }
 
 func PrintRepoInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedRepoCache, repoPath string,
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, repoPath string,
 ) error {
-	req, err := env.LoadFSRepoReq(repoPath)
+	req, err := pallet.LoadFSRepoReq(repoPath)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't load repo version lock definition %s from environment %s",
-			repoPath, env.FS.Path(),
+			err, "couldn't load repo version lock definition %s from pallet %s",
+			repoPath, pallet.FS.Path(),
 		)
 	}
 	printRepoReq(indent, req.RepoReq)
@@ -100,9 +100,9 @@ func PrintReadme(indent int, readme []byte, widthLimit int) {
 // Download
 
 func DownloadRepos(
-	indent int, env *forklift.FSEnv, cache forklift.PathedRepoCache,
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache,
 ) (changed bool, err error) {
-	loadedRepos, err := env.LoadFSRepoReqs("**")
+	loadedRepos, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify repos")
 	}
@@ -124,7 +124,7 @@ func downloadRepo(
 ) (downloaded bool, err error) {
 	if !repo.VersionLock.Def.IsCommitLocked() {
 		return false, errors.Errorf(
-			"the local environment's version lock definition for repo %s has no commit lock", repo.Path(),
+			"the pallet's version lock definition for repo %s has no commit lock", repo.Path(),
 		)
 	}
 	repoPath := repo.Path()

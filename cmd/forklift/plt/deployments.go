@@ -1,4 +1,4 @@
-package env
+package plt
 
 import (
 	"github.com/urfave/cli/v2"
@@ -9,22 +9,22 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintEnvDepls(0, env, cache)
+	return fcli.PrintPalletDepls(0, pallet, cache)
 }
 
 // show-depl
 
 func showDeplAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
 
 	deplName := c.Args().First()
-	return fcli.PrintDeplInfo(0, env, cache, deplName)
+	return fcli.PrintDeplInfo(0, pallet, cache, deplName)
 }

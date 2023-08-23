@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- (Breaking change) Now only a single Forklift repository is permitted per Git repository, and the root of the Forklift repository must be the root of the Git repository. This means that the path of the Forklift repository is just the path of the Git repository corresponding to that Forklift repository, and thus the repository definition file must be located at the root of the Git repository.
 - (Breaking change) Renamed "Forklift pallet"/"pallet" to "Forklift repository"/"repository". All commands now use `repo` instead of `plt`. This partially reverts a change made in 0.2.0.
+- (Breaking change) Renamed "environment"/"env" to "pallet"/"plt". All commands now use `plt` instead of `env`.
 - (Breaking change) Changed the name of repository definition files from `forklift-pallet.yml` to `forklift-repository.yml`. This partially reverts a change made in 0.2.0.
 - (Breaking change) Changed the name of the repository specification section in the repository definition file from `pallet` to `repository`. This reverts a change made in 0.2.0.
 - (Breaking change) Changed the name of the repository requirements directory in environments from `requirements/pallets` to `requirements/repositories`. This partially reverts a change made in 0.2.0.
 - (Breaking change) Changed the name of the repository cache directory in the workspace from `cache` to `cache/repositories`. This partially reverts a change made in 0.2.0.
+- (Breaking change) Changed the name of the pallet directory in the workspace from `env` to `pallet`.
+- (Breaking change) Renamed the `depl` subcommand to `host`.
+- (Breaking change) Renamed the `env` subcommand to `plt`, and the `dev env` subcommand to `dev plt`.
 
 ## 0.2.2 - 2023-08-11
 

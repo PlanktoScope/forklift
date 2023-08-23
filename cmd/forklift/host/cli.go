@@ -1,34 +1,33 @@
-// Package depl provides subcommands for the active deployment
-package depl
+// Package host provides subcommands for the local Docker host
+package host
 
 import (
 	"github.com/urfave/cli/v2"
 )
 
 var Cmd = &cli.Command{
-	Name:    "depl",
-	Aliases: []string{"d", "deployments"},
-	Usage:   "Manages active package deployments in the local environment",
+	Name:  "host",
+	Usage: "Manages the local Docker host",
 	Subcommands: []*cli.Command{
 		{
 			Name:     "ls-app",
 			Aliases:  []string{"list-applications"},
-			Category: "Query the active deployment",
+			Category: "Query the Docker host",
 			Usage:    "Lists running Docker Compose applications",
 			Action:   lsAppAction,
 		},
 		{
 			Name:     "ls-con",
 			Aliases:  []string{"list-containers"},
-			Category: "Query the active deployment",
+			Category: "Query the Docker host",
 			Usage:    "Lists the containers associated with a package deployment",
 			Action:   lsConAction,
 		},
 		{
 			Name:     "rm",
 			Aliases:  []string{"remove"},
-			Category: "Modify the active deployment",
-			Usage:    "Removes all Docker stacks",
+			Category: "Modify the Docker host",
+			Usage:    "Removes all Docker Compose applications",
 			Action:   rmAction,
 		},
 	},

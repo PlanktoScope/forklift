@@ -5,40 +5,40 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-// A FSEnv is a Forklift environment configuration stored at the root of a [fs.FS] filesystem.
-type FSEnv struct {
-	// Env is the Forklift environment at the root of the filesystem.
-	Env
-	// FS is a filesystem which contains the environment's contents.
+// A FSPallet is a Forklift pallet stored at the root of a [fs.FS] filesystem.
+type FSPallet struct {
+	// Pallet is the pallet at the root of the filesystem.
+	Pallet
+	// FS is a filesystem which contains the pallet's contents.
 	FS core.PathedFS
 }
 
-// An Env is a Forklift environment, a complete specification of all package deployments which
-// should be active on a Docker host.
-type Env struct {
-	// Def is the Forklift environment definition for the environment.
-	Def EnvDef
+// A Pallet is a Forklift pallet, a complete specification of all package deployments which should
+// be active on a Docker host.
+type Pallet struct {
+	// Def is the Forklift pallet definition for the pallet.
+	Def PalletDef
 }
 
-// EnvDefFile is the name of the file defining each Forklift environment.
-const EnvDefFile = "forklift-env.yml"
+// PalletDefFile is the name of the file defining each Forklift pallet.
+const PalletDefFile = "forklift-pallet.yml"
 
-// A EnvDef defines a Forklift environment.
-type EnvDef struct {
-	// Environment defines the basic metadata for the environment.
-	Environment EnvSpec `yaml:"environment,omitempty"`
+// A PalletDef defines a Forklift pallet.
+type PalletDef struct {
+	// Pallet defines the basic metadata for the pallet.
+	Pallet PalletSpec `yaml:"pallet,omitempty"`
 }
 
-// EnvSpec defines the basic metadata for a Forklift environment.
-type EnvSpec struct {
-	// Description is a short description of the environment to be shown to users.
+// PalletSpec defines the basic metadata for a Forklift pallet.
+type PalletSpec struct {
+	// Description is a short description of the pallet to be shown to users.
 	Description string `yaml:"description,omitempty"`
 }
 
 // Deployment Configurations
 
 const (
-	// DeplsDirName is the directory in a Forklift environment which contains deployment
+	// DeplsDirName is the directory in a pallet which contains deployment
 	// configurations.
 	DeplsDirName = "deployments"
 	// DeplsFileExt is the file extension for deployment configuration files.
@@ -74,7 +74,7 @@ type DeplDef struct {
 
 // Requirements
 
-// ReqsDirName is the directory in a Forklift environment which contains requirement configurations.
+// ReqsDirName is the directory in a Forklift pallet which contains requirement configurations.
 const ReqsDirName = "requirements"
 
 // A PkgReq is a requirement for a package at a specific version.
@@ -91,8 +91,8 @@ type PkgReqLoader interface {
 }
 
 const (
-	// ReqsReposDirName is the subdirectory in the requirements directory of a Forklift environment
-	// which contains repo requirement configurations.
+	// ReqsReposDirName is the subdirectory in the requirements directory of a Forklift pallet which
+	// contains repo requirement configurations.
 	ReqsReposDirName = "repositories"
 )
 

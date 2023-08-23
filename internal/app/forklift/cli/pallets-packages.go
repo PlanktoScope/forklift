@@ -12,12 +12,10 @@ import (
 
 // Print
 
-func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	reqs, err := env.LoadFSRepoReqs("**")
+func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+	reqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify repos in environment %s", env.FS.Path(),
-		)
+		return errors.Wrapf(err, "couldn't identify repos in pallet %s", pallet.FS.Path())
 	}
 	pkgs := make([]*core.FSPkg, 0)
 	for _, req := range reqs {
@@ -38,13 +36,12 @@ func PrintEnvPkgs(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) 
 }
 
 func PrintPkgInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedRepoCache, pkgPath string,
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(env, cache, pkgPath)
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't look up information about package %s in environment %s", pkgPath,
-			env.FS.Path(),
+			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
 		)
 	}
 	PrintPkg(indent, cache, pkg)

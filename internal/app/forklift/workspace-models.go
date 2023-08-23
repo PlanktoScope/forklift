@@ -9,7 +9,7 @@ type FSWorkspace struct {
 }
 
 const (
-	currentEnvDirName = "env"
-	cacheDirName      = "cache"
-	cacheReposDirName = "repositories"
+	currentPalletDirName = "pallet" // TODO: cache pallets and track the "current" one in a file?
+	cacheDirName         = "cache"
+	cacheReposDirName    = "repositories"
 )

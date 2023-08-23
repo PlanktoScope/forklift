@@ -1,4 +1,4 @@
-// Package dev provides subcommands for developing packages, repositories, and environments
+// Package dev provides subcommands for developing packages, repositories, and pallets
 package dev
 
 import (
@@ -6,7 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/cmd/forklift/dev/env"
+	"github.com/PlanktoScope/forklift/cmd/forklift/dev/plt"
 )
 
 var defaultWorkingDir, _ = os.Getwd()
@@ -16,7 +16,7 @@ var Cmd = &cli.Command{
 	Aliases: []string{"development"},
 	Usage:   "Facilitates development and maintenance in the current working directory",
 	Subcommands: []*cli.Command{
-		env.Cmd,
+		plt.Cmd,
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{

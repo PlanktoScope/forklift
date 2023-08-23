@@ -1,4 +1,4 @@
-package env
+package plt
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 // cache-repo
 
 func cacheRepoAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c, false)
+	pallet, cache, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Downloading repos specified by the local environment...")
-	changed, err := fcli.DownloadRepos(0, env, cache)
+	fmt.Println("Downloading repos specified by the local pallet...")
+	changed, err := fcli.DownloadRepos(0, pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -25,29 +25,29 @@ func cacheRepoAction(c *cli.Context) error {
 		fmt.Println("Done! No further actions are needed at this time.")
 		return nil
 	}
-	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift env apply`.")
+	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
 	return nil
 }
 
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	env, err := getEnv(c.String("workspace"))
+	pallet, err := getPallet(c.String("workspace"))
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintEnvRepos(0, env)
+	return fcli.PrintPalletRepos(0, pallet)
 }
 
 // show-plt
 
 func showRepoAction(c *cli.Context) error {
-	env, cache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
 
 	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, env, cache, repoPath)
+	return fcli.PrintRepoInfo(0, pallet, cache, repoPath)
 }

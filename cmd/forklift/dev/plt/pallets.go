@@ -1,4 +1,4 @@
-package env
+package plt
 
 import (
 	"fmt"
@@ -14,10 +14,10 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context, ensureCache bool) (
-	env *forklift.FSEnv, cache *forklift.LayeredRepoCache, override *forklift.RepoOverrideCache,
+	pallet *forklift.FSPallet, cache *forklift.LayeredRepoCache, override *forklift.RepoOverrideCache,
 	err error,
 ) {
-	if env, err = getEnv(c.String("cwd")); err != nil {
+	if pallet, err = getPallet(c.String("cwd")); err != nil {
 		return nil, nil, nil, err
 	}
 	if cache, override, err = getCache(
@@ -25,16 +25,16 @@ func processFullBaseArgs(c *cli.Context, ensureCache bool) (
 	); err != nil {
 		return nil, nil, nil, err
 	}
-	return env, cache, override, nil
+	return pallet, cache, override, nil
 }
 
-func getEnv(cwdPath string) (env *forklift.FSEnv, err error) {
-	if env, err = forklift.LoadFSEnvContaining(cwdPath); err != nil {
+func getPallet(cwdPath string) (pallet *forklift.FSPallet, err error) {
+	if pallet, err = forklift.LoadFSPalletContaining(cwdPath); err != nil {
 		return nil, errors.Wrapf(
-			err, "The current working directory %s is not part of a Forklift environment", cwdPath,
+			err, "The current working directory %s is not part of a Forklift pallet", cwdPath,
 		)
 	}
-	return env, nil
+	return pallet, nil
 }
 
 func getCache(
@@ -63,8 +63,8 @@ func getCache(
 
 	if ensureCache && !fsCache.Exists() {
 		return nil, nil, errors.New(
-			"you first need to cache the repos specified by your environment with " +
-				"`forklift dev env cache-repos`",
+			"you first need to cache the repos specified by your pallet with " +
+				"`forklift dev plt cache-repos`",
 		)
 	}
 	return cache, override, nil
@@ -94,12 +94,12 @@ func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err er
 }
 
 func setOverrideCacheVersions(
-	env *forklift.FSEnv, overrideCache *forklift.RepoOverrideCache,
+	pallet *forklift.FSPallet, overrideCache *forklift.RepoOverrideCache,
 ) error {
-	reqs, err := env.LoadFSRepoReqs("**")
+	reqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't identify repo requirements specified by environment %s", env.FS.Path(),
+			err, "couldn't identify repo requirements specified by pallet %s", pallet.FS.Path(),
 		)
 	}
 	repoVersions := make(map[string]map[string]struct{})
@@ -121,25 +121,25 @@ func setOverrideCacheVersions(
 // show
 
 func showAction(c *cli.Context) error {
-	env, err := getEnv(c.String("cwd"))
+	pallet, err := getPallet(c.String("cwd"))
 	if err != nil {
 		return err
 	}
-	return fcli.PrintEnvInfo(0, env)
+	return fcli.PrintPalletInfo(0, pallet)
 }
 
 // check
 
 func checkAction(c *cli.Context) error {
-	env, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
-	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
-	if err := fcli.CheckEnv(0, env, cache); err != nil {
+	if err := fcli.CheckPallet(0, pallet, cache); err != nil {
 		return err
 	}
 	return nil
@@ -148,15 +148,15 @@ func checkAction(c *cli.Context) error {
 // plan
 
 func planAction(c *cli.Context) error {
-	env, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
-	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
-	if err := fcli.PlanEnv(0, env, cache); err != nil {
+	if err := fcli.PlanPallet(0, pallet, cache); err != nil {
 		return err
 	}
 	return nil
@@ -165,15 +165,15 @@ func planAction(c *cli.Context) error {
 // apply
 
 func applyAction(c *cli.Context) error {
-	env, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
-	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
-	if err := fcli.ApplyEnv(0, env, cache); err != nil {
+	if err := fcli.ApplyPallet(0, pallet, cache); err != nil {
 		return err
 	}
 	fmt.Println()

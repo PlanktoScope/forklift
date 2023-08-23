@@ -18,35 +18,35 @@ import (
 
 // Print
 
-func PrintEnvInfo(indent int, env *forklift.FSEnv) error {
-	IndentedPrintf(indent, "Environment: %s\n", env.FS.Path())
-	IndentedPrintf(indent, "Description: %s\n", env.Def.Environment.Description)
+func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
+	IndentedPrintf(indent, "Pallet: %s\n", pallet.FS.Path())
+	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
 
-	ref, err := git.Head(env.FS.Path())
+	ref, err := git.Head(pallet.FS.Path())
 	if err != nil {
-		return errors.Wrapf(err, "couldn't query environment %s for its HEAD", env.FS.Path())
+		return errors.Wrapf(err, "couldn't query pallet %s for its HEAD", pallet.FS.Path())
 	}
 	IndentedPrintf(indent, "Currently on: %s\n", git.StringifyRef(ref))
 	// TODO: report any divergence between head and remotes
-	if err := printUncommittedChanges(indent+1, env.FS.Path()); err != nil {
+	if err := printUncommittedChanges(indent+1, pallet.FS.Path()); err != nil {
 		return err
 	}
 
 	fmt.Println()
-	if err := printLocalRefsInfo(indent, env.FS.Path()); err != nil {
+	if err := printLocalRefsInfo(indent, pallet.FS.Path()); err != nil {
 		return err
 	}
 	fmt.Println()
-	if err := printRemotesInfo(indent, env.FS.Path()); err != nil {
+	if err := printRemotesInfo(indent, pallet.FS.Path()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func printUncommittedChanges(indent int, envPath string) error {
-	status, err := git.Status(envPath)
+func printUncommittedChanges(indent int, palletPath string) error {
+	status, err := git.Status(palletPath)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't query the environment %s for its status", envPath)
+		return errors.Wrapf(err, "couldn't query the pallet %s for its status", palletPath)
 	}
 	IndentedPrint(indent, "Uncommitted changes:")
 	if len(status) == 0 {
@@ -67,10 +67,10 @@ func printUncommittedChanges(indent int, envPath string) error {
 	return nil
 }
 
-func printLocalRefsInfo(indent int, envPath string) error {
-	refs, err := git.Refs(envPath)
+func printLocalRefsInfo(indent int, palletPath string) error {
+	refs, err := git.Refs(palletPath)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't query environment %s for its refs", envPath)
+		return errors.Wrapf(err, "couldn't query pallet %s for its refs", palletPath)
 	}
 
 	IndentedPrintf(indent, "References:")
@@ -87,10 +87,10 @@ func printLocalRefsInfo(indent int, envPath string) error {
 	return nil
 }
 
-func printRemotesInfo(indent int, envPath string) error {
-	remotes, err := git.Remotes(envPath)
+func printRemotesInfo(indent int, palletPath string) error {
+	remotes, err := git.Remotes(palletPath)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't query environment %s for its remotes", envPath)
+		return errors.Wrapf(err, "couldn't query pallet %s for its remotes", palletPath)
 	}
 
 	IndentedPrintf(indent, "Remotes:")
@@ -142,12 +142,12 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 
 // Check
 
-func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadDepls("**/*")
+func CheckPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
 		return err
 	}
-	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func CheckEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) erro
 		return err
 	}
 	if len(conflicts) > 0 || len(missingDeps) > 0 {
-		return errors.New("environment failed resource constraint checks")
+		return errors.New("pallet failed resource constraint checks")
 	}
 	return nil
 }
@@ -346,8 +346,8 @@ func printDepCandidate[Res any](indent int, candidate core.ResDepCandidate[Res])
 
 // Plan
 
-func PlanEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	_, _, err := computePlan(indent, env, loader)
+func PlanPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+	_, _, err := computePlan(indent, pallet, loader)
 	if err != nil {
 		return errors.Wrap(err, "couldn't compute plan for changes")
 	}
@@ -368,13 +368,13 @@ type reconciliationChange struct {
 }
 
 func computePlan(
-	indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader,
+	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
 ) ([]reconciliationChange, *docker.Client, error) {
-	depls, err := env.LoadDepls("**/*")
+	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
 		return nil, nil, err
 	}
-	resolved, err := forklift.ResolveDepls(env, loader, depls)
+	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -397,7 +397,7 @@ func computePlan(
 		return nil, nil, err
 	}
 	if len(conflicts) > 0 || len(missingDeps) > 0 {
-		return nil, nil, errors.New("environment failed resource constraint checks")
+		return nil, nil, errors.New("pallet failed resource constraint checks")
 	}
 
 	IndentedPrintln(indent, "Resolving resource dependencies among package deployments...")
@@ -711,8 +711,8 @@ func printReconciliationChange(indent int, change reconciliationChange) {
 
 // Apply
 
-func ApplyEnv(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	changes, dc, err := computePlan(indent, env, loader)
+func ApplyPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+	changes, dc, err := computePlan(indent, pallet, loader)
 	if err != nil {
 		return errors.Wrap(err, "couldn't compute plan for changes")
 	}

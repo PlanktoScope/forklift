@@ -14,8 +14,8 @@ import (
 )
 
 var errMissingCache = errors.Errorf(
-	"you first need to cache the repos specified by your environment with " +
-		"`forklift env cache-repo`",
+	"you first need to cache the repos specified by your pallet with " +
+		"`forklift plt cache-repo`",
 )
 
 func getCache(wpath string) (*forklift.FSRepoCache, error) {

@@ -35,18 +35,12 @@ func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
 	}, nil
 }
 
-func (w *FSWorkspace) GetCurrentEnvPath() string {
-	return path.Join(w.FS.Path(), currentEnvDirName)
+func (w *FSWorkspace) GetCurrentPalletPath() string {
+	return path.Join(w.FS.Path(), currentPalletDirName)
 }
 
-func (w *FSWorkspace) GetCurrentEnv() (*FSEnv, error) {
-	pathedFS, err := w.FS.Sub(currentEnvDirName)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get local environment from workspace")
-	}
-	return &FSEnv{
-		FS: pathedFS,
-	}, nil
+func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
+	return LoadFSPallet(w.FS, currentPalletDirName)
 }
 
 func (w *FSWorkspace) getCachePath() string {

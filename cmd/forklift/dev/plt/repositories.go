@@ -1,4 +1,4 @@
-package env
+package plt
 
 import (
 	"fmt"
@@ -19,13 +19,13 @@ import (
 // cache-repo
 
 func cacheRepoAction(c *cli.Context) error {
-	env, cache, _, err := processFullBaseArgs(c, false)
+	pallet, cache, _, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Downloading repos specified by the development environment...\n")
-	changed, err := fcli.DownloadRepos(0, env, cache.Underlay)
+	fmt.Printf("Downloading repos specified by the development pallet...\n")
+	changed, err := fcli.DownloadRepos(0, pallet, cache.Underlay)
 	if err != nil {
 		return err
 	}
@@ -34,39 +34,39 @@ func cacheRepoAction(c *cli.Context) error {
 		return nil
 	}
 
-	fmt.Println("Done! Next, you might want to run `sudo -E forklift dev env apply`.")
+	fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
 	return nil
 }
 
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	env, err := getEnv(c.String("cwd"))
+	pallet, err := getPallet(c.String("cwd"))
 	if err != nil {
 		return err
 	}
-	return fcli.PrintEnvRepos(0, env)
+	return fcli.PrintPalletRepos(0, pallet)
 }
 
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	env, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
 	if err != nil {
 		return err
 	}
-	if err = setOverrideCacheVersions(env, overrideCache); err != nil {
+	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
 	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, env, cache, repoPath)
+	return fcli.PrintRepoInfo(0, pallet, cache, repoPath)
 }
 
 // add-repo
 
 func addRepoAction(c *cli.Context) error {
-	env, cache, _, err := processFullBaseArgs(c, false)
+	pallet, cache, _, err := processFullBaseArgs(c, false)
 	if err != nil {
 		return err
 	}
@@ -87,13 +87,13 @@ func addRepoAction(c *cli.Context) error {
 		return errors.Wrap(err, "couldn't resolve version queries for repos")
 	}
 	fmt.Println()
-	fmt.Printf("Saving configurations to %s...\n", env.FS.Path())
+	fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
 	for _, repoQuery := range repoQueries {
 		repoReq, ok := repoReqs[repoQuery]
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", repoQuery)
 		}
-		reqsReposFS, err := env.GetRepoReqsFS()
+		reqsReposFS, err := pallet.GetRepoReqsFS()
 		if err != nil {
 			return err
 		}

@@ -13,8 +13,8 @@ import (
 
 // Print
 
-func PrintEnvDepls(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader) error {
-	depls, err := env.LoadDepls("**/*")
+func PrintPalletDepls(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
 		return err
 	}
@@ -25,16 +25,16 @@ func PrintEnvDepls(indent int, env *forklift.FSEnv, loader forklift.FSPkgLoader)
 }
 
 func PrintDeplInfo(
-	indent int, env *forklift.FSEnv, cache forklift.PathedRepoCache, deplName string,
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
 ) error {
-	depl, err := env.LoadDepl(deplName)
+	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't find package deployment specification %s in environment %s",
-			deplName, env.FS.Path(),
+			err, "couldn't find package deployment specification %s in pallet %s",
+			deplName, pallet.FS.Path(),
 		)
 	}
-	resolved, err := forklift.ResolveDepl(env, cache, depl)
+	resolved, err := forklift.ResolveDepl(pallet, cache, depl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
