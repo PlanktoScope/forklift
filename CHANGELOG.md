@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.3.0 - 2023-08-23
+
+### Added
+
+- Now Git repositories providing Forklift packages can be hosted anywhere with a URL, not just on GitHub.
+
 ### Changed
 
 - (Breaking change) Now only a single Forklift repository is permitted per Git repository, and the root of the Forklift repository must be the root of the Git repository. This means that the path of the Forklift repository is just the path of the Git repository corresponding to that Forklift repository, and thus the repository definition file must be located at the root of the Git repository.
