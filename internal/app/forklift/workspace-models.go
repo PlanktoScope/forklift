@@ -1,15 +1,15 @@
 package forklift
 
 import (
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 type FSWorkspace struct {
-	FS pallets.PathedFS
+	FS core.PathedFS
 }
 
 const (
-	currentEnvDirName   = "env"
-	cacheDirName        = "cache"
-	cachePalletsDirName = "pallets"
+	currentPalletDirName = "pallet" // TODO: cache pallets and track the "current" one in a file?
+	cacheDirName         = "cache"
+	cacheReposDirName    = "repositories"
 )

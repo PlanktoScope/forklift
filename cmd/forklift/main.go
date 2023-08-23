@@ -8,9 +8,9 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/cmd/forklift/cache"
-	"github.com/PlanktoScope/forklift/cmd/forklift/depl"
 	"github.com/PlanktoScope/forklift/cmd/forklift/dev"
-	"github.com/PlanktoScope/forklift/cmd/forklift/env"
+	"github.com/PlanktoScope/forklift/cmd/forklift/host"
+	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
 )
 
 func main() {
@@ -25,12 +25,12 @@ var app = &cli.App{
 	Name: "forklift",
 	// TODO: see if there's a way to get the version from a build tag, so that we don't have to update
 	// this manually
-	Version: "v0.2.2",
+	Version: "v0.3.0",
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
-		env.Cmd,
+		plt.Cmd,
 		cache.Cmd,
-		depl.Cmd,
+		host.Cmd,
 		dev.Cmd,
 	},
 	Flags: []cli.Flag{

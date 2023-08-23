@@ -11,20 +11,20 @@ import (
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // LoadAppDefinition parses the specified Docker Compose files from the provided fs as the current
 // working directory, applies the provided environment variables, and returns a representation of
 // the app as a Docker Compose project.
 func LoadAppDefinition(
-	fsys pallets.PathedFS, name string, configPaths []string, env map[string]string,
+	fsys core.PathedFS, name string, configPaths []string, env map[string]string,
 ) (*dct.Project, error) {
 	// This function is adapted from the github.com/compose-spec/compose-go/cli package's
 	// ProjectFromOptions function, which is licensed under Apache-2.0. This function was changed to
-	// load files from a provided [pallets.PathedFS] and to integrate custom label-setting
-	// functionality from the Apache-2.0-licensed github.com/docker/compose/cmd/compose package's
-	// ToProject function.
+	// load files from a provided [core.PathedFS] and to integrate custom label-setting functionality
+	// from the Apache-2.0-licensed github.com/docker/compose/cmd/compose package's ToProject
+	// function.
 	var configs []dct.ConfigFile
 	for _, configPath := range configPaths {
 		filename := path.Join(fsys.Path(), configPath)

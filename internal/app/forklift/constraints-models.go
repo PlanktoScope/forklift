@@ -1,7 +1,7 @@
 package forklift
 
 import (
-	"github.com/PlanktoScope/forklift/pkg/pallets"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 type DeplConflict struct {
@@ -10,21 +10,21 @@ type DeplConflict struct {
 
 	// Possible conflicts
 	Name      bool
-	Listeners []pallets.ResConflict[pallets.ListenerRes]
-	Networks  []pallets.ResConflict[pallets.NetworkRes]
-	Services  []pallets.ResConflict[pallets.ServiceRes]
+	Listeners []core.ResConflict[core.ListenerRes]
+	Networks  []core.ResConflict[core.NetworkRes]
+	Services  []core.ResConflict[core.ServiceRes]
 }
 
 type SatisfiedDeplDeps struct {
 	Depl *ResolvedDepl
 
-	Networks []pallets.SatisfiedResDep[pallets.NetworkRes]
-	Services []pallets.SatisfiedResDep[pallets.ServiceRes]
+	Networks []core.SatisfiedResDep[core.NetworkRes]
+	Services []core.SatisfiedResDep[core.ServiceRes]
 }
 
 type MissingDeplDeps struct {
 	Depl *ResolvedDepl
 
-	Networks []pallets.MissingResDep[pallets.NetworkRes]
-	Services []pallets.MissingResDep[pallets.ServiceRes]
+	Networks []core.MissingResDep[core.NetworkRes]
+	Services []core.MissingResDep[core.ServiceRes]
 }
