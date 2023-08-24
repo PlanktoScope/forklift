@@ -25,7 +25,7 @@ var app = &cli.App{
 	Name: "forklift",
 	// TODO: see if there's a way to get the version from a build tag, so that we don't have to update
 	// this manually
-	Version: "v0.3.0",
+	Version: "v0.3.1",
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
 		plt.Cmd,
