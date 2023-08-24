@@ -64,26 +64,28 @@ diff: ## git diff
 build: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --snapshot --skip-publish --clean
 build: install
 	$(call print-target)
-	docker run \
-		--rm \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--snapshot --skip-publish --clean
+	goreleaser --snapshot --skip-publish --clean
+	# docker run \
+	# 	--rm \
+	# 	-v /var/run/docker.sock:/var/run/docker.sock \
+	# 	-v `pwd`:/go/src/$(PACKAGE_NAME) \
+	# 	-w /go/src/$(PACKAGE_NAME) \
+	# 	ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+	# 	--snapshot --skip-publish --clean
 
 .PHONY: release
 release: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --clean
 release: install
 	$(call print-target)
-	docker run \
-		--rm \
-		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--clean
+	goreleaser --clean
+	# docker run \
+	# 	--rm \
+	# 	-e GITHUB_TOKEN=${GITHUB_TOKEN} \
+	# 	-v /var/run/docker.sock:/var/run/docker.sock \
+	# 	-v `pwd`:/go/src/$(PACKAGE_NAME) \
+	# 	-w /go/src/$(PACKAGE_NAME) \
+	# 	ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+	# 	--clean
 
 .PHONY: run
 run: ## go run
