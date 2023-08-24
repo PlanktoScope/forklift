@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.3.1 - 2023-08-24
+
+### Removed
+
+- Removed builds for Darwin and Windows targets, because v0.3.0 couldn't be released due to the CI workflow running out of disk space.
+
 ## 0.3.0 - 2023-08-23
 
 ### Added
