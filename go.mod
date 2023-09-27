@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bmatcuk/doublestar/v4 v4.6.0
-	github.com/compose-spec/compose-go v1.18.2
+	github.com/compose-spec/compose-go v1.19.0
 	github.com/docker/cli v24.0.6+incompatible
 	github.com/docker/compose/v2 v2.20.3
 	github.com/docker/distribution v2.8.2+incompatible
@@ -52,6 +52,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/distribution/v3 v3.0.0-20230601133803-97b1d649c493 // indirect
+	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/buildx v0.11.2 // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go v1.5.1-1.0.20160303222718-d30aec9fd63c // indirect
