@@ -5,7 +5,7 @@ This specification defines Forklift packages and repositories.
 
 ## Introduction
 
-This specification's design is heavily inspired by the design of the Go programming language's module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of packages are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
+This specification's design is heavily inspired by the design of the Go programming language and its module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of packages are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
 
 
 ## Repositories, packages, and versions
@@ -58,7 +58,7 @@ Each such operation will modify the set of all active package deployments on the
 
 ### Package resource constraints
 
-The resource requirements and provided resources associated with a package deployment are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users correct resource conflicts and unresolved resource dependencies between package deployments.
+The resource requirements and provided resources associated with a package deployment are its *resource interface* and are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users correct resource conflicts and unresolved resource dependencies between package deployments. The resource interface of a package deployment is determined from the package deployment's configuration and information specified by the package.
 
 A package deployment's declaration of resource requirements and provided resources is also a declaration of its external interface on the Docker host. Currently, resources can be:
 
