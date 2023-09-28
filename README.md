@@ -84,6 +84,7 @@ cd /home/pi/
 
 The following projects solve related problems with containers, though they make different trade-offs compared to Forklift and Pallets:
 
+- poco enables Git-based management of Docker Compose projects and collections (*catalogs*) of projects and repositories and provides some similar functionalities to forklift: https://github.com/shiwaforce/poco
 - Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Docker Swarms from a Terraform configuration: https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs
 - swarm-pack (an inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages: https://github.com/swarm-pack/swarm-pack
 - SwarmManagement uses a single YAML file for declarative configuration of an entire Docker Swarm: https://github.com/hansehe/SwarmManagement
