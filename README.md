@@ -1,4 +1,8 @@
-# forklift
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/PlanktoScope/forklift/assets/180370/2e25942e-ec4c-417d-b627-3a97891ee575">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/PlanktoScope/forklift/assets/180370/aa988cc1-eddd-492e-9938-850c65320014">
+  <img src="https://github.com/PlanktoScope/forklift/assets/180370/aa988cc1-eddd-492e-9938-850c65320014" alt="Forklift" height="100">
+</picture>
 
 A GitOps-inspired software distribution and configuration system for operating customizable scientific instruments at scale.
 
