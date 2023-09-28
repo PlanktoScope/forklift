@@ -1,16 +1,16 @@
-# Reference
+# Forklift package specification
 
-This document is a detailed reference for *Forklift*, the package management system used by the PlanktoScope project to manage deployment and configuration of software on the computers embedded in PlanktoScopes.
+This specification defines Forklift packages and repositories.
 
 
 ## Introduction
 
-Forklift is a declarative software package management system for uniformly distributing, deploying, and configuring software as [Docker Compose applications](https://docs.docker.com/compose/) on Docker hosts. Its design is heavily inspired by the Go programming language's module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of Forklift are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
+This specification's design is heavily inspired by the design of the Go programming language's module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of packages are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
 
 
 ## Repositories, packages, and versions
 
-A Forklift *repository* is a collection of software configuration packages which are tested, released, distributed, and upgraded together. Packages are how PlanktoScopes manage software installations and configurations. A Forklift repository is just a Git repository hosted at a stable location on the internet (e.g. on GitHub), with a special configuration file declaring the repository. A repository is identified by a [*repository path*](#repository-paths), which is declared in a `forklift-repository.yml` file at the root of the repository.
+A Forklift *repository* is a collection of software configuration packages which are tested, released, distributed, and upgraded together. Packages are how Forklift makes apps recomposable. A Forklift repository is just a Git repository hosted at a stable location on the internet (e.g. on GitHub), with a special configuration file declaring the repository. A repository is identified by a [*repository path*](#repository-paths), which is declared in a `forklift-repository.yml` file at the root of the repository.
 
 A Forklift *package* is a configuration of a software application which can be deployed on a Docker host. Each package within a repository specifies the prerequisites and consequences of its deployment on the host. Typically, a package declares some or all of the following:
 
@@ -910,10 +910,3 @@ A feature specification object consists of the following fields:
             - /admin/portainer
             - /admin/portainer/*
     ```
-
-
-## Pallets
-
-A Forklift *pallet* is a fully-specified configuration of the set of all package deployments which should be active on a Docker host. Only one pallet may be applied to a Docker host at any time.
-
-TODO
