@@ -58,7 +58,7 @@ Each such operation will modify the set of all active package deployments on the
 
 ### Package resource constraints
 
-The resource requirements and provided resources associated with a package deployment are its *resource interface* and are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users correct resource conflicts and unresolved resource dependencies between package deployments. The resource interface of a package deployment is determined from the package deployment's configuration and information specified by the package.
+The resource requirements and provided resources associated with a package deployment are its *resource interface* and are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users correct resource conflicts and unresolved resource dependencies between package deployments. The resource interface of a package deployment is determined from the package deployment's configuration and information specified by the package. The design of the resource interface system for determining the validity of a combination of package deployments is inspired by design of implicit interfaces in the Go programming language.
 
 A package deployment's declaration of resource requirements and provided resources is also a declaration of its external interface on the Docker host. Currently, resources can be:
 
@@ -71,9 +71,9 @@ Resource requirements and provided resources are specified as a set of *identifi
 Because some Docker hosts may already have ambiently-available resources not provided by applications running in Docker (for example, an SSH server on port 22 installed using `apt-get`), a Forklift package may also include a list of resources already ambiently provided by the host; if such a resource is declared, it should be provided by the Docker host regardless of whether the package is deployed. Adding or removing a deployment of such a package will not affect the actual existence of such resources; it will only change a package manager's assumptions about what resources are ambiently provided by the host.
 
 ### Package features
-Forklift package *features* provide a mechanism to express optional resource constraints (both required resources and provided resources) and functionalities of a package. The design of Forklift package features is inspired by the design of the [features system](https://doc.rust-lang.org/cargo/reference/features.html) in the Rust Cargo package management system.
+Forklift package *features* provide a mechanism to express optional resource constraints (both required resources and provided resources) and functionalities of a package. Each feature is identified by a name unique within the package. The design of Forklift package features is inspired by the design of the [features system](https://doc.rust-lang.org/cargo/reference/features.html) in the Rust Cargo package management system.
 
-A package defines a set of named features in its `forklift-package.yml` metadata file, and each feature can be either enabled or disabled by a package manager. Each package feature specifies any resources it requires from the Docker host, as well as any resources it provides on the Docker host.
+A package defines a set of named features in its `forklift-package.yml` metadata file, and each feature can be either enabled or disabled by a package manager. Each package feature specifies any resources it requires from the Docker host, as well as any resources it provides on the Docker host, and the names of any additional Docker Compose files which should be merged together into the Docker Compose application defined by the package when the feature is enabled.
 
 ### Versioning with constraints and features
 

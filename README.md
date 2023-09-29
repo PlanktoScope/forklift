@@ -16,12 +16,12 @@ For end-users operating open-source instruments with network APIs or browser-bas
 
 For open-hardware project developers, Forklift enables Linux-based devices and [appliances](https://en.wikipedia.org/wiki/Computer_appliance) to be retrofitted and extended with an open ecosystem of containerized software - device-specific or general-purpose, project-maintained or third-party - to help those devices become interoperable software platforms with software extensibility, customizability, and composability. Forklift also provides an incremental path for migrating project-specific software applications into containers so that they can be distributed, updated, and replaced by users just like any other app managed by Forklift. The [PlanktoScope](https://www.planktoscope.org/), an open-hardware microscope for quantitative imaging of plankton, uses Forklift as foundational infrastructure for software configuration management in the PlanktoScope's custom Linux distro based on the Raspberry Pi OS. Forklift was developed in order to solve software maintenance and operations challenges experienced in this context, and to help the PlanktoScope mature from a tool into a platform.
 
-For indie developers familiar with DevOps and cloud-native principles, Forklift is a GitOps system which is small and simple enough to work beyond the cloud - using Docker Compose to avoid the architectural complexity, operational overhead, and memory usage of even minimalistic Kubernetes distributions like k0s. Forklift allows hassle-free management of software configurations on one or more machines with only occasional internet access and no specialized ops or platform team.
+For indie developers familiar with DevOps and cloud-native principles, Forklift is a GitOps system which is small and simple enough to work beyond the cloud - using Docker Compose to avoid the architectural complexity, operational overhead, and memory usage of even minimal Kubernetes distributions like k0s. Forklift allows hassle-free management of software configurations on one or more machines with only occasional internet access and no specialized ops or platform team.
 
 
 ### Values & Governance
 
-Forklift is guided by the following values for infrastructural software in the PlanktoScope:
+Forklift is guided by the following values for infrastructural software in the PlanktoScope software:
 
 - Autonomy: It must empower people to make their own decisions specific to their needs and contexts, and to exercise full control of their ops independent of the PlanktoScope project’s longevity.
 - Compatibility: It must work well together with legacy systems such as the PlanktoScope distro, with the diverse programs which might be managed by it, and with the variety of operational contexts for PlanktoScope deployment. When compatibility is infeasible, incremental migration must be feasible.
@@ -30,13 +30,13 @@ Forklift is guided by the following values for infrastructural software in the P
 - Thoughtfulness: Its design must be rigorous, deliberate, and considerate of how it will impact people. We must not commit to new features or changes in system behavior until we thoroughly understand their consequences.
 - Transparency: Its architecture and behavior must be sufficiently simple and easy to observe, fully explain, fully understand, troubleshoot, and learn from.
 
-Currently, development of Forklift prioritizes the needs of the PlanktoScope community; decisions are made by the PlanktoScope software's maintainer in consultation with the PlanktoScope community.
+Currently, development of Forklift prioritizes the needs of the PlanktoScope community; decisions are made by the PlanktoScope software's maintainer in consultation with the PlanktoScope community in meetings open to the entire community.
 
 ### Architecture
 
 Forklift consists of:
 
-- The `forklift` tool, a single self-contained executable file which provides interfaces (currently only a command-line interface, though a browser app is also planned) for managing the configuration of apps deployed on a Docker host.
+- The `forklift` tool, a single self-contained executable file which provides user interfaces (currently only a command-line interface, though a browser app is also planned) for managing the configuration of apps deployed on a Docker host.
 - The Forklift specifications (in the `docs/specs` directory), which describe the syntax, structure, and semantics of configuration files and Git repositories used by the forklift tool.
 - Publicly-hosted Git repositories (e.g. on GitHub) complying with the Forklift specifications.
 - Container image registries (e.g. Docker Hub or the GitHub Container Registry) complying with the OCI Distribution Specification.
