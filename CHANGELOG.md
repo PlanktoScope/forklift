@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- The `forklift-pallet.yml` file can now optionally specify a README file and a pallet path.
+
+### Changed
+
+- (Breaking change) The `forklift-version-lock.yml` file now requires a `type` field which specifies whether the version lock is to be interpreted as a tagged version or as a pseudoversion. The `commit` and `timestamp` fields are now required for all types, instead of being used to determine whether the version lock is for a tagged version or a pseudoversion.
+
+### Fixed
+
+- Now the `dev plt add-repo` correctly specifies version-locking information when locking a repo at a tagged version.
+
 ## 0.3.1 - 2023-08-24
 
 ### Removed

@@ -192,9 +192,6 @@ func resolveRepoQueries(
 		}
 
 		fmt.Printf("Resolved %s as %+v", repoQuery, repoReq.VersionLock.Version)
-		if repoReq.VersionLock.Def.Type == forklift.LockTypeVersion {
-			fmt.Printf(", tagged at %s", repoReq.VersionLock.Def.Tag)
-		}
 		fmt.Println()
 		resolved[repoQuery] = repoReq
 	}
