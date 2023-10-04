@@ -212,8 +212,8 @@ func (r *Repo) GetAncestralTags(commit string) ([]AncestralTag, error) {
 				continue
 			}
 
-			commitObject, err := r.repository.CommitObject(hash)
-			if err != nil {
+			commitObject, cerr := r.repository.CommitObject(hash)
+			if cerr != nil {
 				return nil, errors.Wrapf(err, "couldn't load commit %s", hash)
 			}
 			visitQueue = append(visitQueue, ancestralCommit{
