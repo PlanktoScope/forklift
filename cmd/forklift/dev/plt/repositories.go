@@ -5,10 +5,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -190,8 +192,8 @@ func resolveRepoQueries(
 		}
 
 		fmt.Printf("Resolved %s as %+v", repoQuery, repoReq.VersionLock.Version)
-		if repoReq.VersionLock.Def.BaseVersion != "" {
-			fmt.Printf(", version %s", repoReq.VersionLock.Def.BaseVersion)
+		if repoReq.VersionLock.Def.Type == forklift.LockTypeVersion {
+			fmt.Printf(", tagged at %s", repoReq.VersionLock.Def.Tag)
 		}
 		fmt.Println()
 		resolved[repoQuery] = repoReq
@@ -253,13 +255,56 @@ func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error
 	return "", nil
 }
 
+type nameGetter interface {
+	GetName() string
+}
+
+func filterTags[T nameGetter](tags []T) []T {
+	filtered := make([]T, 0, len(tags))
+	for _, tag := range tags {
+		if !semver.IsValid(tag.GetName()) {
+			continue
+		}
+		filtered = append(filtered, tag)
+	}
+	return filtered
+}
+
 func lockCommit(gitRepo *git.Repo, commit string) (config forklift.VersionLockDef, err error) {
 	config.Commit = commit
 	if config.Timestamp, err = forklift.GetCommitTimestamp(gitRepo, config.Commit); err != nil {
 		return forklift.VersionLockDef{}, err
 	}
-	// FIXME: look for a version tagged on the commit, or the last version if it's a pseudoversion.
-	// If there's a proper tagged version, write the tag as the base version and write the commit hash
-	// but omit the timestamp.
+
+	// Attempt to lock as a tagged version
+	tags, err := gitRepo.GetTagsAt(commit)
+	if err != nil {
+		return forklift.VersionLockDef{}, errors.Wrapf(err, "couldn't lookup tags matching %s", commit)
+	}
+	tags = filterTags(tags)
+	sort.Slice(tags, func(i, j int) bool {
+		return semver.Compare(tags[i].Name, tags[j].Name) > 0
+	})
+	if len(tags) > 0 {
+		config.Tag = tags[0].Name
+		config.Type = forklift.LockTypeVersion
+		return config, nil
+	}
+
+	// Lock as a pseudoversion
+	config.Type = forklift.LockTypePseudoversion
+	ancestralTags, err := gitRepo.GetAncestralTags(commit)
+	if err != nil {
+		return forklift.VersionLockDef{}, errors.Wrapf(
+			err, "couldn't determine tagged ancestors of %s", commit,
+		)
+	}
+	ancestralTags = filterTags(ancestralTags)
+	sort.Slice(ancestralTags, func(i, j int) bool {
+		return semver.Compare(ancestralTags[i].Name, ancestralTags[j].Name) > 0
+	})
+	if len(ancestralTags) > 0 {
+		config.Tag = ancestralTags[0].Name
+	}
 	return config, nil
 }

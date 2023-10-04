@@ -31,8 +31,13 @@ type PalletDef struct {
 
 // PalletSpec defines the basic metadata for a Forklift pallet.
 type PalletSpec struct {
+	// Path is the pallet path, which acts as the canonical name for the pallet. It should just be the
+	// path of the VCS repository for the pallet.
+	Path string `yaml:"path"`
 	// Description is a short description of the pallet to be shown to users.
-	Description string `yaml:"description,omitempty"`
+	Description string `yaml:"description"`
+	// ReadmeFile is the name of a readme file to be shown to users.
+	ReadmeFile string `yaml:"readme-file"`
 }
 
 // Deployment Configurations

@@ -96,20 +96,14 @@ func (c VersionLockDef) ShortCommit() string {
 	return ShortCommit(c.Commit)
 }
 
-func (c VersionLockDef) IsVersion() bool {
-	return c.BaseVersion != "" && c.Commit != ""
-}
-
 func (c VersionLockDef) ParseVersion() (semver.Version, error) {
-	if !strings.HasPrefix(c.BaseVersion, "v") {
-		return semver.Version{}, errors.Errorf(
-			"invalid version `%s` doesn't start with `v`", c.BaseVersion,
-		)
+	if !strings.HasPrefix(c.Tag, "v") {
+		return semver.Version{}, errors.Errorf("invalid tag `%s` doesn't start with `v`", c.Tag)
 	}
-	version, err := semver.Parse(strings.TrimPrefix(c.BaseVersion, "v"))
+	version, err := semver.Parse(strings.TrimPrefix(c.Tag, "v"))
 	if err != nil {
 		return semver.Version{}, errors.Errorf(
-			"version `%s` couldn't be parsed as a semantic version", c.BaseVersion,
+			"tag `%s` couldn't be parsed as a semantic version", c.Tag,
 		)
 	}
 	return version, nil
@@ -118,39 +112,48 @@ func (c VersionLockDef) ParseVersion() (semver.Version, error) {
 func (c VersionLockDef) Pseudoversion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
 	if c.Commit == "" {
-		return "", errors.Errorf("version missing commit hash")
+		return "", errors.Errorf("pseudoversion missing commit hash")
 	}
 	if c.Timestamp == "" {
-		return "", errors.Errorf("version missing commit timestamp")
+		return "", errors.Errorf("pseudoversion missing commit timestamp")
 	}
 	revisionID := ShortCommit(c.Commit)
-	if c.BaseVersion == "" {
+	if c.Tag == "" {
 		return fmt.Sprintf("v0.0.0-%s-%s", c.Timestamp, revisionID), nil
 	}
-	version, err := c.ParseVersion()
+	parsed, err := c.ParseVersion()
 	if err != nil {
 		return "", err
 	}
-	version.Build = nil
-	if len(version.Pre) > 0 {
-		return fmt.Sprintf("%s.0.%s-%s", version.String(), c.Timestamp, revisionID), nil
+	parsed.Build = nil
+	if len(parsed.Pre) > 0 {
+		return fmt.Sprintf("v%s.0.%s-%s", parsed.String(), c.Timestamp, revisionID), nil
 	}
 	return fmt.Sprintf(
-		"v%d.%d.%d-0.%s-%s", version.Major, version.Minor, version.Patch+1, c.Timestamp, revisionID,
+		"v%d.%d.%d-0.%s-%s", parsed.Major, parsed.Minor, parsed.Patch+1, c.Timestamp, revisionID,
 	), nil
 }
 
+const (
+	LockTypeVersion       = "version"
+	LockTypePseudoversion = "pseudoversion"
+)
+
 func (c VersionLockDef) Version() (string, error) {
-	if c.IsVersion() {
+	switch c.Type {
+	case LockTypeVersion:
 		version, err := c.ParseVersion()
 		if err != nil {
 			return "", errors.Wrap(err, "invalid version")
 		}
-		return version.String(), nil
+		return "v" + version.String(), nil
+	case LockTypePseudoversion:
+		pseudoversion, err := c.Pseudoversion()
+		if err != nil {
+			return "", errors.Wrap(err, "couldn't determine pseudo-version")
+		}
+		return pseudoversion, nil
+	default:
+		return "", errors.Errorf("unknown lock type %s", c.Type)
 	}
-	pseudoversion, err := c.Pseudoversion()
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't determine pseudo-version")
-	}
-	return pseudoversion, nil
 }

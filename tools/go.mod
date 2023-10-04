@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/golangci/golangci-lint v1.54.2
-	github.com/goreleaser/goreleaser v1.21.1
+	github.com/goreleaser/goreleaser v1.21.2
 	mvdan.cc/gofumpt v0.5.0
 )
 
