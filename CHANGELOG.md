@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The `forklift-pallet.yml` file can now optionally specify a README file and a pallet path.
+- The `.deploy.yml` files now have a `disabled` boolean flag which specifies whether that deployment definition should be ignored (so that it is excluded from `plt plan`, `plt check`, and `plt apply` commands).
 
 ### Changed
 

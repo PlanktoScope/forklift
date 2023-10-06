@@ -71,10 +71,12 @@ type Depl struct {
 
 // A DeplDef defines a package deployment.
 type DeplDef struct {
-	// Package is the package path of the package to deploy
-	Package string `yaml:"package,omitempty"`
+	// Package is the package path of the package to deploy.
+	Package string `yaml:"package"`
 	// Features is a list of features from the package which should be enabled in the deployment.
-	Features []string `yaml:"features,omitempty"`
+	Features []string `yaml:"features"`
+	// Disabled represents whether the deployment should be ignored.
+	Disabled bool `yaml:"disabled"`
 }
 
 // Requirements

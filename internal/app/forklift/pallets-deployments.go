@@ -292,6 +292,18 @@ func CheckDeplDeps(
 
 // Depl
 
+// FilterDeplsForEnabled filters a slice of Depls to only include those which are not disabled.
+func FilterDeplsForEnabled(depls []Depl) []Depl {
+	filtered := make([]Depl, 0, len(depls))
+	for _, depl := range depls {
+		if depl.Def.Disabled {
+			continue
+		}
+		filtered = append(filtered, depl)
+	}
+	return filtered
+}
+
 // loadDepl loads the Depl from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the deployment followed by the deployment config file extension.
 func loadDepl(fsys core.PathedFS, name string) (depl Depl, err error) {

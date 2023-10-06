@@ -57,7 +57,11 @@ func PrintDeplInfo(
 }
 
 func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Package deployment: %s\n", depl.Name)
+	IndentedPrint(indent, "Package deployment")
+	if depl.Depl.Def.Disabled {
+		fmt.Print(" (disabled!)")
+	}
+	fmt.Printf(": %s\n", depl.Name)
 	indent++
 
 	printDeplPkg(indent, cache, depl)
