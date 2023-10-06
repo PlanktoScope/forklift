@@ -1,10 +1,13 @@
 module github.com/PlanktoScope/forklift/tools
 
-go 1.20
+go 1.21
+
+toolchain go1.21.2
 
 require (
+	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.54.2
-	github.com/goreleaser/goreleaser v1.21.1
+	github.com/goreleaser/goreleaser v1.21.2
 	mvdan.cc/gofumpt v0.5.0
 )
 

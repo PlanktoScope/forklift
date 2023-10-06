@@ -10,6 +10,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
 )
 
@@ -107,6 +108,121 @@ func (r *Repo) GetCommitTime(commit string) (time.Time, error) {
 		)
 	}
 	return object.Committer.When, nil
+}
+
+type Tag struct {
+	Name string
+	Hash plumbing.Hash
+}
+
+func (t Tag) GetName() string {
+	return t.Name
+}
+
+func (r *Repo) GetTags() ([]Tag, error) {
+	iter, err := r.repository.Tags()
+	if err != nil {
+		return nil, err
+	}
+	tags := make([]Tag, 0)
+	err = iter.ForEach(func(ref *plumbing.Reference) error {
+		tags = append(tags, Tag{
+			Name: strings.TrimPrefix(string(ref.Name()), "refs/tags/"),
+			Hash: ref.Hash(),
+		})
+		return nil
+	})
+	return tags, err
+}
+
+func (r *Repo) GetTagsAt(commit string) ([]Tag, error) {
+	hash, err := r.resolveCommit(commit)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't resolve commit %s", commit)
+	}
+
+	allTags, err := r.GetTags()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't list tags on git repo")
+	}
+	matchingTags := make([]Tag, 0)
+	for _, tag := range allTags {
+		if tag.Hash != *hash {
+			continue
+		}
+		matchingTags = append(matchingTags, tag)
+	}
+	return matchingTags, nil
+}
+
+type ancestralCommit struct {
+	commit *object.Commit
+	depth  int
+}
+
+type AncestralTag struct {
+	Tag
+	Depth int
+}
+
+func (r *Repo) GetAncestralTags(commit string) ([]AncestralTag, error) {
+	tags, err := r.GetTags()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't list tags on git repo")
+	}
+	taggedCommits := make(map[plumbing.Hash][]Tag)
+	for _, tag := range tags {
+		taggedCommits[tag.Hash] = append(taggedCommits[tag.Hash], tag)
+	}
+
+	hash, err := r.resolveCommit(commit)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't resolve commit %s", commit)
+	}
+	commitObject, err := r.repository.CommitObject(*hash)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't load commit %s", hash)
+	}
+
+	// Walk ancestor commits with a breadth-first search, accumulating tagged commits
+	visitQueue := []ancestralCommit{{
+		commit: commitObject,
+		depth:  0,
+	}}
+	visited := make(map[plumbing.Hash]struct{})
+	ancestralTags := make([]AncestralTag, 0)
+	for len(visitQueue) > 0 && len(ancestralTags) < len(tags) {
+		next := visitQueue[0]
+		visitQueue = visitQueue[1:]
+		if _, ok := visited[next.commit.Hash]; ok { // we already visited this, so don't revisit it
+			continue
+		}
+
+		if tags, ok := taggedCommits[next.commit.Hash]; ok {
+			for _, tag := range tags {
+				ancestralTags = append(ancestralTags, AncestralTag{
+					Tag:   tag,
+					Depth: next.depth,
+				})
+			}
+		}
+		visited[next.commit.Hash] = struct{}{}
+		for _, hash := range next.commit.ParentHashes {
+			if _, ok := visited[hash]; ok { // we already visited this, so don't enqueue it
+				continue
+			}
+
+			commitObject, cerr := r.repository.CommitObject(hash)
+			if cerr != nil {
+				return nil, errors.Wrapf(err, "couldn't load commit %s", hash)
+			}
+			visitQueue = append(visitQueue, ancestralCommit{
+				commit: commitObject,
+				depth:  next.depth + 1,
+			})
+		}
+	}
+	return ancestralTags, errors.Wrapf(err, "couldn't check for tags ancestral to commit %s", commit)
 }
 
 var ErrRepositoryAlreadyExists = git.ErrRepositoryAlreadyExists

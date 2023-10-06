@@ -5,7 +5,7 @@ GOLANG_CROSS_VERSION ?= v1.21.0
 
 .PHONY: dev
 dev: ## dev build
-dev: clean install generate vet fmt lint test mod-tidy
+dev: clean install generate vet fmt spell lint test mod-tidy
 
 .PHONY: ci
 ci: ## CI build
@@ -20,7 +20,7 @@ clean: ## remove files created during build pipeline
 .PHONY: install
 install: ## go install tools
 	$(call print-target)
-	cd tools && go install $(shell cd tools && go list -f '{{ join .Imports " " }}' -tags=tools)
+	cd tools && go install $(shell cd tools && go list -e -f '{{ join .Imports " " }}' -tags=tools)
 
 .PHONY: generate
 generate: ## go generate
@@ -36,6 +36,11 @@ vet: ## go vet
 fmt: ## go fmt
 	$(call print-target)
 	go fmt ./...
+
+.PHONY: spell
+spell: ##misspell
+	$(call print-target)
+	misspell -error -locale=US -w **.md
 
 .PHONY: lint
 lint: ## golangci-lint
