@@ -147,6 +147,7 @@ func CheckPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoa
 	if err != nil {
 		return err
 	}
+	depls = forklift.FilterDeplsForEnabled(depls)
 	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
 		return err
@@ -374,6 +375,7 @@ func computePlan(
 	if err != nil {
 		return nil, nil, err
 	}
+	depls = forklift.FilterDeplsForEnabled(depls)
 	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
 		return nil, nil, err
