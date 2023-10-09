@@ -8,7 +8,7 @@ require (
 	github.com/compose-spec/compose-go v1.19.0
 	github.com/docker/cli v24.0.6+incompatible
 	github.com/docker/compose/v2 v2.22.0
-	github.com/docker/distribution v2.8.2+incompatible
+	github.com/docker/distribution v2.8.3+incompatible
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.9.0
