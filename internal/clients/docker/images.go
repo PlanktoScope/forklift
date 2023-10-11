@@ -7,10 +7,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/distribution/reference"
 	"github.com/docker/cli/cli/command/inspect"
 	"github.com/docker/cli/cli/streams"
 	"github.com/docker/cli/cli/trust"
-	"github.com/docker/distribution/reference"
 	dt "github.com/docker/docker/api/types"
 	dtf "github.com/docker/docker/api/types/filters"
 	dtr "github.com/docker/docker/api/types/registry"
