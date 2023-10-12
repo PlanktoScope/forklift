@@ -106,7 +106,7 @@ You can also override cached repos with repos from your filesystem by specifying
 
 ```
 cd /home/pi/
-/home/pi/forklift dev --cwd /home/pi/dev/pallet-standard plt --repo /home/pi/forklift/dev/pallets check
+/home/pi/forklift dev --cwd /home/pi/dev/pallet-standard plt --repos /home/pi/forklift/dev/pallets check
 ```
 
 ## Similar projects
