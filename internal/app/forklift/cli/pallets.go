@@ -31,7 +31,9 @@ func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 		IndentedPrintf(indent, "Path in filesystem: %s\n", pallet.FS.Path())
 	}
 	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
-	if pallet.Def.Pallet.ReadmeFile != "" {
+	if pallet.Def.Pallet.ReadmeFile == "" {
+		fmt.Println()
+	} else {
 		readme, err := pallet.LoadReadme()
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load readme file for pallet %s", pallet.FS.Path())
@@ -41,7 +43,6 @@ func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 		PrintReadme(indent+1, readme, widthLimit)
 	}
 
-	fmt.Println()
 	ref, err := git.Head(pallet.FS.Path())
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query pallet %s for its HEAD", pallet.FS.Path())
