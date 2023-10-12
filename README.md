@@ -30,7 +30,7 @@ Forklift is guided by the following values for infrastructural software in the P
 - Thoughtfulness: Its design must be rigorous, deliberate, and considerate of how it will impact people. We must not commit to new features or changes in system behavior until we thoroughly understand their consequences.
 - Transparency: Its architecture and behavior must be sufficiently simple and easy to observe, fully explain, fully understand, troubleshoot, and learn from.
 
-Currently, development of Forklift prioritizes the needs of the PlanktoScope community; decisions are made by the PlanktoScope software's maintainer in consultation with the PlanktoScope community in meetings open to the entire community.
+Currently, development of Forklift prioritizes the needs of the PlanktoScope community; decisions are made by the PlanktoScope software's maintainer as a "benevolent dictator"/"mad scientist" in consultation with the PlanktoScope community in online meetings and discussion channels open to the entire community. Because Forklift is still an experimental tool and is only used for the PlanktoScope software, governance of the github.com/PlanktoScope/forklift repository will remain in this benevolent-dictatorship model in order to ensure that the Forklift system develops in a cohesive way consistent with the values listed above and with the PlanktoScope community's use-case for Forklift. We encourage anyone who is interested in Forklift to fork this repository for experimentation and/or to [start discussions on GitHub](https://github.com/PlanktoScope/forklift/discussions/new/choose), though we can't make any guarantees about the stability of any APIs or about our capacity to address any external code contributions or feature requests.
 
 ### Architecture
 
