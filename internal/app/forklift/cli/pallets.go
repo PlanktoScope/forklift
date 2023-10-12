@@ -19,9 +19,29 @@ import (
 // Print
 
 func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
-	IndentedPrintf(indent, "Pallet: %s\n", pallet.FS.Path())
-	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
+	IndentedPrint(indent, "Pallet: ")
+	if pallet.Def.Pallet.Path == "" {
+		fmt.Println(pallet.FS.Path())
+	} else {
+		fmt.Println(pallet.Def.Pallet.Path)
+	}
+	indent++
 
+	if pallet.Def.Pallet.Path != "" {
+		IndentedPrintf(indent, "Path in filesystem: %s\n", pallet.FS.Path())
+	}
+	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
+	if pallet.Def.Pallet.ReadmeFile != "" {
+		readme, err := pallet.LoadReadme()
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load readme file for pallet %s", pallet.FS.Path())
+		}
+		IndentedPrintln(indent, "Readme:")
+		const widthLimit = 100
+		PrintReadme(indent+1, readme, widthLimit)
+	}
+
+	fmt.Println()
 	ref, err := git.Head(pallet.FS.Path())
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query pallet %s for its HEAD", pallet.FS.Path())
@@ -31,12 +51,9 @@ func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 	if err := printUncommittedChanges(indent+1, pallet.FS.Path()); err != nil {
 		return err
 	}
-
-	fmt.Println()
 	if err := printLocalRefsInfo(indent, pallet.FS.Path()); err != nil {
 		return err
 	}
-	fmt.Println()
 	if err := printRemotesInfo(indent, pallet.FS.Path()); err != nil {
 		return err
 	}

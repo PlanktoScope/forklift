@@ -61,6 +61,16 @@ func (e *FSPallet) Remove() error {
 	return os.RemoveAll(e.FS.Path())
 }
 
+// LoadReadme loads the readme file defined by the pallet.
+func (e *FSPallet) LoadReadme() ([]byte, error) {
+	readmePath := e.Def.Pallet.ReadmeFile
+	bytes, err := fs.ReadFile(e.FS, readmePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't read pallet readme %s/%s", e.FS.Path(), readmePath)
+	}
+	return bytes, nil
+}
+
 // FSPallet: Requirements
 
 // getReqsFS returns the [fs.FS] in the pallet which contains requirement definitions.
