@@ -11,6 +11,13 @@ import (
 	"github.com/PlanktoScope/forklift/cmd/forklift/dev"
 	"github.com/PlanktoScope/forklift/cmd/forklift/host"
 	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
+	"github.com/PlanktoScope/forklift/cmd/forklift/versioning"
+)
+
+var (
+	// buildSummary should be overridden by ldflags, such as with GoReleaser's "Summary"
+	buildSummary = ""
+	toolVersion  = versioning.DetermineToolVersion(buildSummary)
 )
 
 func main() {
@@ -22,10 +29,8 @@ func main() {
 var defaultWorkspaceBase, _ = os.UserHomeDir()
 
 var app = &cli.App{
-	Name: "forklift",
-	// TODO: see if there's a way to get the version from a build tag, so that we don't have to update
-	// this manually
-	Version: "v0.3.1",
+	Name:    "forklift",
+	Version: toolVersion,
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
 		plt.Cmd,

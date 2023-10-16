@@ -66,17 +66,17 @@ diff: ## git diff
 	RES=$$(git status --porcelain) ; if [ -n "$$RES" ]; then echo $$RES && exit 1 ; fi
 
 .PHONY: build
-build: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --snapshot --skip-publish --clean
+build: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --snapshot --skip=publish --clean
 build: install
 	$(call print-target)
-	goreleaser --snapshot --skip-publish --clean
+	goreleaser --snapshot --skip=publish --clean
 	# docker run \
 	# 	--rm \
 	# 	-v /var/run/docker.sock:/var/run/docker.sock \
 	# 	-v `pwd`:/go/src/$(PACKAGE_NAME) \
 	# 	-w /go/src/$(PACKAGE_NAME) \
 	# 	ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-	# 	--snapshot --skip-publish --clean
+	# 	--snapshot --skip=publish --clean
 
 .PHONY: release
 release: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --clean

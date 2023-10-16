@@ -20,8 +20,8 @@ func ToTimestamp(t time.Time) string {
 }
 
 func ShortCommit(commit string) string {
-	const shortCommitLength = 12
-	return commit[:shortCommitLength]
+	const truncatedLength = 12
+	return commit[:truncatedLength]
 }
 
 type CommitTimeGetter interface {
