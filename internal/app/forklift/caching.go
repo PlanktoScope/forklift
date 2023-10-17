@@ -287,40 +287,40 @@ func NewRepoOverrideCache(
 }
 
 // SetVersions configures the cache to cover the specified versions of the specified repo.
-func (f *RepoOverrideCache) SetVersions(repoPath string, versions map[string]struct{}) {
-	if _, ok := f.repoVersionSets[repoPath]; !ok {
-		f.repoVersionSets[repoPath] = make(map[string]struct{})
+func (c *RepoOverrideCache) SetVersions(repoPath string, versions map[string]struct{}) {
+	if _, ok := c.repoVersionSets[repoPath]; !ok {
+		c.repoVersionSets[repoPath] = make(map[string]struct{})
 	}
 	sortedVersions := make([]string, 0, len(versions))
 	for version := range versions {
 		sortedVersions = append(sortedVersions, version)
-		f.repoVersionSets[repoPath][version] = struct{}{}
+		c.repoVersionSets[repoPath][version] = struct{}{}
 	}
 	sort.Strings(sortedVersions)
-	f.repoVersions[repoPath] = sortedVersions
+	c.repoVersions[repoPath] = sortedVersions
 }
 
 // RepoOverrideCache: OverlayCache
 
 // IncludesFSRepo reports whether the RepoOverrideCache instance has a repo with the
 // specified path and version.
-func (f *RepoOverrideCache) IncludesFSRepo(repoPath string, version string) bool {
-	if _, ok := f.repos[repoPath]; !ok {
+func (c *RepoOverrideCache) IncludesFSRepo(repoPath string, version string) bool {
+	if _, ok := c.repos[repoPath]; !ok {
 		return false
 	}
-	_, ok := f.repoVersionSets[repoPath][version]
+	_, ok := c.repoVersionSets[repoPath][version]
 	return ok
 }
 
 // LoadFSRepo loads the FSRepo with the specified path, if the version matches any of versions
 // for the repo in the cache.
 // The loaded FSRepo instance is fully initialized.
-func (f *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
-	repo, ok := f.repos[repoPath]
+func (c *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
+	repo, ok := c.repos[repoPath]
 	if !ok {
 		return nil, errors.Errorf("couldn't find a repo with path %s", repoPath)
 	}
-	if _, ok = f.repoVersionSets[repoPath][version]; !ok {
+	if _, ok = c.repoVersionSets[repoPath][version]; !ok {
 		return nil, errors.Errorf("found repo %s, but not with version %s", repoPath, version)
 	}
 	return repo, nil
@@ -330,12 +330,12 @@ func (f *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.F
 // The search pattern should be a [doublestar] pattern, such as `**`, matching repos to search
 // for.
 // The loaded FSRepo instances are fully initialized.
-func (f *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+func (c *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
 	loadedRepos := make(map[string]*core.FSRepo) // indexed by repo cache path
 	repoCachePaths := make([]string, 0)
-	for _, repoPath := range f.repoPaths {
-		repo := f.repos[repoPath]
-		for _, version := range f.repoVersions[repoPath] {
+	for _, repoPath := range c.repoPaths {
+		repo := c.repos[repoPath]
+		for _, version := range c.repoVersions[repoPath] {
 			repoCachePath := fmt.Sprintf("%s@%s", repoPath, version)
 			repoCachePaths = append(repoCachePaths, repoCachePath)
 			loadedRepos[repoCachePath] = repo
@@ -363,14 +363,14 @@ func (f *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, e
 
 // IncludesFSPkg reports whether the RepoOverrideCache instance has a repo with the specified
 // version which covers the specified package path.
-func (f *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
+func (c *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
-	for _, repo := range f.repos {
+	for _, repo := range c.repos {
 		if !core.CoversPath(repo, pkgPath) {
 			continue
 		}
-		_, ok := f.repoVersionSets[repo.Path()][version]
+		_, ok := c.repoVersionSets[repo.Path()][version]
 		return ok
 	}
 	return false
@@ -379,14 +379,14 @@ func (f *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
 // LoadFSPkg loads the FSPkg with the specified path, if the version matches any of versions for
 // the package's repo in the cache.
 // The loaded FSPkg instance is fully initialized.
-func (f *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
-	for _, repo := range f.repos {
+	for _, repo := range c.repos {
 		if !core.CoversPath(repo, pkgPath) {
 			continue
 		}
-		if _, ok := f.repoVersionSets[repo.Path()][version]; !ok {
+		if _, ok := c.repoVersionSets[repo.Path()][version]; !ok {
 			return nil, errors.Errorf(
 				"found repo %s providing package %s, but not at version %s", repo.Path(), pkgPath, version,
 			)
@@ -400,16 +400,16 @@ func (f *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSP
 // The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
 // to search for.
 // The loaded FSPkg instances are fully initialized.
-func (f *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+func (c *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 	pkgs := make(map[string]*core.FSPkg) // indexed by package cache path
 	pkgCachePaths := make([]string, 0)
-	for _, repoPath := range f.repoPaths {
-		repo := f.repos[repoPath]
+	for _, repoPath := range c.repoPaths {
+		repo := c.repos[repoPath]
 		loaded, err := repo.LoadFSPkgs("**")
 		if err != nil {
 			return nil, errors.Errorf("couldn't list packages in repo %s", repo.Path())
 		}
-		for _, version := range f.repoVersions[repoPath] {
+		for _, version := range c.repoVersions[repoPath] {
 			for _, pkg := range loaded {
 				pkgCachePath := path.Join(fmt.Sprintf("%s@%s", repoPath, version), pkg.Subdir)
 				pkgCachePaths = append(pkgCachePaths, pkgCachePath)
