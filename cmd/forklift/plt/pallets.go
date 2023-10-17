@@ -63,10 +63,22 @@ func cloneAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't parse remote release %s", remoteRelease)
 	}
+	if err = clonePallet(remote, release, wpath, c.Bool("force")); err != nil {
+		return errors.Wrapf(err, "couldn't clone %s@%s into %s", remote, release, wpath)
+	}
+
+	// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
+	// version is incompatible
+	fmt.Println("Done! Next, you'll probably want to run `forklift plt cache-repo`.")
+	return nil
+}
+
+func clonePallet(remote, release, wpath string, force bool) error {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load workspace")
 	}
+
 	local := workspace.GetCurrentPalletPath()
 	fmt.Printf("Cloning pallet %s to %s...\n", remote, local)
 	gitRepo, err := git.Clone(remote, local)
@@ -76,7 +88,7 @@ func cloneAction(c *cli.Context) error {
 				err, "couldn't clone pallet %s at release %s to %s", remote, release, local,
 			)
 		}
-		if !c.Bool("force") {
+		if !force {
 			return errors.Wrap(
 				err,
 				"you need to first delete your local pallet with `forklift plt rm` before "+
@@ -106,7 +118,6 @@ func cloneAction(c *cli.Context) error {
 	if err = gitRepo.Checkout(release); err != nil {
 		return errors.Wrapf(err, "couldn't check out release %s at %s", release, local)
 	}
-	fmt.Println("Done! Next, you'll probably want to run `forklift plt cache-repo`.")
 	return nil
 }
 
@@ -127,6 +138,7 @@ func fetchAction(c *cli.Context) error {
 	if !updated {
 		fmt.Println("No updates from the remote release.")
 	}
+
 	// TODO: display changes
 	return nil
 }
@@ -148,6 +160,9 @@ func pullAction(c *cli.Context) error {
 	if !updated {
 		fmt.Println("No changes from the remote release.")
 	}
+
+	// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
+	// version is incompatible
 	// TODO: display changes
 	return nil
 }
@@ -179,48 +194,75 @@ func showAction(c *cli.Context) error {
 
 // check
 
-func checkAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, true)
-	if err != nil {
-		return err
-	}
+func checkAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, true)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet.Def.ForkliftVersion, toolVersion, minVersion,
+			pallet.Path(), c.Bool("ignore-tool-version"),
+		); err != nil {
+			return errors.Wrap(err, "forklift tool has a version incompatibility")
+		}
+		// TODO: ensure the pallet and its repos have compatible versions
 
-	if err := fcli.CheckPallet(0, pallet, cache); err != nil {
-		return err
+		if err := fcli.CheckPallet(0, pallet, cache); err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
 }
 
 // plan
 
-func planAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, true)
-	if err != nil {
-		return err
-	}
+func planAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, true)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet.Def.ForkliftVersion, toolVersion, minVersion,
+			pallet.Path(), c.Bool("ignore-tool-version"),
+		); err != nil {
+			return errors.Wrap(err, "forklift tool has a version incompatibility")
+		}
+		// TODO: ensure the pallet and its repos have compatible versions
 
-	if err := fcli.PlanPallet(0, pallet, cache); err != nil {
-		return errors.Wrap(
-			err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
-		)
+		if err := fcli.PlanPallet(0, pallet, cache); err != nil {
+			return errors.Wrap(
+				err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
+			)
+		}
+		return nil
 	}
-	return nil
 }
 
 // apply
 
-func applyAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, true)
-	if err != nil {
-		return err
-	}
+func applyAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, true)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet.Def.ForkliftVersion, toolVersion, minVersion,
+			pallet.Path(), c.Bool("ignore-tool-version"),
+		); err != nil {
+			return errors.Wrap(err, "forklift tool has a version incompatibility")
+		}
+		// TODO: ensure the pallet and its repos have compatible versions
 
-	if err := fcli.ApplyPallet(0, pallet, cache); err != nil {
-		return errors.Wrap(
-			err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
-		)
+		if err := fcli.ApplyPallet(0, pallet, cache); err != nil {
+			return errors.Wrap(
+				err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
+			)
+		}
+		fmt.Println()
+		fmt.Println("Done!")
+		return nil
 	}
-	fmt.Println()
-	fmt.Println("Done!")
-	return nil
 }

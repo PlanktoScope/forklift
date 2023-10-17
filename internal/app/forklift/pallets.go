@@ -71,6 +71,14 @@ func (e *FSPallet) LoadReadme() ([]byte, error) {
 	return bytes, nil
 }
 
+// Path returns either the pallet's path (if specified) or its path on the filesystem.
+func (e *FSPallet) Path() string {
+	if e.Def.Pallet.Path == "" {
+		return e.FS.Path()
+	}
+	return e.Def.Pallet.Path
+}
+
 // FSPallet: Requirements
 
 // getReqsFS returns the [fs.FS] in the pallet which contains requirement definitions.

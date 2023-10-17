@@ -19,13 +19,11 @@ import (
 // Print
 
 func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
-	IndentedPrint(indent, "Pallet: ")
-	if pallet.Def.Pallet.Path == "" {
-		fmt.Println(pallet.FS.Path())
-	} else {
-		fmt.Println(pallet.Def.Pallet.Path)
-	}
+	IndentedPrintf(indent, "Pallet: %s\n", pallet.Path())
 	indent++
+
+	IndentedPrintf(indent, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	fmt.Println()
 
 	if pallet.Def.Pallet.Path != "" {
 		IndentedPrintf(indent, "Path in filesystem: %s\n", pallet.FS.Path())
@@ -43,19 +41,23 @@ func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 		PrintReadme(indent+1, readme, widthLimit)
 	}
 
-	ref, err := git.Head(pallet.FS.Path())
+	return printGitRepoInfo(indent, pallet.FS.Path())
+}
+
+func printGitRepoInfo(indent int, palletPath string) error {
+	ref, err := git.Head(palletPath)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't query pallet %s for its HEAD", pallet.FS.Path())
+		return errors.Wrapf(err, "couldn't query pallet %s for its HEAD", palletPath)
 	}
 	IndentedPrintf(indent, "Currently on: %s\n", git.StringifyRef(ref))
 	// TODO: report any divergence between head and remotes
-	if err := printUncommittedChanges(indent+1, pallet.FS.Path()); err != nil {
+	if err := printUncommittedChanges(indent+1, palletPath); err != nil {
 		return err
 	}
-	if err := printLocalRefsInfo(indent, pallet.FS.Path()); err != nil {
+	if err := printLocalRefsInfo(indent, palletPath); err != nil {
 		return err
 	}
-	if err := printRemotesInfo(indent, pallet.FS.Path()); err != nil {
+	if err := printRemotesInfo(indent, palletPath); err != nil {
 		return err
 	}
 	return nil

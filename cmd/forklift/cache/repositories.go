@@ -67,6 +67,9 @@ func printCachedRepo(indent int, cache *forklift.FSRepoCache, repo *core.FSRepo)
 	fcli.IndentedPrintf(indent, "Cached repo: %s\n", repo.Path())
 	indent++
 
+	fcli.IndentedPrintf(indent, "Forklift version: %s\n", repo.Def.ForkliftVersion)
+	fmt.Println()
+
 	fcli.IndentedPrintf(indent, "Version: %s\n", repo.Version)
 	fcli.IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, repo.FS.Path()))
 	fcli.IndentedPrintf(indent, "Description: %s\n", repo.Def.Repo.Description)

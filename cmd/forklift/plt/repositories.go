@@ -3,6 +3,7 @@ package plt
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
@@ -10,23 +11,35 @@ import (
 
 // cache-repo
 
-func cacheRepoAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, false)
-	if err != nil {
-		return err
-	}
+func cacheRepoAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet.Def.ForkliftVersion, toolVersion, minVersion,
+			pallet.Path(), c.Bool("ignore-tool-version"),
+		); err != nil {
+			return errors.Wrap(err, "forklift tool has a version incompatibility")
+		}
+		// TODO: ensure the pallet and its repos have compatible versions
 
-	fmt.Println("Downloading repos specified by the local pallet...")
-	changed, err := fcli.DownloadRepos(0, pallet, cache)
-	if err != nil {
-		return err
-	}
-	if !changed {
-		fmt.Println("Done! No further actions are needed at this time.")
+		fmt.Println("Downloading repos specified by the local pallet...")
+		changed, err := fcli.DownloadRepos(0, pallet, cache)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			fmt.Println("Done! No further actions are needed at this time.")
+			return nil
+		}
+
+		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
+		// forklift version is incompatible or ahead of the pallet version
+		fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
 		return nil
 	}
-	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
-	return nil
 }
 
 // ls-repo
