@@ -16,7 +16,7 @@ func cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.A
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
+		if err = fcli.CheckShallowCompatibility(
 			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
