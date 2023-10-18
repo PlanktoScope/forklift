@@ -180,8 +180,8 @@ func LoadRepoDef(fsys PathedFS, filePath string) (RepoDef, error) {
 }
 
 // Check looks for errors in the construction of the repo configuration.
-func (c RepoDef) Check() (errs []error) {
-	return ErrsWrap(c.Repo.Check(), "invalid repo spec")
+func (d RepoDef) Check() (errs []error) {
+	return ErrsWrap(d.Repo.Check(), "invalid repo spec")
 }
 
 // RepoSpec

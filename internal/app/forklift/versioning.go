@@ -20,8 +20,8 @@ func ToTimestamp(t time.Time) string {
 }
 
 func ShortCommit(commit string) string {
-	const shortCommitLength = 12
-	return commit[:shortCommitLength]
+	const truncatedLength = 12
+	return commit[:truncatedLength]
 }
 
 type CommitTimeGetter interface {
@@ -88,49 +88,49 @@ func loadVersionLockDef(fsys core.PathedFS, filePath string) (VersionLockDef, er
 	return config, nil
 }
 
-func (c VersionLockDef) IsCommitLocked() bool {
-	return c.Commit != ""
+func (l VersionLockDef) IsCommitLocked() bool {
+	return l.Commit != ""
 }
 
-func (c VersionLockDef) ShortCommit() string {
-	return ShortCommit(c.Commit)
+func (l VersionLockDef) ShortCommit() string {
+	return ShortCommit(l.Commit)
 }
 
-func (c VersionLockDef) ParseVersion() (semver.Version, error) {
-	if !strings.HasPrefix(c.Tag, "v") {
-		return semver.Version{}, errors.Errorf("invalid tag `%s` doesn't start with `v`", c.Tag)
+func (l VersionLockDef) ParseVersion() (semver.Version, error) {
+	if !strings.HasPrefix(l.Tag, "v") {
+		return semver.Version{}, errors.Errorf("invalid tag `%s` doesn't start with `v`", l.Tag)
 	}
-	version, err := semver.Parse(strings.TrimPrefix(c.Tag, "v"))
+	version, err := semver.Parse(strings.TrimPrefix(l.Tag, "v"))
 	if err != nil {
 		return semver.Version{}, errors.Errorf(
-			"tag `%s` couldn't be parsed as a semantic version", c.Tag,
+			"tag `%s` couldn't be parsed as a semantic version", l.Tag,
 		)
 	}
 	return version, nil
 }
 
-func (c VersionLockDef) Pseudoversion() (string, error) {
+func (l VersionLockDef) Pseudoversion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
-	if c.Commit == "" {
+	if l.Commit == "" {
 		return "", errors.Errorf("pseudoversion missing commit hash")
 	}
-	if c.Timestamp == "" {
+	if l.Timestamp == "" {
 		return "", errors.Errorf("pseudoversion missing commit timestamp")
 	}
-	revisionID := ShortCommit(c.Commit)
-	if c.Tag == "" {
-		return fmt.Sprintf("v0.0.0-%s-%s", c.Timestamp, revisionID), nil
+	revisionID := ShortCommit(l.Commit)
+	if l.Tag == "" {
+		return fmt.Sprintf("v0.0.0-%s-%s", l.Timestamp, revisionID), nil
 	}
-	parsed, err := c.ParseVersion()
+	parsed, err := l.ParseVersion()
 	if err != nil {
 		return "", err
 	}
 	parsed.Build = nil
 	if len(parsed.Pre) > 0 {
-		return fmt.Sprintf("v%s.0.%s-%s", parsed.String(), c.Timestamp, revisionID), nil
+		return fmt.Sprintf("v%s.0.%s-%s", parsed.String(), l.Timestamp, revisionID), nil
 	}
 	return fmt.Sprintf(
-		"v%d.%d.%d-0.%s-%s", parsed.Major, parsed.Minor, parsed.Patch+1, c.Timestamp, revisionID,
+		"v%d.%d.%d-0.%s-%s", parsed.Major, parsed.Minor, parsed.Patch+1, l.Timestamp, revisionID,
 	), nil
 }
 
@@ -139,21 +139,21 @@ const (
 	LockTypePseudoversion = "pseudoversion"
 )
 
-func (c VersionLockDef) Version() (string, error) {
-	switch c.Type {
+func (l VersionLockDef) Version() (string, error) {
+	switch l.Type {
 	case LockTypeVersion:
-		version, err := c.ParseVersion()
+		version, err := l.ParseVersion()
 		if err != nil {
 			return "", errors.Wrap(err, "invalid version")
 		}
 		return "v" + version.String(), nil
 	case LockTypePseudoversion:
-		pseudoversion, err := c.Pseudoversion()
+		pseudoversion, err := l.Pseudoversion()
 		if err != nil {
 			return "", errors.Wrap(err, "couldn't determine pseudo-version")
 		}
 		return pseudoversion, nil
 	default:
-		return "", errors.Errorf("unknown lock type %s", c.Type)
+		return "", errors.Errorf("unknown lock type %s", l.Type)
 	}
 }

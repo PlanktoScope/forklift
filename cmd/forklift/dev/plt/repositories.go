@@ -20,24 +20,33 @@ import (
 
 // cache-repo
 
-func cacheRepoAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, false)
-	if err != nil {
-		return err
-	}
+func cacheRepoAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, _, err := processFullBaseArgs(c, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
 
-	fmt.Printf("Downloading repos specified by the development pallet...\n")
-	changed, err := fcli.DownloadRepos(0, pallet, cache.Underlay)
-	if err != nil {
-		return err
-	}
-	if !changed {
-		fmt.Println("Done! No further actions are needed at this time.")
+		fmt.Printf("Downloading repos specified by the development pallet...\n")
+		changed, err := fcli.DownloadRepos(0, pallet, cache.Underlay)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			fmt.Println("Done! No further actions are needed at this time.")
+			return nil
+		}
+
+		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
+		// forklift version is incompatible or ahead of the pallet version
+		fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
 		return nil
 	}
-
-	fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
-	return nil
 }
 
 // ls-repo
@@ -67,57 +76,64 @@ func showRepoAction(c *cli.Context) error {
 
 // add-repo
 
-func addRepoAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, false)
-	if err != nil {
-		return err
-	}
-
-	repoQueries := c.Args().Slice()
-	if err = validateRepoQueries(repoQueries); err != nil {
-		return errors.Wrap(err, "one or more arguments is invalid")
-	}
-	fmt.Println("Updating local mirrors of remote Git repos...")
-	if err = updateLocalRepoMirrors(repoQueries, cache.Underlay.Path()); err != nil {
-		return errors.Wrap(err, "couldn't update local repo mirrors")
-	}
-
-	fmt.Println()
-	fmt.Println("Resolving version queries...")
-	repoReqs, err := resolveRepoQueries(repoQueries, cache.Underlay.Path())
-	if err != nil {
-		return errors.Wrap(err, "couldn't resolve version queries for repos")
-	}
-	fmt.Println()
-	fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
-	for _, repoQuery := range repoQueries {
-		repoReq, ok := repoReqs[repoQuery]
-		if !ok {
-			return errors.Errorf("couldn't find configuration for %s", repoQuery)
-		}
-		reqsReposFS, err := pallet.GetRepoReqsFS()
+func addRepoAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, _, err := processFullBaseArgs(c, false)
 		if err != nil {
 			return err
 		}
-		repoReqPath := path.Join(reqsReposFS.Path(), repoReq.Path(), forklift.VersionLockDefFile)
-		marshaled, err := yaml.Marshal(repoReq.VersionLock.Def)
+		if err = fcli.CheckCompatibility(
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		repoQueries := c.Args().Slice()
+		if err = validateRepoQueries(repoQueries); err != nil {
+			return errors.Wrap(err, "one or more arguments is invalid")
+		}
+		fmt.Println("Updating local mirrors of remote Git repos...")
+		if err = updateLocalRepoMirrors(repoQueries, cache.Underlay.Path()); err != nil {
+			return errors.Wrap(err, "couldn't update local repo mirrors")
+		}
+
+		fmt.Println()
+		fmt.Println("Resolving version queries...")
+		repoReqs, err := resolveRepoQueries(repoQueries, cache.Underlay.Path())
 		if err != nil {
-			return errors.Wrapf(err, "couldn't marshal repo requirement from %s", repoReqPath)
+			return errors.Wrap(err, "couldn't resolve version queries for repos")
 		}
-		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
-			return errors.Wrapf(
-				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
-			)
+		fmt.Println()
+		fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
+		for _, repoQuery := range repoQueries {
+			repoReq, ok := repoReqs[repoQuery]
+			if !ok {
+				return errors.Errorf("couldn't find configuration for %s", repoQuery)
+			}
+			reqsReposFS, err := pallet.GetRepoReqsFS()
+			if err != nil {
+				return err
+			}
+			repoReqPath := path.Join(reqsReposFS.Path(), repoReq.Path(), forklift.VersionLockDefFile)
+			marshaled, err := yaml.Marshal(repoReq.VersionLock.Def)
+			if err != nil {
+				return errors.Wrapf(err, "couldn't marshal repo requirement from %s", repoReqPath)
+			}
+			if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
+				return errors.Wrapf(
+					err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
+				)
+			}
+			const perm = 0o644 // owner rw, group r, public r
+			if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
+				return errors.Wrapf(
+					err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
+				)
+			}
 		}
-		const perm = 0o644 // owner rw, group r, public r
-		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
-			return errors.Wrapf(
-				err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
-			)
-		}
+		fmt.Println("Done!")
+		return nil
 	}
-	fmt.Println("Done!")
-	return nil
 }
 
 func validateRepoQueries(repoQueries []string) error {

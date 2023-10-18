@@ -24,6 +24,11 @@ const RepoDefFile = "forklift-repository.yml"
 
 // A RepoDef defines a repository.
 type RepoDef struct {
+	// ForkliftVersion indicates that the repo was written assuming the semantics of a given version
+	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
+	// Forklift required to use the repository. The Forklift tool refuses to use repositories
+	// declaring newer Forklift versions for any operations beyond printing information.
+	ForkliftVersion string `yaml:"forklift-version"`
 	// Repo defines the basic metadata for the repository.
 	Repo RepoSpec `yaml:"repository"`
 }

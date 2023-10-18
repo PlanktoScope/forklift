@@ -6,6 +6,8 @@ builds:
 - id: forklift
   main: ./cmd/forklift
   binary: forklift
+  ldflags:
+    - -s -w -X main.buildVersion={{.Version}} -X main.buildCommit={{.Commit}} -X main.buildCommitTimestamp={{.CommitTimestamp}} -X main.buildSummary={{.Summary}} -X main.builtBy=goreleaser
   env:
     - CGO_ENABLED=0
   targets:

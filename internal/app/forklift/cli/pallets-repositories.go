@@ -41,7 +41,6 @@ func PrintRepoInfo(
 		)
 	}
 	printRepoReq(indent, req.RepoReq)
-	fmt.Println()
 	indent++
 
 	version := req.VersionLock.Version
@@ -52,6 +51,9 @@ func PrintRepoInfo(
 			repoPath, version,
 		)
 	}
+	IndentedPrintf(indent, "Forklift version: %s\n", cachedRepo.Def.ForkliftVersion)
+	fmt.Println()
+
 	if core.CoversPath(cache, cachedRepo.FS.Path()) {
 		IndentedPrintf(
 			indent, "Path in cache: %s\n", core.GetSubdirPath(cache, cachedRepo.FS.Path()),
@@ -76,7 +78,7 @@ func PrintRepoInfo(
 func printRepoReq(indent int, req forklift.RepoReq) {
 	IndentedPrintf(indent, "Repo: %s\n", req.Path())
 	indent++
-	IndentedPrintf(indent, "Locked version: %s\n", req.VersionLock.Version)
+	IndentedPrintf(indent, "Locked repo version: %s\n", req.VersionLock.Version)
 }
 
 func PrintReadme(indent int, readme []byte, widthLimit int) {

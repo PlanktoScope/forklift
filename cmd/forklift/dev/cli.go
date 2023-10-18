@@ -11,19 +11,21 @@ import (
 
 var defaultWorkingDir, _ = os.Getwd()
 
-var Cmd = &cli.Command{
-	Name:    "dev",
-	Aliases: []string{"development"},
-	Usage:   "Facilitates development and maintenance in the current working directory",
-	Subcommands: []*cli.Command{
-		plt.Cmd,
-	},
-	Flags: []cli.Flag{
-		&cli.StringFlag{
-			Name:    "cwd",
-			Value:   defaultWorkingDir,
-			Usage:   "Path of the current working directory",
-			EnvVars: []string{"FORKLIFT_CWD"},
+func MakeCmd(toolVersion, minVersion string) *cli.Command {
+	return &cli.Command{
+		Name:    "dev",
+		Aliases: []string{"development"},
+		Usage:   "Facilitates development and maintenance in the current working directory",
+		Subcommands: []*cli.Command{
+			plt.MakeCmd(toolVersion, minVersion),
 		},
-	},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "cwd",
+				Value:   defaultWorkingDir,
+				Usage:   "Path of the current working directory",
+				EnvVars: []string{"FORKLIFT_CWD"},
+			},
+		},
+	}
 }

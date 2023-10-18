@@ -25,6 +25,13 @@ const PalletDefFile = "forklift-pallet.yml"
 
 // A PalletDef defines a Forklift pallet.
 type PalletDef struct {
+	// ForkliftVersion indicates that the pallet was written assuming the semantics of a given version
+	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
+	// Forklift required to use the pallet. The Forklift tool refuses to use pallets declaring newer
+	// Forklift versions for any operations beyond printing information. The Forklift version of the
+	// pallet must be greater than or equal to the Forklift version of every required Forklift repo or
+	// pallet.
+	ForkliftVersion string `yaml:"forklift-version"`
 	// Pallet defines the basic metadata for the pallet.
 	Pallet PalletSpec `yaml:"pallet,omitempty"`
 }

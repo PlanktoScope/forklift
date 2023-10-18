@@ -10,23 +10,33 @@ import (
 
 // cache-repo
 
-func cacheRepoAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, false)
-	if err != nil {
-		return err
-	}
+func cacheRepoAction(toolVersion, minVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
 
-	fmt.Println("Downloading repos specified by the local pallet...")
-	changed, err := fcli.DownloadRepos(0, pallet, cache)
-	if err != nil {
-		return err
-	}
-	if !changed {
-		fmt.Println("Done! No further actions are needed at this time.")
+		fmt.Println("Downloading repos specified by the local pallet...")
+		changed, err := fcli.DownloadRepos(0, pallet, cache)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			fmt.Println("Done! No further actions are needed at this time.")
+			return nil
+		}
+
+		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
+		// forklift version is incompatible or ahead of the pallet version
+		fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
 		return nil
 	}
-	fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
-	return nil
 }
 
 // ls-repo

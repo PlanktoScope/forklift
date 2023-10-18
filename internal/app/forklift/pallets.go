@@ -14,17 +14,17 @@ import (
 // FSPallet
 
 // LoadFSPallet loads a FSPallet from the specified directory path in the provided base filesystem.
-func LoadFSPallet(fsys core.PathedFS, subdirPath string) (e *FSPallet, err error) {
-	e = &FSPallet{}
-	if e.FS, err = fsys.Sub(subdirPath); err != nil {
+func LoadFSPallet(fsys core.PathedFS, subdirPath string) (p *FSPallet, err error) {
+	p = &FSPallet{}
+	if p.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if e.Pallet.Def, err = loadPalletDef(e.FS, PalletDefFile); err != nil {
+	if p.Pallet.Def, err = loadPalletDef(p.FS, PalletDefFile); err != nil {
 		return nil, errors.Errorf("couldn't load pallet config")
 	}
-	return e, nil
+	return p, nil
 }
 
 // LoadFSPalletContaining loads the FSPallet containing the specified sub-directory path in the
@@ -52,28 +52,46 @@ func LoadFSPalletContaining(path string) (*FSPallet, error) {
 }
 
 // Exists checks whether the pallet actually exists on the OS's filesystem.
-func (e *FSPallet) Exists() bool {
-	return Exists(e.FS.Path())
+func (p *FSPallet) Exists() bool {
+	return Exists(p.FS.Path())
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.
-func (e *FSPallet) Remove() error {
-	return os.RemoveAll(e.FS.Path())
+func (p *FSPallet) Remove() error {
+	return os.RemoveAll(p.FS.Path())
+}
+
+// LoadReadme loads the readme file defined by the pallet.
+func (p *FSPallet) LoadReadme() ([]byte, error) {
+	readmePath := p.Def.Pallet.ReadmeFile
+	bytes, err := fs.ReadFile(p.FS, readmePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't read pallet readme %s/%s", p.FS.Path(), readmePath)
+	}
+	return bytes, nil
+}
+
+// Path returns either the pallet's path (if specified) or its path on the filesystem.
+func (p *FSPallet) Path() string {
+	if p.Def.Pallet.Path == "" {
+		return p.FS.Path()
+	}
+	return p.Def.Pallet.Path
 }
 
 // FSPallet: Requirements
 
 // getReqsFS returns the [fs.FS] in the pallet which contains requirement definitions.
-func (e *FSPallet) getReqsFS() (core.PathedFS, error) {
-	return e.FS.Sub(ReqsDirName)
+func (p *FSPallet) getReqsFS() (core.PathedFS, error) {
+	return p.FS.Sub(ReqsDirName)
 }
 
 // FSPallet: Repo Requirements
 
 // GetRepoReqsFS returns the [fs.FS] in the pallet which contains repo requirement
 // definitions.
-func (e *FSPallet) GetRepoReqsFS() (core.PathedFS, error) {
-	fsys, err := e.getReqsFS()
+func (p *FSPallet) GetRepoReqsFS() (core.PathedFS, error) {
+	fsys, err := p.getReqsFS()
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +100,8 @@ func (e *FSPallet) GetRepoReqsFS() (core.PathedFS, error) {
 
 // LoadFSRepoReq loads the FSRepoReq from the pallet for the repo with the specified
 // path.
-func (e *FSPallet) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
-	reposFS, err := e.GetRepoReqsFS()
+func (p *FSPallet) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
+	reposFS, err := p.GetRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 	}
@@ -97,8 +115,8 @@ func (e *FSPallet) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
 // pattern.
 // The search pattern should be a [doublestar] pattern, such as `**`, matching the repo paths to
 // search for.
-func (e *FSPallet) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
-	reposFS, err := e.GetRepoReqsFS()
+func (p *FSPallet) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
+	reposFS, err := p.GetRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for repos in pallet")
 	}
@@ -108,8 +126,8 @@ func (e *FSPallet) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
 // FSPallet: Package Requirements
 
 // LoadPkgReq loads the PkgReq from the pallet for the package with the specified package path.
-func (e *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-	reposFS, err := e.GetRepoReqsFS()
+func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
+	reposFS, err := p.GetRepoReqsFS()
 	if err != nil {
 		return PkgReq{}, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 	}
@@ -126,13 +144,13 @@ func (e *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 
 // getDeplsFS returns the [fs.FS] in the pallet which contains package deployment
 // configurations.
-func (e *FSPallet) getDeplsFS() (core.PathedFS, error) {
-	return e.FS.Sub(DeplsDirName)
+func (p *FSPallet) getDeplsFS() (core.PathedFS, error) {
+	return p.FS.Sub(DeplsDirName)
 }
 
 // LoadDepl loads the Depl with the specified name from the pallet.
-func (e *FSPallet) LoadDepl(name string) (depl Depl, err error) {
-	deplsFS, err := e.getDeplsFS()
+func (p *FSPallet) LoadDepl(name string) (depl Depl, err error) {
+	deplsFS, err := p.getDeplsFS()
 	if err != nil {
 		return Depl{}, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from pallet",
@@ -147,8 +165,8 @@ func (e *FSPallet) LoadDepl(name string) (depl Depl, err error) {
 // LoadDepls loads all package deployment configurations matching the specified search pattern.
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
-func (e *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
-	fsys, err := e.getDeplsFS()
+func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
+	fsys, err := p.getDeplsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from pallet",

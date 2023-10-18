@@ -30,7 +30,7 @@ Forklift is guided by the following values for infrastructural software in the P
 - Thoughtfulness: Its design must be rigorous, deliberate, and considerate of how it will impact people. We must not commit to new features or changes in system behavior until we thoroughly understand their consequences.
 - Transparency: Its architecture and behavior must be sufficiently simple and easy to observe, fully explain, fully understand, troubleshoot, and learn from.
 
-Currently, development of Forklift prioritizes the needs of the PlanktoScope community; decisions are made by the PlanktoScope software's maintainer in consultation with the PlanktoScope community in meetings open to the entire community.
+Currently, development of Forklift prioritizes the needs of the PlanktoScope community; decisions are made by the PlanktoScope software's maintainer as a "benevolent dictator"/"mad scientist" in consultation with the PlanktoScope community in online meetings and discussion channels open to the entire community. Because Forklift is still an experimental tool and is only used for the PlanktoScope software, governance of the github.com/PlanktoScope/forklift repository will remain in this benevolent-dictatorship model in order to ensure that the Forklift system develops in a cohesive way consistent with the values listed above and with the PlanktoScope community's use-case for Forklift. We encourage anyone who is interested in Forklift to fork this repository for experimentation and/or to [start discussions on GitHub](https://github.com/PlanktoScope/forklift/discussions/new/choose), though we can't make any guarantees about the stability of any APIs or about our capacity to address any external code contributions or feature requests.
 
 ### Architecture
 
@@ -52,66 +52,66 @@ tar -xzf forklift_{version number}_{os}_{cpu architecture}.tar.gz forklift
 
 Then you may need to move the forklift binary into a directory in your system path, or you can just run the forklift binary in your current directory (in which case you should replace `forklift` with `./forklift` in the commands listed below), or you can just run the forklift binary by its absolute/relative path (in which case you should replace `forklift` with the absolute/relative path of the binary in the commands listed below).
 
-### Deploy a published environment
+### Deploy a published pallet
 
-Once you have forklift, you will need to clone a Pallet environment to your local environment. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallets-env`](https://github.com/PlanktoScope/pallets-env) environment using the command:
+Once you have forklift, you will need to clone a pallet to your Docker host. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallet-standard`](https://github.com/PlanktoScope/pallet-standard) pallet using the command:
 ```
-forklift env clone github.com/PlanktoScope/pallets-env@edge
-```
-
-Then you will need to download the Pallet repositories specified by your local environment into your local cache, so that you can deploy packages provided by those repositories. You can download the necessary repositories using the command:
-```
-forklift env cache-repo
+forklift plt clone github.com/PlanktoScope/pallet-standard@edge
 ```
 
-Then you will need to apply the package deployments as configured by your local environment, into your Docker Swarm. You can apply the deployments using the command (note that you need `sudo -E` unless you are running the Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
+Then you will need to download the Forklift repositories specified by your local pallet into your local cache, so that you can deploy packages provided by those repositories according to the pallet's configuration. You can download the necessary repositories using the command:
 ```
-sudo -E forklift env apply
-```
-
-### Work on a development environment
-
-First, you will need to make/download a Pallet environment somewhere on your local file system. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallets-env`](https://github.com/PlanktoScope/pallets-env) environment using the command:
-
-```
-git clone https://github.com/PlanktoScope/pallets-env
+forklift plt cache-repo
 ```
 
-Then you will need to download/install forklift (see instructions in the "Download/install forklift" section above). Once you have forklift, you can run commands using the `dev env` subcommand; if forklift is in your system path, you can simply run commands within the directory containing your development environment, or any subdirectory of it. For example, if your development environment is at `/home/pi/dev/pallets-env`, you can run the following commands to see some information about your development environment:
-
+Then you will need to apply the package deployments as configured by your local pallet, into your Docker Swarm. You can apply the deployments using the command (note that you need `sudo -E` unless you are running the Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
 ```
-cd /home/pi/dev/pallets-env
-forklift dev env show
+sudo -E forklift plt apply
 ```
 
-You can also run the command from anywhere else on your filesystem by specifying the path of your development environment. For example, if your forklift binary is in `/home/pi`, you can run any the following sets of commands to see the same information about your development environment:
+### Work on a development pallet
+
+First, you will need to make/download a pallet somewhere on your local file system. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallet-standard`](https://github.com/PlanktoScope/pallet-standard) pallet using the command:
+
+```
+git clone https://github.com/PlanktoScope/pallet-standard
+```
+
+Then you will need to download/install forklift (see instructions in the ["Download/install forklift"](#downloadinstall-forklift) section above). Once you have forklift, you can run commands using the `dev plt` subcommand; if forklift is in your system path, you can simply run commands within the directory containing your development pallet, or any subdirectory of it. For example, if your development pallet is at `/home/pi/dev/pallet-standard`, you can run the following commands to see some information about your development pallet:
+
+```
+cd /home/pi/dev/pallet-standard
+forklift dev plt show
+```
+
+You can also run the command from anywhere else on your filesystem by specifying the path of your development pallet. For example, if your forklift binary is in `/home/pi`, you can run any the following sets of commands to see the same information about your development pallet:
 
 ```
 cd /home/pi/
-./forklift dev --cwd ./dev/pallets-env env show
+./forklift dev --cwd ./dev/pallet-standard plt show
 ```
 
 ```
 cd /etc/
-/home/pi/forklift dev --cwd /home/pi/dev/pallets-env env show
+/home/pi/forklift dev --cwd /home/pi/dev/pallet-standard plt show
 ```
 
-You can also use the `forklift dev env add-repo` command to add additional Pallet repositories to your development environment, and to change the versions of Pallet repositories already added to your development environment.
+You can also use the `forklift dev plt add-repo` command to add additional Forklift repositories to your development pallet, and to change the versions of Forklift repositories already added to your development pallet.
 
-You can also run commands like `forklift dev env cache-repo` and `sudo -E forklift dev env apply` (with appropriate values in the `--cwd` flag if necessary) to download the Pallet repositories specified by your development environment into your local cache and deploy the packages provided by those repositories according to the configuration in your development environment. This is useful if, for example, you want to make some experimental changes to your development environment and test them on your local machine before committing and pushing those changes onto GitHub.
+You can also run commands like `forklift dev plt cache-repo` and `sudo -E forklift dev plt apply` (with appropriate values in the `--cwd` flag if necessary) to download the Forklift repositories specified by your development pallet into your local cache and deploy the packages provided by those repositories according to the configuration in your development pallet. This is useful if, for example, you want to make some experimental changes to your development pallet and test them on your local machine before committing and pushing those changes onto GitHub.
 
-Finally, you can run the `forklift dev env check` command to check the environment for any problems, such as resource constraint violations.
+Finally, you can run the `forklift dev plt check` command to check the pallet for any problems, such as resource constraint violations.
 
 You can also override cached repos with repos from your filesystem by specifying one or more directories containing one or more repos; then the repos in those directories will be used instead of the respective repos from the cache, regardless of repo version. For example:
 
 ```
 cd /home/pi/
-/home/pi/forklift dev --cwd /home/pi/dev/pallets-env env --repo /home/pi/forklift/dev/pallets check
+/home/pi/forklift dev --cwd /home/pi/dev/pallet-standard plt --repos /home/pi/forklift/dev/pallets check
 ```
 
 ## Similar projects
 
-The following projects solve related problems with containers, though they make different trade-offs compared to Forklift and Pallets:
+The following projects solve related problems with containers, though they make different trade-offs compared to Forklift:
 
 - poco enables Git-based management of Docker Compose projects and collections (*catalogs*) of projects and repositories and provides some similar functionalities to forklift: https://github.com/shiwaforce/poco
 - Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Docker Swarms from a Terraform configuration: https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs

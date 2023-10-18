@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The `forklift-pallet.yml` file can now optionally specify a README file and a pallet path.
+- The `forklift-pallet.yml` file can now optionally specify a README file and a pallet path. When specified, those fields are displayed by the `plt show` and `dev plt show` commands.
 - The `.deploy.yml` files now have a `disabled` boolean flag which specifies whether that deployment definition should be ignored (so that it is excluded from `plt plan`, `plt check`, and `plt apply` commands).
 
 ### Changed
 
+- The `forklift-repository.yml` and `forklift-pallet.yml` now have a `forklift-version` field which indicates that the repository/pallet was written assuming the semantics of a given version of Forklift, and which sets the minimum version of Forklift required to use the repository/pallet. The Forklift version of a pallet cannot be less than the Forklift version of any repo required by the pallet. The Forklift tool also checks version compatibility - an older version of the Forklift tool is incompatible with repositories/pallets with newer Forklift versions, and the Forklift tool is also sets the minimum Forklift version of any repository/pallet it is compatible with (so for example v0.4.0 of the Forklift tool is incompatible with any repositories/pallets with Forklift version below v0.4.0, due to other breaking changes made for Forklift v0.4.0).
 - (Breaking change) The `forklift-version-lock.yml` file now requires a `type` field which specifies whether the version lock is to be interpreted as a tagged version or as a pseudoversion. The `commit` and `timestamp` fields are now required for all types, instead of being used to determine whether the version lock is for a tagged version or a pseudoversion.
 
 ### Fixed
