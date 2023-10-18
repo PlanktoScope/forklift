@@ -124,13 +124,25 @@ It is the reponsibility of the package maintainer to document the package's exte
 The definition of a repository is stored in a YAML file named `forklift-repository.yml` in the repository's root directory. Here is an example of a `forklift-repository.yml` file:
 
 ```yaml
+forklift-version: v0.4.0
+
 repository:
   path: github.com/PlanktoScope/device-pkgs
   description: Packages for the PlanktoScope software distribution
   readme-file: README.md
 ```
 
-Currently, all fields in the repository metadata file are under a `repository` section.
+### `forklift-version` field
+This field of the `forklift-repository.yml` file declares that the repository was written assuming the semantics of a given version of Forklift.
+- This field is required.
+- The version must be a valid version of the Forklift tool or the Forklift specification.
+- The version sets the minimum version of the Forklift tool required to use the repository. The Forklift tool refuses to use repositories declaring newer Forklift versions (or excessively old Forklift versions) for any operations beyond printing information.
+- Example:
+  ```yaml
+  forklift-version: v0.4.0
+  ```
+
+All other fields in the repository metadata file are under a `repository` section.
 
 ### `repository` section
 
