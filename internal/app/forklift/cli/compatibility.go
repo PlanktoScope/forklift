@@ -11,11 +11,11 @@ import (
 
 // CheckCompatibility returns an error upon any version compatibility errors between a pallet, its
 // required pallets & repos (as loaded by repoLoader), and - unless the ignoreTool flag is set - the
-// Forklift tool (whose version is specified as toolVersion, and whose minimum compatible pallet
-// version is specified as minArtifactVersion).
+// Forklift tool (whose version is specified as toolVersion, and whose minimum compatible Forklift
+// versions are specified as repoMinVersion and palletMinVersion).
 func CheckCompatibility(
 	pallet *forklift.FSPallet, repoLoader forklift.FSRepoLoader,
-	toolVersion, minArtifactVersion string, ignoreTool bool,
+	toolVersion, repoMinVersion, palletMinVersion string, ignoreTool bool,
 ) error {
 	if ignoreTool {
 		fmt.Printf(
@@ -25,13 +25,13 @@ func CheckCompatibility(
 	}
 
 	if err := checkArtifactCompatibility(
-		pallet.Def.ForkliftVersion, toolVersion, minArtifactVersion, pallet.Path(), ignoreTool,
+		pallet.Def.ForkliftVersion, toolVersion, palletMinVersion, pallet.Path(), ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
 			err, "forklift tool has a version incompatibility with pallet %s", pallet.Path(),
 		)
 	}
-	versions, err := loadReqForkliftVersions(pallet, repoLoader)
+	versions, err := loadRepoReqForkliftVersions(pallet, repoLoader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine Forklift versions of pallet %s's requirements", pallet.Path(),
@@ -44,10 +44,10 @@ func CheckCompatibility(
 	}
 	for _, v := range versions {
 		if err := checkArtifactCompatibility(
-			v.forkliftVersion, toolVersion, minArtifactVersion, v.reqPath+"@"+v.reqVersion, ignoreTool,
+			v.forkliftVersion, toolVersion, repoMinVersion, v.reqPath+"@"+v.reqVersion, ignoreTool,
 		); err != nil {
 			return errors.Wrapf(
-				err, "forklift tool has a version incompatibility with pallet requirement %s", v.reqPath,
+				err, "forklift tool has a version incompatibility with required repo %s", v.reqPath,
 			)
 		}
 	}
@@ -90,7 +90,7 @@ type reqForkliftVersion struct {
 	forkliftVersion string
 }
 
-func loadReqForkliftVersions(
+func loadRepoReqForkliftVersions(
 	pallet *forklift.FSPallet, repoLoader forklift.FSRepoLoader,
 ) ([]reqForkliftVersion, error) {
 	repoReqs, err := pallet.LoadFSRepoReqs("**")

@@ -5,9 +5,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func MakeCmd(toolVersion, minVersion string) *cli.Command {
+func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command {
 	var subcommands []*cli.Command
-	for _, group := range makeSubcommandGroups(toolVersion, minVersion) {
+	for _, group := range makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion) {
 		subcommands = append(subcommands, group...)
 	}
 	return &cli.Command{
@@ -18,15 +18,15 @@ func MakeCmd(toolVersion, minVersion string) *cli.Command {
 	}
 }
 
-func makeSubcommandGroups(toolVersion, minVersion string) [][]*cli.Command {
+func makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion string) [][]*cli.Command {
 	return [][]*cli.Command{
-		makeUseSubcmds(toolVersion, minVersion),
+		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion),
 		makeQuerySubcmds(),
 		makeModifySubcmds(),
 	}
 }
 
-func makeUseSubcmds(toolVersion, minVersion string) []*cli.Command {
+func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
 	const category = "Use the pallet"
 	return []*cli.Command{
 		{
@@ -34,33 +34,33 @@ func makeUseSubcmds(toolVersion, minVersion string) []*cli.Command {
 			Aliases:  []string{"cache-repositories"},
 			Category: category,
 			Usage:    "Updates the cache with the repos available in the local pallet",
-			Action:   cacheRepoAction(toolVersion, minVersion),
+			Action:   cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion),
 		},
 		{
 			Name:     "cache-img",
 			Aliases:  []string{"cache-images"},
 			Category: category,
 			Usage:    "Pre-downloads the Docker container images required by the local pallet",
-			Action:   cacheImgAction(toolVersion, minVersion),
+			Action:   cacheImgAction(toolVersion, repoMinVersion, palletMinVersion),
 		},
 		{
 			Name:     "check",
 			Category: category,
 			Usage:    "Checks whether the local pallet's resource constraints are satisfied",
-			Action:   checkAction(toolVersion, minVersion),
+			Action:   checkAction(toolVersion, repoMinVersion, palletMinVersion),
 		},
 		{
 			Name:     "plan",
 			Category: category,
 			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
 				"specified by the local pallet",
-			Action: planAction(toolVersion, minVersion),
+			Action: planAction(toolVersion, repoMinVersion, palletMinVersion),
 		},
 		{
 			Name:     "apply",
 			Category: category,
 			Usage:    "Updates the Docker host to match the deployments specified by the local pallet",
-			Action:   applyAction(toolVersion, minVersion),
+			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
 		},
 	}
 }
