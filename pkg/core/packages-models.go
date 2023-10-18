@@ -89,6 +89,10 @@ type PkgDeplSpec struct {
 type PkgFeatureSpec struct {
 	// Description is a short description of the feature to be shown to users.
 	Description string `yaml:"description"`
+	// ComposeFiles is a list of the names of Docker Compose files specifying the Docker Compose
+	// application which will be merged together with any other Compose files as part of a package
+	// deployment which enables the feature.
+	ComposeFiles []string `yaml:"compose-files,omitempty"`
 	// Tags is a list of strings associated with the feature.
 	Tags []string `yaml:"tags,omitempty"`
 	// Provides describes resource requirements which must be met for a deployment of the package to

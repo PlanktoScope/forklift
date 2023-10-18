@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 
-	dct "github.com/compose-spec/compose-go/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
-	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 // Download
@@ -73,18 +70,4 @@ func listRequiredImages(
 		}
 	}
 	return orderedImages, nil
-}
-
-func loadAppDefinition(pkg *core.FSPkg) (*dct.Project, error) {
-	appDef, err := docker.LoadAppDefinition(
-		pkg.FS, path.Base(pkg.Path()), pkg.Def.Deployment.ComposeFiles, nil,
-	)
-	// TODO: also load the docker compose files for all features
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load Docker Compose app definition for a basic deployment of %s",
-			pkg.FS.Path(),
-		)
-	}
-	return appDef, nil
 }
