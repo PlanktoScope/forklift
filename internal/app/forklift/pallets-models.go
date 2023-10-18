@@ -29,8 +29,8 @@ type PalletDef struct {
 	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
 	// Forklift required to use the pallet. The Forklift tool refuses to use pallets declaring newer
 	// Forklift versions for any operations beyond printing information. The Forklift version of the
-	// pallet must be greater than or equal to the Forklift version of all required Forklift repos or
-	// pallets.
+	// pallet must be greater than or equal to the Forklift version of every required Forklift repo or
+	// pallet.
 	ForkliftVersion string `yaml:"forklift-version"`
 	// Pallet defines the basic metadata for the pallet.
 	Pallet PalletSpec `yaml:"pallet,omitempty"`

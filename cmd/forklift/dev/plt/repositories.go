@@ -27,12 +27,10 @@ func cacheRepoAction(toolVersion, minVersion string) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet.Def.ForkliftVersion, toolVersion, minVersion,
-			pallet.Path(), c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
-			return errors.Wrap(err, "forklift tool has a version incompatibility")
+			return err
 		}
-		// TODO: ensure the pallet and its repos have compatible versions
 
 		fmt.Printf("Downloading repos specified by the development pallet...\n")
 		changed, err := fcli.DownloadRepos(0, pallet, cache.Underlay)
@@ -85,12 +83,10 @@ func addRepoAction(toolVersion, minVersion string) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet.Def.ForkliftVersion, toolVersion, minVersion,
-			pallet.Path(), c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
-			return errors.Wrap(err, "forklift tool has a version incompatibility")
+			return err
 		}
-		// TODO: ensure the pallet and its repos have compatible versions
 
 		repoQueries := c.Args().Slice()
 		if err = validateRepoQueries(repoQueries); err != nil {

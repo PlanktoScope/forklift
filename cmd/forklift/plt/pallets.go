@@ -201,12 +201,10 @@ func checkAction(toolVersion, minVersion string) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet.Def.ForkliftVersion, toolVersion, minVersion,
-			pallet.Path(), c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
-			return errors.Wrap(err, "forklift tool has a version incompatibility")
+			return err
 		}
-		// TODO: ensure the pallet and its repos have compatible versions
 
 		if err := fcli.CheckPallet(0, pallet, cache); err != nil {
 			return err
@@ -224,12 +222,10 @@ func planAction(toolVersion, minVersion string) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet.Def.ForkliftVersion, toolVersion, minVersion,
-			pallet.Path(), c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
-			return errors.Wrap(err, "forklift tool has a version incompatibility")
+			return err
 		}
-		// TODO: ensure the pallet and its repos have compatible versions
 
 		if err := fcli.PlanPallet(0, pallet, cache); err != nil {
 			return errors.Wrap(
@@ -249,12 +245,10 @@ func applyAction(toolVersion, minVersion string) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet.Def.ForkliftVersion, toolVersion, minVersion,
-			pallet.Path(), c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
-			return errors.Wrap(err, "forklift tool has a version incompatibility")
+			return err
 		}
-		// TODO: ensure the pallet and its repos have compatible versions
 
 		if err := fcli.ApplyPallet(0, pallet, cache); err != nil {
 			return errors.Wrap(
