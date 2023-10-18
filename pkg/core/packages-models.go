@@ -73,9 +73,9 @@ type PkgHostSpec struct {
 
 // PkgDeplSpec contains information about any deployment of the package.
 type PkgDeplSpec struct {
-	// DefinitionFiles is a list of the names of Docker Compose files specifying the Docker Compose
+	// ComposeFiles is a list of the names of Docker Compose files specifying the Docker Compose
 	// application which will be deployed as part of a package deployment.
-	DefinitionFiles []string `yaml:"definition-files,omitempty"`
+	ComposeFiles []string `yaml:"compose-files,omitempty"`
 	// Tags is a list of strings associated with the deployment.
 	Tags []string `yaml:"tags,omitempty"`
 	// Provides describes resource requirements which must be met for a deployment of the package to

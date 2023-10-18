@@ -77,7 +77,7 @@ func listRequiredImages(
 
 func loadAppDefinition(pkg *core.FSPkg) (*dct.Project, error) {
 	appDef, err := docker.LoadAppDefinition(
-		pkg.FS, path.Base(pkg.Path()), pkg.Def.Deployment.DefinitionFiles, nil,
+		pkg.FS, path.Base(pkg.Path()), pkg.Def.Deployment.ComposeFiles, nil,
 	)
 	// TODO: also load the docker compose files for all features
 	if err != nil {

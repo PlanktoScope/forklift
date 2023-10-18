@@ -83,14 +83,14 @@ func PrintDeplSpec(indent int, spec core.PkgDeplSpec) {
 	IndentedPrintf(indent, "Deployment:\n")
 	indent++
 
-	// TODO: actually display the app definition?
-	IndentedPrintf(indent, "Definition files: ")
-	if len(spec.DefinitionFiles) == 0 {
+	// TODO: actually display the app definition
+	IndentedPrintf(indent, "Compose files: ")
+	if len(spec.ComposeFiles) == 0 {
 		fmt.Printf("(none)")
 		return
 	}
 	fmt.Println()
-	for _, file := range spec.DefinitionFiles {
+	for _, file := range spec.ComposeFiles {
 		BulletedPrintln(indent+1, file)
 	}
 }
