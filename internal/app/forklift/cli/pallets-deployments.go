@@ -46,7 +46,7 @@ func PrintDeplInfo(
 	if resolved.Pkg.Def.Deployment.DefinesApp() {
 		fmt.Println()
 		IndentedPrintln(indent, "Deploys with Docker Compose app:")
-		appDef, err := loadAppDefinition(resolved.Pkg)
+		appDef, err := loadAppDefinition(resolved)
 		if err != nil {
 			return err
 		}
@@ -135,15 +135,30 @@ func printDockerAppServices(indent int, services []dct.ServiceConfig) {
 	}
 }
 
-func loadAppDefinition(pkg *core.FSPkg) (*dct.Project, error) {
+func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
+	composeFiles := append([]string{}, depl.Pkg.Def.Deployment.ComposeFiles...)
+
+	// Add compose files from features
+	enabledFeatures, err := depl.EnabledFeatures()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't determine enabled features of deployment %s", depl.Name)
+	}
+	orderedNames := make([]string, 0, len(enabledFeatures))
+	for name := range enabledFeatures {
+		orderedNames = append(orderedNames, name)
+	}
+	sort.Strings(orderedNames)
+	for _, name := range orderedNames {
+		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
+	}
+
 	appDef, err := docker.LoadAppDefinition(
-		pkg.FS, path.Base(pkg.Path()), pkg.Def.Deployment.ComposeFiles, nil,
+		depl.Pkg.FS, path.Base(depl.Pkg.Path()), composeFiles, nil,
 	)
-	// TODO: also load the docker compose files for all features
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load Docker Compose app definition for a basic deployment of %s",
-			pkg.FS.Path(),
+			err, "couldn't load Docker Compose app definition for deployment %s of %s",
+			depl.Name, depl.Pkg.FS.Path(),
 		)
 	}
 	return appDef, nil

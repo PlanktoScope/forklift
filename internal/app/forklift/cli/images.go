@@ -57,7 +57,7 @@ func listRequiredImages(
 			continue
 		}
 
-		appDef, err := loadAppDefinition(depl.Pkg)
+		appDef, err := loadAppDefinition(depl)
 		if err != nil {
 			return nil, err
 		}
