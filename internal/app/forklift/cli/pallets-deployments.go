@@ -50,7 +50,10 @@ func PrintDeplInfo(
 		if err != nil {
 			return err
 		}
-		printDockerAppDef(indent+1, appDef)
+		indent++
+
+		printDockerAppDefFiles(indent, resolved)
+		printDockerAppDef(indent, appDef)
 	}
 
 	// TODO: print the state of the Docker Compose app associated with deplName - or maybe that should
@@ -111,6 +114,43 @@ func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {
 	}
 }
 
+func printDockerAppDefFiles(indent int, depl *forklift.ResolvedDepl) error {
+	composeFiles, err := determineDockerAppDefFiles(depl)
+	if err != nil {
+		return err
+	}
+
+	IndentedPrintf(indent, "Compose files: ")
+	if len(composeFiles) == 0 {
+		fmt.Printf("(none)")
+		return nil
+	}
+	fmt.Println()
+	for _, file := range composeFiles {
+		BulletedPrintln(indent+1, path.Join(depl.Pkg.Path(), file))
+	}
+	return nil
+}
+
+func determineDockerAppDefFiles(depl *forklift.ResolvedDepl) ([]string, error) {
+	composeFiles := append([]string{}, depl.Pkg.Def.Deployment.ComposeFiles...)
+
+	// Add compose files from features
+	enabledFeatures, err := depl.EnabledFeatures()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't determine enabled features of deployment %s", depl.Name)
+	}
+	orderedNames := make([]string, 0, len(enabledFeatures))
+	for name := range enabledFeatures {
+		orderedNames = append(orderedNames, name)
+	}
+	sort.Strings(orderedNames)
+	for _, name := range orderedNames {
+		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
+	}
+	return composeFiles, nil
+}
+
 func printDockerAppDef(indent int, appDef *dct.Project) {
 	printDockerAppServices(indent, appDef.Services)
 	// TODO: also print networks, volumes, etc.
@@ -136,20 +176,9 @@ func printDockerAppServices(indent int, services []dct.ServiceConfig) {
 }
 
 func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
-	composeFiles := append([]string{}, depl.Pkg.Def.Deployment.ComposeFiles...)
-
-	// Add compose files from features
-	enabledFeatures, err := depl.EnabledFeatures()
+	composeFiles, err := determineDockerAppDefFiles(depl)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't determine enabled features of deployment %s", depl.Name)
-	}
-	orderedNames := make([]string, 0, len(enabledFeatures))
-	for name := range enabledFeatures {
-		orderedNames = append(orderedNames, name)
-	}
-	sort.Strings(orderedNames)
-	for _, name := range orderedNames {
-		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
+		return nil, err
 	}
 
 	appDef, err := docker.LoadAppDefinition(
