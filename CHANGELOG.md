@@ -9,18 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `forklift-package.yml` files now have an optional `compose-files` field in feature flags to define Compose files which should be merged into the Compose app for every package deployment which enables that feature.
 - The `forklift-pallet.yml` file can now optionally specify a README file and a pallet path. When specified, those fields are displayed by the `plt show` and `dev plt show` commands.
 - The `.deploy.yml` files now have a `disabled` boolean flag which specifies whether that deployment definition should be ignored (so that it is excluded from `plt plan`, `plt check`, and `plt apply` commands).
+- The `show-pkg` subcommand now shows a list of Compose files associated with each package feature flag.
+- The `show-depl` subcommand now shows a list of the Compose files used to define the Compose app for a deployment.
+- The `forklift-repository.yml` and `forklift-pallet.yml` now have a `forklift-version` field which indicates that the repository/pallet was written assuming the semantics of a given version of Forklift, and which sets the minimum version of Forklift required to use the repository/pallet. The Forklift version of a pallet cannot be less than the Forklift version of any repo required by the pallet. The Forklift tool also checks version compatibility - an older version of the Forklift tool is incompatible with repositories/pallets with newer Forklift versions, and the Forklift tool is also sets the minimum Forklift version of any repository/pallet it is compatible with (so for example v0.4.0 of the Forklift tool is incompatible with any repositories/pallets with Forklift version below v0.4.0, due to other breaking changes made for Forklift v0.4.0).
 
 ### Changed
 
-- The `forklift-repository.yml` and `forklift-pallet.yml` now have a `forklift-version` field which indicates that the repository/pallet was written assuming the semantics of a given version of Forklift, and which sets the minimum version of Forklift required to use the repository/pallet. The Forklift version of a pallet cannot be less than the Forklift version of any repo required by the pallet. The Forklift tool also checks version compatibility - an older version of the Forklift tool is incompatible with repositories/pallets with newer Forklift versions, and the Forklift tool is also sets the minimum Forklift version of any repository/pallet it is compatible with (so for example v0.4.0 of the Forklift tool is incompatible with any repositories/pallets with Forklift version below v0.4.0, due to other breaking changes made for Forklift v0.4.0).
+- (Breaking change) The `definition-files` field in `forklift-package.yml` files has been renamed to `compose-files`, for unambiguity and future-proofing (so that we can add other definition types, such as for regular files rather than Docker apps).
 - (Breaking change) The `forklift-version-lock.yml` file now requires a `type` field which specifies whether the version lock is to be interpreted as a tagged version or as a pseudoversion. The `commit` and `timestamp` fields are now required for all types, instead of being used to determine whether the version lock is for a tagged version or a pseudoversion.
-- (Breaking change) The `definition-files` field in Forklift package definitions has been renamed to `compose-files`.
+- (Breaking change) The `DefinesApp` method has been removed from `PkgDeplSpec`, since now a Compose App may be defined purely by feature flags.
 
 ### Fixed
 
-- Now the `dev plt add-repo` correctly specifies version-locking information when locking a repo at a tagged version.
+- Now the `dev plt add-repo` command correctly specifies version-locking information when locking a repo at a tagged version.
 
 ## 0.3.1 - 2023-08-24
 

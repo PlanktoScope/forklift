@@ -53,13 +53,19 @@ func listRequiredImages(
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
-		if !depl.Pkg.Def.Deployment.DefinesApp() {
+		definesApp, err := depl.DefinesApp()
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
+			)
+		}
+		if !definesApp {
 			continue
 		}
 
 		appDef, err := loadAppDefinition(depl)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "couldn't load Compose app definition")
 		}
 		for _, service := range appDef.Services {
 			BulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)

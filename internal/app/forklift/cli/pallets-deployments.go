@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
@@ -43,16 +42,24 @@ func PrintDeplInfo(
 	printDepl(indent, cache, resolved)
 	indent++
 
-	if resolved.Pkg.Def.Deployment.DefinesApp() {
+	definesApp, err := resolved.DefinesApp()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
+		)
+	}
+	if definesApp {
 		fmt.Println()
-		IndentedPrintln(indent, "Deploys with Docker Compose app:")
 		appDef, err := loadAppDefinition(resolved)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "couldn't load Compose app definition")
 		}
+		IndentedPrintf(indent, "Deploys as Docker Compose app %s:\n", appDef.Name)
 		indent++
 
-		printDockerAppDefFiles(indent, resolved)
+		if err = printDockerAppDefFiles(indent, resolved); err != nil {
+			return err
+		}
 		printDockerAppDef(indent, appDef)
 	}
 
@@ -115,9 +122,9 @@ func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {
 }
 
 func printDockerAppDefFiles(indent int, depl *forklift.ResolvedDepl) error {
-	composeFiles, err := determineDockerAppDefFiles(depl)
+	composeFiles, err := depl.GetComposeFilenames()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't determine Compose files for deployment")
 	}
 
 	IndentedPrintf(indent, "Compose files: ")
@@ -130,25 +137,6 @@ func printDockerAppDefFiles(indent int, depl *forklift.ResolvedDepl) error {
 		BulletedPrintln(indent+1, path.Join(depl.Pkg.Path(), file))
 	}
 	return nil
-}
-
-func determineDockerAppDefFiles(depl *forklift.ResolvedDepl) ([]string, error) {
-	composeFiles := append([]string{}, depl.Pkg.Def.Deployment.ComposeFiles...)
-
-	// Add compose files from features
-	enabledFeatures, err := depl.EnabledFeatures()
-	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't determine enabled features of deployment %s", depl.Name)
-	}
-	orderedNames := make([]string, 0, len(enabledFeatures))
-	for name := range enabledFeatures {
-		orderedNames = append(orderedNames, name)
-	}
-	sort.Strings(orderedNames)
-	for _, name := range orderedNames {
-		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
-	}
-	return composeFiles, nil
 }
 
 func printDockerAppDef(indent int, appDef *dct.Project) {
@@ -173,22 +161,4 @@ func printDockerAppServices(indent int, services []dct.ServiceConfig) {
 	for _, service := range services {
 		IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
 	}
-}
-
-func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
-	composeFiles, err := determineDockerAppDefFiles(depl)
-	if err != nil {
-		return nil, err
-	}
-
-	appDef, err := docker.LoadAppDefinition(
-		depl.Pkg.FS, path.Base(depl.Pkg.Path()), composeFiles, nil,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load Docker Compose app definition for deployment %s of %s",
-			depl.Name, depl.Pkg.FS.Path(),
-		)
-	}
-	return appDef, nil
 }
