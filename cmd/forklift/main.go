@@ -28,10 +28,10 @@ var app = &cli.App{
 	Version: toolVersion,
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
-		plt.MakeCmd(toolVersion, minVersion),
+		plt.MakeCmd(toolVersion, repoMinVersion, palletMinVersion),
 		cache.Cmd,
 		host.Cmd,
-		dev.MakeCmd(toolVersion, minVersion),
+		dev.MakeCmd(toolVersion, repoMinVersion, palletMinVersion),
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -54,8 +54,9 @@ var app = &cli.App{
 // Versioning
 
 const (
-	minVersion      = "v0.4.0-dev" // minimum supported version among artifacts
-	fallbackVersion = "v0.4.0-dev"
+	repoMinVersion   = "v0.4.0-dev" // minimum supported Forklift version among repos
+	palletMinVersion = "v0.4.0-dev" // minimum supported Forklift version among pallets
+	fallbackVersion  = "v0.4.0-dev" // version reported by Forklift tool if actual version is unknown
 )
 
 var (

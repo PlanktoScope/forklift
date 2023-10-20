@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"path"
 	"sort"
 
 	dct "github.com/compose-spec/compose-go/types"
@@ -41,14 +42,25 @@ func PrintDeplInfo(
 	printDepl(indent, cache, resolved)
 	indent++
 
-	if resolved.Pkg.Def.Deployment.DefinesApp() {
+	definesApp, err := resolved.DefinesApp()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
+		)
+	}
+	if definesApp {
 		fmt.Println()
-		IndentedPrintln(indent, "Deploys with Docker Compose app:")
-		appDef, err := loadAppDefinition(resolved.Pkg)
+		appDef, err := loadAppDefinition(resolved)
 		if err != nil {
+			return errors.Wrap(err, "couldn't load Compose app definition")
+		}
+		IndentedPrintf(indent, "Deploys as Docker Compose app %s:\n", appDef.Name)
+		indent++
+
+		if err = printDockerAppDefFiles(indent, resolved); err != nil {
 			return err
 		}
-		printDockerAppDef(indent+1, appDef)
+		printDockerAppDef(indent, appDef)
 	}
 
 	// TODO: print the state of the Docker Compose app associated with deplName - or maybe that should
@@ -109,9 +121,28 @@ func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {
 	}
 }
 
+func printDockerAppDefFiles(indent int, depl *forklift.ResolvedDepl) error {
+	composeFiles, err := depl.GetComposeFilenames()
+	if err != nil {
+		return errors.Wrap(err, "couldn't determine Compose files for deployment")
+	}
+
+	IndentedPrintf(indent, "Compose files: ")
+	if len(composeFiles) == 0 {
+		fmt.Printf("(none)")
+		return nil
+	}
+	fmt.Println()
+	for _, file := range composeFiles {
+		BulletedPrintln(indent+1, path.Join(depl.Pkg.Path(), file))
+	}
+	return nil
+}
+
 func printDockerAppDef(indent int, appDef *dct.Project) {
 	printDockerAppServices(indent, appDef.Services)
-	// TODO: also print networks, volumes, etc.
+	printDockerAppNetworks(indent, appDef.Networks)
+	printDockerAppVolumes(indent, appDef.Volumes)
 }
 
 func printDockerAppServices(indent int, services []dct.ServiceConfig) {
@@ -130,5 +161,51 @@ func printDockerAppServices(indent int, services []dct.ServiceConfig) {
 
 	for _, service := range services {
 		IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
+	}
+}
+
+func printDockerAppNetworks(indent int, networks dct.Networks) {
+	if len(networks) == 0 {
+		return
+	}
+	networkNames := make([]string, 0, len(networks))
+	for name := range networks {
+		networkNames = append(networkNames, name)
+	}
+	IndentedPrint(indent, "Networks:")
+	sort.Slice(networkNames, func(i, j int) bool {
+		return networkNames[i] < networkNames[j]
+	})
+	if len(networkNames) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
+
+	for _, name := range networkNames {
+		BulletedPrintln(indent, networks[name].Name)
+	}
+}
+
+func printDockerAppVolumes(indent int, volumes dct.Volumes) {
+	if len(volumes) == 0 {
+		return
+	}
+	volumeNames := make([]string, 0, len(volumes))
+	for name := range volumes {
+		volumeNames = append(volumeNames, name)
+	}
+	IndentedPrint(indent, "Volumes:")
+	sort.Slice(volumeNames, func(i, j int) bool {
+		return volumeNames[i] < volumeNames[j]
+	})
+	if len(volumeNames) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
+
+	for _, name := range volumeNames {
+		BulletedPrintln(indent, name)
 	}
 }

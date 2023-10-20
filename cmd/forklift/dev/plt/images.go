@@ -10,7 +10,7 @@ import (
 
 // cache-img
 
-func cacheImgAction(toolVersion, minVersion string) cli.ActionFunc {
+func cacheImgAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
 		if err != nil {
@@ -20,7 +20,7 @@ func cacheImgAction(toolVersion, minVersion string) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

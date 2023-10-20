@@ -124,13 +124,25 @@ It is the reponsibility of the package maintainer to document the package's exte
 The definition of a repository is stored in a YAML file named `forklift-repository.yml` in the repository's root directory. Here is an example of a `forklift-repository.yml` file:
 
 ```yaml
+forklift-version: v0.4.0
+
 repository:
   path: github.com/PlanktoScope/device-pkgs
   description: Packages for the PlanktoScope software distribution
   readme-file: README.md
 ```
 
-Currently, all fields in the repository metadata file are under a `repository` section.
+### `forklift-version` field
+This field of the `forklift-repository.yml` file declares that the repository was written assuming the semantics of a given version of Forklift.
+- This field is required.
+- The version must be a valid version of the Forklift tool or the Forklift specification.
+- The version sets the minimum version of the Forklift tool required to use the repository. The Forklift tool refuses to use repositories declaring newer Forklift versions (or excessively old Forklift versions) for any operations beyond printing information.
+- Example:
+  ```yaml
+  forklift-version: v0.4.0
+  ```
+
+All other fields in the repository metadata file are under a `repository` section.
 
 ### `repository` section
 
@@ -187,8 +199,8 @@ package:
 
 deployment:
   name: caddy-ingress
-  definition-files:
-    - docker-compose.yml
+  compose-files:
+    - compose.yml
 
 features:
   service-proxy:
@@ -494,24 +506,24 @@ This optional section of the `forklift-package.yml` file specifies the Docker Co
 
 ```yaml
 deployment:
-  definition-files:
-    - docker-compose.yml
+  compose-files:
+    - compose.yml
   provides:
     networks:
       - description: Overlay network for the Portainer server to connect to Portainer agents
         name: portainer-agent
 ```
 
-#### `definition-files` field
+#### `compose-files` field
 This field of the `deployment` section is an array of the string filenames of one or more Docker Compose files specifying the Docker Compose application which will be deployed when the package is deployed.
 - This field is optional.
 - The filenames must be for YAML files following the [Docker Compose file specification](https://docs.docker.com/compose/compose-file/).
 - The files must be located in the same directory as the `forklift-package.yml` file, or in subdirectories.
-- It only makes sense to omit the Docker Compose file from a package if the package also specifies some host resources in the `host` section of the `forklift-package.yml` file; otherwise, the package would do nothing and have no effect.
+- It only makes sense to omit the Docker Compose file from a package if the package also specifies some host resources in the `host` section of the `forklift-package.yml` file, or if the package defines some features with associated Compose files; otherwise, the package would do nothing and have no effect.
 - Example:
   ```yaml
-  definition-files:
-    - docker-compose.yml
+  compose-files:
+    - compose.yml
   ```
 
 #### `tags` field
@@ -794,9 +806,59 @@ This optional section of the `forklift-package.yml` file specifies the optional 
 The `features` section is a map (i.e. dictionary) whose keys are feature names and whose values are feature specification objects.  Here is an example of a `features` section:
 
 ```yaml
+package:
+  description: Web GUI for operating the PlanktoScope
+  maintainers:
+    - name: Ethan Li
+      email: lietk12@gmail.com
+  license: GPL-3.0-or-later
+  sources:
+    - https://github.com/PlanktoScope/PlanktoScope
+
+host:
+  provides:
+    listeners:
+      - description: Node-RED server for the PlanktoScope v2 dashboard
+        port: 1880
+        protocol: tcp
+    services:
+      - description: The Node-RED editor for the v2 PlanktoScope dashboard
+        port: 1880
+        protocol: http
+        paths:
+          - /admin/ps/node-red-v2
+          - /admin/ps/node-red-v2/*
+      - description: The v2 PlanktoScope dashboard for configuring the PlanktoScope and collecting data
+        port: 1880
+        protocol: http
+        paths:
+          - /ps/node-red-v2/ui
+          - /ps/node-red-v2/ui/*
+
+deployment:
+  compose-files: [compose.yml]
+  requires:
+    services:
+      - tags: [planktoscope-api-v2]
+        port: 1883
+        protocol: mqtt
+        paths:
+          - /actuator/pump
+          - /actuator/focus
+          - /imager/image
+          - /segmenter/segment
+          - /status/pump
+          - /status/focus
+          - /status/imager
+          - /status/segmenter
+          - /status/segmenter/name
+          - /status/segmenter/object_id
+          - /status/segmenter/metric
+
 features:
   editor:
     description: Provides access to the Node-RED admin editor for modifying the GUI
+    compose-files: [compose-editor.yml]
     tags:
     - device-portal.name=Node-RED dashboard editor
     - device-portal.description=Provides a Node-RED flow editor to modify the Node-RED dashboard
@@ -825,6 +887,7 @@ features:
             - /admin/ps/node-red-v2/*
   frontend:
     description: Provides access to the GUI
+    compose-files: [compose-frontend.yml]
     tags:
     - device-portal.name=Node-RED dashboard
     - device-portal.description=Provides a Node-RED dashboard to operate the PlanktoScope
@@ -866,6 +929,16 @@ A feature specification object consists of the following fields:
   - Example:
     ```yaml
     description: Provides access to the GUI
+    ```
+
+- `compose-files` is an array of the string filenames of one or more Docker Compose files specifying modifications to the Docker Compose application which will be applied if the feature is enabled.
+  - This field is optional.
+  - The filenames must be for YAML files which are fragments of a [Docker Compose file specification](https://docs.docker.com/compose/compose-file/). These files will be merged together with any other Compose files specified in the [`deployment` section](#deployment-section) of the `forklift-package.yml` file and in any other enabled features according to Docker Compose's [compose file merging mechanism](https://docs.docker.com/compose/multiple-compose-files/merge/).
+  - The files must be located in the same directory as the `forklift-package.yml` file, or in subdirectories.
+  - For clarity, it is strongly recommended that the order in which the files for different feature flags are merged should not affect the final result of merging.
+  - Example:
+    ```yaml
+    compose-files: [compose-frontend.yml]
     ```
 
 - `tags` is an array of strings to associate with the feature or with resources required or provided by the feature.

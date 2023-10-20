@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	dct "github.com/compose-spec/compose-go/types"
 	"github.com/docker/compose/v2/pkg/api"
 	ggit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
@@ -388,6 +389,37 @@ type reconciliationChange struct {
 	App  api.Stack
 }
 
+func newAddReconciliationChange(deplName string, depl *forklift.ResolvedDepl) reconciliationChange {
+	return reconciliationChange{
+		Name: getAppName(deplName),
+		Type: addReconciliationChange,
+		Depl: depl,
+	}
+}
+
+func newUpdateReconciliationChange(
+	deplName string, depl *forklift.ResolvedDepl, app api.Stack,
+) reconciliationChange {
+	return reconciliationChange{
+		Name: getAppName(deplName),
+		Type: updateReconciliationChange,
+		Depl: depl,
+		App:  app,
+	}
+}
+
+func newRemoveReconciliationChange(appName string, app api.Stack) reconciliationChange {
+	return reconciliationChange{
+		Name: appName,
+		Type: removeReconciliationChange,
+		App:  app,
+	}
+}
+
+func getAppName(deplName string) string {
+	return strings.ReplaceAll(deplName, "/", "_")
+}
+
 func computePlan(
 	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
 ) ([]reconciliationChange, *docker.Client, error) {
@@ -438,7 +470,10 @@ func computePlan(
 
 	fmt.Println()
 	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes := planReconciliation(resolved, deps, apps)
+	changes, err := planReconciliation(resolved, deps, apps)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't plan changes")
+	}
 	for _, change := range changes {
 		printReconciliationChange(indent, change)
 	}
@@ -561,54 +596,49 @@ func invertDeps(deps map[string]map[string]struct{}) map[string]map[string]struc
 // closure of the deployments depending on each deployment, and a list of
 // Docker Compose apps describing the current complete state of the Docker host.
 func planReconciliation(
-	depls []*forklift.ResolvedDepl, deps map[string]map[string]struct{},
-	apps []api.Stack,
-) []reconciliationChange {
+	depls []*forklift.ResolvedDepl, deps map[string]map[string]struct{}, apps []api.Stack,
+) ([]reconciliationChange, error) {
 	deplSet := make(map[string]*forklift.ResolvedDepl)
+	composeAppDefinerSet := make(map[string]struct{})
 	for _, depl := range depls {
 		deplSet[depl.Name] = depl
+		definesApp, err := depl.DefinesApp()
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
+			)
+		}
+		if definesApp {
+			composeAppDefinerSet[depl.Name] = struct{}{}
+		}
 	}
 	appSet := make(map[string]api.Stack)
 	for _, app := range apps {
 		appSet[app.Name] = app
 	}
-	appDeplNames := make(map[string]string)
 
+	appDeplNames := make(map[string]string)
 	changes := make([]reconciliationChange, 0, len(deplSet)+len(appSet))
 	for name, depl := range deplSet {
 		appDeplNames[getAppName(name)] = name
-		definesApp := depl.Pkg.Def.Deployment.DefinesApp()
 		app, ok := appSet[getAppName(name)]
 		if !ok {
-			if definesApp {
-				changes = append(changes, reconciliationChange{
-					Name: getAppName(name),
-					Type: addReconciliationChange,
-					Depl: depl,
-				})
+			if _, ok := composeAppDefinerSet[name]; ok {
+				changes = append(changes, newAddReconciliationChange(name, depl))
 			}
 			continue
 		}
-		if definesApp {
-			changes = append(changes, reconciliationChange{
-				Name: getAppName(name),
-				Type: updateReconciliationChange,
-				Depl: depl,
-				App:  app,
-			})
+		if _, ok := composeAppDefinerSet[name]; ok {
+			changes = append(changes, newUpdateReconciliationChange(name, depl, app))
 		}
 	}
 	for name, app := range appSet {
 		if deplName, ok := appDeplNames[name]; ok {
-			if depl, ok := deplSet[deplName]; ok && depl.Pkg.Def.Deployment.DefinesApp() {
+			if _, ok = composeAppDefinerSet[deplName]; ok {
 				continue
 			}
 		}
-		changes = append(changes, reconciliationChange{
-			Name: name,
-			Type: removeReconciliationChange,
-			App:  app,
-		})
+		changes = append(changes, newRemoveReconciliationChange(name, app))
 	}
 
 	dependents := invertDeps(deps)
@@ -616,11 +646,7 @@ func planReconciliation(
 	sort.Slice(changes, func(i, j int) bool {
 		return compareChanges(changes[i], changes[j], deps, dependents) == core.CompareLT
 	})
-	return changes
-}
-
-func getAppName(deplName string) string {
-	return strings.ReplaceAll(deplName, "/", "_")
+	return changes, nil
 }
 
 // compareChanges returns a comparison for generating a total ordering of reconciliation changes
@@ -784,19 +810,41 @@ func applyReconciliationChange(
 }
 
 func deployApp(indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client) error {
-	if !depl.Pkg.Def.Deployment.DefinesApp() {
+	definesApp, err := depl.DefinesApp()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
+		)
+	}
+	if !definesApp {
 		IndentedPrintln(indent, "No Docker Compose app to deploy!")
 		return nil
 	}
 
-	appDef, err := docker.LoadAppDefinition(
-		depl.Pkg.FS, name, depl.Pkg.Def.Deployment.DefinitionFiles, nil,
-	)
+	appDef, err := loadAppDefinition(depl)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't load Compose app definition")
 	}
 	if err = dc.DeployApp(context.Background(), appDef, 0); err != nil {
 		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
 	}
 	return nil
+}
+
+func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
+	composeFiles, err := depl.GetComposeFilenames()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't determine Compose files for deployment")
+	}
+
+	appDef, err := docker.LoadAppDefinition(
+		depl.Pkg.FS, getAppName(depl.Name), composeFiles, nil,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load Docker Compose app definition for deployment %s of %s",
+			depl.Name, depl.Pkg.FS.Path(),
+		)
+	}
+	return appDef, nil
 }

@@ -194,14 +194,14 @@ func showAction(c *cli.Context) error {
 
 // check
 
-func checkAction(toolVersion, minVersion string) cli.ActionFunc {
+func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -215,14 +215,14 @@ func checkAction(toolVersion, minVersion string) cli.ActionFunc {
 
 // plan
 
-func planAction(toolVersion, minVersion string) cli.ActionFunc {
+func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -238,14 +238,14 @@ func planAction(toolVersion, minVersion string) cli.ActionFunc {
 
 // apply
 
-func applyAction(toolVersion, minVersion string) cli.ActionFunc {
+func applyAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

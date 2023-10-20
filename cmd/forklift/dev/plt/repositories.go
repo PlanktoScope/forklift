@@ -20,14 +20,14 @@ import (
 
 // cache-repo
 
-func cacheRepoAction(toolVersion, minVersion string) cli.ActionFunc {
+func cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, _, err := processFullBaseArgs(c, false)
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+		if err = fcli.CheckShallowCompatibility(
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -76,14 +76,14 @@ func showRepoAction(c *cli.Context) error {
 
 // add-repo
 
-func addRepoAction(toolVersion, minVersion string) cli.ActionFunc {
+func addRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, _, err := processFullBaseArgs(c, false)
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, minVersion, c.Bool("ignore-tool-version"),
+		if err = fcli.CheckShallowCompatibility(
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

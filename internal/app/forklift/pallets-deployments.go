@@ -117,6 +117,45 @@ func sortKeys[Value any](m map[string]Value) (sorted []string) {
 	return sorted
 }
 
+// GetComposeFilenames returns a list of the names of the Compose files which must be merged into
+// the Compose app, with feature-flagged Compose files ordered based on the alphabetical order of
+// enabled feature flags.
+func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
+	composeFiles := append([]string{}, d.Pkg.Def.Deployment.ComposeFiles...)
+
+	// Add compose files from features
+	enabledFeatures, err := d.EnabledFeatures()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't determine enabled features of deployment %s", d.Name)
+	}
+	orderedNames := make([]string, 0, len(enabledFeatures))
+	for name := range enabledFeatures {
+		orderedNames = append(orderedNames, name)
+	}
+	sort.Strings(orderedNames)
+	for _, name := range orderedNames {
+		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
+	}
+	return composeFiles, nil
+}
+
+// DefinesApp determines whether the deployment defines a Docker Compose app to be deployed.
+func (d *ResolvedDepl) DefinesApp() (bool, error) {
+	composeFiles, err := d.GetComposeFilenames()
+	if err != nil {
+		return false, errors.Wrap(err, "couldn't determine Compose files for deployment")
+	}
+	if len(composeFiles) == 0 {
+		return false, nil
+	}
+	for _, file := range composeFiles {
+		if len(file) > 0 {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // CheckConflicts produces a report of all resource conflicts between the ResolvedDepl instance and
 // a candidate ResolvedDepl.
 func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, error) {

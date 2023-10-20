@@ -270,12 +270,6 @@ func (s PkgDeplSpec) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "deployment specification")
 }
 
-// DefinesApp determines whether the PkgDeplSpec instance defines a Docker Compose app to be
-// deployed.
-func (s PkgDeplSpec) DefinesApp() bool {
-	return len(s.DefinitionFiles) > 0 && s.DefinitionFiles[0] != ""
-}
-
 // PkgFeatureSpec
 
 // ResAttachmentSource returns the source path for resources under the PkgFeatureSpec instance,
