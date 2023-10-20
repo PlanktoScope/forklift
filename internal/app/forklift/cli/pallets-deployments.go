@@ -141,7 +141,8 @@ func printDockerAppDefFiles(indent int, depl *forklift.ResolvedDepl) error {
 
 func printDockerAppDef(indent int, appDef *dct.Project) {
 	printDockerAppServices(indent, appDef.Services)
-	// TODO: also print networks, volumes, etc.
+	printDockerAppNetworks(indent, appDef.Networks)
+	printDockerAppVolumes(indent, appDef.Volumes)
 }
 
 func printDockerAppServices(indent int, services []dct.ServiceConfig) {
@@ -160,5 +161,51 @@ func printDockerAppServices(indent int, services []dct.ServiceConfig) {
 
 	for _, service := range services {
 		IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
+	}
+}
+
+func printDockerAppNetworks(indent int, networks dct.Networks) {
+	if len(networks) == 0 {
+		return
+	}
+	networkNames := make([]string, 0, len(networks))
+	for name := range networks {
+		networkNames = append(networkNames, name)
+	}
+	IndentedPrint(indent, "Networks:")
+	sort.Slice(networkNames, func(i, j int) bool {
+		return networkNames[i] < networkNames[j]
+	})
+	if len(networkNames) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
+
+	for _, name := range networkNames {
+		BulletedPrintln(indent, networks[name].Name)
+	}
+}
+
+func printDockerAppVolumes(indent int, volumes dct.Volumes) {
+	if len(volumes) == 0 {
+		return
+	}
+	volumeNames := make([]string, 0, len(volumes))
+	for name := range volumes {
+		volumeNames = append(volumeNames, name)
+	}
+	IndentedPrint(indent, "Volumes:")
+	sort.Slice(volumeNames, func(i, j int) bool {
+		return volumeNames[i] < volumeNames[j]
+	})
+	if len(volumeNames) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
+
+	for _, name := range volumeNames {
+		BulletedPrintln(indent, name)
 	}
 }
