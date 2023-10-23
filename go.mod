@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/blang/semver/v4 v4.0.0
-	github.com/bmatcuk/doublestar/v4 v4.6.0
+	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/compose-spec/compose-go v1.19.0
 	github.com/distribution/reference v0.5.0
