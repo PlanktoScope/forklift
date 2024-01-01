@@ -14,7 +14,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/pkg/errors v0.9.1
-	github.com/urfave/cli/v2 v2.26.0
+	github.com/urfave/cli/v2 v2.27.1
 	golang.org/x/mod v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
 )
