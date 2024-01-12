@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a `cache rm-repo` subcommand which only deletes cached repositories.
 - Added a `cache rm-img` subcommand which only deletes unused Docker container images.
+- Added a `--include-disabled` flag to the `plt cache-img` and `dev plt cache-img` subcommands to also cache images used by disabled package deployments.
 
 ### Changed
 
 - (Breaking change) Renamed the `cache rm` command to `cache rm-all`
+- (Breaking change) By default, now the `plt cache-img` and `dev plt cache-img` commands don't cache images used only by disabled package deployments.
 
 ## 0.4.0 - 2023-10-23
 

@@ -64,7 +64,7 @@ func getCache(
 	if ensureCache && !fsCache.Exists() {
 		return nil, nil, errors.New(
 			"you first need to cache the repos specified by your pallet with " +
-				"`forklift dev plt cache-repos`",
+				"`forklift dev plt cache-repo`",
 		)
 	}
 	return cache, override, nil

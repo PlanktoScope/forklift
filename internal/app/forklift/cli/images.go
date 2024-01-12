@@ -13,8 +13,11 @@ import (
 
 // Download
 
-func DownloadImages(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
-	orderedImages, err := listRequiredImages(indent, pallet, loader)
+func DownloadImages(
+	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+	includeDisabled, parallel bool,
+) error {
+	orderedImages, err := listRequiredImages(indent, pallet, loader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -36,7 +39,7 @@ func DownloadImages(indent int, pallet *forklift.FSPallet, loader forklift.FSPkg
 }
 
 func listRequiredImages(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, includeDisabled bool,
 ) ([]string, error) {
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
@@ -50,6 +53,10 @@ func listRequiredImages(
 	orderedImages := make([]string, 0, len(resolved))
 	images := make(map[string]struct{})
 	for _, depl := range resolved {
+		if depl.Def.Disabled && !includeDisabled {
+			continue
+		}
+
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
