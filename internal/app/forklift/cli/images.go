@@ -3,9 +3,11 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
@@ -26,16 +28,11 @@ func DownloadImages(
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
-	for _, image := range orderedImages {
-		fmt.Println()
-		IndentedPrintf(indent, "Downloading %s...\n", image)
-		pulled, err := dc.PullImage(context.Background(), image, docker.NewOutStream(os.Stdout))
-		if err != nil {
-			return errors.Wrapf(err, "couldn't download %s", image)
-		}
-		IndentedPrintf(indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
+
+	if parallel {
+		return downloadImagesParallel(indent, orderedImages, dc)
 	}
-	return nil
+	return downloadImagesSerial(indent, orderedImages, dc)
 }
 
 func listRequiredImages(
@@ -83,4 +80,41 @@ func listRequiredImages(
 		}
 	}
 	return orderedImages, nil
+}
+
+func downloadImagesParallel(indent int, images []string, dc *docker.Client) error {
+	eg, egctx := errgroup.WithContext(context.Background())
+	fmt.Println()
+	for _, image := range images {
+		eg.Go(func(image string) func() error {
+			return func() error {
+				IndentedPrintf(indent, "Downloading %s...\n", image)
+				pulled, err := dc.PullImage(egctx, image, docker.NewOutStream(io.Discard))
+				if err != nil {
+					return errors.Wrapf(err, "couldn't download %s", image)
+				}
+				IndentedPrintf(
+					indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
+				)
+				return nil
+			}
+		}(image))
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func downloadImagesSerial(indent int, images []string, dc *docker.Client) error {
+	for _, image := range images {
+		fmt.Println()
+		IndentedPrintf(indent, "Downloading %s...\n", image)
+		pulled, err := dc.PullImage(context.Background(), image, docker.NewOutStream(os.Stdout))
+		if err != nil {
+			return errors.Wrapf(err, "couldn't download %s", image)
+		}
+		IndentedPrintf(indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
+	}
+	return nil
 }

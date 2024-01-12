@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `cache rm-repo` subcommand which only deletes cached repositories.
 - Added a `cache rm-img` subcommand which only deletes unused Docker container images.
 - Added a `--include-disabled` flag to the `plt cache-img` and `dev plt cache-img` subcommands to also cache images used by disabled package deployments.
+- Added a `--parallel` flag to the `plt cache-img` and `dev plt cache-img` subcommands to enable parallel caching of Docker container images. Speedup will depend on the host machine, but on a high-performance laptop it led to a ~40% speedup.
 
 ### Changed
 
