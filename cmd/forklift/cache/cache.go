@@ -30,19 +30,39 @@ func getCache(wpath string) (*forklift.FSRepoCache, error) {
 	return cache, nil
 }
 
-// rm
+// rm-all
 
-func rmAction(c *cli.Context) error {
+func rmAllAction(c *cli.Context) error {
+	if err := rmRepoAction(c); err != nil {
+		return errors.Wrap(err, "couldn't remove cached repositories")
+	}
+
+	if err := rmImgAction(c); err != nil {
+		return errors.Wrap(err, "couldn't remove unused Docker container images")
+	}
+	return nil
+}
+
+// rm-repo
+
+func rmRepoAction(c *cli.Context) error {
 	cache, err := getCache(c.String("workspace"))
 	if err != nil {
 		return err
 	}
 
+	// FIXME: if/when the cache stores other resources (e.g. pallets), this will need to be changed
+	// to only remove repos
 	fmt.Println("Clearing cache...")
 	if err = cache.Remove(); err != nil {
 		return errors.Wrap(err, "couldn't clear cache")
 	}
+	return nil
+}
 
+// rm-img
+
+func rmImgAction(_ *cli.Context) error {
 	fmt.Println("Removing unused Docker container images...")
 	client, err := docker.NewClient()
 	if err != nil {

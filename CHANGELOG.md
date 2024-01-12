@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a `cache rm-repo` subcommand which only deletes cached repositories.
+- Added a `cache rm-img` subcommand which only deletes unused Docker container images.
+
+### Changed
+
+- (Breaking change) Renamed the `cache rm` command to `cache rm-all`
+
 ## 0.4.0 - 2023-10-23
 
 ### Added
