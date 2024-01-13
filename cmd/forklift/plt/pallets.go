@@ -206,7 +206,7 @@ func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Actio
 			return err
 		}
 
-		if err := fcli.CheckPallet(0, pallet, cache); err != nil {
+		if _, _, err := fcli.CheckPallet(0, pallet, cache); err != nil {
 			return err
 		}
 		return nil
@@ -227,7 +227,7 @@ func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Action
 			return err
 		}
 
-		if err := fcli.PlanPallet(0, pallet, cache); err != nil {
+		if _, _, err = fcli.PlanPallet(0, pallet, cache, c.Bool("parallel")); err != nil {
 			return errors.Wrap(
 				err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
 			)
@@ -250,7 +250,7 @@ func applyAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Actio
 			return err
 		}
 
-		if err := fcli.ApplyPallet(0, pallet, cache); err != nil {
+		if err := fcli.ApplyPallet(0, pallet, cache, c.Bool("parallel")); err != nil {
 			return errors.Wrap(
 				err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
 			)

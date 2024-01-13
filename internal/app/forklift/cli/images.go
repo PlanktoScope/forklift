@@ -42,9 +42,9 @@ func listRequiredImages(
 	if err != nil {
 		return nil, err
 	}
-  if !includeDisabled {
-    depls = forklift.FilterDeplsForEnabled(depls)
-  }
+	if !includeDisabled {
+		depls = forklift.FilterDeplsForEnabled(depls)
+	}
 	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
 		return nil, err

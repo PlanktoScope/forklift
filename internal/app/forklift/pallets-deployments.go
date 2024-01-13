@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // ResolvedDepl
@@ -327,6 +328,31 @@ func CheckDeplDeps(
 		satisfiedDeps = append(satisfiedDeps, satisfied)
 	}
 	return satisfiedDeps, missingDeps, nil
+}
+
+// ResolveDeps returns a digraph where each node is the name of a deployment and each edge goes from
+// a deployment which requires some resource to a deployment which provides that resource. Thus, the
+// returned graph is a graph of direct dependencies among deployments, excluding deployments with
+// no dependencies.
+func ResolveDeps(satisfiedDeps []SatisfiedDeplDeps) structures.Digraph[string] {
+	deps := make(structures.Digraph[string])
+	for _, satisfied := range satisfiedDeps {
+		for _, network := range satisfied.Networks {
+			provider := strings.TrimPrefix(network.Provided.Source[0], "deployment ")
+			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
+				continue
+			}
+			deps.AddEdge(satisfied.Depl.Name, provider)
+		}
+		for _, service := range satisfied.Services {
+			provider := strings.TrimPrefix(service.Provided.Source[0], "deployment ")
+			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
+				continue
+			}
+			deps.AddEdge(satisfied.Depl.Name, provider)
+		}
+	}
+	return deps
 }
 
 // Depl
