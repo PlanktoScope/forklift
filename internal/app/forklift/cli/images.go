@@ -42,6 +42,9 @@ func listRequiredImages(
 	if err != nil {
 		return nil, err
 	}
+  if !includeDisabled {
+    depls = forklift.FilterDeplsForEnabled(depls)
+  }
 	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
 		return nil, err
@@ -50,10 +53,6 @@ func listRequiredImages(
 	orderedImages := make([]string, 0, len(resolved))
 	images := make(map[string]struct{})
 	for _, depl := range resolved {
-		if depl.Def.Disabled && !includeDisabled {
-			continue
-		}
-
 		IndentedPrintf(
 			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
 		)
