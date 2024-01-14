@@ -34,7 +34,7 @@ func (r *Repo) resolveCommit(commit string) (*plumbing.Hash, error) {
 	return nil, errors.Errorf("%s appears to be a non-commit revision name", commit)
 }
 
-func (r *Repo) makeCheckoutOptions(release string) git.CheckoutOptions {
+func (r *Repo) makeCheckoutOptions(release string, remote string) git.CheckoutOptions {
 	if plumbing.IsHash(release) {
 		return git.CheckoutOptions{
 			Hash: plumbing.NewHash(release),
@@ -52,17 +52,22 @@ func (r *Repo) makeCheckoutOptions(release string) git.CheckoutOptions {
 			Branch: plumbing.NewTagReferenceName(release),
 		}
 	}
+	if remote != "" {
+		return git.CheckoutOptions{
+			Branch: plumbing.NewRemoteReferenceName(remote, release),
+		}
+	}
 	return git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(release),
 	}
 }
 
-func (r *Repo) Checkout(release string) error {
+func (r *Repo) Checkout(release string, remote string) error {
 	worktree, err := r.repository.Worktree()
 	if err != nil {
 		return err
 	}
-	checkoutOptions := r.makeCheckoutOptions(release)
+	checkoutOptions := r.makeCheckoutOptions(release, remote)
 	if err = worktree.Checkout(&checkoutOptions); err != nil {
 		return err
 	}

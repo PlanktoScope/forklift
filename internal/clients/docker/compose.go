@@ -3,6 +3,7 @@ package docker
 
 import (
 	"context"
+	"io"
 	"time"
 
 	dct "github.com/compose-spec/compose-go/types"
@@ -16,33 +17,60 @@ import (
 
 // Client
 
+type clientOptions struct {
+	quiet     bool
+	apiClient []dc.Opt
+	cli       []command.DockerCliOption
+	cliFlags  flags.ClientOptions
+}
+
+type ClientOption func(clientOptions) clientOptions
+
+func WithConcurrencySafeOutput() ClientOption {
+	return func(options clientOptions) clientOptions {
+		options.quiet = true
+		options.cli = append(options.cli, command.WithErrorStream(io.Discard))
+		options.cliFlags.LogLevel = "warning"
+		return options
+	}
+}
+
 type Client struct {
+	options clientOptions
 	Client  *dc.Client
 	Compose api.Service
 }
 
-func NewClient() (*Client, error) {
-	client, err := dc.NewClientWithOpts(
-		dc.WithHostFromEnv(),
-		dc.WithAPIVersionNegotiation(),
-	)
+func NewClient(opts ...ClientOption) (*Client, error) {
+	options := clientOptions{
+		apiClient: []dc.Opt{
+			dc.WithHostFromEnv(),
+			dc.WithAPIVersionNegotiation(),
+		},
+		cli: []command.DockerCliOption{
+			command.WithDefaultContextStoreConfig(),
+		},
+		cliFlags: flags.ClientOptions{},
+	}
+	for _, opt := range opts {
+		options = opt(options)
+	}
+	client, err := dc.NewClientWithOpts(options.apiClient...)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't make docker client")
 	}
 
-	cli, err := command.NewDockerCli(
-		command.WithAPIClient(client),
-		command.WithDefaultContextStoreConfig(),
-	)
+	options.cli = append([]command.DockerCliOption{command.WithAPIClient(client)}, options.cli...)
+	cli, err := command.NewDockerCli(options.cli...)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't make docker cli")
 	}
-	clientOptions := flags.ClientOptions{}
-	if err = cli.Initialize(&clientOptions); err != nil {
+	if err = cli.Initialize(&options.cliFlags); err != nil {
 		return nil, errors.Wrap(err, "couldn't initialize docker cli")
 	}
 
 	return &Client{
+		options: options,
 		Client:  client,
 		Compose: compose.NewComposeService(cli),
 	}, nil
@@ -58,13 +86,16 @@ func (c *Client) ListApps(ctx context.Context) ([]api.Stack, error) {
 
 // docker compose up
 
-func (c *Client) DeployApp(ctx context.Context, app *dct.Project, waitTimeout time.Duration) error {
+func (c *Client) DeployApp(
+	ctx context.Context, app *dct.Project, waitTimeout time.Duration,
+) error {
 	options := api.UpOptions{
 		Create: api.CreateOptions{
 			RemoveOrphans:        true,
 			Recreate:             api.RecreateDiverged,
 			RecreateDependencies: api.RecreateDiverged,
 			Timeout:              &waitTimeout,
+			QuietPull:            c.options.quiet,
 		},
 		Start: api.StartOptions{
 			Project:     app,

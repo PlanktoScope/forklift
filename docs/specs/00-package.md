@@ -642,6 +642,15 @@ A network service object consists of the following fields:
       - /stream.mjpg
     ```
 
+- `nonblocking` is a boolean flag specifying whether the package deployment providing the required service is allowed to start after starting the package deployment with the service requirement.
+  - This field is optional.
+  - This is a performance optimization hint which may be ignored; it's only meaningful if package deployments can be started concurrently. However, it can help to reduce the startup time needed for the critical path of a chain of dependencies between package deployments.
+  - This field can be set to true if the service client can gracefully handle the temporary absence of the service while package deployments are being applied; otherwise, this field should not be set to true.
+  - Example:
+    ```yaml
+    nonblocking: true
+    ```
+
 #### `provides` subsection
 
 This optional subsection of the `deployment` section specifies the resources provided by an active deployment of the package. This is the same as the `provides` subsection of the `host` section, except that here the resources only exist when a package deployment is active. Here is an example of a `provides` section:

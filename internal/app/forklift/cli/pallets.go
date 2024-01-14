@@ -10,11 +10,13 @@ import (
 	"github.com/docker/compose/v2/pkg/api"
 	ggit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // Print
@@ -163,29 +165,32 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 
 // Check
 
-func CheckPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+// CheckPallet checks the resource constraints among package deployments in the pallet.
+func CheckPallet(
+	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+) ([]*forklift.ResolvedDepl, []forklift.SatisfiedDeplDeps, error) {
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	depls = forklift.FilterDeplsForEnabled(depls)
 	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	conflicts, err := checkDeplConflicts(indent, resolved)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	_, missingDeps, err := checkDeplDeps(indent, resolved)
+	satisfied, missingDeps, err := checkDeplDeps(indent, resolved)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if len(conflicts) > 0 || len(missingDeps) > 0 {
-		return errors.New("pallet failed resource constraint checks")
+		return nil, nil, errors.New("pallet failed resource constraint checks")
 	}
-	return nil
+	return resolved, satisfied, nil
 }
 
 func checkDeplConflicts(
@@ -368,51 +373,40 @@ func printDepCandidate[Res any](indent int, candidate core.ResDepCandidate[Res])
 
 // Plan
 
-func PlanPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
-	_, _, err := computePlan(indent, pallet, loader)
-	if err != nil {
-		return errors.Wrap(err, "couldn't compute plan for changes")
-	}
-	return nil
-}
-
 const (
-	addReconciliationChange    = "Add"
-	removeReconciliationChange = "Remove"
-	updateReconciliationChange = "Update"
+	addReconciliationChange    = "add"
+	removeReconciliationChange = "remove"
+	updateReconciliationChange = "update"
 )
 
-type reconciliationChange struct {
+type ReconciliationChange struct {
 	Name string
 	Type string
-	Depl *forklift.ResolvedDepl
-	App  api.Stack
+	Depl *forklift.ResolvedDepl // this is nil for an app to be removed
+	App  api.Stack              // this is empty for an app which does not yet exist
 }
 
-func newAddReconciliationChange(deplName string, depl *forklift.ResolvedDepl) reconciliationChange {
-	return reconciliationChange{
+func (c *ReconciliationChange) String() string {
+	if c.Depl == nil {
+		return fmt.Sprintf("(%s %s)", c.Type, c.Name)
+	}
+	return fmt.Sprintf("(%s %s)", c.Type, c.Depl.Name)
+}
+
+func (c *ReconciliationChange) PlanString() string {
+	if c.Depl == nil {
+		return fmt.Sprintf("%s Compose app %s (from unknown deployment)", c.Type, c.Name)
+	}
+	return fmt.Sprintf("%s deployment %s as Compose app %s", c.Type, c.Depl.Name, c.Name)
+}
+
+func newAddReconciliationChange(
+	deplName string, depl *forklift.ResolvedDepl,
+) *ReconciliationChange {
+	return &ReconciliationChange{
 		Name: getAppName(deplName),
 		Type: addReconciliationChange,
 		Depl: depl,
-	}
-}
-
-func newUpdateReconciliationChange(
-	deplName string, depl *forklift.ResolvedDepl, app api.Stack,
-) reconciliationChange {
-	return reconciliationChange{
-		Name: getAppName(deplName),
-		Type: updateReconciliationChange,
-		Depl: depl,
-		App:  app,
-	}
-}
-
-func newRemoveReconciliationChange(appName string, app api.Stack) reconciliationChange {
-	return reconciliationChange{
-		Name: appName,
-		Type: removeReconciliationChange,
-		App:  app,
 	}
 }
 
@@ -420,188 +414,210 @@ func getAppName(deplName string) string {
 	return strings.ReplaceAll(deplName, "/", "_")
 }
 
-func computePlan(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
-) ([]reconciliationChange, *docker.Client, error) {
-	depls, err := pallet.LoadDepls("**/*")
-	if err != nil {
-		return nil, nil, err
+func newUpdateReconciliationChange(
+	deplName string, depl *forklift.ResolvedDepl, app api.Stack,
+) *ReconciliationChange {
+	return &ReconciliationChange{
+		Name: getAppName(deplName),
+		Type: updateReconciliationChange,
+		Depl: depl,
+		App:  app,
 	}
-	depls = forklift.FilterDeplsForEnabled(depls)
-	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
-	if err != nil {
-		return nil, nil, err
-	}
+}
 
+func newRemoveReconciliationChange(appName string, app api.Stack) *ReconciliationChange {
+	return &ReconciliationChange{
+		Name: appName,
+		Type: removeReconciliationChange,
+		App:  app,
+	}
+}
+
+// PlanPallet builds a plan for changes to make to the Docker host in order to reconcile it with the
+// desired state as expressed by the pallet. The plan is expressed as a dependency graph which can
+// be used to build a partial ordering of the changes (where each change is a node in the graph)
+// for concurrent execution, and - if serial execution is required either because the parallel arg
+// is set to true or because a dependency cycle was detected - a total ordering of the changes for
+// serial (rather than concurrent) execution.
+func PlanPallet(
+	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, parallel bool,
+) (
+	changeDeps structures.Digraph[*ReconciliationChange], serialization []*ReconciliationChange,
+	err error,
+) {
 	dc, err := docker.NewClient()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't make Docker API client")
 	}
+
+	depls, satisfiedDeps, err := CheckPallet(indent, pallet, loader)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't ensure pallet validity")
+	}
+	// Always skip nonblocking dependency relationships - even for serial execution, they don't need
+	// to be considered for a total ordering. And we don't want nonblocking dependency relationships
+	// to count towards dependency cycles. And it's simpler to just have the same behavior (and the
+	// same resulting dependency graph) regardless of serial vs. concurrent execution.
+	deps := forklift.ResolveDeps(satisfiedDeps, true)
+
+	IndentedPrintln(indent, "Determining and ordering package deployment changes...")
 	apps, err := dc.ListApps(context.Background())
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "couldn't list active Docker Compose apps")
 	}
-
-	conflicts, err := checkDeplConflicts(indent, resolved)
+	changeDeps, cycles, serialization, err := planChanges(depls, deps, apps, !parallel)
 	if err != nil {
-		return nil, nil, err
-	}
-	satisfiedDeps, missingDeps, err := checkDeplDeps(indent, resolved)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(conflicts) > 0 || len(missingDeps) > 0 {
-		return nil, nil, errors.New("pallet failed resource constraint checks")
+		return nil, nil, errors.Wrap(err, "couldn't compute a plan for changes")
 	}
 
-	IndentedPrintln(indent, "Resolving resource dependencies among package deployments...")
-	deps := resolveDeps(satisfiedDeps)
-	IndentedPrintln(indent, "Direct dependencies:")
-	printDigraph(indent+1, deps, "directly depends on")
-	IndentedPrintln(indent, "(In)direct dependencies:")
-	deps = computeTransitiveClosure(deps)
-	printDigraph(indent+1, deps, "(in)directly depends on")
-
-	// TODO: warn about any circular dependencies, until we can make a reconciliation plan where
-	// relevant resources (i.e. Docker networks) are created simultaneously so that circular
-	// dependencies don't prevent successful application. We can safely assume that clients of
-	// services can handle a transiently missing service (i.e. missing while only part of the circular
-	// dependency has been created so far).
+	IndentedPrintln(indent, "Ordering relationships:")
+	printDigraph(indent+1, changeDeps, "after")
+	if len(cycles) > 0 {
+		fmt.Println("Detected ordering cycles:")
+		for _, cycle := range cycles {
+			IndentedPrintf(indent+1, "cycle between: %s\n", cycle)
+		}
+		if parallel {
+			return nil, nil, errors.Errorf(
+				"concurrent plan would deadlock due to ordering cycles (try a serial plan instead): %+v",
+				cycles,
+			)
+		}
+	}
+	if serialization == nil {
+		return changeDeps, nil, nil
+	}
 
 	fmt.Println()
-	IndentedPrintln(indent, "Determining package deployment changes...")
-	changes, err := planReconciliation(resolved, deps, apps)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't plan changes")
+	IndentedPrintln(indent, "Serialized ordering of package deployment changes:")
+	for _, change := range serialization {
+		IndentedPrintln(indent+1, change.PlanString())
 	}
-	for _, change := range changes {
-		printReconciliationChange(indent, change)
-	}
-	return changes, dc, nil
+	return changeDeps, serialization, nil
 }
 
-// resolveDeps returns a map of sets, where each key is the name of a deployment and the
-// the value is the set of deployments providing its required resources.
-func resolveDeps(satisfiedDeps []forklift.SatisfiedDeplDeps) map[string]map[string]struct{} {
-	deps := make(map[string]map[string]struct{})
-	for _, satisfied := range satisfiedDeps {
-		providers := make(map[string]struct{})
-		for _, network := range satisfied.Networks {
-			provider := strings.TrimPrefix(network.Provided.Source[0], "deployment ")
-			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
-				continue
-			}
-			providers[provider] = struct{}{}
-		}
-		for _, service := range satisfied.Services {
-			provider := strings.TrimPrefix(service.Provided.Source[0], "deployment ")
-			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
-				continue
-			}
-			providers[provider] = struct{}{}
-		}
-		deps[satisfied.Depl.Name] = providers
-	}
-	return deps
-}
-
-func printDigraph(
-	indent int, digraph map[string]map[string]struct{}, edgeType string,
+func printDigraph[Node comparable, Digraph structures.MapDigraph[Node]](
+	indent int, digraph Digraph, edgeType string,
 ) {
-	sortedNodes := make([]string, 0, len(digraph))
+	sortedNodes := make([]Node, 0, len(digraph))
 	for node := range digraph {
 		sortedNodes = append(sortedNodes, node)
 	}
-	sort.Strings(sortedNodes)
+	sort.Slice(sortedNodes, func(i, j int) bool {
+		return fmt.Sprintf("%v", sortedNodes[i]) < fmt.Sprintf("%v", sortedNodes[j])
+	})
 	for _, node := range sortedNodes {
-		upstreamNodes := make([]string, 0, len(digraph[node]))
-		for dep := range digraph[node] {
-			upstreamNodes = append(upstreamNodes, dep)
-		}
-		sort.Strings(upstreamNodes)
-		if len(upstreamNodes) > 0 {
-			IndentedPrintf(indent, "%s %s: %+v\n", node, edgeType, upstreamNodes)
-		}
+		printNodeOutboundEdges(indent, digraph, node, edgeType)
 	}
 }
 
-// computeTransitiveClosure returns, given a set of direct dependencies for every deployment, a set
-// of all direct and indirect dependencies for every deployment. This is just the transitive closure
-// of the relation expressed by the digraph. Iff the digraph isn't a DAG (i.e. iff it has cycles),
-// then each node in the cycle will have an edge directed to itself.
-func computeTransitiveClosure(
-	digraph map[string]map[string]struct{},
-) map[string]map[string]struct{} {
-	// Seed the transitive closure with the initial digraph
-	closure := make(map[string]map[string]struct{})
-	prevChangedNodes := make(map[string]bool)
-	changedNodes := make(map[string]bool)
-	for node, upstreamNodes := range digraph {
-		closure[node] = make(map[string]struct{})
-		for upstreamNode := range upstreamNodes {
-			closure[node][upstreamNode] = struct{}{}
-		}
-		prevChangedNodes[node] = true
-		changedNodes[node] = true
+func printNodeOutboundEdges[Node comparable, Digraph structures.MapDigraph[Node]](
+	indent int, digraph Digraph, node Node, edgeType string,
+) {
+	upstreamNodes := make([]Node, 0, len(digraph[node]))
+	for dep := range digraph[node] {
+		upstreamNodes = append(upstreamNodes, dep)
 	}
-	// This algorithm is very asymptotically inefficient when long paths exist between nodes, but it's
-	// easy to understand, and performance is good enough for a typical use case in dependency
-	// resolution where dependency trees should be kept relatively shallow.
-	for {
-		converged := true
-		for node, upstreamNodes := range closure {
-			initial := len(upstreamNodes)
-			for upstreamNode := range upstreamNodes {
-				if !prevChangedNodes[upstreamNode] { // this is just a performance optimization
-					continue
-				}
-				// Add the dependency's own dependencies to the set of dependencies
-				transitiveNodes := closure[upstreamNode]
-				for transitiveNode := range transitiveNodes {
-					upstreamNodes[transitiveNode] = struct{}{}
-				}
-			}
-			final := len(upstreamNodes)
-			changedNodes[node] = initial != final
-			if changedNodes[node] {
-				converged = false
-			}
-		}
-		if converged {
-			return closure
-		}
-		prevChangedNodes = changedNodes
-		changedNodes = make(map[string]bool)
+	sort.Slice(upstreamNodes, func(i, j int) bool {
+		return fmt.Sprintf("%v", upstreamNodes[i]) < fmt.Sprintf("%v", upstreamNodes[j])
+	})
+	if len(upstreamNodes) == 0 {
+		IndentedPrintf(indent, "%v %s nothing", node, edgeType)
+	} else {
+		IndentedPrintf(indent, "%v %s: %+v", node, edgeType, upstreamNodes)
 	}
+	fmt.Println()
 }
 
-// invertDeps produces a map associating every deployment to the set of deployments
-// depending on it. In other words, it reverses the edges of the DAG of dependencies among
-// deployments.
-func invertDeps(deps map[string]map[string]struct{}) map[string]map[string]struct{} {
-	dependents := make(map[string]map[string]struct{})
-	for depl, deps := range deps {
-		for dependency := range deps {
-			if _, ok := dependents[dependency]; !ok {
-				dependents[dependency] = make(map[string]struct{})
-			}
-			dependents[dependency][depl] = struct{}{}
-		}
+// planChanges builds a dependency graph of changes to make to the Docker host (as a plan for
+// concurrent execution), for a given list of resolved package deployments, a precomputed graph of
+// direct dependency relationships between them, and a list of currently active Compose apps.
+// This function also identifies any cycles in the returned dependency graph.
+// If the serialize arg is set to true, this function will also compute a non-nil sequential order
+// for executing the changes serially (rather than concurrently); otherwise, a nil sequential order
+// will be returned.
+func planChanges(
+	depls []*forklift.ResolvedDepl, deplDirectDeps structures.Digraph[string], apps []api.Stack,
+	serialize bool,
+) (
+	changeDirectDeps structures.Digraph[*ReconciliationChange], cycles [][]*ReconciliationChange,
+	serialization []*ReconciliationChange, err error,
+) {
+	// TODO: make a reconciliation plan where relevant resources (i.e. Docker networks) are created
+	// simultaneously/independently so that circular dependencies for those resouces won't prevent
+	// successful application.
+	changes, err := identifyReconciliationChanges(depls, apps)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "couldn't identify the changes to make")
 	}
-	return dependents
+
+	changeDirectDeps = computeChangeDeps(changes, deplDirectDeps)
+	changeIndirectDeps := changeDirectDeps.ComputeTransitiveClosure()
+	cycles = changeIndirectDeps.IdentifyCycles()
+	if !serialize {
+		return changeDirectDeps, cycles, nil, nil
+	}
+
+	// Serialize changes with a total ordering
+	dependents := changeIndirectDeps.Invert()
+	sort.Slice(changes, func(i, j int) bool {
+		return compareChangesTotal(
+			changes[i], changes[j], changeIndirectDeps, dependents,
+		) == core.CompareLT
+	})
+	return changeDirectDeps, cycles, changes, nil
 }
 
-// planReconciliation produces a list of changes to make on the Docker host based on the desired
-// list of deployments, a transitive closure of dependencies among those deployments, a transitive
-// closure of the deployments depending on each deployment, and a list of
-// Docker Compose apps describing the current complete state of the Docker host.
-func planReconciliation(
-	depls []*forklift.ResolvedDepl, deps map[string]map[string]struct{}, apps []api.Stack,
-) ([]reconciliationChange, error) {
-	deplSet := make(map[string]*forklift.ResolvedDepl)
-	composeAppDefinerSet := make(map[string]struct{})
+// identifyReconciliationChanges builds an arbitrarily-ordered list of changes to carry out to
+// reconcile the desired list of deployments with the actual list of active Docker Compose apps.
+func identifyReconciliationChanges(
+	depls []*forklift.ResolvedDepl, apps []api.Stack,
+) ([]*ReconciliationChange, error) {
+	deplsByName := make(map[string]*forklift.ResolvedDepl)
 	for _, depl := range depls {
-		deplSet[depl.Name] = depl
+		deplsByName[depl.Name] = depl
+	}
+	appsByName := make(map[string]api.Stack)
+	for _, app := range apps {
+		appsByName[app.Name] = app
+	}
+	composeAppDefinerSet, err := identifyComposeAppDefiners(deplsByName)
+	if err != nil {
+		return nil, err
+	}
+
+	appDeplNames := make(map[string]string)
+	changes := make([]*ReconciliationChange, 0, len(depls)+len(apps))
+	for name, depl := range deplsByName {
+		appDeplNames[getAppName(name)] = name
+		app, ok := appsByName[getAppName(name)]
+		if !ok {
+			if composeAppDefinerSet.Has(name) {
+				changes = append(changes, newAddReconciliationChange(name, depl))
+			}
+			continue
+		}
+		if composeAppDefinerSet.Has(name) {
+			changes = append(changes, newUpdateReconciliationChange(name, depl, app))
+		}
+	}
+	for name, app := range appsByName {
+		if deplName, ok := appDeplNames[name]; ok {
+			if composeAppDefinerSet.Has(deplName) {
+				continue
+			}
+		}
+		changes = append(changes, newRemoveReconciliationChange(name, app))
+	}
+	return changes, nil
+}
+
+// identifyComposeAppDefiners builds a set of the names of deployments which define Compose apps.
+func identifyComposeAppDefiners(
+	depls map[string]*forklift.ResolvedDepl,
+) (structures.Set[string], error) {
+	composeAppDefinerSet := make(structures.Set[string])
+	for _, depl := range depls {
 		definesApp, err := depl.DefinesApp()
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -609,112 +625,95 @@ func planReconciliation(
 			)
 		}
 		if definesApp {
-			composeAppDefinerSet[depl.Name] = struct{}{}
+			composeAppDefinerSet.Add(depl.Name)
 		}
 	}
-	appSet := make(map[string]api.Stack)
-	for _, app := range apps {
-		appSet[app.Name] = app
-	}
+	return composeAppDefinerSet, nil
+}
 
-	appDeplNames := make(map[string]string)
-	changes := make([]reconciliationChange, 0, len(deplSet)+len(appSet))
-	for name, depl := range deplSet {
-		appDeplNames[getAppName(name)] = name
-		app, ok := appSet[getAppName(name)]
-		if !ok {
-			if _, ok := composeAppDefinerSet[name]; ok {
-				changes = append(changes, newAddReconciliationChange(name, depl))
-			}
+// computeChangeDeps produces a dependency graph of changes to make on the Docker host based on the
+// desired list of deployments, a graph of direct dependencies among those deployments, and a list
+// of Docker Compose apps describing the current complete state of the Docker host. The returned
+// dependency graph is a map between each reconciliation change and the respective set of any other
+// reconciliation changes which must be completed first.
+func computeChangeDeps(
+	changes []*ReconciliationChange, directDeps structures.Digraph[string],
+) structures.Digraph[*ReconciliationChange] {
+	removalChanges := make(map[string]*ReconciliationChange)    // keyed by app name
+	nonremovalChanges := make(map[string]*ReconciliationChange) // keyed by depl name
+	graph := make(structures.Digraph[*ReconciliationChange])
+	for _, change := range changes {
+		graph.AddNode(change)
+		if change.Type == removeReconciliationChange {
+			removalChanges[change.Name] = change
 			continue
 		}
-		if _, ok := composeAppDefinerSet[name]; ok {
-			changes = append(changes, newUpdateReconciliationChange(name, depl, app))
+		nonremovalChanges[change.Depl.Name] = change
+	}
+	// FIXME: ideally we would order the removal changes based on dependency relationships between
+	// the Compose apps, e.g. with networks. With removals we don't have deployments which would
+	// tell us about Docker resource dependency relationships, so we'd need to determine this from
+	// Docker. If app r depends on a resource provided by app s, then app r must be removed first -
+	// so the removal of app s depends upon the removal of app r.
+	// Remove old resources first, in case additions/updates would add overlapping resources.
+	for _, change := range nonremovalChanges {
+		for _, removalChange := range removalChanges {
+			graph.AddEdge(change, removalChange)
 		}
 	}
-	for name, app := range appSet {
-		if deplName, ok := appDeplNames[name]; ok {
-			if _, ok = composeAppDefinerSet[deplName]; ok {
-				continue
+	for _, dependent := range nonremovalChanges {
+		for deplName := range directDeps[dependent.Depl.Name] {
+			if dependency, ok := nonremovalChanges[deplName]; ok {
+				graph.AddEdge(dependent, dependency)
 			}
 		}
-		changes = append(changes, newRemoveReconciliationChange(name, app))
 	}
 
-	dependents := invertDeps(deps)
-	// Sequence the changes such that they can (hopefully) be carried out successfully
-	sort.Slice(changes, func(i, j int) bool {
-		return compareChanges(changes[i], changes[j], deps, dependents) == core.CompareLT
-	})
-	return changes, nil
+	return graph
 }
 
-// compareChanges returns a comparison for generating a total ordering of reconciliation changes
-// so that they are applied in a way that will (hopefully) succeed for all changes. Deps
-// should be a transitive closure of dependencies, and dependents should be a transitive closure of
-// dependents.
-func compareChanges(
-	r, s reconciliationChange, deps, dependents map[string]map[string]struct{},
+// compareChangesTotal returns a comparison for generating a total ordering of reconciliation
+// changes so that they are applied serially and sequentially in a way that will (hopefully) succeed
+// for all changes. deps should be a transitive closure of dependencies between changes, and
+// dependents should be the inverse of deps.
+// This function returns -1 if r should occur before s and 1 if s should occur before r.
+func compareChangesTotal(
+	r, s *ReconciliationChange, deps, dependents structures.TransitiveClosure[*ReconciliationChange],
 ) int {
-	// Remove old resources first, in case additions/updates would add overlapping resources.
-	if result := compareReconciliationChangesByType(r, s); result != core.CompareEQ {
+	// Apply the partial ordering from dependencies
+	if result := compareReconciliationChangesByDeps(r, s, deps); result != core.CompareEQ {
 		return result
-	}
-	// Now r.Depl and s.Depl are either both nil or both non-nil
-	if r.Depl == nil && s.Depl == nil {
-		return compareDeplNames(r.Name, s.Name)
 	}
 
-	// Now r and s are either both removals or both changes/additions
-	if result := compareReconciliationChangesByDeplDeps(r, s, deps); result != core.CompareEQ {
-		return result
-	}
 	// Now r and s either are in a circular dependency or have no dependency relationships
-	if result := compareDeplsByDepCounts(
-		r.Depl.Name, s.Depl.Name, deps, dependents,
-	); result != core.CompareEQ {
+	if result := compareDeplsByDepCounts(r, s, deps, dependents); result != core.CompareEQ {
 		return result
 	}
-	return compareDeplNames(r.Depl.Name, s.Depl.Name)
+
+	// Compare by names as a last resort
+	if r.Depl != nil && s.Depl != nil {
+		return compareDeplNames(r.Depl.Name, s.Depl.Name)
+	}
+	return compareDeplNames(r.Name, s.Name)
 }
 
-func compareReconciliationChangesByType(r, s reconciliationChange) int {
-	if r.Type == removeReconciliationChange && s.Type != removeReconciliationChange {
-		return core.CompareLT
-	}
-	if r.Type != removeReconciliationChange && s.Type == removeReconciliationChange {
+func compareReconciliationChangesByDeps(
+	r, s *ReconciliationChange, deps structures.TransitiveClosure[*ReconciliationChange],
+) int {
+	rDependsOnS := deps.HasEdge(r, s)
+	sDependsOnR := deps.HasEdge(s, r)
+	if rDependsOnS && !sDependsOnR {
 		return core.CompareGT
 	}
-	return core.CompareEQ
-}
-
-func compareReconciliationChangesByDeplDeps(
-	r, s reconciliationChange, deps map[string]map[string]struct{},
-) int {
-	rDependsOnS := false
-	if rDeps, ok := deps[r.Depl.Name]; ok {
-		_, rDependsOnS = rDeps[s.Depl.Name]
-	}
-	sDependsOnR := false
-	if sDeps, ok := deps[s.Depl.Name]; ok {
-		_, sDependsOnR = sDeps[r.Depl.Name]
-	}
-	if rDependsOnS && !sDependsOnR {
-		if r.Type == removeReconciliationChange { // i.e. r and s are both removals
-			return core.CompareLT // removal r goes before removal s
-		}
-		return core.CompareGT // addition/update r goes after addition/update s
-	}
 	if !rDependsOnS && sDependsOnR {
-		if s.Type == removeReconciliationChange { // i.e. r and s are both removals
-			return core.CompareGT // removal r goes after removal s
-		}
-		return core.CompareLT // addition/update r goes before addition/update s
+		return core.CompareLT
 	}
 	return core.CompareEQ
 }
 
-func compareDeplsByDepCounts(r, s string, deps, dependents map[string]map[string]struct{}) int {
+func compareDeplsByDepCounts(
+	r, s *ReconciliationChange, deps, dependents structures.TransitiveClosure[*ReconciliationChange],
+) int {
 	// Deployments with greater numbers of dependents go first (needed for correct ordering among
 	// unrelated deployments sorted by sort.Slice).
 	if len(dependents[r]) > len(dependents[s]) {
@@ -723,7 +722,7 @@ func compareDeplsByDepCounts(r, s string, deps, dependents map[string]map[string
 	if len(dependents[r]) < len(dependents[s]) {
 		return core.CompareGT
 	}
-	// Deployments with greater numbers of deps go first (for aesthetic reasons)
+	// Deployments with greater numbers of dependencies go first (for aesthetic reasons)
 	if len(deps[r]) > len(deps[s]) {
 		return core.CompareLT
 	}
@@ -743,42 +742,42 @@ func compareDeplNames(r, s string) int {
 	return core.CompareEQ
 }
 
-func printReconciliationChange(indent int, change reconciliationChange) {
-	if change.Depl == nil {
-		IndentedPrintf(
-			indent, "Will %s Compose app %s (from unknown deployment)\n",
-			strings.ToLower(change.Type), change.Name,
-		)
-		return
-	}
-	IndentedPrintf(
-		indent, "Will %s deployment %s as Compose app %s\n",
-		strings.ToLower(change.Type), change.Depl.Name, change.Name,
-	)
-}
-
 // Apply
 
-func ApplyPallet(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
-	changes, dc, err := computePlan(indent, pallet, loader)
+func ApplyPallet(
+	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, parallel bool,
+) error {
+	concurrentPlan, serialPlan, err := PlanPallet(indent, pallet, loader, parallel)
 	if err != nil {
-		return errors.Wrap(err, "couldn't compute plan for changes")
+		return err
 	}
 
-	for _, change := range changes {
-		if err := applyReconciliationChange(0, change, dc); err != nil {
-			return errors.Wrapf(
-				err, "couldn't apply '%s' change to Compose app %s", change.Type, change.Name,
-			)
+	if serialPlan != nil {
+		return applyChangesSerially(indent, serialPlan)
+	}
+	return applyChangesConcurrently(indent, concurrentPlan)
+}
+
+func applyChangesSerially(indent int, plan []*ReconciliationChange) error {
+	dc, err := docker.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+
+	fmt.Println()
+	fmt.Println("Applying changes serially...")
+	for _, change := range plan {
+		fmt.Println()
+		if err := applyReconciliationChange(context.Background(), indent+1, change, dc); err != nil {
+			return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
 		}
 	}
 	return nil
 }
 
 func applyReconciliationChange(
-	indent int, change reconciliationChange, dc *docker.Client,
+	ctx context.Context, indent int, change *ReconciliationChange, dc *docker.Client,
 ) error {
-	fmt.Println()
 	switch change.Type {
 	default:
 		return errors.Errorf("unknown change type '%s'", change.Type)
@@ -786,14 +785,14 @@ func applyReconciliationChange(
 		IndentedPrintf(
 			indent, "Adding package deployment %s as Compose app %s...\n", change.Depl.Name, change.Name,
 		)
-		if err := deployApp(indent+1, change.Depl, change.Name, dc); err != nil {
+		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
 	case removeReconciliationChange:
 		// Note: removeReconciliationChange has a nil Depl field
 		IndentedPrintf(indent, "Removing Compose app %s (unknown deployment)...\n", change.Name)
-		if err := dc.RemoveApps(context.Background(), []string{change.Name}); err != nil {
+		if err := dc.RemoveApps(ctx, []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
@@ -802,14 +801,16 @@ func applyReconciliationChange(
 			indent, "Updating package deployment %s as Compose app %s...\n",
 			change.Depl.Name, change.Name,
 		)
-		if err := deployApp(indent+1, change.Depl, change.Name, dc); err != nil {
+		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
 		}
 		return nil
 	}
 }
 
-func deployApp(indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client) error {
+func deployApp(
+	ctx context.Context, indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client,
+) error {
 	definesApp, err := depl.DefinesApp()
 	if err != nil {
 		return errors.Wrapf(
@@ -825,7 +826,7 @@ func deployApp(indent int, depl *forklift.ResolvedDepl, name string, dc *docker.
 	if err != nil {
 		return errors.Wrap(err, "couldn't load Compose app definition")
 	}
-	if err = dc.DeployApp(context.Background(), appDef, 0); err != nil {
+	if err = dc.DeployApp(ctx, appDef, 0); err != nil {
 		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
 	}
 	return nil
@@ -847,4 +848,40 @@ func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
 		)
 	}
 	return appDef, nil
+}
+
+func applyChangesConcurrently(indent int, plan structures.Digraph[*ReconciliationChange]) error {
+	dc, err := docker.NewClient(docker.WithConcurrencySafeOutput())
+	if err != nil {
+		return errors.Wrap(err, "couldn't make Docker API client")
+	}
+	fmt.Println()
+	fmt.Println("Applying changes concurrently...")
+	changeDone := make(map[*ReconciliationChange]chan struct{})
+	for change := range plan {
+		changeDone[change] = make(chan struct{})
+	}
+	// We don't use the errgroup's context because we don't want one failing service to prevent
+	// bringup of all other services.
+	eg, _ := errgroup.WithContext(context.Background())
+	for change, deps := range plan {
+		eg.Go(func(
+			change *ReconciliationChange, deps structures.Set[*ReconciliationChange],
+		) func() error {
+			return func() error {
+				defer close(changeDone[change])
+
+				for dep := range deps {
+					<-changeDone[dep]
+				}
+				if err := applyReconciliationChange(
+					context.Background(), indent, change, dc,
+				); err != nil {
+					return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
+				}
+				return nil
+			}
+		}(change, deps))
+	}
+	return eg.Wait()
 }

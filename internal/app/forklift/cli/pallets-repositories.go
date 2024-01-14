@@ -162,7 +162,7 @@ func downloadRepo(
 	}
 
 	// Checkout commit
-	if err = gitRepo.Checkout(repo.VersionLock.Def.Commit); err != nil {
+	if err = gitRepo.Checkout(repo.VersionLock.Def.Commit, ""); err != nil {
 		if cerr := os.RemoveAll(repoCachePath); cerr != nil {
 			IndentedPrintf(
 				indent, "Error: couldn't clean up %s! You'll need to delete it yourself.\n", repoCachePath,

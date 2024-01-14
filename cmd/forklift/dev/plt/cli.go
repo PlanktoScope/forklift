@@ -50,6 +50,16 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 			Category: category,
 			Usage:    "Pre-downloads the Docker container images required by the development pallet",
 			Action:   cacheImgAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "include-disabled",
+					Usage: "also download images for disabled package deployments",
+				},
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
 		},
 		{
 			Name:     "check",
@@ -63,12 +73,24 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
 				"specified by the local pallet",
 			Action: planAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
 		},
 		{
 			Name:     "apply",
 			Category: category,
 			Usage:    "Updates the Docker host to match the deployments specified by the development pallet",
 			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
 		},
 	}
 }
