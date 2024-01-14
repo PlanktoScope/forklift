@@ -52,11 +52,11 @@ func (r *Repo) makeCheckoutOptions(release string, remote string) git.CheckoutOp
 			Branch: plumbing.NewTagReferenceName(release),
 		}
 	}
-  if remote != "" {
-    return git.CheckoutOptions{
-      Branch: plumbing.NewRemoteReferenceName(remote, release),
-    }
-  }
+	if remote != "" {
+		return git.CheckoutOptions{
+			Branch: plumbing.NewRemoteReferenceName(remote, release),
+		}
+	}
 	return git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(release),
 	}
