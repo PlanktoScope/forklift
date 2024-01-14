@@ -7,24 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.0 - 2024-01-14
+
 ### Added
 
-- Added a `[dev] plt locate-depl-pkg` subcommand which prints the absolute filesystem path of the package deployed by the specified deployment (useful for making shell scripts in directories available for use, e.g. in systemd services).
-- Added a `cache rm-repo` subcommand which only deletes cached repositories.
-- Added a `cache rm-img` subcommand which only deletes unused Docker container images.
-- Added a `--include-disabled` flag to the `plt cache-img` and `dev plt cache-img` subcommands to also cache images used by disabled package deployments.
-- Added a `--parallel` flag to the `plt apply` and `dev plt apply` subcommands to enable parallel bringup of Docker Compose apps without any dependency relationships between them.
-- Added a `--parallel` flag to the `plt cache-img` and `dev plt cache-img` subcommands to enable parallel caching of Docker container images. Speedup will depend on the host machine, but on a high-performance laptop it led to a ~40% speedup.
-- Added a `nonblocking` field to service resource requirement objects in the package specification to allow a resource requirement to be ignored for the purposes of planning the order in which package deployments are to be added or modified.
+- (cli) Added a `[dev] plt locate-depl-pkg` subcommand which prints the absolute filesystem path of the package deployed by the specified deployment (useful for making shell scripts in directories available for use, e.g. in systemd services).
+- (cli) Added a `cache rm-repo` subcommand which only deletes cached repositories.
+- (cli) Added a `cache rm-img` subcommand which only deletes unused Docker container images.
+- (cli) Added a `--include-disabled` flag to the `plt cache-img` and `dev plt cache-img` subcommands to also cache images used by disabled package deployments.
+- (cli) Added a `--parallel` flag to the `plt apply` and `dev plt apply` subcommands to enable parallel bringup of Docker Compose apps without any dependency relationships between them.
+- (cli) Added a `--parallel` flag to the `plt cache-img` and `dev plt cache-img` subcommands to enable parallel caching of Docker container images. Speedup will depend on the host machine, but on a high-performance laptop it led to a ~40% speedup.
+- (spec) Added a `nonblocking` field to service resource requirement objects in the package specification to allow a resource requirement to be ignored for the purposes of planning the order in which package deployments are to be added or modified.
 
 ### Changed
 
-- (Breaking change) Renamed the `cache rm` command to `cache rm-all`
-- (Breaking change) By default, now the `plt cache-img` and `dev plt cache-img` commands don't cache images used only by disabled package deployments.
+- (Breaking change: cli) Renamed the `cache rm` command to `cache rm-all`
+- (Breaking change: cli) By default, now the `plt cache-img` and `dev plt cache-img` commands don't cache images used only by disabled package deployments.
+- (Breaking change: cli, workspace) The default value of the `--workspace` flag has changed from `$HOME/.forklift` to `$HOME`.
+- (Breaking change: workspace) The forklift repository cache has been moved from `(workspace path)/.cache` to `(workspace path)/.cache/forklift`, so that (with the default workspace location) the forklift repository cache now matches the correct default location according to the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html). For simplicity, the cache has a fixed location with respect to the workspace, instead of being wherever is specified by the `$XDG_CACHE_HOME` environment variable.
+- (Breaking change: workspace) The main forklift pallet has been moved from `(workspace path)/.forklift/cache` to `(workspace path)/.local/share/forklift/pallet`, so that (with the default workspace location) the main forklift pallet cache now matches the correct default location according to the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html). For simplicity, the main pallet has a fixed location with respect to the workspace, instead of being wherever is specified by the `$XDG_DATA_HOME` environment variable.
 
 ### Fixed
 
-- `plt clone` can now resolve a branch name as the version query, because it now treats the branch name as the name of a remote branch from the "origin" remote (since that is the only source of branches immediately after cloning).
+- (cli) `plt clone` can now resolve a branch name as the version query, because it now treats the branch name as the name of a remote branch from the "origin" remote (since that is the only source of branches immediately after cloning).
 
 ## 0.4.0 - 2023-10-23
 
@@ -40,9 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) The `definition-files` field in `forklift-package.yml` files has been renamed to `compose-files`, for unambiguity and future-proofing (so that we can add other definition types, such as for regular files rather than Docker apps).
-- (Breaking change) The `forklift-version-lock.yml` file now requires a `type` field which specifies whether the version lock is to be interpreted as a tagged version or as a pseudoversion. The `commit` and `timestamp` fields are now required for all types, instead of being used to determine whether the version lock is for a tagged version or a pseudoversion.
-- (Breaking change) The `DefinesApp` method has been removed from `PkgDeplSpec`, since now a Compose App may be defined purely by feature flags.
+- (Breaking change: spec) The `definition-files` field in `forklift-package.yml` files has been renamed to `compose-files`, for unambiguity and future-proofing (so that we can add other definition types, such as for regular files rather than Docker apps).
+- (Breaking change: spec) The `forklift-version-lock.yml` file now requires a `type` field which specifies whether the version lock is to be interpreted as a tagged version or as a pseudoversion. The `commit` and `timestamp` fields are now required for all types, instead of being used to determine whether the version lock is for a tagged version or a pseudoversion.
+- (Breaking change: spec) The `DefinesApp` method has been removed from `PkgDeplSpec`, since now a Compose App may be defined purely by feature flags.
 
 ### Fixed
 
@@ -62,16 +67,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) Now only a single Forklift repository is permitted per Git repository, and the root of the Forklift repository must be the root of the Git repository. This means that the path of the Forklift repository is just the path of the Git repository corresponding to that Forklift repository, and thus the repository definition file must be located at the root of the Git repository.
-- (Breaking change) Renamed "Forklift pallet"/"pallet" to "Forklift repository"/"repository". All commands now use `repo` instead of `plt`. This partially reverts a change made in 0.2.0.
-- (Breaking change) Renamed "environment"/"env" to "pallet"/"plt". All commands now use `plt` instead of `env`.
-- (Breaking change) Changed the name of repository definition files from `forklift-pallet.yml` to `forklift-repository.yml`. This partially reverts a change made in 0.2.0.
-- (Breaking change) Changed the name of the repository specification section in the repository definition file from `pallet` to `repository`. This reverts a change made in 0.2.0.
-- (Breaking change) Changed the name of the repository requirements directory in environments from `requirements/pallets` to `requirements/repositories`. This partially reverts a change made in 0.2.0.
-- (Breaking change) Changed the name of the repository cache directory in the workspace from `cache` to `cache/repositories`. This partially reverts a change made in 0.2.0.
-- (Breaking change) Changed the name of the pallet directory in the workspace from `env` to `pallet`.
-- (Breaking change) Renamed the `depl` subcommand to `host`.
-- (Breaking change) Renamed the `env` subcommand to `plt`, and the `dev env` subcommand to `dev plt`.
+- (Breaking change: spec) Now only a single Forklift repository is permitted per Git repository, and the root of the Forklift repository must be the root of the Git repository. This means that the path of the Forklift repository is just the path of the Git repository corresponding to that Forklift repository, and thus the repository definition file must be located at the root of the Git repository.
+- (Breaking change: spec, cli) Renamed "Forklift pallet"/"pallet" to "Forklift repository"/"repository". All commands now use `repo` instead of `plt`. This partially reverts a change made in 0.2.0.
+- (Breaking change: spec, cli) Renamed "environment"/"env" to "pallet"/"plt". All commands now use `plt` instead of `env`.
+- (Breaking change: spec) Changed the name of repository definition files from `forklift-pallet.yml` to `forklift-repository.yml`. This partially reverts a change made in 0.2.0.
+- (Breaking change: spec) Changed the name of the repository specification section in the repository definition file from `pallet` to `repository`. This reverts a change made in 0.2.0.
+- (Breaking change: spec) Changed the name of the repository requirements directory in environments from `requirements/pallets` to `requirements/repositories`. This partially reverts a change made in 0.2.0.
+- (Breaking change: workspace) Changed the name of the repository cache directory in the workspace from `cache` to `cache/repositories`. This partially reverts a change made in 0.2.0.
+- (Breaking change: workspace) Changed the name of the pallet directory in the workspace from `env` to `pallet`.
+- (Breaking change: cli) Renamed the `depl` subcommand to `host`.
+- (Breaking change: cli) Renamed the `env` subcommand to `plt`, and the `dev env` subcommand to `dev plt`.
 
 ## 0.2.2 - 2023-08-11
 
@@ -93,19 +98,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers). Note that this causes the compiled binaries to approximately double in size, from ~20-25 MB (on linux_amd64) to ~50-60 MB, because of all the unnecessary dependencies pulled in by the `github.comdocker/compose/v2` package; similarly, the compressed archives for the binaries double in size, from ~8 MB to ~17 MB. Hopefully we can return to more reasonable uncompressed binary sizes in the future.
-- (Breaking change) Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
-- (Breaking change) Changed the name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
-- (Breaking change) Changed the name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
-- (Breaking change) Changed the name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
-- (Breaking change) Changed the way the Docker Compose application is specified in the `deployment` section of a Pallet package definition, from a `definition-file` field for a single string to a `definition-files` field for a list of strings.
-- (Breaking change) Changed the name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
-- (Breaking change) Changed the name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
-- (Breaking change) Changed the name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
+- (Breaking change: spec, cli) Forklift now manages Docker Compose applications instead of Docker Stacks, due to Docker Swarm Mode's lack of support for [devices](https://github.com/moby/swarmkit/issues/1244) (important for talking to hardware) and privileged containers (very useful for gradually migrating non-containerized applications into containers). Note that this causes the compiled binaries to approximately double in size, from ~20-25 MB (on linux_amd64) to ~50-60 MB, because of all the unnecessary dependencies pulled in by the `github.comdocker/compose/v2` package; similarly, the compressed archives for the binaries double in size, from ~8 MB to ~17 MB. Hopefully we can return to more reasonable uncompressed binary sizes in the future.
+- (Breaking change: spec, cli) Renamed "Pallet repository" to "Forklift pallet"/"pallet". All commands now use `plt` instead of `repo`.
+- (Breaking change: spec) Changed the name of pallet definition files from `pallet-repository.yml` to `forklift-pallet.yml`.
+- (Breaking change: spec) Changed the name of the pallet specification section in the pallet definition file from `repository` to `pallet`.
+- (Breaking change: spec) Changed the name of package definition files from `pallet-package.yml` to `forklift-package.yml`.
+- (Breaking change: spec) Changed the way the Docker Compose application is specified in the `deployment` section of a Pallet package definition, from a `definition-file` field for a single string to a `definition-files` field for a list of strings.
+- (Breaking change: spec) Changed the name of the pallet requirements directory in environments from `repositories` to `requirements/pallets`.
+- (Breaking change: spec) Changed the name of pallet version lock files in environments from `forklift-repo.yml` to `forklift-version-lock.yml`.
+- (Breaking change: workspace) Changed the name of the pallet cache directory in the workspace from `cache` to `cache/pallets`.
 
 ### Removed
 
-- (Breaking change) Removed one-letter abbreviations in all aliases.
+- (Breaking change: cli) Removed one-letter abbreviations in all aliases.
 
 ## 0.1.10 - 2023-08-03
 
@@ -159,8 +164,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used HashiCorp Terraform.
-- (Breaking change) Renamed the `env cache` and `dev env cache` commands to `env cache-repo` and `dev env cache-repo`, respectively. This disambiguates the commands for caching Pallets-related data and for caching Docker container images, while allowing them to be run separately (useful on Docker environments where root permissions are required to talk to the Docker daemon).
+- (Breaking change: cli) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used HashiCorp Terraform.
+- (Breaking change: cli) Renamed the `env cache` and `dev env cache` commands to `env cache-repo` and `dev env cache-repo`, respectively. This disambiguates the commands for caching Pallets-related data and for caching Docker container images, while allowing them to be run separately (useful on Docker environments where root permissions are required to talk to the Docker daemon).
 
 ### Fixed
 
@@ -180,7 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) Renamed the `version` field of `forklift-repo.yml` files to `base-version`.
+- (Breaking change: spec) Renamed the `version` field of `forklift-repo.yml` files to `base-version`.
 
 ## 0.1.3 - 2023-05-23
 
@@ -198,7 +203,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Release channels are no longer tracked for each Pallet repository within a Forklift environment, for simplicity.
-- (Breaking change) The `forklift-repo-lock.yml` file has been renamed to `forklift-repo.yml`, for simplicity.
+- (Breaking change: spec) The `forklift-repo-lock.yml` file has been renamed to `forklift-repo.yml`, for simplicity.
 
 ### Fixed
 

@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"path/filepath"
 	"runtime/debug"
 
 	"github.com/carlmjohnson/versioninfo"
@@ -37,7 +36,7 @@ var app = &cli.App{
 		&cli.StringFlag{
 			Name:    "workspace",
 			Aliases: []string{"ws"},
-			Value:   filepath.Join(defaultWorkspaceBase, ".forklift"),
+			Value:   defaultWorkspaceBase,
 			Usage:   "Path of the forklift workspace",
 			EnvVars: []string{"FORKLIFT_WORKSPACE"},
 		},
@@ -56,7 +55,7 @@ var app = &cli.App{
 const (
 	repoMinVersion   = "v0.4.0"     // minimum supported Forklift version among repos
 	palletMinVersion = "v0.4.0"     // minimum supported Forklift version among pallets
-	fallbackVersion  = "v0.4.1-dev" // version reported by Forklift tool if actual version is unknown
+	fallbackVersion  = "v0.5.0-dev" // version reported by Forklift tool if actual version is unknown
 )
 
 var (

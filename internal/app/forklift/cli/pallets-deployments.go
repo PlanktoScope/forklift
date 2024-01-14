@@ -214,7 +214,7 @@ func printDockerAppVolumes(indent int, volumes dct.Volumes) {
 
 func PrintDeplPkgPath(
 	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
-  allowDisabled bool,
+	allowDisabled bool,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -227,9 +227,9 @@ func PrintDeplPkgPath(
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
-  if resolved.Def.Disabled && !allowDisabled {
+	if resolved.Def.Disabled && !allowDisabled {
 		return errors.Errorf("package deployment %s is not enabled!", depl.Name)
-  }
+	}
 	fmt.Println(resolved.Pkg.FS.Path())
 	return nil
 }
