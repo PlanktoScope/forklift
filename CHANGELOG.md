@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (Breaking change) Renamed the `cache rm` command to `cache rm-all`
 - (Breaking change) By default, now the `plt cache-img` and `dev plt cache-img` commands don't cache images used only by disabled package deployments.
 
+### Fixed
+
+- `plt clone` can now resolve a branch name as the version query, because it now treats the branch name as the name of a remote branch from the "origin" remote (since that is the only source of branches immediately after cloning).
+
 ## 0.4.0 - 2023-10-23
 
 ### Added

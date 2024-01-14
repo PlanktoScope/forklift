@@ -92,7 +92,7 @@ func clonePallet(remote, release, wpath string, force bool) error {
 			return errors.Wrap(
 				err,
 				"you need to first delete your local pallet with `forklift plt rm` before "+
-					"cloning another remote release to it",
+					"cloning another remote release to it, or re-run this command with the `--force` flag",
 			)
 		}
 
@@ -115,7 +115,7 @@ func clonePallet(remote, release, wpath string, force bool) error {
 		}
 	}
 	fmt.Printf("Checking out release %s...\n", release)
-	if err = gitRepo.Checkout(release); err != nil {
+	if err = gitRepo.Checkout(release, "origin"); err != nil {
 		return errors.Wrapf(err, "couldn't check out release %s at %s", release, local)
 	}
 	return nil
