@@ -38,5 +38,5 @@ func locateDeplPkgAction(c *cli.Context) error {
 	}
 
 	deplName := c.Args().First()
-	return fcli.PrintDeplPkgPath(0, pallet, cache, deplName)
+	return fcli.PrintDeplPkgPath(0, pallet, cache, deplName, c.Bool("allow-disabled"))
 }

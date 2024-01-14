@@ -164,6 +164,12 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 			Usage:     "Prints the absolute filesystem path of the package for the specified deployment",
 			ArgsUsage: "deployment_name",
 			Action:    locateDeplPkgAction,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "allow-disabled",
+					Usage: "locates the package even if the specified deployment is disabled",
+				},
+			},
 		},
 	}
 }
