@@ -333,8 +333,11 @@ func CheckDeplDeps(
 // ResolveDeps returns a digraph where each node is the name of a deployment and each edge goes from
 // a deployment which requires some resource to a deployment which provides that resource. Thus, the
 // returned graph is a graph of direct dependencies among deployments, excluding deployments with
-// no dependencies.
-func ResolveDeps(satisfiedDeps []SatisfiedDeplDeps) structures.Digraph[string] {
+// no dependency relationships. If the skipNonblocking arg is set, then nonblocking resource
+// requirements are ignored as if they didn't exist.
+func ResolveDeps(
+	satisfiedDeps []SatisfiedDeplDeps, skipNonblocking bool,
+) structures.Digraph[string] {
 	deps := make(structures.Digraph[string])
 	for _, satisfied := range satisfiedDeps {
 		for _, network := range satisfied.Networks {
@@ -346,7 +349,11 @@ func ResolveDeps(satisfiedDeps []SatisfiedDeplDeps) structures.Digraph[string] {
 		}
 		for _, service := range satisfied.Services {
 			provider := strings.TrimPrefix(service.Provided.Source[0], "deployment ")
+			deps.AddNode(provider)
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
+				continue
+			}
+			if service.Required.Res.Nonblocking && skipNonblocking {
 				continue
 			}
 			deps.AddEdge(satisfied.Depl.Name, provider)

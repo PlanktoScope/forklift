@@ -156,4 +156,7 @@ type ServiceRes struct {
 	// Paths is a list of paths used for accessing the service. A path may also be a prefix, indicated
 	// by ending the path with an asterisk (`*`).
 	Paths []string `yaml:"paths,omitempty"`
+	// Nonblocking, when specified as a resource requirement, specifies that the client of the service
+	// does not need to wait for the resource to exist before the client can start.
+	Nonblocking bool `yaml:"nonblocking,omitempty"`
 }

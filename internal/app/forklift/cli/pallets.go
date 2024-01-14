@@ -165,6 +165,7 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 
 // Check
 
+// CheckPallet checks the resource constraints among package deployments in the pallet.
 func CheckPallet(
 	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
 ) ([]*forklift.ResolvedDepl, []forklift.SatisfiedDeplDeps, error) {
@@ -453,12 +454,12 @@ func PlanPallet(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't ensure pallet validity")
 	}
-	IndentedPrintln(indent, "Resolving resource dependencies among package deployments...")
-	deps := forklift.ResolveDeps(satisfiedDeps)
-	IndentedPrintln(indent, "Direct dependencies:")
-	printDigraph(indent+1, deps, "requires")
+	// Always skip nonblocking dependency relationships - even for serial execution, they don't need
+	// to be considered for a total ordering. And we don't want nonblocking dependency relationships
+	// to count towards dependency cycles. And it's simpler to just have the same behavior (and the
+	// same resulting dependency graph) regardless of serial vs. concurrent execution.
+	deps := forklift.ResolveDeps(satisfiedDeps, true)
 
-	fmt.Println()
 	IndentedPrintln(indent, "Determining and ordering package deployment changes...")
 	apps, err := dc.ListApps(context.Background())
 	if err != nil {
@@ -466,27 +467,31 @@ func PlanPallet(
 	}
 	changeDeps, cycles, serialization, err := planChanges(depls, deps, apps, !parallel)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't compute plan for changes")
+		return nil, nil, errors.Wrap(err, "couldn't compute a plan for changes")
 	}
 
 	IndentedPrintln(indent, "Ordering relationships:")
 	printDigraph(indent+1, changeDeps, "after")
 	if len(cycles) > 0 {
-		IndentedPrintln(indent, "WARNING: detected ordering cycles:")
+		fmt.Println("Detected ordering cycles:")
 		for _, cycle := range cycles {
 			IndentedPrintf(indent+1, "cycle between: %s\n", cycle)
 		}
-		IndentedPrintln(
-			indent, "To avoid deadlocks in cycles, changes must be applied serially, not concurrently.",
-		)
+		if parallel {
+			return nil, nil, errors.Errorf(
+				"concurrent plan would deadlock due to ordering cycles (try a serial plan instead): %+v",
+				cycles,
+			)
+		}
+	}
+	if serialization == nil {
+		return changeDeps, nil, nil
 	}
 
-	if serialization != nil {
-		fmt.Println()
-		IndentedPrintln(indent, "Serialized ordering of package deployment changes:")
-		for _, change := range serialization {
-			IndentedPrintln(indent+1, change.PlanString())
-		}
+	fmt.Println()
+	IndentedPrintln(indent, "Serialized ordering of package deployment changes:")
+	for _, change := range serialization {
+		IndentedPrintln(indent+1, change.PlanString())
 	}
 	return changeDeps, serialization, nil
 }
@@ -527,8 +532,8 @@ func printNodeOutboundEdges[Node comparable, Digraph structures.MapDigraph[Node]
 // planChanges builds a dependency graph of changes to make to the Docker host (as a plan for
 // concurrent execution), for a given list of resolved package deployments, a precomputed graph of
 // direct dependency relationships between them, and a list of currently active Compose apps.
-// This function also identifies any cycles in the returned dependency graph; if cycles exist or
-// if the serialize arg is set to true, this function will also compute a non-nil sequential order
+// This function also identifies any cycles in the returned dependency graph.
+// If the serialize arg is set to true, this function will also compute a non-nil sequential order
 // for executing the changes serially (rather than concurrently); otherwise, a nil sequential order
 // will be returned.
 func planChanges(
@@ -548,14 +553,12 @@ func planChanges(
 
 	changeDirectDeps = computeChangeDeps(changes, deplDirectDeps)
 	changeIndirectDeps := changeDirectDeps.ComputeTransitiveClosure()
-	if cycles = changeIndirectDeps.IdentifyCycles(); len(cycles) > 0 {
-		serialize = true
-	}
+	cycles = changeIndirectDeps.IdentifyCycles()
 	if !serialize {
 		return changeDirectDeps, cycles, nil, nil
 	}
 
-	// Compute a total ordering of the reconciliation changes
+	// Serialize changes with a total ordering
 	dependents := changeIndirectDeps.Invert()
 	sort.Slice(changes, func(i, j int) bool {
 		return compareChangesTotal(
