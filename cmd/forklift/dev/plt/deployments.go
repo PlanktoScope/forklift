@@ -34,3 +34,18 @@ func showDeplAction(c *cli.Context) error {
 	deplName := c.Args().First()
 	return fcli.PrintDeplInfo(0, pallet, cache, deplName)
 }
+
+// locate-depl-pkg
+
+func locateDeplPkgAction(c *cli.Context) error {
+	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	if err != nil {
+		return err
+	}
+	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
+		return err
+	}
+
+	deplName := c.Args().First()
+	return fcli.PrintDeplPkgPath(0, pallet, cache, deplName)
+}

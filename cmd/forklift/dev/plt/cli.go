@@ -97,43 +97,51 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 
 func makeQuerySubcmds() []*cli.Command {
 	const category = "Query the pallet"
+	return append(
+		[]*cli.Command{
+			{
+				Name:     "show",
+				Category: category,
+				Usage:    "Describes the development pallet",
+				Action:   showAction,
+			},
+			{
+				Name:     "ls-repo",
+				Aliases:  []string{"list-repositories"},
+				Category: category,
+				Usage:    "Lists repos specified by the pallet",
+				Action:   lsRepoAction,
+			},
+			{
+				Name:      "show-repo",
+				Aliases:   []string{"show-repository"},
+				Category:  category,
+				Usage:     "Describes a repo available in the development pallet",
+				ArgsUsage: "repo_path",
+				Action:    showRepoAction,
+			},
+			{
+				Name:     "ls-pkg",
+				Aliases:  []string{"list-packages"},
+				Category: category,
+				Usage:    "Lists packages available in the development pallet",
+				Action:   lsPkgAction,
+			},
+			{
+				Name:      "show-pkg",
+				Aliases:   []string{"show-package"},
+				Category:  category,
+				Usage:     "Describes a package available in the development pallet",
+				ArgsUsage: "package_path",
+				Action:    showPkgAction,
+			},
+		},
+		makeQueryDeplSubcmds(category)...,
+	)
+}
+
+func makeQueryDeplSubcmds(category string) []*cli.Command {
 	return []*cli.Command{
-		{
-			Name:     "show",
-			Category: category,
-			Usage:    "Describes the development pallet",
-			Action:   showAction,
-		},
-		{
-			Name:     "ls-repo",
-			Aliases:  []string{"list-repositories"},
-			Category: category,
-			Usage:    "Lists repos specified by the pallet",
-			Action:   lsRepoAction,
-		},
-		{
-			Name:      "show-repo",
-			Aliases:   []string{"show-repository"},
-			Category:  category,
-			Usage:     "Describes a repo available in the development pallet",
-			ArgsUsage: "repo_path",
-			Action:    showRepoAction,
-		},
-		{
-			Name:     "ls-pkg",
-			Aliases:  []string{"list-packages"},
-			Category: category,
-			Usage:    "Lists packages available in the development pallet",
-			Action:   lsPkgAction,
-		},
-		{
-			Name:      "show-pkg",
-			Aliases:   []string{"show-package"},
-			Category:  category,
-			Usage:     "Describes a package available in the development pallet",
-			ArgsUsage: "package_path",
-			Action:    showPkgAction,
-		},
 		{
 			Name:     "ls-depl",
 			Aliases:  []string{"list-deployments"},
@@ -146,8 +154,16 @@ func makeQuerySubcmds() []*cli.Command {
 			Aliases:   []string{"show-deployment"},
 			Category:  category,
 			Usage:     "Describes a package deployment specified by the development pallet",
-			ArgsUsage: "package_path",
+			ArgsUsage: "deployment_name",
 			Action:    showDeplAction,
+		},
+		{
+			Name:      "locate-depl-pkg",
+			Aliases:   []string{"locate-deployment-package"},
+			Category:  category,
+			Usage:     "Prints the absolute filesystem path of the package for the specified deployment",
+			ArgsUsage: "deployment_name",
+			Action:    locateDeplPkgAction,
 		},
 	}
 }

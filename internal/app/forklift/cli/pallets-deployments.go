@@ -48,20 +48,22 @@ func PrintDeplInfo(
 			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
 		)
 	}
-	if definesApp {
-		fmt.Println()
-		appDef, err := loadAppDefinition(resolved)
-		if err != nil {
-			return errors.Wrap(err, "couldn't load Compose app definition")
-		}
-		IndentedPrintf(indent, "Deploys as Docker Compose app %s:\n", appDef.Name)
-		indent++
-
-		if err = printDockerAppDefFiles(indent, resolved); err != nil {
-			return err
-		}
-		printDockerAppDef(indent, appDef)
+	if !definesApp {
+		return nil
 	}
+
+	fmt.Println()
+	appDef, err := loadAppDefinition(resolved)
+	if err != nil {
+		return errors.Wrap(err, "couldn't load Compose app definition")
+	}
+	IndentedPrintf(indent, "Deploys as Docker Compose app %s:\n", appDef.Name)
+	indent++
+
+	if err = printDockerAppDefFiles(indent, resolved); err != nil {
+		return err
+	}
+	printDockerAppDef(indent, appDef)
 
 	// TODO: print the state of the Docker Compose app associated with deplName - or maybe that should
 	// be a `forklift depl show-d deplName` command instead?
@@ -208,4 +210,22 @@ func printDockerAppVolumes(indent int, volumes dct.Volumes) {
 	for _, name := range volumeNames {
 		BulletedPrintln(indent, name)
 	}
+}
+
+func PrintDeplPkgPath(
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
+) error {
+	depl, err := pallet.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find package deployment specification %s in pallet %s",
+			deplName, pallet.FS.Path(),
+		)
+	}
+	resolved, err := forklift.ResolveDepl(pallet, cache, depl)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
+	}
+	fmt.Println(resolved.Pkg.FS.Path())
+	return nil
 }

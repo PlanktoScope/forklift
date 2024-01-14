@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a `[dev] plt locate-depl-pkg` subcommand which prints the absolute filesystem path of the package deployed by the specified deployment (useful for making shell scripts in directories available for use, e.g. in systemd services).
 - Added a `cache rm-repo` subcommand which only deletes cached repositories.
 - Added a `cache rm-img` subcommand which only deletes unused Docker container images.
 - Added a `--include-disabled` flag to the `plt cache-img` and `dev plt cache-img` subcommands to also cache images used by disabled package deployments.
