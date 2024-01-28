@@ -147,21 +147,21 @@ func printDockerAppDef(indent int, appDef *dct.Project) {
 	printDockerAppVolumes(indent, appDef.Volumes)
 }
 
-func printDockerAppServices(indent int, services []dct.ServiceConfig) {
+func printDockerAppServices(indent int, services dct.Services) {
 	if len(services) == 0 {
 		return
 	}
-	IndentedPrint(indent, "Services:")
-	sort.Slice(services, func(i, j int) bool {
-		return services[i].Name < services[j].Name
-	})
-	if len(services) == 0 {
-		fmt.Print(" (none)")
+	IndentedPrintln(indent, "Services:")
+	sortedServices := make([]dct.ServiceConfig, 0, len(services))
+	for _, service := range services {
+		sortedServices = append(sortedServices, service)
 	}
-	fmt.Println()
+	sort.Slice(sortedServices, func(i, j int) bool {
+		return sortedServices[i].Name < sortedServices[j].Name
+	})
 	indent++
 
-	for _, service := range services {
+	for _, service := range sortedServices {
 		IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
 	}
 }
