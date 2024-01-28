@@ -13,6 +13,7 @@ import (
 	"github.com/docker/cli/cli/trust"
 	dt "github.com/docker/docker/api/types"
 	dtf "github.com/docker/docker/api/types/filters"
+	dti "github.com/docker/docker/api/types/image"
 	dtr "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/pkg/errors"
@@ -113,7 +114,7 @@ func (c *Client) PruneUnusedImages(ctx context.Context) (dt.ImagesPruneReport, e
 	}))
 }
 
-func CompareDeletedImages(i, j dt.ImageDeleteResponseItem) int {
+func CompareDeletedImages(i, j dti.DeleteResponse) int {
 	switch {
 	default:
 		return 0
