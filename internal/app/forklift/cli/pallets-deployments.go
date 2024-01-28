@@ -176,7 +176,7 @@ func printDockerAppNetworks(indent int, networks dct.Networks) {
 	}
 	IndentedPrint(indent, "Networks:")
 	sort.Slice(networkNames, func(i, j int) bool {
-		return networkNames[i] < networkNames[j]
+		return networks[networkNames[i]].Name < networks[networkNames[j]].Name
 	})
 	if len(networkNames) == 0 {
 		fmt.Print(" (none)")
