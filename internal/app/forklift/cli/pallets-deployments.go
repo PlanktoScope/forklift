@@ -5,7 +5,7 @@ import (
 	"path"
 	"sort"
 
-	dct "github.com/compose-spec/compose-go/types"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"

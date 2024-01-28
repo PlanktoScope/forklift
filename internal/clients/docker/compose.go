@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	dct "github.com/compose-spec/compose-go/types"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/compose/v2/pkg/api"

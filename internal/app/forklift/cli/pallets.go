@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	dct "github.com/compose-spec/compose-go/types"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v2/pkg/api"
 	ggit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
