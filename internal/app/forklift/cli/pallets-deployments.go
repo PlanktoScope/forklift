@@ -171,7 +171,11 @@ func printDockerAppNetworks(indent int, networks dct.Networks) {
 		return
 	}
 	networkNames := make([]string, 0, len(networks))
-	for name := range networks {
+	for name, network := range networks {
+		if name == "default" && network.Name == "none" {
+			// Ignore the default network if its creation is suppressed by the Compose file
+			continue
+		}
 		networkNames = append(networkNames, name)
 	}
 	IndentedPrint(indent, "Networks:")
