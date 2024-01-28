@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	dct "github.com/compose-spec/compose-go/types"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/compose/v2/pkg/api"
@@ -20,7 +20,7 @@ import (
 type clientOptions struct {
 	quiet     bool
 	apiClient []dc.Opt
-	cli       []command.DockerCliOption
+	cli       []command.CLIOption
 	cliFlags  flags.ClientOptions
 }
 
@@ -47,7 +47,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 			dc.WithHostFromEnv(),
 			dc.WithAPIVersionNegotiation(),
 		},
-		cli: []command.DockerCliOption{
+		cli: []command.CLIOption{
 			command.WithDefaultContextStoreConfig(),
 		},
 		cliFlags: flags.ClientOptions{},
@@ -60,7 +60,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		return nil, errors.Wrap(err, "couldn't make docker client")
 	}
 
-	options.cli = append([]command.DockerCliOption{command.WithAPIClient(client)}, options.cli...)
+	options.cli = append([]command.CLIOption{command.WithAPIClient(client)}, options.cli...)
 	cli, err := command.NewDockerCli(options.cli...)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't make docker cli")

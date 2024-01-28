@@ -5,7 +5,7 @@ import (
 	"path"
 	"sort"
 
-	dct "github.com/compose-spec/compose-go/types"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -147,21 +147,21 @@ func printDockerAppDef(indent int, appDef *dct.Project) {
 	printDockerAppVolumes(indent, appDef.Volumes)
 }
 
-func printDockerAppServices(indent int, services []dct.ServiceConfig) {
+func printDockerAppServices(indent int, services dct.Services) {
 	if len(services) == 0 {
 		return
 	}
-	IndentedPrint(indent, "Services:")
-	sort.Slice(services, func(i, j int) bool {
-		return services[i].Name < services[j].Name
-	})
-	if len(services) == 0 {
-		fmt.Print(" (none)")
+	IndentedPrintln(indent, "Services:")
+	sortedServices := make([]dct.ServiceConfig, 0, len(services))
+	for _, service := range services {
+		sortedServices = append(sortedServices, service)
 	}
-	fmt.Println()
+	sort.Slice(sortedServices, func(i, j int) bool {
+		return sortedServices[i].Name < sortedServices[j].Name
+	})
 	indent++
 
-	for _, service := range services {
+	for _, service := range sortedServices {
 		IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
 	}
 }
@@ -171,12 +171,16 @@ func printDockerAppNetworks(indent int, networks dct.Networks) {
 		return
 	}
 	networkNames := make([]string, 0, len(networks))
-	for name := range networks {
+	for name, network := range networks {
+		if name == "default" && network.Name == "none" {
+			// Ignore the default network if its creation is suppressed by the Compose file
+			continue
+		}
 		networkNames = append(networkNames, name)
 	}
 	IndentedPrint(indent, "Networks:")
 	sort.Slice(networkNames, func(i, j int) bool {
-		return networkNames[i] < networkNames[j]
+		return networks[networkNames[i]].Name < networks[networkNames[j]].Name
 	})
 	if len(networkNames) == 0 {
 		fmt.Print(" (none)")

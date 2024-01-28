@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/compose/v2/pkg/api"
 	dt "github.com/docker/docker/api/types"
+	dtc "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 )
 
@@ -16,7 +17,7 @@ func (c *Client) ListContainers(ctx context.Context, appName string) ([]dt.Conta
 	if appName == "" {
 		f = filters.NewArgs(oneOffFilter(false))
 	}
-	return c.Client.ContainerList(ctx, dt.ContainerListOptions{
+	return c.Client.ContainerList(ctx, dtc.ListOptions{
 		Filters: f,
 		All:     true,
 	})
