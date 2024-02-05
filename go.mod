@@ -8,7 +8,7 @@ require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/compose-spec/compose-go/v2 v2.0.0-rc.3
 	github.com/distribution/reference v0.5.0
-	github.com/docker/cli v25.0.1+incompatible
+	github.com/docker/cli v25.0.2+incompatible
 	github.com/docker/compose/v2 v2.24.3
 	github.com/docker/docker v25.0.2+incompatible
 	github.com/docker/go-units v0.5.0
