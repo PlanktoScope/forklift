@@ -6,7 +6,20 @@ import (
 )
 
 func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command {
-	var subcommands []*cli.Command
+	subcommands := []*cli.Command{
+		{
+			Name:      "switch",
+			Usage:     "(Re)initializes the local pallet, updates the cache, and deploys the pallet",
+			ArgsUsage: "[github_repository_path@release]",
+			Action:    switchAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize updating of deployments",
+				},
+			},
+		},
+	}
 	for _, group := range makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion) {
 		subcommands = append(subcommands, group...)
 	}
@@ -80,7 +93,7 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize updating of deployments",
 				},
 			},
 		},
