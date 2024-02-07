@@ -1,38 +1,38 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    inkscape:export-ydpi="63.5"
    inkscape:export-xdpi="63.5"
-   inkscape:export-filename="C:\Users\lietk\Dropbox\Forklift\Logo with Text.png"
-   inkscape:version="1.0 (4035a4fb49, 2020-05-01)"
+   inkscape:export-filename="Logo with Text.png"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
    sodipodi:docname="Logo with Text.svg"
    id="svg8"
    version="1.1"
-   viewBox="0 0 562.5 200"
-   height="200mm"
-   width="562.5mm">
+   viewBox="0 0 535 175"
+   height="175mm"
+   width="535mm"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <defs
      id="defs2" />
   <sodipodi:namedview
      units="mm"
      inkscape:window-maximized="1"
-     inkscape:window-y="-8"
-     inkscape:window-x="1912"
-     inkscape:window-height="1017"
-     inkscape:window-width="1920"
+     inkscape:window-y="0"
+     inkscape:window-x="0"
+     inkscape:window-height="1080"
+     inkscape:window-width="1884"
      gridtolerance="10000"
-     showgrid="false"
+     showgrid="true"
      inkscape:document-rotation="0"
      inkscape:current-layer="layer1"
      inkscape:document-units="mm"
-     inkscape:cy="88.167352"
-     inkscape:cx="1282.4654"
+     inkscape:cy="88.388348"
+     inkscape:cx="1282.7359"
      inkscape:zoom="0.45254834"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0"
@@ -40,13 +40,18 @@
      bordercolor="#666666"
      pagecolor="#ffffff"
      id="base"
-     inkscape:pagecheckerboard="false">
+     inkscape:pagecheckerboard="false"
+     inkscape:showpageshadow="0"
+     inkscape:deskcolor="#505050">
     <inkscape:grid
        id="grid833"
        type="xygrid"
        spacingy="5"
        spacingx="5"
-       units="mm" />
+       units="mm"
+       originx="0"
+       originy="0"
+       visible="true" />
   </sodipodi:namedview>
   <metadata
      id="metadata5">
@@ -56,7 +61,6 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -65,51 +69,17 @@
      inkscape:groupmode="layer"
      inkscape:label="Layer 1">
     <rect
-       ry="15"
-       y="-11.536592"
-       x="66.849937"
-       height="30.000002"
-       width="185"
-       id="rect845-7-2"
-       style="fill:#ffffff;fill-opacity:1;stroke-width:0.300008"
-       transform="rotate(45)" />
-    <rect
-       style="fill:#ffffff;fill-opacity:1;stroke-width:0.300008"
-       id="rect845-7"
-       width="180"
-       height="30"
-       x="8.8817842e-16"
-       y="155"
-       ry="14.896647" />
-    <rect
-       transform="rotate(45)"
-       style="fill:#404040;fill-opacity:1;stroke-width:0.264583"
-       id="rect849-3"
-       width="83.639641"
-       height="20"
-       x="163.24129"
-       y="-6.4644628"
-       ry="10" />
-    <rect
        style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
        id="rect849-7"
        width="125"
        height="125"
-       x="10"
+       x="0"
        y="25"
        ry="30" />
     <rect
-       ry="9.6899338"
-       y="160"
-       x="5"
-       height="20"
-       width="170"
-       id="rect845"
-       style="fill:#404040;fill-opacity:1;stroke-width:0.300009" />
-    <rect
        ry="25"
        y="30"
-       x="15"
+       x="5"
        height="115"
        width="115"
        id="rect849"
@@ -119,7 +89,7 @@
        id="rect849-1"
        width="85"
        height="85"
-       x="30"
+       x="20"
        y="45"
        ry="10" />
     <rect
@@ -127,12 +97,12 @@
        id="rect1142-5"
        width="100"
        height="15"
-       x="20"
+       x="10"
        y="70" />
     <rect
        ry="5"
        y="110"
-       x="95"
+       x="85"
        height="15"
        width="15"
        id="rect1210"
@@ -140,7 +110,7 @@
     <rect
        ry="5"
        y="110"
-       x="55"
+       x="45"
        height="15"
        width="35"
        id="rect1210-7-0"
@@ -150,13 +120,13 @@
        id="rect1210-5"
        width="15"
        height="15"
-       x="75"
+       x="65"
        y="50"
        ry="5" />
     <rect
        ry="5"
        y="90"
-       x="35"
+       x="25"
        height="35"
        width="15"
        id="rect1210-1-8"
@@ -164,7 +134,7 @@
     <rect
        ry="5"
        y="90"
-       x="55"
+       x="45"
        height="15"
        width="15"
        id="rect1210-1-3"
@@ -174,13 +144,13 @@
        id="rect1210-7-0-0"
        width="35"
        height="15"
-       x="35"
+       x="25"
        y="50"
        ry="5" />
     <rect
        ry="5"
        y="50"
-       x="95"
+       x="85"
        height="15"
        width="15"
        id="rect1210-5-7"
@@ -190,18 +160,18 @@
        id="rect1210-7-0-5"
        width="35"
        height="15"
-       x="75"
+       x="65"
        y="90"
        ry="5" />
     <text
        xml:space="preserve"
        style="font-size:120px;line-height:1.25;font-family:'Atkinson Hyperlegible';-inkscape-font-specification:'Atkinson Hyperlegible';stroke-width:0.264583"
-       x="179.39999"
+       x="149.39999"
        y="129.96001"
        id="text1432"><tspan
          sodipodi:role="line"
          id="tspan1430"
-         x="179.39999"
+         x="149.39999"
          y="129.96001"
          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;font-family:'Atkinson Hyperlegible';-inkscape-font-specification:'Atkinson Hyperlegible Bold';fill:#404040;fill-opacity:1;stroke-width:0.264583">forklift</tspan></text>
   </g>
