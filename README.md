@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/PlanktoScope/forklift/assets/180370/a4317864-a75e-4717-99e5-402d07e109fb">
   <source media="(prefers-color-scheme: light)" srcset="https://github.com/PlanktoScope/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004">
-  <img src="https://github.com/PlanktoScope/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004" alt="Forklift logo" height="100">
+  <img src="https://github.com/PlanktoScope/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004" alt="Forklift logo" height="80">
 </picture>
 
 A simpler, easier, and safer way to manage apps and services on embedded Linux systems.
