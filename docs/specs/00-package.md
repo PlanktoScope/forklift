@@ -62,9 +62,10 @@ The resource requirements and provided resources associated with a package deplo
 
 A package deployment's declaration of resource requirements and provided resources is also a declaration of its external interface on the Docker host. Currently, resources can be:
 
-- Docker networks
-- Host port listeners bound to network ports on the host
-- Network services mapped to the host
+1. Docker networks
+2. Host port listeners bound to network ports on the host
+3. Network services mapped to the host
+4. Files on the host
 
 Resource requirements and provided resources are specified as a set of *identification criteria* for determining whether two provided resources have conflicting identities or whether the identity of a package deployment's required resource matches the identity of a resource provided by another package.
 
@@ -497,7 +498,7 @@ This field of the `provides` subsection is an array of network service objects l
 
 - This field is optional.
 - The route of a network service can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service whose route is defined only as a port/protocol pair will overlap with another network service if and only if the other network service whose route is also defined only as a port/protocol pair. A network service whose route is defined with one or more paths will overlap with another network service if and only if both network services have the same port, the same protocol, and at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the network service object).
-- Each network service object describes a network service resource which may or may not be in conflict with other network service resources; this is because multiple networks are not allowed to have overlapping routes.
+- Each network service object describes a network service resource which may or may not be in conflict with other network service resources; this is because multiple network services are not allowed to have overlapping routes.
 - If a set of package deployments contains two or more network service resources for services with overlapping routes from different package deployments, then the package deployments declaring those respective network services will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of network services will not be satisfied.
 - Example:
   
@@ -537,10 +538,27 @@ A network service object consists of the following fields:
      protocol: https
      ```
 
+- `paths` is an array of strings which are paths used for accessing the service.
+  
+   - This field is optional.
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the network service covers all paths beginning with that prefix (i.e. the string before the asterisk).
+   - If a network service specifies a port and protocol but no paths, it will conflict with another network service which also specifies the same port and protocol but no paths; it will not conflict with another network service which specifies the same port and protocol and also specifies some paths. In other words, not listing any paths in a network service is equivalent to not having any conflicts with other services available at specific paths on the same port and protocol.
+     This is useful for describing systems involving HTTP reverse-proxies or involving message brokers, where one package deployment may provide a network service which routes specific messages to network services from other package deployments on specific paths; then the reverse-proxy or message broker would be specified on some port and protocol with no paths, while the network services behind it would be specified on the same port and protocol but with a set of specific paths.
+   - If a package deployment has a dependency on a network service with a specific path which matches a prefix path in a network service from another package deployment, that dependency will be satisfied. For example, a dependency on a network service requiring a path `/admin/cockpit/system` would be met by a network service provided with the path prefix `/admin/cockpit/*`, assuming they have the same port and protocol.
+   - If a package deployment provides a network service with a specific path which matches a prefix path in a network service provided by another package deployment, those two package deployments will be in conflict with each other. For example, a network service providing a path `/admin/cockpit/system` would conflict with a network service providing the path prefix `/admin/cockpit/*`, assuming they have the same port and protocol. This is because those overlapping paths would cause the network services to overlap with each other, which is not allowed.
+   - Example:
+     
+     ```yaml
+     paths:
+       - /admin/cockpit/*
+     ```
+
 - `tags` is an array of strings which constrain resolution of network service resource dependencies among package deployments. These tags are ignored in determining whether network services conflict with each other, since they are not part of the network service's route.
   
    - This field is optional.
+  
    - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a network service with information about API versions, subprotocols, etc. If a package deployment specifies that it requires a network service with one or more tags, then another package deployment will only be considered to satisfy the network service dependency if it provides a network service matching both the required route and all required tags. This is useful in ensuring that a network service provided by one package deployment is compatible with the API version required by a service client from another package deployment, for example.
+  
    - Example:
      
      ```yaml
@@ -549,18 +567,71 @@ A network service object consists of the following fields:
        - tls-client-certs-required
      ```
 
-- `paths` is an array of strings which are paths used for accessing the service.
+##### `filesystem` field
+
+This field of the `provides` subsection is an array of filesystem objects listing the filesystem entities (e.g. files and/or directories) which are already available on the Docker host.
+
+- This field is optional.
+
+- A filesystem entity is defined as a list of one or more paths. A filesystem entity will overlap with another filesystem entity if and only if both filesystem entities have at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the filesystem object).
+
+- Each filesystem object describes a filesystem resource which may or may not be in conflict with other filesystem resources; this is because multiple filesystem entities are not allowed to have overlapping paths.
+
+- If a set of package deployments contains two or more filesystem resources for filesystem entities with overlapping paths from different package deployments, then the package deployments declaring those respective filesystem entities will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of filesystem entities will not be satisfied.
+
+- Example:
   
-   - This field is optional.
-   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the network service covers all paths beginning with that prefix (i.e. the string before the asterisk).
-   - If a network service specifies a port and protocol but no paths, it will conflict with another network service which also specifies the same port and protocol but no paths; it will not conflict with another network service which specifies the same port and protocol and also specifies some paths. In other words, not listing any paths in a network service is equivalent to not having any conflicts with other services available at specific paths on the same port and protocol. This is useful for describing systems involving HTTP reverse-proxies or involving message brokers, where one package deployment may provide a network service which routes specific messages to network services from other package deployments on specific paths; then the reverse-proxy or message broker would be specified on some port and protocol with no paths, while the network services behind it would be specified on the same port and protocol but with a set of specific paths.
-   - If a package deployment has a dependency on a network service with a specific path which matches a prefix path in a network service from another package deployment, that dependency will be satisfied. For example, a dependency on a network service requiring a path `/admin/cockpit/system` would be met by a network service provided with the path prefix `/admin/cockpit/*`, assuming they have the same port and protocol.
-   - If a package deployment provides a network service with a specific path which matches a prefix path in a network service provided by another package deployment, those two package deployments will be in conflict with each other. For example, a network service providing a path `/admin/cockpit/system` would conflict with a network service providing the path prefix `/admin/cockpit/*`, assuming they have the same port and protocol. This is because those overlapping paths would cause the network services to overlap with each other, which is not allowed.
+  ```yaml
+  filesystem:
+    - description: File containing the device's machine name
+      paths:
+      - /var/lib/planktoscope/machine-name
+  ```
+
+A filesystem object consists of the following fields:
+
+- `description` is a short (one-sentence) description of the filesystem resource to be shown to users.
+  
+   - This field is required.
+  
+   - Example:
+     
+     ```yaml
+     description: Directory tree containing PlanktoScope datasets
+     ```
+
+- `paths` is an array of strings which are paths where the filesystem entity exists.
+  
+   - This field is required.
+  
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the filesystem entity covers all paths beginning with that prefix (i.e. the string before the asterisk).
+  
+   - If a package deployment has a dependency on a filesystem entity with a specific path which matches a prefix path in a filesystem entity from another package deployment, that dependency will be satisfied. For example, a dependency on a filesystem entity requiring a path `/home/pi/data/img` would be met by a filesystem entity provided with the path prefix `/home/pi/data/*`.
+  
+   - If a package deployment provides a filesystem entity with a specific path which matches a prefix path in a filesystem entity provided by another package deployment, those two package deployments will be in conflict with each other. For example, a filesystem entity providing a path `/home/pi/data/img` would conflict with a network service providing the path prefix `/home/pi/*`. This is because those overlapping paths would cause the filesystem entities to overlap with each other, which is not allowed.
+  
    - Example:
      
      ```yaml
      paths:
-       - /admin/cockpit/*
+       - /home/pi/data
+       - /home/pi/data/img
+       - /home/pi/data/export
+     ```
+
+- `tags` is an array of strings which constrain resolution of filesystem resource dependencies among package deployments. These tags are ignored in determining whether filesystem entities conflict with each other, since they are not part of the filesystem entity's location.
+  
+   - This field is optional.
+  
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc. If a package deployment specifies that it requires a filesystem entity with one or more tags, then another package deployment will only be considered to satisfy the filesystem entity dependency if it provides a filesystem entity matching both the required path(s) and all required tags. This is useful in ensuring that a filesystem entity provided by one package deployment is compatible with the schema version required by another package deployment, for example.
+  
+   - Example:
+     
+     ```yaml
+     tags:
+       - directory
+       - owner-1000
+       - writable
      ```
 
 ### `deployment` section
@@ -584,7 +655,6 @@ This field of the `deployment` section is an array of the string filenames of on
 - This field is optional.
 - The filenames must be for YAML files following the [Docker Compose file specification](https://docs.docker.com/compose/compose-file/).
 - The files must be located in the same directory as the `forklift-package.yml` file, or in subdirectories.
-- It only makes sense to omit the Docker Compose file from a package if the package also specifies some host resources in the `host` section of the `forklift-package.yml` file, or if the package defines some features with associated Compose files; otherwise, the package would do nothing and have no effect.
 - Example:
   
   ```yaml
@@ -667,13 +737,15 @@ A Docker network object consists of the following fields:
 This optional field of the `requires` subsection is an array of network service objects listing the network services which must be available on the Docker host in order for a deployment of the package to successfully become active.
 
 - This field is optional.
-- The route of a network service requirement can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service requirement whose route is defined only as a port/protocol pair can be satisfied by a network service defined with or without paths. A network service requirement whose route is defined with one or more paths will be satisfied by one or more network services if and only if all of those network services have the same port/protocol pair as the network service requirement, *and* the set union of the paths of the network services overlaps with every path listed in the network service requirement (for a definition of overlapping paths, refer below to description of the `path` field of the network service object). Thus, in any particular set of package deployments, one network service from one package deployment may be sufficient to satisfy a network service requirement from some other package deployment, or multiple network services from multiple packages may be necessary to fully satisfy that network service requirement.
+- The route of a network service requirement can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service requirement whose route is defined only as a port/protocol pair can be satisfied by a network service defined with or without paths. A network service requirement whose route is defined with one or more paths will be satisfied by one or more network services if and only if all of those network services have the same port/protocol pair as the network service requirement, *and* the set union of the paths of the network services overlaps with every path listed in the network service requirement (for a definition of overlapping paths, refer below to description of the `path` field of the network service object).
+  Thus, in any particular set of package deployments, one network service from one package deployment may be sufficient to satisfy a network service requirement from some other package deployment, or multiple network services from multiple packages may be necessary to fully satisfy that network service requirement.
 - If a set of package deployments contains a network service resource requirement with a route which does not overlap with the routes of any network services provided by other package deployments, then the package deployment declaring that network service requirement will be reported as having an unmet dependency. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for resource dependencies will not be satisfied.
 - Example:
   
   ```yaml
   services:
-    - tags: [caddy-docker-proxy]
+    - description: A reverse-proxy server configured with Docker labels
+      tags: [caddy-docker-proxy]
       port: 80
       protocol: http
   ```
@@ -707,17 +779,6 @@ A network service object consists of the following fields:
      protocol: http
      ```
 
-- `tags` is an array of strings specifying labels which must be associated with the required service.
-  
-   - This field is optional.
-   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to require a network service annotated with information about specific API versions, subprotocols, etc. If a package deployment specifies that it requires a network service with one or more tags, then another package deployment will only be considered to satisfy the network service dependency if it provides a network service matching both the required route and all required tags. This is useful in ensuring that a network service provided by one package deployment is compatible with the API version required by a service client from another package deployment, for example.
-   - Example:
-     
-     ```yaml
-     tags:
-       - mjpeg-stream
-     ```
-
 - `paths` is an array of strings which are paths which must be accessible on the required service.
   
    - This field is optional.
@@ -731,15 +792,95 @@ A network service object consists of the following fields:
        - /stream.mjpg
      ```
 
+- `tags` is an array of strings specifying labels which must be associated with the required service.
+  
+   - This field is optional.
+  
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to require a network service annotated with information about specific API versions, subprotocols, etc. If a package deployment specifies that it requires a network service with one or more tags, then another package deployment will only be considered to satisfy the network service dependency if it provides a network service matching both the required route and all required tags. This is useful in ensuring that a network service provided by one package deployment is compatible with the API version required by a service client from another package deployment, for example.
+  
+   - Example:
+     
+     ```yaml
+     tags:
+       - mjpeg-stream
+     ```
+
 - `nonblocking` is a boolean flag specifying whether the package deployment providing the required service is allowed to start after starting the package deployment with the service requirement.
   
    - This field is optional.
+  
    - This is a performance optimization hint which may be ignored; it's only meaningful if package deployments can be started concurrently. However, it can help to reduce the startup time needed for the critical path of a chain of dependencies between package deployments.
+  
    - This field can be set to true if the service client can gracefully handle the temporary absence of the service while package deployments are being applied; otherwise, this field should not be set to true.
+  
    - Example:
      
      ```yaml
      nonblocking: true
+     ```
+
+##### `filesystem` field
+
+This optional field of the `requires` subsection is an array of filesystem objects listing the filesystem entities (e.g. files and/or directories) which must be available on the Docker host in order for a deployment of the package to successfully become active.
+
+- This field is optional.
+
+- A filesystem requirement is defined a list of one or more paths. A filesystem requirement will be satisfied by one or more filesystem entities if and only if the set union of the paths of the filesystem entities overlaps with every path listed in the filesystem requirement (for a definition of overlapping paths, refer below to description of the `path` field of the network service object). Thus, in any particular set of package deployments, one filesystem entity from one package deployment may be sufficient to satisfy a filesystem requirement from some other package deployment, or multiple filesystem entities from multiple packages may be necessary to fully satisfy that filesystem requirement.
+
+- If a set of package deployments contains a filesystem resource requirement with a path which does not overlap with the paths of any filesystem entities provided by other package deployments, then the package deployment declaring that filesystem requirement will be reported as having an unmet dependency. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for resource dependencies will not be satisfied.
+
+- Example:
+  
+  ```yaml
+  filesystem:
+    - description: The directory where logs will be saved
+      tags:
+        - directory
+        - owner-1000
+        - writable
+      paths:
+        - /home/pi/device-backend-logs/processing/segmenter
+  ```
+
+A filesystem object consists of the following fields:
+
+- `description` is a short (one-sentence) description of the filesystem resource requirement to be shown to users.
+  
+   - This field is required.
+  
+   - Example:
+     
+     ```yaml
+     description: A file containing the device's machine name
+     ```
+
+- `paths` is an array of strings which are paths which must be accessible on the filesystem.
+  
+   - This field is required.
+  
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the required filesystem entity must declare that it can be used with any path beginning with that prefix (i.e. the string before the asterisk).
+  
+   - If a package deployment has a requirement for a filesystem entity with a specific path which matches the prefix path of a filesystem entity provided by another package deployment, the filesystem requirement will be met. For example, a requirement for a filesystem entity with a path `/var/lib/planktoscope/machine-name` would be met by a filesystem entity provided with the path prefix `/var/lib/planktoscope/*`.
+  
+   - Example:
+     
+     ```yaml
+     paths:
+       - /var/lib/planktoscope/machine-name
+     ```
+
+- `tags` is an array of strings specifying labels which must be associated with the required filesystem entity.
+  
+   - This field is optional.
+  
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to require a filesystem entity annotated with information about file types, file permissions, schema versions, etc. If a package deployment specifies that it requires a filesystem entity with one or more tags, then another package deployment will only be considered to satisfy the filesystem entity dependency if it provides a filesystem entity matching both the required path(s) and all required tags. This is useful in ensuring that a filesystem entity provided by one package deployment is compatible with the schema version required by another package deployment, for example.
+  
+   - Example:
+     
+     ```yaml
+     tags:
+       - file
+       - plain-text
      ```
 
 #### `provides` subsection
@@ -761,7 +902,7 @@ provides:
 
 ##### `listeners` field
 
-This field of the `provides` subsection is an array of host port listener objects listing the network port/protocol pairs which will be bound to processes running in an active deployment of the package and listening for incoming traffic on those port/protocol pairs, on any/all IP addresses.
+This optional field of the `provides` subsection is an array of host port listener objects listing the network port/protocol pairs which will be bound to processes running in an active deployment of the package and listening for incoming traffic on those port/protocol pairs, on any/all IP addresses.
 
 - This field is optional.
 - Generally, a host port listener object should correspond to a [published port](https://docs.docker.com/network/#published-ports) of a Docker container.
@@ -809,7 +950,7 @@ A host port listener object consists of the following fields:
 
 ##### `networks` field
 
-This field of the `provides` subsection is an array of Docker network objects listing the Docker networks which are created when a deployment of the package becomes active.
+This optional field of the `provides` subsection is an array of Docker network objects listing the Docker networks which are created when a deployment of the package becomes active.
 
 - This field is optional.
 - Each host Docker network object describes a Docker network resource which may or may not be in conflict with other Docker network resources; this is because multiple Docker networks are not allowed to have the same name.
@@ -844,11 +985,11 @@ A Docker network object consists of the following fields:
 
 ##### `services` field
 
-This field of the `provides` subsection is an array of network service objects listing the network services which are created when a deployment of the package becomes active.
+This optional field of the `provides` subsection is an array of network service objects listing the network services which are created when a deployment of the package becomes active.
 
 - This field is optional.
 - The route of a network service can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service whose route is defined only as a port/protocol pair will overlap with another network service if and only if the other network service whose route is also defined only as a port/protocol pair. A network service whose route is defined with one or more paths will overlap with another network service if and only if both network services have the same port, the same protocol, and at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the network service object).
-- Each network service object describes a network service resource which may or may not be in conflict with other network service resources; this is because multiple networks are not allowed to have overlapping routes.
+- Each network service object describes a network service resource which may or may not be in conflict with other network service resources; this is because multiple network services are not allowed to have overlapping routes.
 - If a set of package deployments contains two or more network service resources for services with overlapping routes from different package deployments, then the package deployments declaring those respective network services will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of network services will not be satisfied.
 - Example:
   
@@ -902,22 +1043,12 @@ A network service object consists of the following fields:
      protocol: http
      ```
 
-- `tags` is an array of strings which constrain resolution of network service resource dependencies among package deployments. These tags are ignored in determining whether network services conflict with each other, since they are not part of the network service's route.
-  
-   - This field is optional.
-   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a network service with information about API versions, subprotocols, etc. If a package deployment specifies that it requires a network service with one or more tags, then another package deployment will only be considered to satisfy the network service dependency if it provides a network service matching both the required route and all required tags. This is useful in ensuring that a network service provided by one package deployment is compatible with the API version required by a service client from another package deployment, for example.
-   - Example:
-     
-     ```yaml
-     tags:
-       - website
-     ```
-
 - `paths` is an array of strings which are paths used for accessing the service.
   
    - This field is optional.
    - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the network service covers all paths beginning with that prefix (i.e. the string before the asterisk).
-   - If a network service specifies a port and protocol but no paths, it will conflict with another network service which also specifies the same port and protocol but no paths; it will not conflict with another network service which specifies the same port and protocol and also specifies some paths. In other words, not listing any paths in a network service is equivalent to not having any conflicts with other services available at specific paths on the same port and protocol. This is useful for describing systems involving HTTP reverse-proxies or involving message brokers, where one package deployment may provide a network service which routes specific messages to network services from other package deployments on specific paths; then the reverse-proxy or message broker would be specified on some port and protocol with no paths, while the network services behind it would be specified on the same port and protocol but with a set of specific paths.
+   - If a network service specifies a port and protocol but no paths, it will conflict with another network service which also specifies the same port and protocol but no paths; it will not conflict with another network service which specifies the same port and protocol and also specifies some paths. In other words, not listing any paths in a network service is equivalent to not having any conflicts with other services available at specific paths on the same port and protocol.
+     This is useful for describing systems involving HTTP reverse-proxies or involving message brokers, where one package deployment may provide a network service which routes specific messages to network services from other package deployments on specific paths; then the reverse-proxy or message broker would be specified on some port and protocol with no paths, while the network services behind it would be specified on the same port and protocol but with a set of specific paths.
    - If a package deployment has a dependency on a network service with a specific path which matches a prefix path in a network service from another package deployment, that dependency will be satisfied. For example, a dependency on a network service requiring a path `/ps/docs/hardware` would be met by a network service provided with the path prefix `/ps/docs/*`, assuming they have the same port and protocol.
    - If a package deployment provides a network service with a specific path which matches a prefix path in a network service provided by another package deployment, those two package deployments will be in conflict with each other. For example, a network service providing a path `/ps/docs/hardware` would conflict with a network service providing the path prefix `/ps/docs/*`, assuming they have the same port and protocol. This is because those overlapping paths would cause the network services to overlap with each other, which is not allowed.
    - Example:
@@ -928,6 +1059,87 @@ A network service object consists of the following fields:
        - /ps/docs/*
      ```
 
+- `tags` is an array of strings which constrain resolution of network service resource dependencies among package deployments. These tags are ignored in determining whether network services conflict with each other, since they are not part of the network service's route.
+  
+   - This field is optional.
+  
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a network service with information about API versions, subprotocols, etc. If a package deployment specifies that it requires a network service with one or more tags, then another package deployment will only be considered to satisfy the network service dependency if it provides a network service matching both the required route and all required tags. This is useful in ensuring that a network service provided by one package deployment is compatible with the API version required by a service client from another package deployment, for example.
+  
+   - Example:
+     
+     ```yaml
+     tags:
+       - website
+     ```
+
+##### `filesystem` field
+
+This optional field of the `provides` subsection is an array of filesystem objects listing the filesystem entities (e.g. files and/or directories) which are created when a deployment of the package becomes active.
+
+- This field is optional.
+
+- A filesystem entity is defined as a list of one or more paths. A filesystem entity will overlap with another filesystem entity if and only if both filesystem entities have at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the filesystem object).
+
+- Each filesystem object describes a filesystem resource which may or may not be in conflict with other filesystem resources; this is because multiple filesystem entities are not allowed to have overlapping paths.
+
+- If a set of package deployments contains two or more filesystem resources for filesystem entities with overlapping paths from different package deployments, then the package deployments declaring those respective filesystem entities will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of filesystem entities will not be satisfied.
+
+- Example:
+  
+  ```yaml
+  services:
+    - description: File containing the device's machine name
+      tags:
+        - file
+        - plain-text
+      paths:
+        - /var/lib/planktoscope/machine-name
+  ```
+
+A filesystem object consists of the following fields:
+
+- `description` is a short (one-sentence) description of the filesystem resource to be shown to users.
+  
+   - This field is required.
+  
+   - Example:
+     
+     ```yaml
+     description: Directory of EcoTaxa export archives
+     ```
+
+- `paths` is an array of strings which are paths where the filesystem entity exists.
+  
+   - This field is required.
+  
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the filesystem entity covers all paths beginning with that prefix (i.e. the string before the asterisk).
+  
+   - If a package deployment has a dependency on a filesystem entity with a specific path which matches a prefix path in a filesystem entity from another package deployment, that dependency will be satisfied. For example, a dependency on a filesystem entity requiring a path `/home/pi/device-logs/controller` would be met by a network service provided with the path prefix `/home/pi/device-logs/*`.
+  
+   - If a package deployment provides a filesystem entity with a specific path which matches a prefix path in a filesystem entity provided by another package deployment, those two package deployments will be in conflict with each other. For example, a filesystem entity providing a path `/home/pi/data/export/ecotaxa` would conflict with a network service providing the path prefix `/home/pi/data/export/*`. This is because those overlapping paths would cause the filesystem entities to overlap with each other, which is not allowed.
+  
+   - Example:
+     
+     ```yaml
+     paths:
+       - /home/pi/data/export/ecotaxa
+     ```
+
+- `tags` is an array of strings which constrain resolution of filesystem resource dependencies among package deployments. These tags are ignored in determining whether filesystem entities conflict with each other, since they are not part of the filesystem entity's location.
+  
+   - This field is optional.
+  
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc. If a package deployment specifies that it requires a filesystem entity with one or more tags, then another package deployment will only be considered to satisfy the filesystem entity dependency if it provides a filesystem entity matching both the required path(s) and all required tags. This is useful in ensuring that a filesystem entity provided by one package deployment is compatible with the schema version required by another package deployment, for example.
+  
+   - Example:
+     
+     ```yaml
+     tags:
+       - directory
+       - owner-1000
+       - writable
+     ```
+
 ### `features` section
 
 This optional section of the `forklift-package.yml` file specifies the optional features which can be enabled for a deployment of the package, as well as any resources required for each enabled feature, as well as any resources provided by each enabled feature. If resource requirements of any enabled feature are not met, the deployment will not be allowed; resources provided by an enabled feature in a deployment of the package will only exist once the package deployment is successfully applied.
@@ -935,55 +1147,6 @@ This optional section of the `forklift-package.yml` file specifies the optional 
 The `features` section is a map (i.e. dictionary) whose keys are feature names and whose values are feature specification objects.  Here is an example of a `features` section:
 
 ```yaml
-package:
-  description: Web GUI for operating the PlanktoScope
-  maintainers:
-    - name: Ethan Li
-      email: lietk12@gmail.com
-  license: GPL-3.0-or-later
-  sources:
-    - https://github.com/PlanktoScope/PlanktoScope
-
-host:
-  provides:
-    listeners:
-      - description: Node-RED server for the PlanktoScope v2 dashboard
-        port: 1880
-        protocol: tcp
-    services:
-      - description: The Node-RED editor for the v2 PlanktoScope dashboard
-        port: 1880
-        protocol: http
-        paths:
-          - /admin/ps/node-red-v2
-          - /admin/ps/node-red-v2/*
-      - description: The v2 PlanktoScope dashboard for configuring the PlanktoScope and collecting data
-        port: 1880
-        protocol: http
-        paths:
-          - /ps/node-red-v2/ui
-          - /ps/node-red-v2/ui/*
-
-deployment:
-  compose-files: [compose.yml]
-  requires:
-    services:
-      - tags: [planktoscope-api-v2]
-        port: 1883
-        protocol: mqtt
-        paths:
-          - /actuator/pump
-          - /actuator/focus
-          - /imager/image
-          - /segmenter/segment
-          - /status/pump
-          - /status/focus
-          - /status/imager
-          - /status/segmenter
-          - /status/segmenter/name
-          - /status/segmenter/object_id
-          - /status/segmenter/metric
-
 features:
   editor:
     description: Provides access to the Node-RED admin editor for modifying the GUI
