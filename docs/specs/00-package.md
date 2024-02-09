@@ -614,30 +614,30 @@ A network service object consists of the following fields:
        - tls-client-certs-required
      ```
 
-##### `filesystem` field
+##### `filesets` field
 
-This field of the `provides` subsection is an array of filesystem objects listing the filesystem entities (e.g. files and/or directories) which are already available on the Docker host.
+This field of the `provides` subsection is an array of fileset objects listing the files (which can include directories) which are already available on the Docker host.
 
 - This field is optional.
 
-- A filesystem entity is defined as a list of one or more paths. A filesystem entity will overlap with another filesystem entity if and only if both filesystem entities have at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the filesystem object).
+- A fileset is defined as a list of one or more paths to files. A fileset will overlap with another fileset if and only if both filesets have at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the fileset object).
 
-- Each filesystem object describes a filesystem resource which may or may not be in conflict with other filesystem resources; this is because multiple filesystem entities are not allowed to have overlapping paths.
+- Each fileset object describes a fileset resource which may or may not be in conflict with other fileset resources; this is because multiple filesets are not allowed to have overlapping paths.
 
-- If a set of package deployments contains two or more filesystem resources for filesystem entities with overlapping paths from different package deployments, then the package deployments declaring those respective filesystem entities will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of filesystem entities will not be satisfied.
+- If a set of package deployments contains two or more fileset resources for filesets with overlapping paths from different package deployments, then the package deployments declaring those respective filesets will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of filesets will not be satisfied.
 
 - Example:
   
   ```yaml
-  filesystem:
+  filesets:
     - description: File containing the device's machine name
       paths:
       - /var/lib/planktoscope/machine-name
   ```
 
-A filesystem object consists of the following fields:
+A fileset object consists of the following fields:
 
-- `description` is a short (one-sentence) description of the filesystem resource to be shown to users.
+- `description` is a short (one-sentence) description of the fileset resource to be shown to users.
   
    - This field is required.
   
@@ -647,15 +647,15 @@ A filesystem object consists of the following fields:
      description: Directory tree containing PlanktoScope datasets
      ```
 
-- `paths` is an array of strings which are paths where the filesystem entity exists.
+- `paths` is an array of strings which are paths where the fileset exists.
   
    - This field is required.
   
-   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the filesystem entity covers all paths beginning with that prefix (i.e. the string before the asterisk).
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the fileset covers all paths beginning with that prefix (i.e. the string before the asterisk).
   
-   - If a package deployment has a dependency on a filesystem entity with a specific path which matches a prefix path in a filesystem entity from another package deployment, that dependency will be satisfied. For example, a dependency on a filesystem entity requiring a path `/home/pi/data/img` would be met by a filesystem entity provided with the path prefix `/home/pi/data/*`.
+   - If a package deployment has a dependency on a fileset with a specific path which matches a prefix path in a fileset from another package deployment, that dependency will be satisfied. For example, a dependency on a fileset requiring a path `/home/pi/data/img` would be met by a fileset provided with the path prefix `/home/pi/data/*`.
   
-   - If a package deployment provides a filesystem entity with a specific path which matches a prefix path in a filesystem entity provided by another package deployment, those two package deployments will be in conflict with each other. For example, a filesystem entity providing a path `/home/pi/data/img` would conflict with a network service providing the path prefix `/home/pi/*`. This is because those overlapping paths would cause the filesystem entities to overlap with each other, which is not allowed.
+   - If a package deployment provides a fileset with a specific path which matches a prefix path in a fileset provided by another package deployment, those two package deployments will be in conflict with each other. For example, a fileset providing a path `/home/pi/data/img` would conflict with a network service providing the path prefix `/home/pi/*`. This is because those overlapping paths would cause the filesets to overlap with each other, which is not allowed.
   
    - Example:
      
@@ -666,11 +666,11 @@ A filesystem object consists of the following fields:
        - /home/pi/data/export
      ```
 
-- `tags` is an array of strings which constrain resolution of filesystem resource dependencies among package deployments. These tags are ignored in determining whether filesystem entities conflict with each other, since they are not part of the filesystem entity's location.
+- `tags` is an array of strings which constrain resolution of fileset resource dependencies among package deployments. These tags are ignored in determining whether filesets conflict with each other, since they are not part of the fileset's location.
   
    - This field is optional.
   
-   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc. If a package deployment specifies that it requires a filesystem entity with one or more tags, then another package deployment will only be considered to satisfy the filesystem entity dependency if it provides a filesystem entity matching both the required path(s) and all required tags. This is useful in ensuring that a filesystem entity provided by one package deployment is compatible with the schema version required by another package deployment, for example.
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc. If a package deployment specifies that it requires a fileset with one or more tags, then another package deployment will only be considered to satisfy the fileset dependency if it provides a fileset matching both the required path(s) and all required tags. This is useful in ensuring that a fileset provided by one package deployment is compatible with the schema version required by another package deployment, for example.
   
    - Example:
      
@@ -884,20 +884,20 @@ A network service object consists of the following fields:
      nonblocking: true
      ```
 
-##### `filesystem` field
+##### `filesets` field
 
-This optional field of the `requires` subsection is an array of filesystem objects listing the filesystem entities (e.g. files and/or directories) which must be available on the Docker host in order for a deployment of the package to successfully become active.
+This optional field of the `requires` subsection is an array of fileset objects listing the files (which can include directories) which must be available on the Docker host in order for a deployment of the package to successfully become active.
 
 - This field is optional.
 
-- A filesystem requirement is defined a list of one or more paths. A filesystem requirement will be satisfied by one or more filesystem entities if and only if the set union of the paths of the filesystem entities overlaps with every path listed in the filesystem requirement (for a definition of overlapping paths, refer below to description of the `path` field of the network service object). Thus, in any particular set of package deployments, one filesystem entity from one package deployment may be sufficient to satisfy a filesystem requirement from some other package deployment, or multiple filesystem entities from multiple packages may be necessary to fully satisfy that filesystem requirement.
+- A fileset requirement is defined a list of one or more paths. A fileset requirement will be satisfied by one or more filesets if and only if the set union of the paths of the filesets overlaps with every path listed in the fileset requirement (for a definition of overlapping paths, refer below to description of the `path` field of the network service object). Thus, in any particular set of package deployments, one fileset from one package deployment may be sufficient to satisfy a fileset requirement from some other package deployment, or multiple filesets from multiple packages may be necessary to fully satisfy that fileset requirement.
 
-- If a set of package deployments contains a filesystem resource requirement with a path which does not overlap with the paths of any filesystem entities provided by other package deployments, then the package deployment declaring that filesystem requirement will be reported as having an unmet dependency. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for resource dependencies will not be satisfied.
+- If a set of package deployments contains a fileset resource requirement with a path which does not overlap with the paths of any filesets provided by other package deployments, then the package deployment declaring that fileset requirement will be reported as having an unmet dependency. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for resource dependencies will not be satisfied.
 
 - Example:
   
   ```yaml
-  filesystem:
+  filesets:
     - description: The directory where logs will be saved
       tags:
         - directory
@@ -907,9 +907,9 @@ This optional field of the `requires` subsection is an array of filesystem objec
         - /home/pi/device-backend-logs/processing/segmenter
   ```
 
-A filesystem object consists of the following fields:
+A fileset object consists of the following fields:
 
-- `description` is a short (one-sentence) description of the filesystem resource requirement to be shown to users.
+- `description` is a short (one-sentence) description of the fileset resource requirement to be shown to users.
   
    - This field is required.
   
@@ -919,13 +919,13 @@ A filesystem object consists of the following fields:
      description: A file containing the device's machine name
      ```
 
-- `paths` is an array of strings which are paths which must be accessible on the filesystem.
+- `paths` is an array of strings which are paths of files which must exist.
   
    - This field is required.
   
-   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the required filesystem entity must declare that it can be used with any path beginning with that prefix (i.e. the string before the asterisk).
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the required fileset must declare that it can be used with any path beginning with that prefix (i.e. the string before the asterisk).
   
-   - If a package deployment has a requirement for a filesystem entity with a specific path which matches the prefix path of a filesystem entity provided by another package deployment, the filesystem requirement will be met. For example, a requirement for a filesystem entity with a path `/var/lib/planktoscope/machine-name` would be met by a filesystem entity provided with the path prefix `/var/lib/planktoscope/*`.
+   - If a package deployment has a requirement for a fileset with a specific path which matches the prefix path of a fileset provided by another package deployment, the fileset requirement will be met. For example, a requirement for a fileset with a path `/var/lib/planktoscope/machine-name` would be met by a fileset provided with the path prefix `/var/lib/planktoscope/*`.
   
    - Example:
      
@@ -934,11 +934,11 @@ A filesystem object consists of the following fields:
        - /var/lib/planktoscope/machine-name
      ```
 
-- `tags` is an array of strings specifying labels which must be associated with the required filesystem entity.
+- `tags` is an array of strings specifying labels which must be associated with the required fileset.
   
    - This field is optional.
   
-   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to require a filesystem entity annotated with information about file types, file permissions, schema versions, etc. If a package deployment specifies that it requires a filesystem entity with one or more tags, then another package deployment will only be considered to satisfy the filesystem entity dependency if it provides a filesystem entity matching both the required path(s) and all required tags. This is useful in ensuring that a filesystem entity provided by one package deployment is compatible with the schema version required by another package deployment, for example.
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to require a fileset annotated with information about file types, file permissions, schema versions, etc. If a package deployment specifies that it requires a fileset with one or more tags, then another package deployment will only be considered to satisfy the fileset dependency if it provides a fileset matching both the required path(s) and all required tags. This is useful in ensuring that a fileset provided by one package deployment is compatible with the schema version required by another package deployment, for example.
   
    - Example:
      
@@ -948,13 +948,13 @@ A filesystem object consists of the following fields:
        - plain-text
      ```
 
-- `nonblocking` is a boolean flag specifying whether the package deployment providing the required filesystem entity is allowed to start after starting the package deployment with the filesystem requirement.
+- `nonblocking` is a boolean flag specifying whether the package deployment providing the required fileset is allowed to start after starting the package deployment with the fileset requirement.
   
    - This field is optional.
   
    - This is a performance optimization hint which may be ignored; it's only meaningful if package deployments can be started concurrently. However, it can help to reduce the startup time needed for the critical path of a chain of dependencies between package deployments.
   
-   - This field can be set to true if the program requiring the filesystem entity can gracefully handle the temporary absence of the filesystem entity while package deployments are being applied; otherwise, this field should not be set to true.
+   - This field can be set to true if the program requiring the fileset can gracefully handle the temporary absence of the fileset while package deployments are being applied; otherwise, this field should not be set to true.
   
    - Example:
      
@@ -1177,17 +1177,17 @@ A network service object consists of the following fields:
        - website
      ```
 
-##### `filesystem` field
+##### `filesets` field
 
-This optional field of the `provides` subsection is an array of filesystem objects listing the filesystem entities (e.g. files and/or directories) which are created when a deployment of the package becomes active.
+This optional field of the `provides` subsection is an array of fileset objects listing the files (which can include directories) which are created when a deployment of the package becomes active.
 
 - This field is optional.
 
-- A filesystem entity is defined as a list of one or more paths. A filesystem entity will overlap with another filesystem entity if and only if both filesystem entities have at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the filesystem object).
+- A fileset is defined as a list of one or more paths. A fileset will overlap with another fileset if and only if both filesets have at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the fileset object).
 
-- Each filesystem object describes a filesystem resource which may or may not be in conflict with other filesystem resources; this is because multiple filesystem entities are not allowed to have overlapping paths.
+- Each fileset object describes a fileset resource which may or may not be in conflict with other fileset resources; this is because multiple filesets are not allowed to have overlapping paths.
 
-- If a set of package deployments contains two or more filesystem resources for filesystem entities with overlapping paths from different package deployments, then the package deployments declaring those respective filesystem entities will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of filesystem entities will not be satisfied.
+- If a set of package deployments contains two or more fileset resources for filesets with overlapping paths from different package deployments, then the package deployments declaring those respective filesets will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of filesets will not be satisfied.
 
 - Example:
   
@@ -1201,9 +1201,9 @@ This optional field of the `provides` subsection is an array of filesystem objec
         - /var/lib/planktoscope/machine-name
   ```
 
-A filesystem object consists of the following fields:
+A fileset object consists of the following fields:
 
-- `description` is a short (one-sentence) description of the filesystem resource to be shown to users.
+- `description` is a short (one-sentence) description of the fileset resource to be shown to users.
   
    - This field is required.
   
@@ -1213,15 +1213,15 @@ A filesystem object consists of the following fields:
      description: Directory of EcoTaxa export archives
      ```
 
-- `paths` is an array of strings which are paths where the filesystem entity exists.
+- `paths` is an array of strings which are paths of files in the fileset.
   
    - This field is required.
   
-   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the filesystem entity covers all paths beginning with that prefix (i.e. the string before the asterisk).
+   - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the fileset covers all paths beginning with that prefix (i.e. the string before the asterisk).
   
-   - If a package deployment has a dependency on a filesystem entity with a specific path which matches a prefix path in a filesystem entity from another package deployment, that dependency will be satisfied. For example, a dependency on a filesystem entity requiring a path `/home/pi/device-logs/controller` would be met by a network service provided with the path prefix `/home/pi/device-logs/*`.
+   - If a package deployment has a dependency on a fileset with a specific path which matches a prefix path in a fileset from another package deployment, that dependency will be satisfied. For example, a dependency on a fileset requiring a path `/home/pi/device-logs/controller` would be met by a network service provided with the path prefix `/home/pi/device-logs/*`.
   
-   - If a package deployment provides a filesystem entity with a specific path which matches a prefix path in a filesystem entity provided by another package deployment, those two package deployments will be in conflict with each other. For example, a filesystem entity providing a path `/home/pi/data/export/ecotaxa` would conflict with a network service providing the path prefix `/home/pi/data/export/*`. This is because those overlapping paths would cause the filesystem entities to overlap with each other, which is not allowed.
+   - If a package deployment provides a fileset with a specific path which matches a prefix path in a fileset provided by another package deployment, those two package deployments will be in conflict with each other. For example, a fileset providing a path `/home/pi/data/export/ecotaxa` would conflict with a network service providing the path prefix `/home/pi/data/export/*`. This is because those overlapping paths would cause the filesets to overlap with each other, which is not allowed.
   
    - Example:
      
@@ -1230,11 +1230,11 @@ A filesystem object consists of the following fields:
        - /home/pi/data/export/ecotaxa
      ```
 
-- `tags` is an array of strings which constrain resolution of filesystem resource dependencies among package deployments. These tags are ignored in determining whether filesystem entities conflict with each other, since they are not part of the filesystem entity's location.
+- `tags` is an array of strings which constrain resolution of fileset resource dependencies among package deployments. These tags are ignored in determining whether filesets conflict with each other, since they are not part of the fileset's location.
   
    - This field is optional.
   
-   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc. If a package deployment specifies that it requires a filesystem entity with one or more tags, then another package deployment will only be considered to satisfy the filesystem entity dependency if it provides a filesystem entity matching both the required path(s) and all required tags. This is useful in ensuring that a filesystem entity provided by one package deployment is compatible with the schema version required by another package deployment, for example.
+   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc. If a package deployment specifies that it requires a fileset with one or more tags, then another package deployment will only be considered to satisfy the fileset dependency if it provides a fileset matching both the required path(s) and all required tags. This is useful in ensuring that a fileset provided by one package deployment is compatible with the schema version required by another package deployment, for example.
   
    - Example:
      
