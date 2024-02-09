@@ -134,17 +134,32 @@ func (p Pkg) ResAttachmentSource(parentSource []string) []string {
 func (p Pkg) ProvidedListeners(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ListenerRes]) {
+	return providedResources[ListenerRes](
+		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ListenerRes] {
+			return res.AttachedListeners
+		},
+	)
+}
+
+type (
+	attachedResGetter[Resource any] func(source []string) []AttachedRes[Resource]
+	providedResGetter[Resource any] func(res ProvidedRes) attachedResGetter[Resource]
+)
+
+func providedResources[Resource any](
+	p Pkg, parentSource []string, enabledFeatures []string, getter providedResGetter[Resource],
+) (provided []AttachedRes[Resource]) {
 	parentSource = p.ResAttachmentSource(parentSource)
-	provided = append(provided, p.Def.Host.Provides.AttachedListeners(
+	provided = append(provided, getter(p.Def.Host.Provides)(
 		p.Def.Host.ResAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, p.Def.Deployment.Provides.AttachedListeners(
+	provided = append(provided, getter(p.Def.Deployment.Provides)(
 		p.Def.Deployment.ResAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
 		feature := p.Def.Features[featureName]
-		provided = append(provided, feature.Provides.AttachedListeners(
+		provided = append(provided, getter(feature.Provides)(
 			feature.ResAttachmentSource(parentSource, featureName),
 		)...)
 	}
@@ -156,14 +171,26 @@ func (p Pkg) ProvidedListeners(
 func (p Pkg) RequiredNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[NetworkRes]) {
+	return requiredResources[NetworkRes](
+		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[NetworkRes] {
+			return res.AttachedNetworks
+		},
+	)
+}
+
+type requiredResGetter[Resource any] func(res RequiredRes) attachedResGetter[Resource]
+
+func requiredResources[Resource any](
+	p Pkg, parentSource []string, enabledFeatures []string, getter requiredResGetter[Resource],
+) (required []AttachedRes[Resource]) {
 	parentSource = p.ResAttachmentSource(parentSource)
-	required = append(required, p.Def.Deployment.Requires.AttachedNetworks(
+	required = append(required, getter(p.Def.Deployment.Requires)(
 		p.Def.Deployment.ResAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
 		feature := p.Def.Features[featureName]
-		required = append(required, feature.Requires.AttachedNetworks(
+		required = append(required, getter(feature.Requires)(
 			feature.ResAttachmentSource(parentSource, featureName),
 		)...)
 	}
@@ -175,21 +202,11 @@ func (p Pkg) RequiredNetworks(
 func (p Pkg) ProvidedNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[NetworkRes]) {
-	parentSource = p.ResAttachmentSource(parentSource)
-	provided = append(provided, p.Def.Host.Provides.AttachedNetworks(
-		p.Def.Host.ResAttachmentSource(parentSource),
-	)...)
-	provided = append(provided, p.Def.Deployment.Provides.AttachedNetworks(
-		p.Def.Deployment.ResAttachmentSource(parentSource),
-	)...)
-
-	for _, featureName := range enabledFeatures {
-		feature := p.Def.Features[featureName]
-		provided = append(provided, feature.Provides.AttachedNetworks(
-			feature.ResAttachmentSource(parentSource, featureName),
-		)...)
-	}
-	return provided
+	return providedResources[NetworkRes](
+		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[NetworkRes] {
+			return res.AttachedNetworks
+		},
+	)
 }
 
 // RequiredServices returns a slice of all network services required by a deployment of the package
@@ -197,18 +214,11 @@ func (p Pkg) ProvidedNetworks(
 func (p Pkg) RequiredServices(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[ServiceRes]) {
-	parentSource = p.ResAttachmentSource(parentSource)
-	required = append(required, p.Def.Deployment.Requires.AttachedServices(
-		p.Def.Deployment.ResAttachmentSource(parentSource),
-	)...)
-
-	for _, featureName := range enabledFeatures {
-		feature := p.Def.Features[featureName]
-		required = append(required, feature.Requires.AttachedServices(
-			feature.ResAttachmentSource(parentSource, featureName),
-		)...)
-	}
-	return required
+	return requiredResources[ServiceRes](
+		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[ServiceRes] {
+			return res.AttachedServices
+		},
+	)
 }
 
 // ProvidedServices returns a slice of all network services provided by a deployment of the package
@@ -216,21 +226,35 @@ func (p Pkg) RequiredServices(
 func (p Pkg) ProvidedServices(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ServiceRes]) {
-	parentSource = p.ResAttachmentSource(parentSource)
-	provided = append(provided, p.Def.Host.Provides.AttachedServices(
-		p.Def.Host.ResAttachmentSource(parentSource),
-	)...)
-	provided = append(provided, p.Def.Deployment.Provides.AttachedServices(
-		p.Def.Deployment.ResAttachmentSource(parentSource),
-	)...)
+	return providedResources[ServiceRes](
+		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ServiceRes] {
+			return res.AttachedServices
+		},
+	)
+}
 
-	for _, featureName := range enabledFeatures {
-		feature := p.Def.Features[featureName]
-		provided = append(provided, feature.Provides.AttachedServices(
-			feature.ResAttachmentSource(parentSource, featureName),
-		)...)
-	}
-	return provided
+// RequiredFilesets returns a slice of all filesets required by a deployment of the package
+// with the specified features enabled.
+func (p Pkg) RequiredFilesets(
+	parentSource []string, enabledFeatures []string,
+) (required []AttachedRes[FilesetRes]) {
+	return requiredResources[FilesetRes](
+		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[FilesetRes] {
+			return res.AttachedFilesets
+		},
+	)
+}
+
+// ProvidedFilesets returns a slice of all filesets provided by a deployment of the package
+// with the specified features enabled.
+func (p Pkg) ProvidedFilesets(
+	parentSource []string, enabledFeatures []string,
+) (provided []AttachedRes[FilesetRes]) {
+	return providedResources[FilesetRes](
+		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FilesetRes] {
+			return res.AttachedFilesets
+		},
+	)
 }
 
 // PkgDef

@@ -239,6 +239,12 @@ func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
 			return errors.Wrap(err, "couldn't print conflicting network services")
 		}
 	}
+	if conflict.HasFilesetConflict() {
+		IndentedPrintln(indent, "Conflicting filesets:")
+		if err := printResConflicts(indent+1, conflict.Filesets); err != nil {
+			return errors.Wrap(err, "couldn't print conflicting filesets")
+		}
+	}
 	return nil
 }
 
@@ -322,6 +328,14 @@ func printMissingDeplDep(indent int, deps forklift.MissingDeplDeps) error {
 		if err := printMissingDeps(indent+1, deps.Services); err != nil {
 			return errors.Wrapf(
 				err, "couldn't print unmet network service dependencies of deployment %s", deps.Depl.Name,
+			)
+		}
+	}
+	if deps.HasMissingFilesetDep() {
+		IndentedPrintln(indent, "Missing filesets:")
+		if err := printMissingDeps(indent+1, deps.Filesets); err != nil {
+			return errors.Wrapf(
+				err, "couldn't print unmet fileset dependencies of deployment %s", deps.Depl.Name,
 			)
 		}
 	}

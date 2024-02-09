@@ -111,6 +111,8 @@ type RequiredRes struct {
 	Networks []NetworkRes `yaml:"networks,omitempty"`
 	// Services is a list of requirements for network services.
 	Services []ServiceRes `yaml:"services,omitempty"`
+	// Filesets is a list of requirements for files/directories.
+	Filesets []FilesetRes `yaml:"fileset,omitempty"`
 }
 
 // ProvidedRes describes a set of resources provided by some aspect of a package.
@@ -121,6 +123,8 @@ type ProvidedRes struct {
 	Networks []NetworkRes `yaml:"networks,omitempty"`
 	// Services is a list of network services.
 	Services []ServiceRes `yaml:"services,omitempty"`
+	// Filesets is a list of files/directories.
+	Filesets []FilesetRes `yaml:"fileset,omitempty"`
 }
 
 // ListenerRes describes a host port listener.
@@ -158,5 +162,20 @@ type ServiceRes struct {
 	Paths []string `yaml:"paths,omitempty"`
 	// Nonblocking, when specified as a resource requirement, specifies that the client of the service
 	// does not need to wait for the resource to exist before the client can start.
+	Nonblocking bool `yaml:"nonblocking,omitempty"`
+}
+
+// FilesetRes describes a set of files/directories.
+type FilesetRes struct {
+	// Description is a short description of the fileset to be shown to users.
+	Description string `yaml:"description,omitempty"`
+	// Tags is a list of strings associated with the fileset. Tags are considered in determining which
+	// fileset resources meet fileset resource requirements.
+	Tags []string `yaml:"tags,omitempty"`
+	// Paths is a list of paths where the fileset exists. A path may also be a prefix, indicated
+	// by ending the path with an asterisk (`*`).
+	Paths []string `yaml:"paths,omitempty"`
+	// Nonblocking, when specified as a resource requirement, specifies that the program requiring the
+	// fileset does not need to wait for the fileset to exist before the program can start.
 	Nonblocking bool `yaml:"nonblocking,omitempty"`
 }

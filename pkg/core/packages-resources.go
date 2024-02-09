@@ -35,6 +35,13 @@ func (r ProvidedRes) AttachedServices(source []string) []AttachedRes[ServiceRes]
 	return attachRes(r.Services, append(source, providesSourcePart))
 }
 
+// AttachedFilesets returns a list of [AttachedRes] instances for each respective fileset
+// in the ProvidedRes instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedRes instance.
+func (r ProvidedRes) AttachedFilesets(source []string) []AttachedRes[FilesetRes] {
+	return attachRes(r.Filesets, append(source, providesSourcePart))
+}
+
 // RequiredRes
 
 // AttachedNetworks returns a list of [AttachedRes] instances for each respective Docker
@@ -49,6 +56,13 @@ func (r RequiredRes) AttachedNetworks(source []string) []AttachedRes[NetworkRes]
 // list of source elements which describes the source of the RequiredRes instance.
 func (r RequiredRes) AttachedServices(source []string) []AttachedRes[ServiceRes] {
 	return attachRes(r.Services, append(source, requiresSourcePart))
+}
+
+// AttachedFilesets returns a list of [AttachedRes] instances for each respective fileset
+// resource requirement in the RequiredRes instance, adding a string to the provided
+// list of source elements which describes the source of the RequiredRes instance.
+func (r RequiredRes) AttachedFilesets(source []string) []AttachedRes[FilesetRes] {
+	return attachRes(r.Filesets, append(source, requiresSourcePart))
 }
 
 // ListenerRes
@@ -107,7 +121,7 @@ func (r ServiceRes) CheckDep(candidate ServiceRes) (errs []error) {
 	}
 
 	// TODO: precompute candidatePaths and candidatePathPrefixes, if this is a performance bottleneck
-	candidatePaths, candidatePathPrefixes := parseServicePaths(candidate.Paths)
+	candidatePaths, candidatePathPrefixes := parsePaths(candidate.Paths)
 	for _, path := range r.Paths {
 		if pathMatchesExactly(path, candidatePaths) {
 			continue
@@ -132,9 +146,9 @@ func (r ServiceRes) CheckDep(candidate ServiceRes) (errs []error) {
 	return errs
 }
 
-// parseServicePaths splits the provided list of paths into a set of exact paths and a set of prefix
+// parsePaths splits the provided list of paths into a set of exact paths and a set of prefix
 // paths, with the trailing asterisk (`*`) removed from the prefixes.
-func parseServicePaths(paths []string) (exact, prefixes map[string]struct{}) {
+func parsePaths(paths []string) (exact, prefixes map[string]struct{}) {
 	exact = make(map[string]struct{})
 	prefixes = make(map[string]struct{})
 	for _, path := range paths {
@@ -187,8 +201,8 @@ func (r ServiceRes) CheckConflict(candidate ServiceRes) (errs []error) {
 // list of candidate paths to identify any conflicts between the two lists of paths.
 func checkConflictingPaths(provided, candidate []string) (errs []error) {
 	pathConflicts := make(map[string]struct{})
-	candidatePaths, candidatePathPrefixes := parseServicePaths(candidate)
-	providedPaths, providedPathPrefixes := parseServicePaths(provided)
+	candidatePaths, candidatePathPrefixes := parsePaths(candidate)
+	providedPaths, providedPathPrefixes := parsePaths(provided)
 
 	for _, path := range provided {
 		if pathMatchesExactly(path, candidatePaths) {
@@ -247,6 +261,72 @@ func SplitServicesByPath(serviceRes []AttachedRes[ServiceRes]) (split []Attached
 			split = append(split, AttachedRes[ServiceRes]{
 				Res:    pathService,
 				Source: service.Source,
+			})
+		}
+	}
+	return split
+}
+
+// FilesetRes
+
+// CheckDep checks whether the fileset resource requirement, represented by the
+// FilesetRes instance, is satisfied by the candidate fileset resource.
+func (r FilesetRes) CheckDep(candidate FilesetRes) (errs []error) {
+	// TODO: precompute candidatePaths and candidatePathPrefixes, if this is a performance bottleneck
+	candidatePaths, candidatePathPrefixes := parsePaths(candidate.Paths)
+	for _, path := range r.Paths {
+		if pathMatchesExactly(path, candidatePaths) {
+			continue
+		}
+		if match, _ := pathMatchesPrefix(path, candidatePathPrefixes); match {
+			continue
+		}
+		errs = append(errs, fmt.Errorf("unmatched path '%s'", path))
+	}
+
+	candidateTags := make(map[string]struct{})
+	for _, tag := range candidate.Tags {
+		candidateTags[tag] = struct{}{}
+	}
+	for _, tag := range r.Tags {
+		if _, ok := candidateTags[tag]; ok {
+			continue
+		}
+		errs = append(errs, fmt.Errorf("unmatched tag '%s'", tag))
+	}
+
+	return errs
+}
+
+// CheckConflict checks whether the fileset resource, represented by the FilesetRes
+// instance, conflicts with the candidate fileset resource.
+func (r FilesetRes) CheckConflict(candidate FilesetRes) (errs []error) {
+	if len(r.Paths) == 0 && len(candidate.Paths) == 0 {
+		errs = append(errs, errors.New("no specified fileset paths"))
+		return errs
+	}
+
+	errs = append(errs, checkConflictingPaths(r.Paths, candidate.Paths)...)
+
+	// Tags should be ignored in checking conflicts
+	return errs
+}
+
+// SplitFilesetsByPath produces a slice of fileset resources from the input slice, where
+// each fileset resource in the input slice with multiple paths results in multiple
+// corresponding fileset resources with one path each.
+func SplitFilesetsByPath(filesetRes []AttachedRes[FilesetRes]) (split []AttachedRes[FilesetRes]) {
+	split = make([]AttachedRes[FilesetRes], 0, len(filesetRes))
+	for _, fileset := range filesetRes {
+		if len(fileset.Res.Paths) == 0 {
+			split = append(split, fileset)
+		}
+		for _, path := range fileset.Res.Paths {
+			pathFileset := fileset.Res
+			pathFileset.Paths = []string{path}
+			split = append(split, AttachedRes[FilesetRes]{
+				Res:    pathFileset,
+				Source: fileset.Source,
 			})
 		}
 	}

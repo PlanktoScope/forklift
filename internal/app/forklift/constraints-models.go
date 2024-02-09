@@ -13,6 +13,7 @@ type DeplConflict struct {
 	Listeners []core.ResConflict[core.ListenerRes]
 	Networks  []core.ResConflict[core.NetworkRes]
 	Services  []core.ResConflict[core.ServiceRes]
+	Filesets  []core.ResConflict[core.FilesetRes]
 }
 
 type SatisfiedDeplDeps struct {
@@ -20,6 +21,7 @@ type SatisfiedDeplDeps struct {
 
 	Networks []core.SatisfiedResDep[core.NetworkRes]
 	Services []core.SatisfiedResDep[core.ServiceRes]
+	Filesets []core.SatisfiedResDep[core.FilesetRes]
 }
 
 type MissingDeplDeps struct {
@@ -27,4 +29,5 @@ type MissingDeplDeps struct {
 
 	Networks []core.MissingResDep[core.NetworkRes]
 	Services []core.MissingResDep[core.ServiceRes]
+	Filesets []core.MissingResDep[core.FilesetRes]
 }
