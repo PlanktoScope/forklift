@@ -112,7 +112,7 @@ type RequiredRes struct {
 	// Services is a list of requirements for network services.
 	Services []ServiceRes `yaml:"services,omitempty"`
 	// Filesets is a list of requirements for files/directories.
-	Filesets []FilesetRes `yaml:"fileset,omitempty"`
+	Filesets []FilesetRes `yaml:"filesets,omitempty"`
 }
 
 // ProvidedRes describes a set of resources provided by some aspect of a package.
@@ -124,7 +124,7 @@ type ProvidedRes struct {
 	// Services is a list of network services.
 	Services []ServiceRes `yaml:"services,omitempty"`
 	// Filesets is a list of files/directories.
-	Filesets []FilesetRes `yaml:"fileset,omitempty"`
+	Filesets []FilesetRes `yaml:"filesets,omitempty"`
 }
 
 // ListenerRes describes a host port listener.
