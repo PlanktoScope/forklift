@@ -185,6 +185,9 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		Services: core.CheckResConflicts(
 			d.providedServices(enabledFeatures), candidate.providedServices(candidateEnabledFeatures),
 		),
+		Filesets: core.CheckResConflicts(
+			d.providedFilesets(enabledFeatures), candidate.providedFilesets(candidateEnabledFeatures),
+		),
 	}, nil
 }
 
@@ -228,6 +231,22 @@ func (d *ResolvedDepl) providedServices(
 	return d.Pkg.ProvidedServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
+// requiredFilesets returns a slice of all filesets required by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
+func (d *ResolvedDepl) requiredFilesets(
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (required []core.AttachedRes[core.FilesetRes]) {
+	return d.Pkg.RequiredFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
+}
+
+// providedFilesets returns a slice of all filesets provided by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
+func (d *ResolvedDepl) providedFilesets(
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (provided []core.AttachedRes[core.FilesetRes]) {
+	return d.Pkg.ProvidedFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
+}
+
 // CheckAllConflicts produces a slice of reports of all resource conflicts between the ResolvedDepl
 // instance and each candidate ResolvedDepl.
 func (d *ResolvedDepl) CheckAllConflicts(
@@ -250,7 +269,7 @@ func (d *ResolvedDepl) CheckAllConflicts(
 // instance and which were and were not met by any candidate ResolvedDepl.
 func (d *ResolvedDepl) CheckDeps(
 	candidates []*ResolvedDepl,
-) (SatisfiedDeplDeps, MissingDeplDeps, error) {
+) (satisfied SatisfiedDeplDeps, missing MissingDeplDeps, err error) {
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
 		return SatisfiedDeplDeps{}, MissingDeplDeps{}, errors.Wrapf(
@@ -271,31 +290,27 @@ func (d *ResolvedDepl) CheckDeps(
 	var (
 		allProvidedNetworks []core.AttachedRes[core.NetworkRes]
 		allProvidedServices []core.AttachedRes[core.ServiceRes]
+		allProvidedFilesets []core.AttachedRes[core.FilesetRes]
 	)
 	for i, candidate := range candidates {
-		allProvidedNetworks = append(
-			allProvidedNetworks, candidate.providedNetworks(candidateEnabledFeatures[i])...,
-		)
-		allProvidedServices = append(
-			allProvidedServices, candidate.providedServices(candidateEnabledFeatures[i])...,
-		)
+		enabled := candidateEnabledFeatures[i]
+		allProvidedNetworks = append(allProvidedNetworks, candidate.providedNetworks(enabled)...)
+		allProvidedServices = append(allProvidedServices, candidate.providedServices(enabled)...)
+		allProvidedFilesets = append(allProvidedFilesets, candidate.providedFilesets(enabled)...)
 	}
 
-	satisfiedNetworkDeps, missingNetworkDeps := core.CheckResDeps(
+	satisfied.Depl = d
+	missing.Depl = d
+	satisfied.Networks, missing.Networks = core.CheckResDeps(
 		d.requiredNetworks(enabledFeatures), allProvidedNetworks,
 	)
-	satisfiedServiceDeps, missingServiceDeps := core.CheckResDeps(
+	satisfied.Services, missing.Services = core.CheckResDeps(
 		core.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
 	)
-	return SatisfiedDeplDeps{
-			Depl:     d,
-			Networks: satisfiedNetworkDeps,
-			Services: satisfiedServiceDeps,
-		}, MissingDeplDeps{
-			Depl:     d,
-			Networks: missingNetworkDeps,
-			Services: missingServiceDeps,
-		}, nil
+	satisfied.Filesets, missing.Filesets = core.CheckResDeps(
+		core.SplitFilesetsByPath(d.requiredFilesets(enabledFeatures)), allProvidedFilesets,
+	)
+	return satisfied, missing, nil
 }
 
 // CheckDeplConflicts produces a slice of reports of all resource conflicts among all provided
@@ -354,6 +369,17 @@ func ResolveDeps(
 				continue
 			}
 			if service.Required.Res.Nonblocking && skipNonblocking {
+				continue
+			}
+			deps.AddEdge(satisfied.Depl.Name, provider)
+		}
+		for _, fileset := range satisfied.Filesets {
+			provider := strings.TrimPrefix(fileset.Provided.Source[0], "deployment ")
+			deps.AddNode(provider)
+			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
+				continue
+			}
+			if fileset.Required.Res.Nonblocking && skipNonblocking {
 				continue
 			}
 			deps.AddEdge(satisfied.Depl.Name, provider)

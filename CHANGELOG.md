@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### 0.5.1 - 2024-02-07
+### Added
+
+- (spec) Added a "fileset" resource type for files (which can include directories).
+
+## 0.5.1 - 2024-02-07
 
 - (cli) Added a `plt switch` subcommand which is the equivalent of running `plt clone --force` and then running `plt cache-repo` and then running `plt apply`. This allows a common task (switching the version of a pallet and applying it immediately) to be run with a single command, for a simpler user experience.
 
