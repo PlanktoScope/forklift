@@ -138,8 +138,11 @@ repository:
 This field of the `forklift-repository.yml` file declares that the repository was written assuming the semantics of a given version of Forklift.
 
 - This field is required.
+
 - The version must be a valid version of the Forklift tool or the Forklift specification.
+
 - The version sets the minimum version of the Forklift tool required to use the repository. The Forklift tool refuses to use repositories declaring newer Forklift versions (or excessively old Forklift versions) for any operations beyond printing information.
+
 - Example:
   
   ```yaml
@@ -164,6 +167,7 @@ repository:
 This field of the `repository` section is the repository path.
 
 - This field is required.
+
 - Example:
   
   ```yaml
@@ -175,6 +179,7 @@ This field of the `repository` section is the repository path.
 This field of the `repository` section is a short (one-sentence) description of the repository to be shown to users.
 
 - This field is required.
+
 - Example:
   
   ```yaml
@@ -186,9 +191,13 @@ This field of the `repository` section is a short (one-sentence) description of 
 This field of the `repository` section is the filename of a readme file to be shown to users.
 
 - This field is required.
+
 - The file must be located in the same directory as the `forklift-repository.yml` file.
+
 - The file must be a text file.
+
 - It is recommended for this file to be named `README.md` and to be formatted in [GitHub-flavored Markdown](https://github.github.com/gfm/).
+
 - Example:
   
   ```yaml
@@ -265,6 +274,7 @@ package:
 This field of the `package` section is a short (one-sentence) description of the package to be shown to users.
 
 - This field is required.
+
 - Example:
   
   ```yaml
@@ -276,7 +286,9 @@ This field of the `package` section is a short (one-sentence) description of the
 This field of the `package` section is an array of maintainer objects listing the people who maintain the Forklift package.
 
 - This field is optional.
+
 - In most cases, the maintainers of the Forklift package will be different from the maintainers of the original software applications provided by the package. The maintainers of the package are specifically the people responsible for maintaining the software configurations specified by the package.
+
 - Example:
   
   ```yaml
@@ -291,6 +303,7 @@ A maintainer object consists of the following fields:
 - `name` is a string with the maintainer's name.
   
    - This field is optional.
+  
    - Example:
      
      ```yaml
@@ -300,6 +313,7 @@ A maintainer object consists of the following fields:
 - `email` is a string with an email address for contacting the maintainer.
   
    - This field is optional.
+  
    - Example:
      
      ```yaml
@@ -311,8 +325,11 @@ A maintainer object consists of the following fields:
 This field of the `package` section is an [SPDX 2.1 license expression](https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/) specifying the licensing terms of the software provided by the Forklift package.
 
 - This field is optional.
+
 - Usually, an SPDX license name will be sufficient; however, some software applications are released under multiple licenses, in which case a more complex SPDX license expression (such as `MIT OR Apache-2.0`) is needed.
+
 - If a package is using a nonstandard license, then the `license-file` field may be specified in lieu of the `license` field.
+
 - Example:
   
   ```yaml
@@ -324,8 +341,11 @@ This field of the `package` section is an [SPDX 2.1 license expression](https://
 This field of the `package` section is the filename of a license file describing the licensing terms of the software provided by the Forklift package.
 
 - This field is optional.
+
 - The file must be a text file.
+
 - The file must be located in the same directory as the `forklift-package.yml` file.
+
 - Example:
   
   ```yaml
@@ -337,6 +357,7 @@ This field of the `package` section is the filename of a license file describing
 This field of the `package` section is an array of URLs which can be opened to access the source code for the software provided by the Forklift package.
 
 - This field is optional.
+
 - Example:
   
   ```yaml
@@ -375,6 +396,7 @@ host:
 This field of the `host` section is an array of strings to associate with the host or with resources provided by the host. These tags have no semantic meaning within the Forklift package specification, but can be used by other applications for arbitrary purposes.
 
 - This field is optional.
+
 - Example:
   
   ```yaml
@@ -412,9 +434,13 @@ provides:
 This field of the `provides` subsection is an array of host port listener objects listing the network port/protocol pairs which are already bound to host processes which are running on the Docker host and listening for incoming traffic on those port/protocol pairs, on any/all IP addresses.
 
 - This field is optional.
+
 - Each host port listener object describes a host port listener resource which may or may not be in conflict with other host port listener resources; this is because multiple processes are not allowed to simultaneously bind to the same port/protocol pair on all IP addresses.
+
 - If a set of package deployments contains two or more host port listener resources for the same port/protocol pair from different package deployments, the package deployments declaring those respective host port listeners will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of host port listener resources will not be satisfied.
+
 - Currently, this specification does not allow multiple host port listeners to bind to the same port/protocol pair on different IP addresses; instead for simplicity, processes are assumed to be listening for that port/protocol pair on *all* IP addresses on the host.
+
 - Example:
   
   ```yaml
@@ -432,6 +458,7 @@ A host port listener object consists of the following fields:
 - `description` is a short (one-sentence) description of the host port listener resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -441,6 +468,7 @@ A host port listener object consists of the following fields:
 - `port` is a number specifying the [network port](https://en.wikipedia.org/wiki/Port_(computer_networking)) bound by a process running on the host.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -450,7 +478,9 @@ A host port listener object consists of the following fields:
 - `protocol` is a string specifying whether the bound network port is for the TCP transport protocol or for the UDP transport protocol.
   
    - This field is required.
+  
    - The value of this field must be either `tcp` or `udp`.
+  
    - Example:
      
      ```yaml
@@ -462,8 +492,11 @@ A host port listener object consists of the following fields:
 This field of the `provides` subsection is an array of host Docker network objects listing the Docker networks which are already available on the Docker host.
 
 - This field is optional.
+
 - Each host Docker network object describes a Docker network resource which may or may not be in conflict with other Docker network resources; this is because multiple Docker networks are not allowed to have the same name.
+
 - If a set of package deployments contains two or more Docker network resources for networks with the same name from different package deployments, the package deployments declaring those respective Docker networks will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of host Docker network names will not be satisfied.
+
 - Example:
   
   ```yaml
@@ -477,6 +510,7 @@ A Docker network object consists of the following fields:
 - `description` is a short (one-sentence) description of the Docker network resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -486,6 +520,7 @@ A Docker network object consists of the following fields:
 - `name` is a string specifying the name of the Docker network.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -497,9 +532,13 @@ A Docker network object consists of the following fields:
 This field of the `provides` subsection is an array of network service objects listing the network services which are already available on the Docker host.
 
 - This field is optional.
+
 - The route of a network service can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service whose route is defined only as a port/protocol pair will overlap with another network service if and only if the other network service whose route is also defined only as a port/protocol pair. A network service whose route is defined with one or more paths will overlap with another network service if and only if both network services have the same port, the same protocol, and at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the network service object).
+
 - Each network service object describes a network service resource which may or may not be in conflict with other network service resources; this is because multiple network services are not allowed to have overlapping routes.
+
 - If a set of package deployments contains two or more network service resources for services with overlapping routes from different package deployments, then the package deployments declaring those respective network services will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of network services will not be satisfied.
+
 - Example:
   
   ```yaml
@@ -514,6 +553,7 @@ A network service object consists of the following fields:
 - `description` is a short (one-sentence) description of the network service resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -523,6 +563,7 @@ A network service object consists of the following fields:
 - `port` is a number specifying the network port used for accessing the service.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -532,6 +573,7 @@ A network service object consists of the following fields:
 - `protocol` is a string specifying the application-level protocol used for accessing the service.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -541,11 +583,16 @@ A network service object consists of the following fields:
 - `paths` is an array of strings which are paths used for accessing the service.
   
    - This field is optional.
+  
    - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the network service covers all paths beginning with that prefix (i.e. the string before the asterisk).
+  
    - If a network service specifies a port and protocol but no paths, it will conflict with another network service which also specifies the same port and protocol but no paths; it will not conflict with another network service which specifies the same port and protocol and also specifies some paths. In other words, not listing any paths in a network service is equivalent to not having any conflicts with other services available at specific paths on the same port and protocol.
      This is useful for describing systems involving HTTP reverse-proxies or involving message brokers, where one package deployment may provide a network service which routes specific messages to network services from other package deployments on specific paths; then the reverse-proxy or message broker would be specified on some port and protocol with no paths, while the network services behind it would be specified on the same port and protocol but with a set of specific paths.
+  
    - If a package deployment has a dependency on a network service with a specific path which matches a prefix path in a network service from another package deployment, that dependency will be satisfied. For example, a dependency on a network service requiring a path `/admin/cockpit/system` would be met by a network service provided with the path prefix `/admin/cockpit/*`, assuming they have the same port and protocol.
+  
    - If a package deployment provides a network service with a specific path which matches a prefix path in a network service provided by another package deployment, those two package deployments will be in conflict with each other. For example, a network service providing a path `/admin/cockpit/system` would conflict with a network service providing the path prefix `/admin/cockpit/*`, assuming they have the same port and protocol. This is because those overlapping paths would cause the network services to overlap with each other, which is not allowed.
+  
    - Example:
      
      ```yaml
@@ -653,8 +700,11 @@ deployment:
 This field of the `deployment` section is an array of the string filenames of one or more Docker Compose files specifying the Docker Compose application which will be deployed when the package is deployed.
 
 - This field is optional.
+
 - The filenames must be for YAML files following the [Docker Compose file specification](https://docs.docker.com/compose/compose-file/).
+
 - The files must be located in the same directory as the `forklift-package.yml` file, or in subdirectories.
+
 - Example:
   
   ```yaml
@@ -667,6 +717,7 @@ This field of the `deployment` section is an array of the string filenames of on
 This field of the `deployment` section is an array of strings to associate with the package deployment or with resources required or provided by the package deployment. These tags have no semantic meaning within the Forklift package specification, but can be used by other applications for arbitrary purposes.
 
 - This field is optional.
+
 - Example:
   
   ```yaml
@@ -703,7 +754,9 @@ requires:
 This optional field of the `requires` subsection is an array of Docker network objects listing the Docker networks which must be available on the Docker host in order for a deployment of the package to successfully become active.
 
 - This field is optional.
+
 - The Docker network object describes a Docker network which must be provided by either the Docker host itself or by another package deployment. If the Docker network does not exist and won't be created, then the package deployment will not be allowed because its [package resource constraints](#package-resource-constraints) for dependencies on Docker networks will not be satisfied.
+
 - Example:
   
   ```yaml
@@ -717,6 +770,7 @@ A Docker network object consists of the following fields:
 - `description` is a short (one-sentence) description of the required Docker network resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -726,6 +780,7 @@ A Docker network object consists of the following fields:
 - `name` is a string specifying the name of the required Docker network.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -737,9 +792,12 @@ A Docker network object consists of the following fields:
 This optional field of the `requires` subsection is an array of network service objects listing the network services which must be available on the Docker host in order for a deployment of the package to successfully become active.
 
 - This field is optional.
+
 - The route of a network service requirement can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service requirement whose route is defined only as a port/protocol pair can be satisfied by a network service defined with or without paths. A network service requirement whose route is defined with one or more paths will be satisfied by one or more network services if and only if all of those network services have the same port/protocol pair as the network service requirement, *and* the set union of the paths of the network services overlaps with every path listed in the network service requirement (for a definition of overlapping paths, refer below to description of the `path` field of the network service object).
   Thus, in any particular set of package deployments, one network service from one package deployment may be sufficient to satisfy a network service requirement from some other package deployment, or multiple network services from multiple packages may be necessary to fully satisfy that network service requirement.
+
 - If a set of package deployments contains a network service resource requirement with a route which does not overlap with the routes of any network services provided by other package deployments, then the package deployment declaring that network service requirement will be reported as having an unmet dependency. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for resource dependencies will not be satisfied.
+
 - Example:
   
   ```yaml
@@ -755,6 +813,7 @@ A network service object consists of the following fields:
 - `description` is a short (one-sentence) description of the network service resource requirement to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -764,6 +823,7 @@ A network service object consists of the following fields:
 - `port` is a number specifying the network port which must be usable for accessing the required service.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -773,6 +833,7 @@ A network service object consists of the following fields:
 - `protocol` is a string specifying the application-level protocol which must be usable for accessing the required service.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -782,9 +843,13 @@ A network service object consists of the following fields:
 - `paths` is an array of strings which are paths which must be accessible on the required service.
   
    - This field is optional.
+  
    - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the required network service must declare that it can be used with any path beginning with that prefix (i.e. the string before the asterisk).
+  
    - If a network service requirement specifies a port and protocol but no paths, that requirement will be satisfied by any network service which also specifies the same port and protocol and has the required tags (if any), regardless of whether the service specifies any paths. In other words, not listing any paths in a network service requirement is equivalent to not having any requirements about the paths exposed by a network service.
+  
    - If a package deployment has a requirement for a network service with a specific path which matches the prefix path of a network service provided by another package deployment, the network service requirement will be met. For example, a requirement for a network service with a path `/stream.mjpg` would be met by a network service provided with the path prefix `/*`, assuming they have the same port and protocol.
+  
    - Example:
      
      ```yaml
@@ -883,6 +948,20 @@ A filesystem object consists of the following fields:
        - plain-text
      ```
 
+- `nonblocking` is a boolean flag specifying whether the package deployment providing the required filesystem entity is allowed to start after starting the package deployment with the filesystem requirement.
+  
+   - This field is optional.
+  
+   - This is a performance optimization hint which may be ignored; it's only meaningful if package deployments can be started concurrently. However, it can help to reduce the startup time needed for the critical path of a chain of dependencies between package deployments.
+  
+   - This field can be set to true if the program requiring the filesystem entity can gracefully handle the temporary absence of the filesystem entity while package deployments are being applied; otherwise, this field should not be set to true.
+  
+   - Example:
+     
+     ```yaml
+     nonblocking: true
+     ```
+
 #### `provides` subsection
 
 This optional subsection of the `deployment` section specifies the resources provided by an active deployment of the package. This is the same as the `provides` subsection of the `host` section, except that here the resources only exist when a package deployment is active. Here is an example of a `provides` section:
@@ -905,10 +984,15 @@ provides:
 This optional field of the `provides` subsection is an array of host port listener objects listing the network port/protocol pairs which will be bound to processes running in an active deployment of the package and listening for incoming traffic on those port/protocol pairs, on any/all IP addresses.
 
 - This field is optional.
+
 - Generally, a host port listener object should correspond to a [published port](https://docs.docker.com/network/#published-ports) of a Docker container.
+
 - Each host port listener object describes a host port listener resource which may or may not be in conflict with other host port listener resources; this is because multiple processes are not allowed to simultaneously bind to the same port/protocol pair on all IP addresses.
+
 - If a set of package deployments contains two or more host port listener resources for the same port/protocol pair from different package deployments, the package deployments declaring those respective host port listeners will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of host port listener resources will not be satisfied.
+
 - Currently, this specification does not allow multiple host port listeners to bind to the same port/protocol pair on different IP addresses; instead for simplicity, processes are assumed to be listening for that port/protocol pair on *all* IP addresses on the host.
+
 - Example:
   
   ```yaml
@@ -923,6 +1007,7 @@ A host port listener object consists of the following fields:
 - `description` is a short (one-sentence) description of the host port listener resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -932,6 +1017,7 @@ A host port listener object consists of the following fields:
 - `port` is a number specifying the [network port](https://en.wikipedia.org/wiki/Port_(computer_networking)) bound by a process running on the host.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -941,7 +1027,9 @@ A host port listener object consists of the following fields:
 - `protocol` is a string specifying whether the bound network port is for the TCP transport protocol or for the UDP transport protocol.
   
    - This field is required.
+  
    - The value of this field must be either `tcp` or `udp`.
+  
    - Example:
      
      ```yaml
@@ -953,8 +1041,11 @@ A host port listener object consists of the following fields:
 This optional field of the `provides` subsection is an array of Docker network objects listing the Docker networks which are created when a deployment of the package becomes active.
 
 - This field is optional.
+
 - Each host Docker network object describes a Docker network resource which may or may not be in conflict with other Docker network resources; this is because multiple Docker networks are not allowed to have the same name.
+
 - If a set of package deployments contains two or more Docker network resources for networks with the same name from different package deployments, the package deployments declaring those respective Docker networks will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of host Docker network names will not be satisfied.
+
 - Example:
   
   ```yaml
@@ -968,6 +1059,7 @@ A Docker network object consists of the following fields:
 - `description` is a short (one-sentence) description of the Docker network resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -977,6 +1069,7 @@ A Docker network object consists of the following fields:
 - `name` is a string specifying the name of the Docker network.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -988,9 +1081,13 @@ A Docker network object consists of the following fields:
 This optional field of the `provides` subsection is an array of network service objects listing the network services which are created when a deployment of the package becomes active.
 
 - This field is optional.
+
 - The route of a network service can be defined either as a port/protocol pair or as a combination of port, protocol, and one or more paths. A network service whose route is defined only as a port/protocol pair will overlap with another network service if and only if the other network service whose route is also defined only as a port/protocol pair. A network service whose route is defined with one or more paths will overlap with another network service if and only if both network services have the same port, the same protocol, and at least one overlapping path (for a definition of overlapping paths, refer below to description of the `path` field of the network service object).
+
 - Each network service object describes a network service resource which may or may not be in conflict with other network service resources; this is because multiple network services are not allowed to have overlapping routes.
+
 - If a set of package deployments contains two or more network service resources for services with overlapping routes from different package deployments, then the package deployments declaring those respective network services will be reported as conflicting with each other. Therefore, the overall set of package deployments will not be allowed because its [package resource constraints](#package-resource-constraints) for uniqueness of network services will not be satisfied.
+
 - Example:
   
   ```yaml
@@ -1019,6 +1116,7 @@ A network service object consists of the following fields:
 - `description` is a short (one-sentence) description of the network service resource to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -1028,6 +1126,7 @@ A network service object consists of the following fields:
 - `port` is a number specifying the network port used for accessing the service.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -1037,6 +1136,7 @@ A network service object consists of the following fields:
 - `protocol` is a string specifying the application-level protocol used for accessing the service.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -1046,11 +1146,16 @@ A network service object consists of the following fields:
 - `paths` is an array of strings which are paths used for accessing the service.
   
    - This field is optional.
+  
    - A path may optionally have an asterisk (`*`) at the end, in which case it is a prefix path - so the network service covers all paths beginning with that prefix (i.e. the string before the asterisk).
+  
    - If a network service specifies a port and protocol but no paths, it will conflict with another network service which also specifies the same port and protocol but no paths; it will not conflict with another network service which specifies the same port and protocol and also specifies some paths. In other words, not listing any paths in a network service is equivalent to not having any conflicts with other services available at specific paths on the same port and protocol.
      This is useful for describing systems involving HTTP reverse-proxies or involving message brokers, where one package deployment may provide a network service which routes specific messages to network services from other package deployments on specific paths; then the reverse-proxy or message broker would be specified on some port and protocol with no paths, while the network services behind it would be specified on the same port and protocol but with a set of specific paths.
+  
    - If a package deployment has a dependency on a network service with a specific path which matches a prefix path in a network service from another package deployment, that dependency will be satisfied. For example, a dependency on a network service requiring a path `/ps/docs/hardware` would be met by a network service provided with the path prefix `/ps/docs/*`, assuming they have the same port and protocol.
+  
    - If a package deployment provides a network service with a specific path which matches a prefix path in a network service provided by another package deployment, those two package deployments will be in conflict with each other. For example, a network service providing a path `/ps/docs/hardware` would conflict with a network service providing the path prefix `/ps/docs/*`, assuming they have the same port and protocol. This is because those overlapping paths would cause the network services to overlap with each other, which is not allowed.
+  
    - Example:
      
      ```yaml
@@ -1219,6 +1324,7 @@ A feature specification object consists of the following fields:
 - `description` is a short (one-sentence) description of the network service resource requirement to be shown to users.
   
    - This field is required.
+  
    - Example:
      
      ```yaml
@@ -1228,9 +1334,13 @@ A feature specification object consists of the following fields:
 - `compose-files` is an array of the string filenames of one or more Docker Compose files specifying modifications to the Docker Compose application which will be applied if the feature is enabled.
   
    - This field is optional.
+  
    - The filenames must be for YAML files which are fragments of a [Docker Compose file specification](https://docs.docker.com/compose/compose-file/). These files will be merged together with any other Compose files specified in the [`deployment` section](#deployment-section) of the `forklift-package.yml` file and in any other enabled features according to Docker Compose's [compose file merging mechanism](https://docs.docker.com/compose/multiple-compose-files/merge/).
+  
    - The files must be located in the same directory as the `forklift-package.yml` file, or in subdirectories.
+  
    - For clarity, it is strongly recommended that the order in which the files for different feature flags are merged should not affect the final result of merging.
+  
    - Example:
      
      ```yaml
@@ -1240,7 +1350,9 @@ A feature specification object consists of the following fields:
 - `tags` is an array of strings to associate with the feature or with resources required or provided by the feature.
   
    - This field is optional.
+  
    - These tags have no semantic meaning within the Forklift package specification, but can be used by other applictions for arbitrary purposes.
+  
    - Example:
      
      ```yaml
@@ -1255,7 +1367,9 @@ A feature specification object consists of the following fields:
 - `requires` is a specification of resources required for a deployment of the package, with the feature enabled, to successfully become active.
   
    - This field is optional.
+  
    - The contents of this field have the same syntax and semantics as the contents of the [`requires` subsection](#requires-subsection) of the `deployment` section of the Forklift package specification, except that resource requirements are only evaluated for features configured as "enabled" for each deployment of each package; resource requirements for disabled features will be ignored.
+  
    - Example:
      
      ```yaml
@@ -1272,7 +1386,9 @@ A feature specification object consists of the following fields:
 - `provides` is a specification of resources provided by a deployment of the package, if the feature is enabled for that deployment.
   
    - This field is optional.
+  
    - The contents of this field have the same syntax and semantics as the contents of the [`provides` subsection](#provides-subsection) of the `deployment` section of the Forklift package specification, except that provided resources are only considered for features configured as "enabled" for each deployment of each package; provided resources for disabled features will be ignored.
+  
    - Example:
      
      ```yaml
