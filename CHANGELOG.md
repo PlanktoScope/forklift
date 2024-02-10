@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.2 - 2024-02-10
+
 ### Added
 
 - (spec) Added a "fileset" resource type for files (which can include directories).
+- (cli) Added support to for a pallet to deploy packages defined in that same pallet, by referring to the package as an absolute path (rooted at the root of the pallet), if the pallet declares itself as a Forklift repo with the same path.
 
 ## 0.5.1 - 2024-02-07
 

@@ -18,7 +18,7 @@ func PrintPkg(indent int, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
 	if core.CoversPath(cache, pkg.FS.Path()) {
 		IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
-		IndentedPrintf(indent, "External path (replacing cached package): %s\n", pkg.FS.Path())
+		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
 	}
 
 	PrintPkgSpec(indent, pkg.Def.Package)
@@ -36,7 +36,7 @@ func printPkgRepo(indent int, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
 		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
 	} else {
 		IndentedPrintf(
-			indent, "External path (replacing cached repository): %s\n", pkg.Repo.FS.Path(),
+			indent, "Absolute path (replacing any cached copy): %s\n", pkg.Repo.FS.Path(),
 		)
 	}
 
