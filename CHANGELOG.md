@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.3 - 2024-02-10
+
+### Fixed
+
+- (cli) When performing operations on a pallet without any external repo requirements, forklift no longer complains if you haven't cached any repos.
+
 ## 0.5.2 - 2024-02-10
 
 ### Added

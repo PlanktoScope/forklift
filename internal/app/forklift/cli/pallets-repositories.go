@@ -35,7 +35,13 @@ func GetCache(
 	cache.Underlay = fsCache
 
 	if ensureCache && !fsCache.Exists() {
-		return nil, nil, errors.New("you first need to cache the repos specified by your pallet")
+		repoReqs, err := pallet.LoadFSRepoReqs("**")
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "couldn't check whether the pallet requires any repos")
+		}
+		if len(repoReqs) > 0 {
+			return nil, nil, errors.New("you first need to cache the repos specified by your pallet")
+		}
 	}
 	return cache, override, nil
 }
