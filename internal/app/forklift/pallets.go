@@ -3,7 +3,9 @@ package forklift
 import (
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -131,6 +133,15 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 	if err != nil {
 		return PkgReq{}, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 	}
+	if path.IsAbs(pkgPath) { // special case: package should be provided by the pallet itself
+		return PkgReq{
+			PkgSubdir: strings.TrimLeft(pkgPath, "/"),
+			Repo: RepoReq{
+				RepoPath: p.Def.Pallet.Path,
+			},
+		}, nil
+	}
+
 	fsRepoReq, err := loadFSRepoReqContaining(reposFS, pkgPath)
 	if err != nil {
 		return PkgReq{}, errors.Wrapf(err, "couldn't find repo providing package %s in pallet", pkgPath)

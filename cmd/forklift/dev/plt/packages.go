@@ -9,11 +9,8 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true, true)
 	if err != nil {
-		return err
-	}
-	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
@@ -23,11 +20,8 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true, true)
 	if err != nil {
-		return err
-	}
-	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 

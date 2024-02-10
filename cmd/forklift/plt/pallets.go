@@ -14,21 +14,12 @@ import (
 
 func processFullBaseArgs(
 	c *cli.Context, ensureCache bool,
-) (pallet *forklift.FSPallet, cache *forklift.FSRepoCache, err error) {
-	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
-	if err != nil {
-		return nil, nil, err
-	}
+) (pallet *forklift.FSPallet, cache forklift.PathedRepoCache, err error) {
 	if pallet, err = getPallet(c.String("workspace")); err != nil {
 		return nil, nil, err
 	}
-	if cache, err = workspace.GetRepoCache(); err != nil {
+	if cache, _, err = fcli.GetCache(c.String("workspace"), pallet, ensureCache); err != nil {
 		return nil, nil, err
-	}
-	if ensureCache && !cache.Exists() {
-		return nil, nil, errors.New(
-			"you first need to cache the repos specified by your pallet with `forklift plt cache-repo`",
-		)
 	}
 	return pallet, cache, nil
 }

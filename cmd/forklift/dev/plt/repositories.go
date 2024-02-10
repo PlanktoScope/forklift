@@ -22,7 +22,7 @@ import (
 
 func cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, _, err := processFullBaseArgs(c, false)
+		pallet, cache, err := processFullBaseArgs(c, false, false)
 		if err != nil {
 			return err
 		}
@@ -62,11 +62,8 @@ func lsRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true, true)
 	if err != nil {
-		return err
-	}
-	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
@@ -78,7 +75,7 @@ func showRepoAction(c *cli.Context) error {
 
 func addRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, _, err := processFullBaseArgs(c, false)
+		pallet, cache, err := processFullBaseArgs(c, false, false)
 		if err != nil {
 			return err
 		}

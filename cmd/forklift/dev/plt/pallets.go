@@ -13,19 +13,22 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func processFullBaseArgs(c *cli.Context, ensureCache bool) (
-	pallet *forklift.FSPallet, cache *forklift.LayeredRepoCache, override *forklift.RepoOverrideCache,
-	err error,
+func processFullBaseArgs(c *cli.Context, ensureCache, enableOverrides bool) (
+	pallet *forklift.FSPallet, cache *forklift.LayeredRepoCache, err error,
 ) {
 	if pallet, err = getPallet(c.String("cwd")); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	if cache, override, err = getCache(
-		c.String("workspace"), c.StringSlice("repos"), ensureCache,
-	); err != nil {
-		return nil, nil, nil, err
+	if cache, _, err = fcli.GetCache(c.String("workspace"), pallet, ensureCache); err != nil {
+		return nil, nil, err
 	}
-	return pallet, cache, override, nil
+	if !enableOverrides {
+		return pallet, cache, nil
+	}
+	if cache, err = overlayCacheOverrides(cache, c.StringSlice("repos"), pallet); err != nil {
+		return nil, nil, err
+	}
+	return pallet, cache, nil
 }
 
 func getPallet(cwdPath string) (pallet *forklift.FSPallet, err error) {
@@ -37,37 +40,25 @@ func getPallet(cwdPath string) (pallet *forklift.FSPallet, err error) {
 	return pallet, nil
 }
 
-func getCache(
-	wpath string, repos []string, ensureCache bool,
-) (*forklift.LayeredRepoCache, *forklift.RepoOverrideCache, error) {
-	cache := &forklift.LayeredRepoCache{}
+func overlayCacheOverrides(
+	underlay forklift.PathedRepoCache, repos []string, pallet *forklift.FSPallet,
+) (cache *forklift.LayeredRepoCache, err error) {
+	cache = &forklift.LayeredRepoCache{
+		Underlay: underlay,
+	}
 	replacementRepos, err := loadReplacementRepos(repos)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	override, err := forklift.NewRepoOverrideCache(replacementRepos, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	if err = setOverrideCacheVersions(pallet, override); err != nil {
+		return nil, err
 	}
 	cache.Overlay = override
-
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return nil, nil, err
-	}
-	fsCache, err := workspace.GetRepoCache()
-	if err != nil && len(repos) == 0 {
-		return nil, nil, err
-	}
-	cache.Underlay = fsCache
-
-	if ensureCache && !fsCache.Exists() {
-		return nil, nil, errors.New(
-			"you first need to cache the repos specified by your pallet with " +
-				"`forklift dev plt cache-repo`",
-		)
-	}
-	return cache, override, nil
+	return cache, nil
 }
 
 func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err error) {
@@ -132,11 +123,8 @@ func showAction(c *cli.Context) error {
 
 func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+		pallet, cache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
-			return err
-		}
-		if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
@@ -156,11 +144,8 @@ func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Actio
 
 func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+		pallet, cache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
-			return err
-		}
-		if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
@@ -180,11 +165,8 @@ func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Action
 
 func applyAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+		pallet, cache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
-			return err
-		}
-		if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(

@@ -14,6 +14,47 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
+func GetCache(
+	wpath string, pallet *forklift.FSPallet, ensureCache bool,
+) (*forklift.LayeredRepoCache, *forklift.RepoOverrideCache, error) {
+	cache := &forklift.LayeredRepoCache{}
+	override, err := makeOverrideCacheFromPallet(pallet)
+	if err != nil {
+		return nil, nil, err
+	}
+	cache.Overlay = override
+
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, nil, err
+	}
+	fsCache, err := workspace.GetRepoCache()
+	if err != nil && override == nil {
+		return nil, nil, err
+	}
+	cache.Underlay = fsCache
+
+	if ensureCache && !fsCache.Exists() {
+		return nil, nil, errors.New("you first need to cache the repos specified by your pallet")
+	}
+	return cache, override, nil
+}
+
+func makeOverrideCacheFromPallet(pallet *forklift.FSPallet) (*forklift.RepoOverrideCache, error) {
+	palletAsRepo, err := core.LoadFSRepo(pallet.FS, ".")
+	if err != nil {
+		// The common case is that the pallet is not a repo (and thus can't be loaded as one), so we
+		// mask the error:
+		return nil, nil
+	}
+	return forklift.NewRepoOverrideCache(
+		[]*core.FSRepo{palletAsRepo}, map[string][]string{
+			// In a pallet which is a repo, the implicit repo requirement is for an empty version string
+			palletAsRepo.Path(): {""},
+		},
+	)
+}
+
 // Print
 
 func PrintPalletRepos(indent int, pallet *forklift.FSPallet) error {
@@ -59,7 +100,7 @@ func PrintRepoInfo(
 			indent, "Path in cache: %s\n", core.GetSubdirPath(cache, cachedRepo.FS.Path()),
 		)
 	} else {
-		IndentedPrintf(indent, "External path (replacing cached repo): %s\n", cachedRepo.FS.Path())
+		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", cachedRepo.FS.Path())
 	}
 	IndentedPrintf(indent, "Description: %s\n", cachedRepo.Def.Repo.Description)
 

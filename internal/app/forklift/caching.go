@@ -214,6 +214,7 @@ func (c *LayeredRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPk
 		pkg, err := c.Overlay.LoadFSPkg(pkgPath, version)
 		return pkg, errors.Wrap(err, "couldn't load package from overlay")
 	}
+
 	pkg, err := c.Underlay.LoadFSPkg(pkgPath, version)
 	return pkg, errors.Wrap(err, "couldn't load package from underlay")
 }
@@ -305,6 +306,9 @@ func (c *RepoOverrideCache) SetVersions(repoPath string, versions map[string]str
 // IncludesFSRepo reports whether the RepoOverrideCache instance has a repo with the
 // specified path and version.
 func (c *RepoOverrideCache) IncludesFSRepo(repoPath string, version string) bool {
+	if c == nil {
+		return false
+	}
 	if _, ok := c.repos[repoPath]; !ok {
 		return false
 	}
@@ -364,6 +368,9 @@ func (c *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, e
 // IncludesFSPkg reports whether the RepoOverrideCache instance has a repo with the specified
 // version which covers the specified package path.
 func (c *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
+	if c == nil {
+		return false
+	}
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
 	for _, repo := range c.repos {

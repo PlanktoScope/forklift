@@ -9,11 +9,8 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true, true)
 	if err != nil {
-		return err
-	}
-	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
@@ -23,11 +20,8 @@ func lsDeplAction(c *cli.Context) error {
 // show-depl
 
 func showDeplAction(c *cli.Context) error {
-	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true, true)
 	if err != nil {
-		return err
-	}
-	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 
@@ -38,11 +32,8 @@ func showDeplAction(c *cli.Context) error {
 // locate-depl-pkg
 
 func locateDeplPkgAction(c *cli.Context) error {
-	pallet, cache, overrideCache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c, true, true)
 	if err != nil {
-		return err
-	}
-	if err = setOverrideCacheVersions(pallet, overrideCache); err != nil {
 		return err
 	}
 

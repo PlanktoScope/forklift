@@ -29,7 +29,7 @@ func ResolveDepl(
 		pkgReqLoader, pkgLoader, pkgPath,
 	); err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load package %s to resolved from package deployment %s", pkgPath, depl.Name,
+			err, "couldn't load package %s to resolve from package deployment %s", pkgPath, depl.Name,
 		)
 	}
 	return resolved, nil
