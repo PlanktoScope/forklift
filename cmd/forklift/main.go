@@ -55,7 +55,7 @@ var app = &cli.App{
 const (
 	repoMinVersion   = "v0.4.0"     // minimum supported Forklift version among repos
 	palletMinVersion = "v0.4.0"     // minimum supported Forklift version among pallets
-	fallbackVersion  = "v0.5.0-dev" // version reported by Forklift tool if actual version is unknown
+	fallbackVersion  = "v0.5.3-dev" // version reported by Forklift tool if actual version is unknown
 )
 
 var (
