@@ -15,7 +15,7 @@ require (
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.27.1
-	golang.org/x/mod v0.14.0
+	golang.org/x/mod v0.15.0
 	golang.org/x/sync v0.6.0
 	gopkg.in/yaml.v3 v3.0.1
 )
