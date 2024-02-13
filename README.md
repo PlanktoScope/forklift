@@ -4,6 +4,8 @@
   <img src="https://github.com/PlanktoScope/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004" alt="Forklift logo" height="60">
 </picture>
 
+<hr>
+
 A simpler, easier, and safer way to manage apps and services on embedded Linux systems.
 
 Note: this is still an experimental prototype and is not yet ready for general use.
