@@ -18,7 +18,35 @@ var errMissingCache = errors.Errorf(
 		"`forklift plt cache-repo`",
 )
 
-func getCache(wpath string) (*forklift.FSRepoCache, error) {
+func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
+	if ensureWorkspace {
+		if !forklift.Exists(wpath) {
+			fmt.Printf("Making a new workspace at %s...", wpath)
+		}
+		if err := forklift.EnsureExists(wpath); err != nil {
+			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
+		}
+	}
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := workspace.GetPalletCache()
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
+func getRepoCache(wpath string, ensureWorkspace bool) (*forklift.FSRepoCache, error) {
+	if ensureWorkspace {
+		if !forklift.Exists(wpath) {
+			fmt.Printf("Making a new workspace at %s...", wpath)
+		}
+		if err := forklift.EnsureExists(wpath); err != nil {
+			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
+		}
+	}
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
@@ -33,29 +61,15 @@ func getCache(wpath string) (*forklift.FSRepoCache, error) {
 // rm-all
 
 func rmAllAction(c *cli.Context) error {
-	if err := rmRepoAction(c); err != nil {
+	if err := rmGitRepoAction("pallet", getPalletCache)(c); err != nil {
+		return errors.Wrap(err, "couldn't remove cached pallets")
+	}
+	if err := rmGitRepoAction("repo", getRepoCache)(c); err != nil {
 		return errors.Wrap(err, "couldn't remove cached repositories")
 	}
 
 	if err := rmImgAction(c); err != nil {
 		return errors.Wrap(err, "couldn't remove unused Docker container images")
-	}
-	return nil
-}
-
-// rm-repo
-
-func rmRepoAction(c *cli.Context) error {
-	cache, err := getCache(c.String("workspace"))
-	if err != nil {
-		return err
-	}
-
-	// FIXME: if/when the cache stores other resources (e.g. pallets), this will need to be changed
-	// to only remove repos
-	fmt.Println("Clearing cache...")
-	if err = cache.Remove(); err != nil {
-		return errors.Wrap(err, "couldn't clear cache")
 	}
 	return nil
 }

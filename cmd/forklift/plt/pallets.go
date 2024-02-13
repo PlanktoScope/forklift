@@ -18,7 +18,7 @@ func processFullBaseArgs(
 	if pallet, err = getPallet(c.String("workspace")); err != nil {
 		return nil, nil, err
 	}
-	if cache, _, err = fcli.GetCache(c.String("workspace"), pallet, ensureCache); err != nil {
+	if cache, _, err = fcli.GetRepoCache(c.String("workspace"), pallet, ensureCache); err != nil {
 		return nil, nil, err
 	}
 	return pallet, cache, nil
@@ -49,15 +49,22 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 		if err := forklift.EnsureExists(wpath); err != nil {
 			return errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
+		workspace, err := forklift.LoadWorkspace(wpath)
+		if err != nil {
+			return err
+		}
+		if err = forklift.EnsureExists(workspace.GetDataPath()); err != nil {
+			return errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
+		}
 
 		// clone pallet
-		remoteRelease := c.Args().First()
-		remote, release, err := git.ParseRemoteRelease(remoteRelease)
-		if err != nil {
-			return errors.Wrapf(err, "couldn't parse remote release %s", remoteRelease)
+		if err = os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+			return errors.Wrap(err, "couldn't remove local pallet")
 		}
-		if err = clonePallet(remote, release, wpath, true); err != nil {
-			return errors.Wrapf(err, "couldn't clone %s@%s into %s", remote, release, wpath)
+		if err = fcli.CloneQueriedGitRepoUsingLocalMirror(
+			0, workspace.GetPalletCachePath(), c.Args().First(), workspace.GetCurrentPalletPath(),
+		); err != nil {
+			return err
 		}
 		fmt.Println()
 		// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
@@ -74,7 +81,7 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 			return err
 		}
 		fmt.Println("Downloading repos specified by the local pallet...")
-		if _, err = fcli.DownloadRepos(0, pallet, cache); err != nil {
+		if _, err = fcli.DownloadRequiredRepos(0, pallet, cache); err != nil {
 			return err
 		}
 		fmt.Println()
@@ -101,69 +108,28 @@ func cloneAction(c *cli.Context) error {
 	if err := forklift.EnsureExists(wpath); err != nil {
 		return errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 	}
-
-	remoteRelease := c.Args().First()
-	remote, release, err := git.ParseRemoteRelease(remoteRelease)
+	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't parse remote release %s", remoteRelease)
+		return err
 	}
-	if err = clonePallet(remote, release, wpath, c.Bool("force")); err != nil {
-		return errors.Wrapf(err, "couldn't clone %s@%s into %s", remote, release, wpath)
+	if err = forklift.EnsureExists(workspace.GetDataPath()); err != nil {
+		return errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
+	}
+
+	if c.Bool("force") {
+		if err = os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+			return errors.Wrap(err, "couldn't remove local pallet")
+		}
+	}
+	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
+		0, workspace.GetPalletCachePath(), c.Args().First(), workspace.GetCurrentPalletPath(),
+	); err != nil {
+		return err
 	}
 
 	// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
 	// version is incompatible
 	fmt.Println("Done! Next, you'll probably want to run `forklift plt cache-repo`.")
-	return nil
-}
-
-func clonePallet(remote, release, wpath string, force bool) error {
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return errors.Wrap(err, "couldn't load workspace")
-	}
-
-	local := workspace.GetCurrentPalletPath()
-	fmt.Printf("Cloning pallet %s to %s...\n", remote, local)
-	gitRepo, err := git.Clone(remote, local)
-	if err != nil {
-		if !errors.Is(err, git.ErrRepositoryAlreadyExists) {
-			return errors.Wrapf(
-				err, "couldn't clone pallet %s at release %s to %s", remote, release, local,
-			)
-		}
-		if !force {
-			return errors.Wrap(
-				err,
-				"you need to first delete your local pallet with `forklift plt rm` before "+
-					"cloning another remote release to it, or re-run this command with the `--force` flag",
-			)
-		}
-
-		pallet, perr := workspace.GetCurrentPallet()
-		if perr != nil {
-			return err
-		}
-		// TODO: we should instead clone each pallet into a pallet cache to avoid the need to overwrite
-		// the local pallet
-		fmt.Println(
-			"Removing local pallet from workspace, because it already exists and we're " +
-				"overwriting the local pallet with the pallet to be cloned...",
-		)
-		if err = pallet.Remove(); err != nil {
-			return errors.Wrap(err, "couldn't remove local pallet")
-		}
-		fmt.Printf("Cloning pallet %s to %s...\n", remote, pallet.FS.Path())
-		if gitRepo, err = git.Clone(remote, pallet.FS.Path()); err != nil {
-			return errors.Wrapf(
-				err, "couldn't clone pallet %s at release %s to %s", remote, release, pallet.FS.Path(),
-			)
-		}
-	}
-	fmt.Printf("Checking out version query %s...\n", release)
-	if err = gitRepo.Checkout(release, "origin"); err != nil {
-		return errors.Wrapf(err, "couldn't check out version query %s at %s", release, local)
-	}
 	return nil
 }
 

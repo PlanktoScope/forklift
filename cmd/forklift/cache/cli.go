@@ -10,6 +10,21 @@ var Cmd = &cli.Command{
 	Usage: "Manages the local cache of repos and packages",
 	Subcommands: []*cli.Command{
 		{
+			Name:     "ls-plt",
+			Aliases:  []string{"list-pallets"},
+			Category: "Query the cache",
+			Usage:    "Lists cached pallets",
+			Action:   lsPltAction,
+		},
+		{
+			Name:      "show-plt",
+			Aliases:   []string{"show-pallet"},
+			Category:  "Query the cache",
+			Usage:     "Describes a cached pallet",
+			ArgsUsage: "pallet_path@version",
+			Action:    showPltAction,
+		},
+		{
 			Name:     "ls-repo",
 			Aliases:  []string{"list-repositories"},
 			Category: "Query the cache",
@@ -29,7 +44,8 @@ var Cmd = &cli.Command{
 			Aliases:  []string{"list-packages"},
 			Category: "Query the cache",
 			Usage:    "Lists packages offered by cached repos",
-			Action:   lsPkgAction,
+			// TODO: allow only listing packages matching a glob pattern
+			Action: lsPkgAction,
 		},
 		{
 			Name:      "show-pkg",
@@ -44,7 +60,8 @@ var Cmd = &cli.Command{
 			Aliases:  []string{"list-images"},
 			Category: "Query the cache",
 			Usage:    "Lists Docker container images in the local cache",
-			Action:   lsImgAction,
+			// TODO: allow only listing images matching a glob pattern
+			Action: lsImgAction,
 		},
 		{
 			Name:      "show-img",
@@ -55,6 +72,22 @@ var Cmd = &cli.Command{
 			Action:    showImgAction,
 		},
 		{
+			Name:      "add-plt",
+			Aliases:   []string{"add-pallets"},
+			Category:  "Modify the cache",
+			Usage:     "Downloads local copies of pallets from remote releases",
+			ArgsUsage: "[pallet_path@release]...",
+			Action:    addGitRepoAction(getPalletCache),
+		},
+		{
+			Name:      "add-repo",
+			Aliases:   []string{"add-repositories"},
+			Category:  "Modify the cache",
+			Usage:     "Downloads local copies of repos from remote releases",
+			ArgsUsage: "[repo_path@release]...",
+			Action:    addGitRepoAction(getRepoCache),
+		},
+		{
 			Name:     "rm-all",
 			Aliases:  []string{"remove-all"},
 			Category: "Modify the cache",
@@ -62,11 +95,20 @@ var Cmd = &cli.Command{
 			Action:   rmAllAction,
 		},
 		{
+			Name:     "rm-plt",
+			Aliases:  []string{"remove-pallets"},
+			Category: "Modify the cache",
+			Usage:    "Removes locally-cached pallets",
+			// TODO: allow only removing repos matching a glob pattern
+			Action: rmGitRepoAction("pallet", getPalletCache),
+		},
+		{
 			Name:     "rm-repo",
 			Aliases:  []string{"remove-repositories"},
 			Category: "Modify the cache",
 			Usage:    "Removes locally-cached repos",
-			Action:   rmRepoAction,
+			// TODO: allow only removing repos matching a glob pattern
+			Action: rmGitRepoAction("repo", getRepoCache),
 		},
 		{
 			Name:     "rm-img",

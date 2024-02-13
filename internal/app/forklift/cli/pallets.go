@@ -19,7 +19,54 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
+func GetPalletCache(
+	wpath string, pallet *forklift.FSPallet, ensureCache bool,
+) (*forklift.FSPalletCache, error) {
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := workspace.GetPalletCache()
+	if err != nil {
+		return nil, err
+	}
+
+	if ensureCache && !cache.Exists() && pallet != nil {
+		palletReqs, err := pallet.LoadFSPalletReqs("**")
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't check whether the pallet requires any pallets")
+		}
+		if len(palletReqs) > 0 {
+			return nil, errors.New("you first need to cache the pallets specified by your pallet")
+		}
+	}
+	return cache, nil
+}
+
 // Print
+
+func PrintCachedPallet(indent int, cache core.Pather, pallet *forklift.FSPallet) error {
+	IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
+	indent++
+
+	IndentedPrintf(indent, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	fmt.Println()
+
+	IndentedPrintf(indent, "Version: %s\n", pallet.Version)
+	IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
+
+	readme, err := pallet.LoadReadme()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load readme file for pallet %s@%s from cache", pallet.Path(), pallet.Version,
+		)
+	}
+	IndentedPrintln(indent, "Readme:")
+	const widthLimit = 100
+	PrintReadme(indent+1, readme, widthLimit)
+	return nil
+}
 
 func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 	IndentedPrintf(indent, "Pallet: %s\n", pallet.Path())
@@ -161,6 +208,30 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 	for _, ref := range refs {
 		BulletedPrintf(indent+1, "%s\n", git.StringifyRef(ref))
 	}
+}
+
+// Download
+
+func DownloadRequiredPallets(
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+) (changed bool, err error) {
+	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't identify pallets")
+	}
+	changed = false
+	for _, req := range loadedPalletReqs {
+		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
+			indent, cache.Path(), req.Path(), req.VersionLock,
+		)
+		changed = changed || downloaded
+		if err != nil {
+			return false, errors.Wrapf(
+				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+			)
+		}
+	}
+	return changed, nil
 }
 
 // Check

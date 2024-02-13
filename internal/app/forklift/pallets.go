@@ -1,13 +1,16 @@
 package forklift
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
@@ -53,6 +56,39 @@ func LoadFSPalletContaining(path string) (*FSPallet, error) {
 	}
 }
 
+// LoadFSPallets loads all FSPallets from the provided base filesystem matching the specified search
+// pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching pallet
+// directories to search for.
+// In the embedded [Pallet] of each loaded FSPallet, the version is *not* initialized.
+func LoadFSPallets(fsys core.PathedFS, searchPattern string) ([]*FSPallet, error) {
+	searchPattern = path.Join(searchPattern, PalletDefFile)
+	palletDefFiles, err := doublestar.Glob(fsys, searchPattern)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't search for pallet config files matching %s/%s", fsys.Path(), searchPattern,
+		)
+	}
+
+	orderedPallets := make([]*FSPallet, 0, len(palletDefFiles))
+	pallets := make(map[string]*FSPallet)
+	for _, palletDefFilePath := range palletDefFiles {
+		if path.Base(palletDefFilePath) != PalletDefFile {
+			continue
+		}
+		pallet, err := LoadFSPallet(fsys, path.Dir(palletDefFilePath))
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't load pallet from %s/%s", fsys.Path(), palletDefFilePath,
+			)
+		}
+
+		orderedPallets = append(orderedPallets, pallet)
+		pallets[pallet.Path()] = pallet
+	}
+
+	return orderedPallets, nil
+}
+
 // Exists checks whether the pallet actually exists on the OS's filesystem.
 func (p *FSPallet) Exists() bool {
 	return Exists(p.FS.Path())
@@ -86,6 +122,43 @@ func (p *FSPallet) Path() string {
 // getReqsFS returns the [fs.FS] in the pallet which contains requirement definitions.
 func (p *FSPallet) getReqsFS() (core.PathedFS, error) {
 	return p.FS.Sub(ReqsDirName)
+}
+
+// FSPallet: Pallet Requirements
+
+// GetPalletReqsFS returns the [fs.FS] in the pallet which contains pallet requirement
+// definitions.
+func (p *FSPallet) GetPalletReqsFS() (core.PathedFS, error) {
+	fsys, err := p.getReqsFS()
+	if err != nil {
+		return nil, err
+	}
+	return fsys.Sub(ReqsPalletsDirName)
+}
+
+// LoadFSPalletReq loads the FSPalletReq from the pallet for the pallet with the specified
+// path.
+func (p *FSPallet) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error) {
+	palletsFS, err := p.GetPalletReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
+	}
+	if r, err = loadFSPalletReq(palletsFS, palletPath); err != nil {
+		return nil, errors.Wrapf(err, "couldn't load pallet %s", palletPath)
+	}
+	return r, nil
+}
+
+// LoadFSPalletReqs loads all FSPalletReqs from the pallet matching the specified search
+// pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching the pallet paths to
+// search for.
+func (p *FSPallet) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
+	palletsFS, err := p.GetPalletReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for pallets in pallet")
+	}
+	return loadFSPalletReqs(palletsFS, searchPattern)
 }
 
 // FSPallet: Repo Requirements
@@ -137,7 +210,9 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 		return PkgReq{
 			PkgSubdir: strings.TrimLeft(pkgPath, "/"),
 			Repo: RepoReq{
-				RepoPath: p.Def.Pallet.Path,
+				GitRepoReq{
+					RequiredPath: p.Def.Pallet.Path,
+				},
 			},
 		}, nil
 	}
@@ -186,6 +261,39 @@ func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 	return loadDepls(fsys, searchPattern)
 }
 
+// Pallet
+
+// Path returns the repo path of the Pallet instance.
+func (p Pallet) Path() string {
+	return p.Def.Pallet.Path
+}
+
+// VersionQuery represents the Pallet instance as a version query.
+func (p Pallet) VersionQuery() string {
+	return fmt.Sprintf("%s@%s", p.Path(), p.Version)
+}
+
+// Check looks for errors in the construction of the repo.
+func (p Pallet) Check() (errs []error) {
+	errs = append(errs, core.ErrsWrap(p.Def.Check(), "invalid repo config")...)
+	return errs
+}
+
+// ComparePallets returns an integer comparing two [Pallet] instances according to their paths and
+// versions. The result will be 0 if the r and s have the same paths and versions; -1 if r has a
+// path which alphabetically comes before the path of s or if the paths are the same but r has a
+// lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
+// the paths are the same but r has a higher version than s.
+func ComparePallets(r, s Pallet) int {
+	if result := core.ComparePaths(r.Path(), s.Path()); result != core.CompareEQ {
+		return result
+	}
+	if result := semver.Compare(r.Version, s.Version); result != core.CompareEQ {
+		return result
+	}
+	return core.CompareEQ
+}
+
 // PalletDef
 
 // loadPalletDef loads an PalletDef from the specified file path in the provided base filesystem.
@@ -201,4 +309,19 @@ func loadPalletDef(fsys core.PathedFS, filePath string) (PalletDef, error) {
 		return PalletDef{}, errors.Wrap(err, "couldn't parse pallet config")
 	}
 	return config, nil
+}
+
+// Check looks for errors in the construction of the pallet configuration.
+func (d PalletDef) Check() (errs []error) {
+	return core.ErrsWrap(d.Pallet.Check(), "invalid pallet spec")
+}
+
+// PalletSpec
+
+// Check looks for errors in the construction of the pallet spec.
+func (s PalletSpec) Check() (errs []error) {
+	if s.Path == "" {
+		errs = append(errs, errors.Errorf("pallet spec is missing `path` parameter"))
+	}
+	return errs
 }

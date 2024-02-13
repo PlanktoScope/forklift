@@ -39,22 +39,26 @@ func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
 }
 
 func (w *FSWorkspace) GetCurrentPalletPath() string {
-	return path.Join(w.getDataPath(), currentPalletDirName)
+	return path.Join(w.GetDataPath(), currentPalletDirName)
 }
 
-func (w *FSWorkspace) getDataPath() string {
+func (w *FSWorkspace) GetDataPath() string {
 	return path.Join(w.FS.Path(), dataDirPath)
 }
 
 func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
-	if err := EnsureExists(w.getDataPath()); err != nil {
-		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getDataPath())
+	if err := EnsureExists(w.GetDataPath()); err != nil {
+		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.GetDataPath())
 	}
 	return LoadFSPallet(w.FS, path.Join(dataDirPath, currentPalletDirName))
 }
 
 func (w *FSWorkspace) GetRepoCachePath() string {
 	return path.Join(w.getCachePath(), cacheReposDirName)
+}
+
+func (w *FSWorkspace) GetPalletCachePath() string {
+	return path.Join(w.getCachePath(), cachePalletsDirName)
 }
 
 func (w *FSWorkspace) getCachePath() string {
@@ -71,6 +75,20 @@ func (w *FSWorkspace) GetRepoCache() (*FSRepoCache, error) {
 		return nil, errors.Wrap(err, "couldn't get repos cache from workspace")
 	}
 	return &FSRepoCache{
+		FS: pathedFS,
+	}, nil
+}
+
+func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
+	fsys, err := w.getCacheFS()
+	if err != nil {
+		return nil, err
+	}
+	pathedFS, err := fsys.Sub(cachePalletsDirName)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get pallets cache from workspace")
+	}
+	return &FSPalletCache{
 		FS: pathedFS,
 	}, nil
 }

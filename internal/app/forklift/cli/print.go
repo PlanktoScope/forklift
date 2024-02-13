@@ -103,3 +103,23 @@ func BulletedPrintYaml(indent int, a any) error {
 	}
 	return nil
 }
+
+// Markdown files
+
+func PrintReadme(indent int, readme []byte, widthLimit int) {
+	lines := strings.Split(string(readme), "\n")
+	for _, line := range lines {
+		line = strings.TrimRight(line, "\r")
+		if line == "" {
+			IndentedPrintln(indent)
+		}
+		for len(line) > 0 {
+			if len(line) < widthLimit { // we've printed everything!
+				IndentedPrintln(indent, line)
+				break
+			}
+			IndentedPrintln(indent, line[:widthLimit])
+			line = line[widthLimit:]
+		}
+	}
+}
