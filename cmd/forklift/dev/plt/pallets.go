@@ -19,7 +19,7 @@ func processFullBaseArgs(c *cli.Context, ensureCache, enableOverrides bool) (
 	if pallet, err = getPallet(c.String("cwd")); err != nil {
 		return nil, nil, err
 	}
-	if cache, _, err = fcli.GetCache(c.String("workspace"), pallet, ensureCache); err != nil {
+	if cache, _, err = fcli.GetRepoCache(c.String("workspace"), pallet, ensureCache); err != nil {
 		return nil, nil, err
 	}
 	if !enableOverrides {

@@ -18,7 +18,7 @@ func processFullBaseArgs(
 	if pallet, err = getPallet(c.String("workspace")); err != nil {
 		return nil, nil, err
 	}
-	if cache, _, err = fcli.GetCache(c.String("workspace"), pallet, ensureCache); err != nil {
+	if cache, _, err = fcli.GetRepoCache(c.String("workspace"), pallet, ensureCache); err != nil {
 		return nil, nil, err
 	}
 	return pallet, cache, nil
@@ -74,7 +74,7 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 			return err
 		}
 		fmt.Println("Downloading repos specified by the local pallet...")
-		if _, err = fcli.DownloadRepos(0, pallet, cache); err != nil {
+		if _, err = fcli.DownloadRequiredRepos(0, pallet, cache); err != nil {
 			return err
 		}
 		fmt.Println()

@@ -12,44 +12,101 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-// PkgReq
+// GitRepoReq
 
-// LoadRequiredFSPkg loads the specified package from the cache according to the specifications in
-// the package requirements provided by the package requirement loader for the provided package
-// path.
-func LoadRequiredFSPkg(
-	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, pkgPath string,
-) (*core.FSPkg, PkgReq, error) {
-	req, err := pkgReqLoader.LoadPkgReq(pkgPath)
-	if err != nil {
-		return nil, PkgReq{}, errors.Wrapf(
-			err, "couldn't determine package requirement for package %s", pkgPath,
+// Path returns the path of the required Git repo.
+func (r GitRepoReq) Path() string {
+	return r.RequiredPath
+}
+
+// GetQueryPath returns the path of the Git repo in version queries, which is of form
+// gitRepoPath@version (e.g. github.com/PlanktoScope/pallets/core@v0.1.0).
+func (r GitRepoReq) GetQueryPath() string {
+	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
+}
+
+// CompareGitRepoReqs returns an integer comparing two [RepoReq] instances according to their paths
+// and versions. The result will be 0 if the r and s have the same paths and versions; -1 if r has a
+// path which alphabetically comes before the path of s or if the paths are the same but r has a
+// lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
+// the paths are the same but r has a higher version than s.
+func CompareGitRepoReqs(r, s GitRepoReq) int {
+	if result := core.ComparePaths(r.Path(), s.Path()); result != core.CompareEQ {
+		return result
+	}
+	if result := semver.Compare(
+		r.VersionLock.Version, s.VersionLock.Version,
+	); result != core.CompareEQ {
+		return result
+	}
+	return core.CompareEQ
+}
+
+// PalletReq
+
+// LoadFSPallet loads a FSPalletReq from the specified directory path in the provided base
+// filesystem, assuming the directory path is also the path of the required pallet.
+func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err error) {
+	r = &FSPalletReq{}
+	if r.FS, err = fsys.Sub(palletPath); err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't enter directory %s from fs at %s", palletPath, fsys.Path(),
 		)
 	}
-	fsPkg, err := pkgLoader.LoadFSPkg(req.Path(), req.Repo.VersionLock.Version)
+	r.RequiredPath = palletPath
+	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
 	if err != nil {
-		return nil, PkgReq{}, errors.Wrapf(err, "couldn't load required package %s", req.GetQueryPath())
+		return nil, errors.Wrapf(
+			err, "couldn't load version lock config of requirement for pallet %s", palletPath,
+		)
 	}
-	return fsPkg, req, nil
+	return r, nil
 }
 
-// GetCachePath returns the path of the package in caches, which is of form
-// repoPath@version/pkgSubdir
-// (e.g. github.com/PlanktoScope/pallets@v0.1.0/core/infrastructure/caddy-ingress).
-func (r PkgReq) GetCachePath() string {
-	return path.Join(r.Repo.GetCachePath(), r.PkgSubdir)
+// loadFSPalletReqs loads all FSPalletReqs from the provided base filesystem matching the specified
+// search pattern, assuming the directory paths in the base filesystem are also the paths of the
+// required pallets. The search pattern should be a [doublestar] pattern, such as `**`, matching the
+// pallet paths to search for.
+// With a nil processor function, in the embedded [Pallet] of each loaded FSPallet, the VCS
+// repository path and pallet subdirectory are initialized from the pallet path declared in the
+// pallet's configuration file, while the pallet's version is not initialized.
+func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
+	searchPattern = path.Join(searchPattern, VersionLockDefFile)
+	palletReqFiles, err := doublestar.Glob(fsys, searchPattern)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't search for pallet requirement files matching %s/%s",
+			fsys.Path(), searchPattern,
+		)
+	}
+
+	reqs := make([]*FSPalletReq, 0, len(palletReqFiles))
+	for _, palletReqDefFilePath := range palletReqFiles {
+		if path.Base(palletReqDefFilePath) != VersionLockDefFile {
+			continue
+		}
+
+		req, err := loadFSPalletReq(fsys, path.Dir(palletReqDefFilePath))
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't load pallet requirement from %s", palletReqDefFilePath,
+			)
+		}
+		reqs = append(reqs, req)
+	}
+	return reqs, nil
 }
 
-// GetQueryPath returns the path of the package in version queries, which is of form
-// repoPath/pkgSubdir@version
-// (e.g. github.com/PlanktoScope/pallets/core/infrastructure/caddy-ingress@v0.1.0).
-func (r PkgReq) GetQueryPath() string {
-	return fmt.Sprintf("%s@%s", r.Path(), r.Repo.VersionLock.Version)
+// GetCachePath returns the path of the pallet in caches, which is of form
+// palletPath@version (e.g. github.com/PlanktoScope/pallets@v0.1.0/core).
+func (r PalletReq) GetCachePath() string {
+	return r.GetQueryPath()
 }
 
-// Path returns the package path of the required package.
-func (r PkgReq) Path() string {
-	return path.Join(r.Repo.Path(), r.PkgSubdir)
+// GetQueryPath returns the path of the pallet in version queries, which is of form
+// palletPath@version (e.g. github.com/PlanktoScope/pallets/core@v0.1.0).
+func (r PalletReq) GetQueryPath() string {
+	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
 }
 
 // RepoReq
@@ -63,7 +120,7 @@ func loadFSRepoReq(fsys core.PathedFS, repoPath string) (r *FSRepoReq, err error
 			err, "couldn't enter directory %s from fs at %s", repoPath, fsys.Path(),
 		)
 	}
-	r.RepoPath = repoPath
+	r.RequiredPath = repoPath
 	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -124,11 +181,6 @@ func loadFSRepoReqs(fsys core.PathedFS, searchPattern string) ([]*FSRepoReq, err
 	return reqs, nil
 }
 
-// Path returns the path of the required repo.
-func (r RepoReq) Path() string {
-	return r.RepoPath
-}
-
 // GetPkgSubdir returns the package subdirectory within the required repo for the provided package
 // path.
 func (r RepoReq) GetPkgSubdir(pkgPath string) string {
@@ -141,25 +193,42 @@ func (r RepoReq) GetCachePath() string {
 	return r.GetQueryPath()
 }
 
-// GetQueryPath returns the path of the repo in version queries, which is of form
-// repoPath@version (e.g. github.com/PlanktoScope/pallets/core@v0.1.0).
-func (r RepoReq) GetQueryPath() string {
-	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
+// PkgReq
+
+// LoadRequiredFSPkg loads the specified package from the cache according to the specifications in
+// the package requirements provided by the package requirement loader for the provided package
+// path.
+func LoadRequiredFSPkg(
+	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, pkgPath string,
+) (*core.FSPkg, PkgReq, error) {
+	req, err := pkgReqLoader.LoadPkgReq(pkgPath)
+	if err != nil {
+		return nil, PkgReq{}, errors.Wrapf(
+			err, "couldn't determine package requirement for package %s", pkgPath,
+		)
+	}
+	fsPkg, err := pkgLoader.LoadFSPkg(req.Path(), req.Repo.VersionLock.Version)
+	if err != nil {
+		return nil, PkgReq{}, errors.Wrapf(err, "couldn't load required package %s", req.GetQueryPath())
+	}
+	return fsPkg, req, nil
 }
 
-// CompareRepoReqs returns an integer comparing two [RepoReq] instances according to their paths
-// and versions. The result will be 0 if the r and s have the same paths and versions; -1 if r has a
-// path which alphabetically comes before the path of s or if the paths are the same but r has a
-// lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
-// the paths are the same but r has a higher version than s.
-func CompareRepoReqs(r, s RepoReq) int {
-	if result := core.ComparePaths(r.Path(), s.Path()); result != core.CompareEQ {
-		return result
-	}
-	if result := semver.Compare(
-		r.VersionLock.Version, s.VersionLock.Version,
-	); result != core.CompareEQ {
-		return result
-	}
-	return core.CompareEQ
+// GetCachePath returns the path of the package in caches, which is of form
+// repoPath@version/pkgSubdir
+// (e.g. github.com/PlanktoScope/pallets@v0.1.0/core/infrastructure/caddy-ingress).
+func (r PkgReq) GetCachePath() string {
+	return path.Join(r.Repo.GetCachePath(), r.PkgSubdir)
+}
+
+// GetQueryPath returns the path of the package in version queries, which is of form
+// repoPath/pkgSubdir@version
+// (e.g. github.com/PlanktoScope/pallets/core/infrastructure/caddy-ingress@v0.1.0).
+func (r PkgReq) GetQueryPath() string {
+	return fmt.Sprintf("%s@%s", r.Path(), r.Repo.VersionLock.Version)
+}
+
+// Path returns the package path of the required package.
+func (r PkgReq) Path() string {
+	return path.Join(r.Repo.Path(), r.PkgSubdir)
 }

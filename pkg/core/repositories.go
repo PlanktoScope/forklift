@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"io/fs"
 	"path"
 
@@ -120,6 +121,11 @@ func (r *FSRepo) LoadReadme() ([]byte, error) {
 // Path returns the repo path of the Repo instance.
 func (r Repo) Path() string {
 	return r.Def.Repo.Path
+}
+
+// VersionQuery represents the Repo instance as a version query.
+func (r Repo) VersionQuery() string {
+	return fmt.Sprintf("%s@%s", r.Path(), r.Version)
 }
 
 // Check looks for errors in the construction of the repo.

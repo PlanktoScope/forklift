@@ -18,6 +18,8 @@ type FSPallet struct {
 type Pallet struct {
 	// Def is the Forklift pallet definition for the pallet.
 	Def PalletDef
+	// Version is the version or pseudoversion of the pallet.
+	Version string
 }
 
 // PalletDefFile is the name of the file defining each Forklift pallet.
@@ -91,17 +93,32 @@ type DeplDef struct {
 // ReqsDirName is the directory in a Forklift pallet which contains requirement configurations.
 const ReqsDirName = "requirements"
 
-// A PkgReq is a requirement for a package at a specific version.
-type PkgReq struct {
-	// PkgSubdir is the package subdirectory in the repo which should provide the required package.
-	PkgSubdir string
-	// Repo is the repo which should provide the required package.
-	Repo RepoReq
+// A GitRepoReq is a requirement for a specific Git repository (e.g. a pallet or Forklift repo) at
+// a specific version.
+type GitRepoReq struct {
+	// GitRepoPath is the path of the required Git repository.
+	RequiredPath string
+	// VersionLock specifies the version of the required Git repository.
+	VersionLock VersionLock
 }
 
-// PkgReqLoader is a source of package requirements.
-type PkgReqLoader interface {
-	LoadPkgReq(pkgPath string) (PkgReq, error)
+const (
+	// ReqsPalletsDirName is the subdirectory in the requirements directory of a Forklift pallet which
+	// contains pallet requirement configurations.
+	ReqsPalletsDirName = "pallets"
+)
+
+// A FSPalletReq is a pallet requirement stored at the root of a [fs.FS] filesystem.
+type FSPalletReq struct {
+	// PalletReq is the pallet requirement at the root of the filesystem.
+	PalletReq
+	// FS is a filesystem which contains the pallet requirement's contents.
+	FS core.PathedFS
+}
+
+// A PalletReq is a requirement for a specific pallet at a specific version.
+type PalletReq struct {
+	GitRepoReq
 }
 
 const (
@@ -120,8 +137,18 @@ type FSRepoReq struct {
 
 // A RepoReq is a requirement for a specific repo at a specific version.
 type RepoReq struct {
-	// RepoPath is the repository path of the required repo.
-	RepoPath string
-	// VersionLock specifies the version of the required repo.
-	VersionLock VersionLock
+	GitRepoReq
+}
+
+// A PkgReq is a requirement for a package at a specific version.
+type PkgReq struct {
+	// PkgSubdir is the package subdirectory in the repo which should provide the required package.
+	PkgSubdir string
+	// Repo is the repo which should provide the required package.
+	Repo RepoReq
+}
+
+// PkgReqLoader is a source of package requirements.
+type PkgReqLoader interface {
+	LoadPkgReq(pkgPath string) (PkgReq, error)
 }

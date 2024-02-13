@@ -57,6 +57,10 @@ func (w *FSWorkspace) GetRepoCachePath() string {
 	return path.Join(w.getCachePath(), cacheReposDirName)
 }
 
+func (w *FSWorkspace) GetPalletCachePath() string {
+	return path.Join(w.getCachePath(), cachePalletsDirName)
+}
+
 func (w *FSWorkspace) getCachePath() string {
 	return path.Join(w.FS.Path(), cacheDirPath)
 }
@@ -71,6 +75,20 @@ func (w *FSWorkspace) GetRepoCache() (*FSRepoCache, error) {
 		return nil, errors.Wrap(err, "couldn't get repos cache from workspace")
 	}
 	return &FSRepoCache{
+		FS: pathedFS,
+	}, nil
+}
+
+func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
+	fsys, err := w.getCacheFS()
+	if err != nil {
+		return nil, err
+	}
+	pathedFS, err := fsys.Sub(cachePalletsDirName)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get pallets cache from workspace")
+	}
+	return &FSPalletCache{
 		FS: pathedFS,
 	}, nil
 }

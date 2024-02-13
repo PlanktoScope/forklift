@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- (cli) Added `cache add-plt` and `cache add-repo` subcommands to download a repo/pallet to the local cache, given the repo/pallet's path and a version query.
+- (cli) Added a `cache show-plt` subcommand to show information about a specified pallet in the local cache.
+- (cli) Added `cache ls-plt` and `cache rm-plt` subcommands to list and delete all pallets in the local cache.
+
 ## 0.5.3 - 2024-02-10
 
 ### Fixed
