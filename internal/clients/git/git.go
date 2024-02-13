@@ -9,6 +9,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
@@ -230,6 +231,92 @@ func (r *Repo) GetAncestralTags(commit string) ([]AncestralTag, error) {
 	return ancestralTags, errors.Wrapf(err, "couldn't check for tags ancestral to commit %s", commit)
 }
 
+func (r *Repo) MakeTrackingBranches(remoteName string) error {
+	// Determine local branches (so we can skip them)
+	branches := make(map[string]struct{})
+	branchesIter, err := r.repository.References()
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list refs")
+	}
+	defer branchesIter.Close()
+	refPrefix := "refs/heads/"
+	if err = branchesIter.ForEach(func(ref *plumbing.Reference) error {
+		refName := ref.Name().String()
+		if !strings.HasPrefix(refName, refPrefix) {
+			return nil
+		}
+		branchName := strings.TrimPrefix(refName, refPrefix)
+		branches[branchName] = struct{}{}
+		return nil
+	}); err != nil {
+		return err
+	}
+	// we don't want to make a branch named "HEAD", either:
+	branches[string(plumbing.HEAD)] = struct{}{}
+
+	// Determine remote branches
+	remote, err := r.repository.Remote(remoteName)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't open remote %s", remoteName)
+	}
+	refs, err := remote.List(&git.ListOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "couldn't list remote refs")
+	}
+
+	// Make any missing branches
+	for _, ref := range refs {
+		refName := ref.Name().String()
+		if !strings.HasPrefix(refName, refPrefix) {
+			continue
+		}
+		branchName := strings.TrimPrefix(refName, refPrefix)
+		if _, ok := branches[branchName]; ok {
+			continue
+		}
+		if err = r.repository.CreateBranch(&config.Branch{
+			Name:   branchName,
+			Remote: remoteName,
+			Merge:  plumbing.NewBranchReferenceName(branchName),
+		}); err != nil {
+			return errors.Wrapf(err, "couldn't set up local branch to track remote branch %s", branchName)
+		}
+	}
+	return nil
+}
+
+func (r *Repo) FetchAll() error {
+	if err := r.repository.Fetch(&git.FetchOptions{
+		Progress: os.Stdout,
+		Tags:     git.AllTags,
+		RefSpecs: []config.RefSpec{
+			"+refs/heads/*:refs/heads/*",
+		},
+	}); err != nil {
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return nil
+		}
+		return errors.Wrapf(err, "couldn't fetch changes")
+	}
+	return nil
+}
+
+func (r *Repo) SetRemoteURLs(remoteName string, urls []string) error {
+	remote, err := r.repository.Remote(remoteName)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't open remote %s", remoteName)
+	}
+	config := remote.Config()
+	config.URLs = urls
+	if err = r.repository.DeleteRemote(remoteName); err != nil {
+		return errors.Wrapf(err, "couldn't delete remote %s", remoteName)
+	}
+	if _, err = r.repository.CreateRemote(config); err != nil {
+		return errors.Wrapf(err, "couldn't delete remote %s", remoteName)
+	}
+	return nil
+}
+
 var ErrRepositoryAlreadyExists = git.ErrRepositoryAlreadyExists
 
 func ParseRemoteRelease(remoteRelease string) (remote, release string, err error) {
@@ -332,6 +419,9 @@ func Fetch(local string) (updated bool, err error) {
 	if err = repo.Fetch(&git.FetchOptions{
 		Progress: os.Stdout,
 		Tags:     git.AllTags,
+		RefSpecs: []config.RefSpec{
+			"+refs/heads/*:refs/remotes/origin/*",
+		},
 	}); err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			return false, nil

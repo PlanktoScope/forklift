@@ -68,7 +68,9 @@ func addGitRepoAction[Cache core.Pather](
 		}
 
 		queries := c.Args().Slice()
-		if _, err = fcli.DownloadGitRepos(0, cache.Path(), queries); err != nil {
+		if _, _, err = fcli.DownloadQueriedGitReposUsingLocalMirrors(
+			0, cache.Path(), queries,
+		); err != nil {
 			return err
 		}
 		fmt.Println()

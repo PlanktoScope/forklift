@@ -221,7 +221,9 @@ func DownloadRequiredPallets(
 	}
 	changed = false
 	for _, req := range loadedPalletReqs {
-		downloaded, err := DownloadGitRepo(indent, cache.Path(), req.Path(), req.VersionLock)
+		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
+			indent, cache.Path(), req.Path(), req.VersionLock,
+		)
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(

@@ -85,21 +85,14 @@ func addRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Act
 		if err = fcli.ValidateGitRepoQueries(repoQueries); err != nil {
 			return errors.Wrap(err, "one or more arguments is invalid")
 		}
-		fmt.Println("Updating local mirrors of remote Git repos...")
-		if err = fcli.UpdateLocalGitRepoMirrors(0, repoQueries, cache.Underlay.Path()); err != nil {
-			return errors.Wrap(err, "couldn't update local repo mirrors")
-		}
-
-		fmt.Println()
-		fmt.Println("Resolving version queries...")
-		reqs, err := fcli.ResolveGitRepoQueries(repoQueries, cache.Underlay.Path())
+		resolved, err := fcli.ResolveQueriesUsingLocalMirrors(0, cache.Underlay.Path(), repoQueries)
 		if err != nil {
-			return errors.Wrap(err, "couldn't resolve version queries for repos")
+			return err
 		}
 		fmt.Println()
 		fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
 		for _, repoQuery := range repoQueries {
-			req, ok := reqs[repoQuery]
+			req, ok := resolved[repoQuery]
 			if !ok {
 				return errors.Errorf("couldn't find configuration for %s", repoQuery)
 			}

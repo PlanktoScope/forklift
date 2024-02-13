@@ -139,7 +139,9 @@ func DownloadRequiredRepos(
 	}
 	changed = false
 	for _, req := range loadedRepoReqs {
-		downloaded, err := DownloadGitRepo(indent, cache.Path(), req.Path(), req.VersionLock)
+		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
+			indent, cache.Path(), req.Path(), req.VersionLock,
+		)
 		changed = changed || downloaded
 		if err != nil {
 			return false, errors.Wrapf(

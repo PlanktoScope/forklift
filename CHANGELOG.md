@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `cache rm-plt` subcommand to delete all pallets in the local cache.
 - (cli) Added a `cache add-repo` subcommand to download a repo to the local cache, given the repo's path and a version query. If the pallet is already in the local cache, the subcommand will complete successfully even if there is no internet connection.
 
+### Changed
+- (cli) The `plt clone` and `plt switch` subcommands now update the local pallet cache, and they initialize the local pallet from the local pallet cache. This way, version queries can still be resolved (for re-cloning or switching pallets) even without internet access, as long as the local pallet cache is up-to-date.
+- (cli) The `plt clone` and `plt switch` subcommands now create local branches tracking all remote branches, and providing a branch name as the version query causes the corresponding local branch to be checked out (instead of checking out the remote branch). This makes it easier to add local commits and push/pull between the local repository and the remote repository when a branch is checked out on the local repository.
+- (cli) The `[dev] plt add-repo` subcommand now updates the local pallet cache, and it runs version queries on the local pallet cache. This way, version queries can still be resolved (for re-cloning or switching pallets) even without internet access, as long as the local pallet cache is up-to-date.
+
 ### Removed
 
 - (Breaking change: cli) Local mirrors of remote Git repos are no longer deleted and re-cloned when Git fetch operations fail on them as part of resolving version queries; such local mirrors will instead need to be manually deleted. This removal of the previous behavior is needed to prevent local mirrors from being deleted when internet access is unavailable.
