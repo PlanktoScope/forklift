@@ -21,17 +21,37 @@ func DownloadGitRepos(
 	if err = ValidateGitRepoQueries(queries); err != nil {
 		return false, errors.Wrap(err, "one or more arguments is invalid")
 	}
-	IndentedPrintln(indent, "Updating local mirrors of remote Git repos...")
-	if err = UpdateLocalGitRepoMirrors(indent, queries, cachePath); err != nil {
-		return false, errors.Wrap(err, "couldn't update local Git repo mirrors")
+	reqs, err := ResolveGitRepoQueries(queries, cachePath)
+
+	fmt.Println()
+	if err == nil {
+		IndentedPrintln(
+			indent,
+			"Trying to update local mirrors of remote Git repos (even though it's not required)...",
+		)
+		if err = UpdateLocalGitRepoMirrors(indent, queries, cachePath); err != nil {
+			IndentedPrintf(
+				indent, "Couldn't update local Git repo mirrors (do you have internet access?): %s\n", err,
+			)
+		}
+	} else {
+		IndentedPrintln(
+			indent,
+			"Couldn't resolve one or more version queries, so we'll update local mirrors of remote Git "+
+				"repos and try again",
+		)
+		IndentedPrintln(indent, "Updating local mirrors of remote Git repos...")
+		if err = UpdateLocalGitRepoMirrors(indent, queries, cachePath); err != nil {
+			return false, errors.Wrap(err, "couldn't update local Git repo mirrors")
+		}
+		fmt.Println()
+		IndentedPrintln(indent, "Resolving version queries now that local mirrors are updated...")
+		if reqs, err = ResolveGitRepoQueries(queries, cachePath); err != nil {
+			return false, errors.Wrap(err, "couldn't resolve version queries for repos")
+		}
 	}
 
 	fmt.Println()
-	IndentedPrintln(indent, "Resolving version queries...")
-	reqs, err := ResolveGitRepoQueries(queries, cachePath)
-	if err != nil {
-		return false, errors.Wrap(err, "couldn't resolve version queries for repos")
-	}
 	changed = false
 	for _, req := range reqs {
 		downloaded, err := DownloadGitRepo(indent, cachePath, req.Path(), req.VersionLock)
@@ -86,22 +106,13 @@ func UpdateLocalGitRepoMirrors(indent int, queries []string, cachePath string) e
 func updateLocalGitRepoMirror(indent int, remote, cachedPath string) error {
 	remote = filepath.FromSlash(remote)
 	cachedPath = filepath.FromSlash(cachedPath)
-	if _, err := os.Stat(cachedPath); err == nil {
-		IndentedPrintf(indent, "Fetching updates for %s...\n", cachedPath)
-		if _, err = git.Fetch(cachedPath); err == nil {
-			return err
-		}
-		IndentedPrintf(
-			indent, "Warning: couldn't fetch updates in local mirror, will try to re-clone instead: %e\n",
-			err,
-		)
-		if err = os.RemoveAll(cachedPath); err != nil {
-			return errors.Wrapf(err, "couldn't remove %s in order to re-clone %s", cachedPath, remote)
-		}
+	if _, err := os.Stat(cachedPath); os.IsNotExist(err) {
+		IndentedPrintf(indent, "Cloning %s to %s...\n", remote, cachedPath)
+		_, err = git.CloneMirrored(remote, cachedPath)
+		return err
 	}
-
-	IndentedPrintf(indent, "Cloning %s to %s...\n", remote, cachedPath)
-	_, err := git.CloneMirrored(remote, cachedPath)
+	IndentedPrintf(indent, "Fetching updates for %s...\n", cachedPath)
+	_, err := git.Fetch(cachedPath)
 	return err
 }
 

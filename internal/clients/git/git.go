@@ -258,7 +258,7 @@ func Open(local string) (*Repo, error) {
 	repo, err := git.PlainOpen(local)
 	return &Repo{
 		repository: repo,
-	}, errors.Wrapf(err, "couldn't pen git repo at %s", local)
+	}, errors.Wrapf(err, "couldn't open git repo at %s", local)
 }
 
 func Clone(remote, local string) (*Repo, error) {

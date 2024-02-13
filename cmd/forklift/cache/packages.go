@@ -15,7 +15,7 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"))
+	cache, err := getRepoCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"))
+	cache, err := getRepoCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}

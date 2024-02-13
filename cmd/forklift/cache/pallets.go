@@ -10,7 +10,7 @@ import (
 // ls-plt
 
 func lsPltAction(c *cli.Context) error {
-	cache, err := getPalletCache(c.String("workspace"))
+	cache, err := getPalletCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func lsPltAction(c *cli.Context) error {
 // show-plt
 
 func showPltAction(c *cli.Context) error {
-	cache, err := getPalletCache(c.String("workspace"))
+	cache, err := getPalletCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}

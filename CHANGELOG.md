@@ -9,9 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- (cli) Added `cache add-plt` and `cache add-repo` subcommands to download a repo/pallet to the local cache, given the repo/pallet's path and a version query.
+- (cli) Added a `cache add-plt` subcommand to download a pallet to the local cache, given the pallet's path and a version query. If the pallet is already in the local cache, the subcommand will complete successfully even if there is no internet connection.
 - (cli) Added a `cache show-plt` subcommand to show information about a specified pallet in the local cache.
-- (cli) Added `cache ls-plt` and `cache rm-plt` subcommands to list and delete all pallets in the local cache.
+- (cli) Added a `cache ls-plt` subcommand to list all pallets in the local cache.
+- (cli) Added a `cache rm-plt` subcommand to delete all pallets in the local cache.
+- (cli) Added a `cache add-repo` subcommand to download a repo to the local cache, given the repo's path and a version query. If the pallet is already in the local cache, the subcommand will complete successfully even if there is no internet connection.
+
+### Removed
+
+- (Breaking change: cli) Local mirrors of remote Git repos are no longer deleted and re-cloned when Git fetch operations fail on them as part of resolving version queries; such local mirrors will instead need to be manually deleted. This removal of the previous behavior is needed to prevent local mirrors from being deleted when internet access is unavailable.
 
 ## 0.5.3 - 2024-02-10
 

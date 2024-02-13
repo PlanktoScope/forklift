@@ -59,10 +59,10 @@ func showGitRepo[GitRepo any](
 // add-*
 
 func addGitRepoAction[Cache core.Pather](
-	cacheGetter func(wpath string) (Cache, error),
+	cacheGetter func(wpath string, ensureWorkspace bool) (Cache, error),
 ) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
-		cache, err := cacheGetter(c.String("workspace"))
+		cache, err := cacheGetter(c.String("workspace"), true)
 		if err != nil {
 			return err
 		}
@@ -84,10 +84,10 @@ type remover interface {
 // rm-*
 
 func rmGitRepoAction[Cache remover](
-	gitRepoType string, cacheGetter func(wpath string) (Cache, error),
+	gitRepoType string, cacheGetter func(wpath string, ensureWorkspace bool) (Cache, error),
 ) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
-		cache, err := cacheGetter(c.String("workspace"))
+		cache, err := cacheGetter(c.String("workspace"), false)
 		if err != nil {
 			return err
 		}

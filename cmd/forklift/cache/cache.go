@@ -18,7 +18,15 @@ var errMissingCache = errors.Errorf(
 		"`forklift plt cache-repo`",
 )
 
-func getPalletCache(wpath string) (*forklift.FSPalletCache, error) {
+func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
+	if ensureWorkspace {
+		if !forklift.Exists(wpath) {
+			fmt.Printf("Making a new workspace at %s...", wpath)
+		}
+		if err := forklift.EnsureExists(wpath); err != nil {
+			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
+		}
+	}
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
@@ -30,7 +38,15 @@ func getPalletCache(wpath string) (*forklift.FSPalletCache, error) {
 	return cache, nil
 }
 
-func getRepoCache(wpath string) (*forklift.FSRepoCache, error) {
+func getRepoCache(wpath string, ensureWorkspace bool) (*forklift.FSRepoCache, error) {
+	if ensureWorkspace {
+		if !forklift.Exists(wpath) {
+			fmt.Printf("Making a new workspace at %s...", wpath)
+		}
+		if err := forklift.EnsureExists(wpath); err != nil {
+			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
+		}
+	}
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err

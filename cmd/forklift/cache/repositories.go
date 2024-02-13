@@ -10,7 +10,7 @@ import (
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"))
+	cache, err := getRepoCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func lsRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"))
+	cache, err := getRepoCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}
