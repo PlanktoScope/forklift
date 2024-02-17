@@ -41,7 +41,61 @@ func makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion string) 
 
 func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
 	const category = "Use the pallet"
+	return append(
+		makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion),
+		&cli.Command{
+			Name:     "check",
+			Category: category,
+			Usage:    "Checks whether the local pallet's resource constraints are satisfied",
+			Action:   checkAction(toolVersion, repoMinVersion, palletMinVersion),
+		},
+		&cli.Command{
+			Name:     "plan",
+			Category: category,
+			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
+				"specified by the local pallet",
+			Action: planAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
+		},
+		&cli.Command{
+			Name:     "apply",
+			Category: category,
+			Usage:    "Updates the Docker host to match the deployments specified by the local pallet",
+			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize updating of deployments",
+				},
+			},
+		},
+	)
+}
+
+func makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+	const category = "Use the pallet"
 	return []*cli.Command{
+		{
+			Name:     "cache-all",
+			Category: category,
+			Usage:    "Updates the cache with everything needed by the local pallet",
+			Action:   cacheAllAction(toolVersion, repoMinVersion, palletMinVersion),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "include-disabled",
+					Usage: "also cache things needed for disabled package deployments",
+				},
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
+		},
 		{
 			Name:     "cache-repo",
 			Aliases:  []string{"cache-repositories"},
@@ -63,37 +117,6 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 				&cli.BoolFlag{
 					Name:  "parallel",
 					Usage: "parallelize downloading of images",
-				},
-			},
-		},
-		{
-			Name:     "check",
-			Category: category,
-			Usage:    "Checks whether the local pallet's resource constraints are satisfied",
-			Action:   checkAction(toolVersion, repoMinVersion, palletMinVersion),
-		},
-		{
-			Name:     "plan",
-			Category: category,
-			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
-				"specified by the local pallet",
-			Action: planAction(toolVersion, repoMinVersion, palletMinVersion),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of images",
-				},
-			},
-		},
-		{
-			Name:     "apply",
-			Category: category,
-			Usage:    "Updates the Docker host to match the deployments specified by the local pallet",
-			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize updating of deployments",
 				},
 			},
 		},

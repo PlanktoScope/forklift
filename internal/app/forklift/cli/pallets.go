@@ -234,6 +234,27 @@ func DownloadRequiredPallets(
 	return changed, nil
 }
 
+// Cache
+
+func CacheAllRequirements(
+	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, includeDisabled, parallel bool,
+) (changed bool, err error) {
+	fmt.Println("Downloading repos specified by the local pallet...")
+	changed, err = DownloadRequiredRepos(0, pallet, repoCache)
+	if err != nil {
+		return false, err
+	}
+
+	// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
+	// forklift version is incompatible or ahead of the pallet version
+
+	fmt.Println("Downloading Docker container images specified by the local pallet...")
+	if err := DownloadImages(0, pallet, repoCache, includeDisabled, parallel); err != nil {
+		return false, err
+	}
+	return changed, nil
+}
+
 // Check
 
 // CheckPallet checks the resource constraints among package deployments in the pallet.
