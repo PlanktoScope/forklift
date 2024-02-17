@@ -38,6 +38,35 @@ func getPallet(wpath string) (pallet *forklift.FSPallet, err error) {
 	return pallet, nil
 }
 
+// cache-all
+
+func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		changed, err := fcli.CacheAllRequirements(
+			pallet, cache, c.Bool("include-disabled"), c.Bool("parallel"),
+		)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			fmt.Println("Done! No further actions are needed at this time.")
+			return nil
+		}
+		fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
+		return nil
+	}
+}
+
 // switch
 
 func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
@@ -70,7 +99,7 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 		// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
 		// version is incompatible
 
-		// cache repos required by pallet
+		// cache everything required by pallet
 		pallet, cache, err := processFullBaseArgs(c, false)
 		if err != nil {
 			return err
@@ -80,11 +109,11 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 		); err != nil {
 			return err
 		}
-		fmt.Println("Downloading repos specified by the local pallet...")
-		if _, err = fcli.DownloadRequiredRepos(0, pallet, cache); err != nil {
+		if _, err = fcli.CacheAllRequirements(
+			pallet, cache, c.Bool("include-disabled"), c.Bool("parallel"),
+		); err != nil {
 			return err
 		}
-		fmt.Println()
 
 		// apply pallet
 		if err = fcli.ApplyPallet(0, pallet, cache, c.Bool("parallel")); err != nil {
@@ -129,7 +158,7 @@ func cloneAction(c *cli.Context) error {
 
 	// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
 	// version is incompatible
-	fmt.Println("Done! Next, you'll probably want to run `forklift plt cache-repo`.")
+	fmt.Println("Done! Next, you'll probably want to run `forklift plt cache-all`.")
 	return nil
 }
 

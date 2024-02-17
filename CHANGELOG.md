@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `cache ls-plt` subcommand to list all pallets in the local cache.
 - (cli) Added a `cache rm-plt` subcommand to delete all pallets in the local cache.
 - (cli) Added a `cache add-repo` subcommand to download a repo to the local cache, given the repo's path and a version query. If the pallet is already in the local cache, the subcommand will complete successfully even if there is no internet connection.
+- (cli) Added a `[dev] plt cache-all` subcommand which just does everything in `[dev] plt cache-repo` and `[dev] plt cache-img` in a single command.
 
 ### Changed
 - (cli) The `plt clone` and `plt switch` subcommands now update the local pallet cache, and they initialize the local pallet from the local pallet cache. This way, version queries can still be resolved (for re-cloning or switching pallets) even without internet access, as long as the local pallet cache is up-to-date.

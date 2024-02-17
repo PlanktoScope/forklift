@@ -109,6 +109,35 @@ func setOverrideCacheVersions(
 	return nil
 }
 
+// cache-all
+
+func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, false, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		changed, err := fcli.CacheAllRequirements(
+			pallet, cache.Underlay, c.Bool("include-disabled"), c.Bool("parallel"),
+		)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			fmt.Println("Done! No further actions are needed at this time.")
+			return nil
+		}
+		fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
+		return nil
+	}
+}
+
 // show
 
 func showAction(c *cli.Context) error {
