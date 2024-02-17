@@ -63,9 +63,9 @@ Once you have forklift, you will need to clone a pallet and apply it to your Doc
 forklift plt clone github.com/PlanktoScope/pallet-standard@edge
 ```
 
-Then you will need to download the Forklift repositories specified by your local pallet into your local cache, so that you can deploy packages provided by those repositories according to the pallet's configuration. You can download the necessary repositories using the command:
+Then you will need to download everything required by your local pallet into your local cache. You can download the necessary requirements using the command:
 ```
-forklift plt cache-repo
+forklift plt cache-all
 ```
 
 Then you will need to apply the package deployments (as configured by your local pallet) onto your Docker host. You can apply the deployments using the command (note that you need `sudo -E` unless you are running the Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
@@ -107,7 +107,7 @@ cd /etc/
 
 You can also use the `forklift dev plt add-repo` command to add additional Forklift repositories to your development pallet, and to change the versions of Forklift repositories already added to your development pallet.
 
-You can also run commands like `forklift dev plt cache-repo` and `sudo -E forklift dev plt apply` (with appropriate values in the `--cwd` flag if necessary) to download the Forklift repositories specified by your development pallet into your local cache and deploy the packages provided by those repositories according to the configuration in your development pallet. This is useful if, for example, you want to make some experimental changes to your development pallet and test them on your local machine before committing and pushing those changes onto GitHub.
+You can also run commands like `forklift dev plt cache-all` and `sudo -E forklift dev plt apply` (with appropriate values in the `--cwd` flag if necessary) to download the Forklift repositories specified by your development pallet into your local cache and deploy the packages provided by those repositories according to the configuration in your development pallet. This is useful if, for example, you want to make some experimental changes to your development pallet and test them on your local machine before committing and pushing those changes onto GitHub.
 
 Finally, you can run the `forklift dev plt check` command to check the pallet for any problems, such as violations of resource constraints between package deployments.
 
