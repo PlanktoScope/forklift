@@ -1,5 +1,5 @@
 PACKAGE_NAME := github.com/PlanktoScope/forklift
-GOLANG_CROSS_VERSION ?= v1.21.0
+GOLANG_CROSS_VERSION ?= v1.22.0
 
 .DEFAULT_GOAL := dev
 
@@ -76,7 +76,7 @@ build: install
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--snapshot --skip=publish --clean
+		release --snapshot --skip publish --clean
 
 .PHONY: release
 release: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --clean
@@ -90,7 +90,7 @@ release: install
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--clean
+		release --clean
 
 .PHONY: run
 run: ## go run
