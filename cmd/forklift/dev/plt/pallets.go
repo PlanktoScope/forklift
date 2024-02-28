@@ -124,7 +124,7 @@ func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Ac
 		}
 
 		changed, err := fcli.CacheAllRequirements(
-			pallet, cache.Underlay, c.Bool("include-disabled"), c.Bool("parallel"),
+			pallet, cache.Underlay.Path(), cache, c.Bool("include-disabled"), c.Bool("parallel"),
 		)
 		if err != nil {
 			return err

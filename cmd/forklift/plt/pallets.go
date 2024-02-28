@@ -53,7 +53,7 @@ func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Ac
 		}
 
 		changed, err := fcli.CacheAllRequirements(
-			pallet, cache, c.Bool("include-disabled"), c.Bool("parallel"),
+			pallet, cache.Path(), cache, c.Bool("include-disabled"), c.Bool("parallel"),
 		)
 		if err != nil {
 			return err
@@ -110,7 +110,7 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 			return err
 		}
 		if _, err = fcli.CacheAllRequirements(
-			pallet, cache, c.Bool("include-disabled"), c.Bool("parallel"),
+			pallet, cache.Path(), cache, c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}

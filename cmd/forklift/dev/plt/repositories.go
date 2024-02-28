@@ -29,7 +29,7 @@ func cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.A
 		}
 
 		fmt.Printf("Downloading repos specified by the development pallet...\n")
-		changed, err := fcli.DownloadRequiredRepos(0, pallet, cache.Underlay)
+		changed, err := fcli.DownloadRequiredRepos(0, pallet, cache.Underlay.Path())
 		if err != nil {
 			return err
 		}
