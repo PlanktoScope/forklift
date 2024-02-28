@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.6.0 - 2024-02-28
 
 ### Added
 
@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `cache rm-plt` subcommand to delete all pallets in the local cache.
 - (cli) Added a `cache add-repo` subcommand to download a repo to the local cache, given the repo's path and a version query. If the pallet is already in the local cache, the subcommand will complete successfully even if there is no internet connection.
 - (cli) Added a `[dev] plt cache-all` subcommand which just does everything in `[dev] plt cache-repo` and `[dev] plt cache-img` in a single command.
+- (release) Restored builds of macOS and Windows binaries (warning: these have not been tested to work!).
 
 ### Changed
 
