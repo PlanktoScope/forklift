@@ -213,7 +213,7 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 // Download
 
 func DownloadRequiredPallets(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+	indent int, pallet *forklift.FSPallet, cachePath string,
 ) (changed bool, err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
@@ -222,7 +222,7 @@ func DownloadRequiredPallets(
 	changed = false
 	for _, req := range loadedPalletReqs {
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cache.Path(), req.Path(), req.VersionLock,
+			indent, cachePath, req.Path(), req.VersionLock,
 		)
 		changed = changed || downloaded
 		if err != nil {
@@ -237,10 +237,11 @@ func DownloadRequiredPallets(
 // Cache
 
 func CacheAllRequirements(
-	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, includeDisabled, parallel bool,
+	pallet *forklift.FSPallet, repoCachePath string, loader forklift.FSPkgLoader,
+	includeDisabled, parallel bool,
 ) (changed bool, err error) {
 	fmt.Println("Downloading repos specified by the local pallet...")
-	changed, err = DownloadRequiredRepos(0, pallet, repoCache)
+	changed, err = DownloadRequiredRepos(0, pallet, repoCachePath)
 	if err != nil {
 		return false, err
 	}
@@ -249,7 +250,7 @@ func CacheAllRequirements(
 	// forklift version is incompatible or ahead of the pallet version
 
 	fmt.Println("Downloading Docker container images specified by the local pallet...")
-	if err := DownloadImages(0, pallet, repoCache, includeDisabled, parallel); err != nil {
+	if err := DownloadImages(0, pallet, loader, includeDisabled, parallel); err != nil {
 		return false, err
 	}
 	return changed, nil

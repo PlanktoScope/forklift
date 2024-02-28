@@ -131,7 +131,7 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 // Download
 
 func DownloadRequiredRepos(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache,
+	indent int, pallet *forklift.FSPallet, cachePath string,
 ) (changed bool, err error) {
 	loadedRepoReqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
@@ -140,7 +140,7 @@ func DownloadRequiredRepos(
 	changed = false
 	for _, req := range loadedRepoReqs {
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cache.Path(), req.Path(), req.VersionLock,
+			indent, cachePath, req.Path(), req.VersionLock,
 		)
 		changed = changed || downloaded
 		if err != nil {
