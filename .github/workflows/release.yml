@@ -20,7 +20,7 @@ jobs:
           swap-storage: false
 
       - name: Set up Golang with cache
-        uses: magnetikonline/action-golang-cache@v4
+        uses: magnetikonline/action-golang-cache@v5
         with:
           go-version-file: go.mod
 
