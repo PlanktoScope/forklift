@@ -42,12 +42,12 @@ Then you may need to move the `forklift` binary into a directory in your system 
 
 ### Deploy a published pallet
 
-Once you have forklift, you will need to clone a pallet and apply it to your Docker host. For example, you can clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallet-standard`](https://github.com/PlanktoScope/pallet-standard) pallet using the command:
+Once you have forklift, you will need to clone a pallet and apply it to your Docker host. For example, you can clone the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet using the command:
 ```
-forklift plt clone github.com/PlanktoScope/pallet-standard@edge
+forklift plt clone github.com/ethanjli/pallet-example-minimal@main
 ```
 
-Then you will need to download everything required by your local pallet into your local cache. You can download the necessary requirements using the command:
+Then you may need to download everything required by your local pallet into your local cache. You can download the necessary requirements using the command:
 ```
 forklift plt cache-all
 ```
@@ -59,21 +59,21 @@ sudo -E forklift plt apply
 
 If your user is in the `docker` group, then you can just run a single command which does all three steps above (this way you don't have to run those three commands each time you want to get a newer version and apply it):
 ```
-forklift plt switch github.com/PlanktoScope/pallet-standard@edge
+forklift plt switch github.com/ethanjli/pallet-example-minimal@main
 ```
 
 ### Work on a development pallet
 
-First, you will need to make/download a pallet somewhere on your local file system. For example, you can use `git` to clone the latest unstable version (on the `edge` branch) of the [`github.com/PlanktoScope/pallet-standard`](https://github.com/PlanktoScope/pallet-standard) pallet using the command:
+First, you will need to make/download a pallet somewhere on your local file system. For example, you can use `git` to clone the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet using the command:
 
 ```
-git clone https://github.com/PlanktoScope/pallet-standard
+git clone https://github.com/ethanjli/pallet-example-minimal
 ```
 
-Then you will need to download/install the `forklift` tool (see instructions in the ["Download/install forklift"](#downloadinstall-forklift) section above). Once you have `forklift`, you can run commands using the `dev plt` subcommand; if `forklift` is in your system path, you can simply run commands within the directory containing your development pallet, or any subdirectory of it. For example, if your development pallet is at `/home/pi/dev/pallet-standard`, you can run the following commands to see some information about your development pallet:
+Then you will need to download/install the `forklift` tool (see instructions in the ["Download/install forklift"](#downloadinstall-forklift) section above). Once you have `forklift`, you can run commands using the `dev plt` subcommand; if `forklift` is in your system path, you can simply run commands within the directory containing your development pallet, or any subdirectory of it. For example, if your development pallet is at `/home/pi/dev/pallet-example-minimal`, you can run the following commands to see some information about your development pallet:
 
 ```
-cd /home/pi/dev/pallet-standard
+cd /home/pi/dev/pallet-example-minimal
 forklift dev plt show
 ```
 
@@ -81,12 +81,12 @@ You can also run the command from anywhere else on your filesystem by specifying
 
 ```
 cd /home/pi/
-./forklift dev --cwd ./dev/pallet-standard plt show
+./forklift dev --cwd ./dev/pallet-example-minimal plt show
 ```
 
 ```
 cd /etc/
-/home/pi/forklift dev --cwd /home/pi/dev/pallet-standard plt show
+/home/pi/forklift dev --cwd /home/pi/dev/pallet-example-minimal plt show
 ```
 
 You can also use the `forklift dev plt add-repo` command to add additional Forklift repositories to your development pallet, and to change the versions of Forklift repositories already added to your development pallet.
@@ -99,7 +99,7 @@ You can also override cached repos with repos from your filesystem by specifying
 
 ```
 cd /home/pi/
-/home/pi/forklift dev --cwd /home/pi/dev/pallet-standard plt --repos /home/pi/forklift/dev/device-pkgs check
+/home/pi/forklift dev --cwd /home/pi/dev/pallet-example-minimal plt --repos /home/pi/forklift/dev/device-pkgs check
 ```
 
 ## Similar projects
