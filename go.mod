@@ -10,7 +10,7 @@ require (
 	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v25.0.4-0.20240305161310-2bf4225ad269+incompatible
 	github.com/docker/compose/v2 v2.25.0
-	github.com/docker/docker v25.0.4-0.20240301160236-51e876cd964c+incompatible
+	github.com/docker/docker v26.0.0-rc2+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/pkg/errors v0.9.1
@@ -112,6 +112,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/buildkit v0.13.0-beta1.0.20231219135447-957cb50df991 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
