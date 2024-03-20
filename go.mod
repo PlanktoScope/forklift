@@ -10,7 +10,7 @@ require (
 	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v25.0.4-0.20240305161310-2bf4225ad269+incompatible
 	github.com/docker/compose/v2 v2.25.0
-	github.com/docker/docker v25.0.4-0.20240301160236-51e876cd964c+incompatible
+	github.com/docker/docker v25.0.5+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/pkg/errors v0.9.1
