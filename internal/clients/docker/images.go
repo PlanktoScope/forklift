@@ -29,7 +29,7 @@ type Image struct {
 // docker image ls
 
 func (c *Client) ListImages(ctx context.Context, matchName string) ([]Image, error) {
-	listOptions := dt.ImageListOptions{}
+	listOptions := dti.ListOptions{}
 	if matchName != "" {
 		listOptions.Filters = dtf.NewArgs(dtf.KeyValuePair{
 			Key:   "reference",
@@ -184,7 +184,7 @@ func (c *Client) pullImage(
 		return err
 	}
 	responseBody, err := c.Client.ImagePull(
-		ctx, reference.FamiliarString(imgRefAndAuth.Reference()), dt.ImagePullOptions{
+		ctx, reference.FamiliarString(imgRefAndAuth.Reference()), dti.PullOptions{
 			RegistryAuth: encodedAuth,
 		},
 	)
