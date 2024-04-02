@@ -9,7 +9,7 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.0.2
 	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v26.0.0+incompatible
-	github.com/docker/compose/v2 v2.26.0
+	github.com/docker/compose/v2 v2.26.1
 	github.com/docker/docker v26.0.0+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.11.0
@@ -133,7 +133,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc6 // indirect
+	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
