@@ -92,7 +92,7 @@ func (p *FSPkg) Check() (errs []error) {
 // respective repos' versions. The result will be 0 if the p and q have the same paths and
 // versions; -1 if r has a path which alphabetically comes before the path of s, or if the paths are
 // the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
-// the path of s, or if the paths are the same but r has a lower version than s.
+// the path of s, or if the paths are the same but r has a higher version than s.
 func ComparePkgs(p, q Pkg) int {
 	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
 		return result

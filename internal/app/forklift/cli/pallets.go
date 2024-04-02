@@ -868,7 +868,8 @@ func StagePallet(
 		return errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
 	fmt.Printf("Committing stage %d to be applied subesequently...\n", index)
-	// TODO: commit the newly-staged pallet for the next stage application
+	// TODO: commit the newly-staged pallet for the next stage application, with a new file at
+	// ~/.local/share/forklift/staged-next or something?
 	return nil
 }
 
@@ -906,7 +907,7 @@ func newBundleDef(
 			Path:        pallet.Path(),
 			Description: pallet.Def.Pallet.Description,
 		},
-		Includes: forklift.BundlePalletInclusions{
+		Includes: forklift.BundleInclusions{
 			Pallets: make(map[string]forklift.BundlePalletInclusion),
 			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},

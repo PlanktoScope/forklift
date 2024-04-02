@@ -296,7 +296,7 @@ func ComparePallets(r, s Pallet) int {
 
 // PalletDef
 
-// loadPalletDef loads an PalletDef from the specified file path in the provided base filesystem.
+// loadPalletDef loads a PalletDef from the specified file path in the provided base filesystem.
 func loadPalletDef(fsys core.PathedFS, filePath string) (PalletDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {

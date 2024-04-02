@@ -7,9 +7,8 @@ import (
 // Bundle
 
 const (
-	// deploymentsDirName is the name of the directory containing bundled files for each package
-	// deployment.
-	deploymentsDirName = "deployments"
+	// packagesDirName is the name of the directory containing bundled files for each package.
+	packagesDirName = "packages"
 )
 
 // A FSBundle is a Forklift pallet bundle stored at the root of a [fs.FS] filesystem.
@@ -41,10 +40,10 @@ type BundleDef struct {
 	// every required Forklift repo or pallet bundle.
 	ForkliftVersion string `yaml:"forklift-version"`
 	// Pallet defines the basic metadata for the bundled pallet.
-	Pallet BundlePallet `yaml:"pallet,omitempty"`
+	Pallet BundlePallet `yaml:"pallet"`
 	// Includes describes repos and pallets used by the bundled pallet to define the bundle's
 	// package deployments.
-	Includes BundlePalletInclusions `yaml:"includes,omitempty"`
+	Includes BundleInclusions `yaml:"includes,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
 }
@@ -58,15 +57,14 @@ type BundlePallet struct {
 	Version string `yaml:"version"`
 	// Clean indicates whether the bundled pallet has been determined to have no changes beyond its
 	// latest Git commit, if the pallet is version-controlled with Git. This does not account for
-	// overrides of required repos/pallets - those should be checked in BundlePalletInclusions
-	// instead.
+	// overrides of required repos/pallets - those should be checked in BundleInclusions instead.
 	Clean bool `yaml:"clean"`
 	// Description is a short description of the bundled pallet to be shown to users.
 	Description string `yaml:"description,omitempty"`
 }
 
-// BundlePalletInclusions describes the requirements used to build the bundled pallet.
-type BundlePalletInclusions struct {
+// BundleInclusions describes the requirements used to build the bundled pallet.
+type BundleInclusions struct {
 	// Pallets describes external pallets used to build the bundled pallet.
 	Pallets map[string]BundlePalletInclusion `yaml:"pallets,omitempty"`
 	// Repos describes package repositories used to build the bundled pallet.

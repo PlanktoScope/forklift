@@ -71,7 +71,7 @@ func makeUseSubcmds(
 		&cli.Command{
 			Name:     "stage",
 			Category: category,
-			Usage:    "Stages the local pallet to be applied later",
+			Usage:    "Builds and stages a bundle of the local pallet to be applied later",
 			Action:   stageAction(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
 		},
 		&cli.Command{

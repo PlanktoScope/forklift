@@ -31,8 +31,8 @@ func (s *FSStageStore) Path() string {
 
 // LoadFSBundle loads the FSBundle with the specified index.
 // The loaded FSBundle instance is fully initialized.
-func (s *FSStageStore) LoadFSBundle(repoPath string, version string) (*FSBundle, error) {
-	return nil, errors.New("Unimplemented")
+func (s *FSStageStore) LoadFSBundle(index int) (*FSBundle, error) {
+	return LoadFSBundle(s.FS, fmt.Sprintf("%d", index))
 }
 
 // List returns a numerically-sorted (in ascending order) list of staged pallet bundles in the

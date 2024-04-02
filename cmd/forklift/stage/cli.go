@@ -18,13 +18,14 @@ func MakeCmd(toolVersion, newStageVersion string) *cli.Command {
 			Usage:    "Lists staged pallet bundles",
 			Action:   lsBunAction,
 		},
-		/*{
-			Name:     "rm-bun",
-			Aliases:  []string{"remove-bundles"},
-			Category: "Modify the stage store",
-			Usage:    "Removes all staged pallet bundles",
-			Action:   rmAction,
-		},*/
+		{
+			Name:      "show-bun",
+			Aliases:   []string{"show-bundle"},
+			Category:  "Query the stage store",
+			Usage:     "Describes a staged pallet bundle",
+			ArgsUsage: "index",
+			Action:    showBunAction,
+		},
 	}
 	return &cli.Command{
 		Name:        "stage",
