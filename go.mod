@@ -7,7 +7,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/compose-spec/compose-go/v2 v2.0.2
-	github.com/distribution/reference v0.5.0
+	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v26.0.0+incompatible
 	github.com/docker/compose/v2 v2.26.1
 	github.com/docker/docker v26.0.0+incompatible
