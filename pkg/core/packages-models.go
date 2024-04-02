@@ -78,7 +78,7 @@ type PkgDeplSpec struct {
 	ComposeFiles []string `yaml:"compose-files,omitempty"`
 	// Tags is a list of strings associated with the deployment.
 	Tags []string `yaml:"tags,omitempty"`
-	// Provides describes resource requirements which must be met for a deployment of the package to
+	// Requires describes resource requirements which must be met for a deployment of the package to
 	// succeed.
 	Requires RequiredRes `yaml:"requires,omitempty"`
 	// Provides describes resources provided by a successful deployment of the package.

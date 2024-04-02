@@ -38,31 +38,80 @@ func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
 	}, nil
 }
 
-func (w *FSWorkspace) GetCurrentPalletPath() string {
-	return path.Join(w.GetDataPath(), currentPalletDirName)
-}
+// Data
 
 func (w *FSWorkspace) GetDataPath() string {
 	return path.Join(w.FS.Path(), dataDirPath)
 }
 
-func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
+func (w *FSWorkspace) getDataFS() (core.PathedFS, error) {
 	if err := EnsureExists(w.GetDataPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.GetDataPath())
 	}
-	return LoadFSPallet(w.FS, path.Join(dataDirPath, currentPalletDirName))
+
+	fsys, err := w.FS.Sub(dataDirPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get data directory from workspace")
+	}
+	return fsys, nil
 }
 
-func (w *FSWorkspace) GetRepoCachePath() string {
-	return path.Join(w.getCachePath(), cacheReposDirName)
+// Data: Current Pallet
+
+func (w *FSWorkspace) GetCurrentPalletPath() string {
+	return path.Join(w.GetDataPath(), dataCurrentPalletDirName)
 }
 
-func (w *FSWorkspace) GetPalletCachePath() string {
-	return path.Join(w.getCachePath(), cachePalletsDirName)
+func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
+	fsys, err := w.getDataFS()
+	if err != nil {
+		return nil, err
+	}
+	return LoadFSPallet(fsys, dataCurrentPalletDirName)
 }
+
+// Data: Stages (i.e. pallet bundles which have been staged to be applied)
+
+func (w *FSWorkspace) GetStageStorePath() string {
+	return path.Join(w.GetDataPath(), dataStageStoreDirName)
+}
+
+func (w *FSWorkspace) GetStageStore() (*FSStageStore, error) {
+	fsys, err := w.getDataFS()
+	if err != nil {
+		return nil, err
+	}
+	pathedFS, err := fsys.Sub(dataStageStoreDirName)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get stage store from workspace")
+	}
+	return &FSStageStore{
+		FS: pathedFS,
+	}, nil
+}
+
+// Cache
 
 func (w *FSWorkspace) getCachePath() string {
 	return path.Join(w.FS.Path(), cacheDirPath)
+}
+
+func (w *FSWorkspace) getCacheFS() (core.PathedFS, error) {
+	if err := EnsureExists(w.getCachePath()); err != nil {
+		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getCachePath())
+	}
+
+	fsys, err := w.FS.Sub(cacheDirPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get cache directory from workspace")
+	}
+	return fsys, nil
+}
+
+// Cache: Repos
+
+func (w *FSWorkspace) GetRepoCachePath() string {
+	return path.Join(w.getCachePath(), cacheReposDirName)
 }
 
 func (w *FSWorkspace) GetRepoCache() (*FSRepoCache, error) {
@@ -79,6 +128,12 @@ func (w *FSWorkspace) GetRepoCache() (*FSRepoCache, error) {
 	}, nil
 }
 
+// Cache: Pallets
+
+func (w *FSWorkspace) GetPalletCachePath() string {
+	return path.Join(w.getCachePath(), cachePalletsDirName)
+}
+
 func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 	fsys, err := w.getCacheFS()
 	if err != nil {
@@ -91,16 +146,4 @@ func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 	return &FSPalletCache{
 		FS: pathedFS,
 	}, nil
-}
-
-func (w *FSWorkspace) getCacheFS() (core.PathedFS, error) {
-	if err := EnsureExists(w.getCachePath()); err != nil {
-		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getCachePath())
-	}
-
-	fsys, err := w.FS.Sub(cacheDirPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get cache from workspace")
-	}
-	return fsys, nil
 }

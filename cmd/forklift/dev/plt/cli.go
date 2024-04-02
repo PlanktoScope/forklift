@@ -5,9 +5,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command {
+func MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion string) *cli.Command {
 	var subcommands []*cli.Command
-	for _, group := range makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion) {
+	for _, group := range makeSubcommandGroups(
+		toolVersion, repoMinVersion, palletMinVersion, newStageVersion,
+	) {
 		subcommands = append(subcommands, group...)
 	}
 	return &cli.Command{
@@ -26,15 +28,19 @@ func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command 
 	}
 }
 
-func makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion string) [][]*cli.Command {
+func makeSubcommandGroups(
+	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
+) [][]*cli.Command {
 	return [][]*cli.Command{
-		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion),
+		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
 		makeQuerySubcmds(),
 		makeModifySubcmds(toolVersion, repoMinVersion, palletMinVersion),
 	}
 }
 
-func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+func makeUseSubcmds(
+	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
+) []*cli.Command {
 	const category = "Use the pallet"
 	return append(
 		makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion),
@@ -58,9 +64,15 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 			},
 		},
 		&cli.Command{
+			Name:     "stage",
+			Category: category,
+			Usage:    "Stages the development pallet to be applied later",
+			Action:   stageAction(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
+		},
+		&cli.Command{
 			Name:     "apply",
 			Category: category,
-			Usage:    "Updates the Docker host to match the deployments specified by the development pallet",
+			Usage:    "Immediately updates the Docker host to match the development pallet",
 			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
@@ -78,7 +90,7 @@ func makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion string) [
 		{
 			Name:     "cache-all",
 			Category: category,
-			Usage:    "Updates the cache with everything needed by the development pallet",
+			Usage:    "Updates the cache with everything needed to apply the development pallet",
 			Action:   cacheAllAction(toolVersion, repoMinVersion, palletMinVersion),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{

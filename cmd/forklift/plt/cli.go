@@ -5,7 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command {
+func MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion string) *cli.Command {
 	subcommands := []*cli.Command{
 		{
 			Name:      "switch",
@@ -20,7 +20,9 @@ func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command 
 			},
 		},
 	}
-	for _, group := range makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion) {
+	for _, group := range makeSubcommandGroups(
+		toolVersion, repoMinVersion, palletMinVersion, newStageVersion,
+	) {
 		subcommands = append(subcommands, group...)
 	}
 	return &cli.Command{
@@ -31,15 +33,19 @@ func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command 
 	}
 }
 
-func makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion string) [][]*cli.Command {
+func makeSubcommandGroups(
+	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
+) [][]*cli.Command {
 	return [][]*cli.Command{
-		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion),
+		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
 		makeQuerySubcmds(),
 		makeModifySubcmds(),
 	}
 }
 
-func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+func makeUseSubcmds(
+	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
+) []*cli.Command {
 	const category = "Use the pallet"
 	return append(
 		makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion),
@@ -61,6 +67,12 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 					Usage: "parallelize downloading of images",
 				},
 			},
+		},
+		&cli.Command{
+			Name:     "stage",
+			Category: category,
+			Usage:    "Stages the local pallet to be applied later",
+			Action:   stageAction(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
 		},
 		&cli.Command{
 			Name:     "apply",

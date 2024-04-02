@@ -27,10 +27,10 @@ var app = &cli.App{
 	Version: toolVersion,
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
-		plt.MakeCmd(toolVersion, repoMinVersion, palletMinVersion),
+		plt.MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
 		cache.Cmd,
 		host.Cmd,
-		dev.MakeCmd(toolVersion, repoMinVersion, palletMinVersion),
+		dev.MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -53,9 +53,18 @@ var app = &cli.App{
 // Versioning
 
 const (
-	repoMinVersion   = "v0.4.0"     // minimum supported Forklift version among repos
-	palletMinVersion = "v0.4.0"     // minimum supported Forklift version among pallets
-	fallbackVersion  = "v0.5.3-dev" // version reported by Forklift tool if actual version is unknown
+	// repoMinVersion is the minimum supported Forklift version among repos. A repo with a lower
+	// Forklift version cannot be used.
+	repoMinVersion = "v0.4.0"
+	// palletMinVersion is the minimum supported Forklift version among pallets. A pallet with a
+	// lower Forklift version cannot be used.
+	palletMinVersion = "v0.4.0"
+	// newStageVersion is the Forklift version reported in new staged pallets made by Forklift. Older
+	// versions of the Forklift tool cannot use such staged pallets.
+	newStageVersion = "v0.7.0"
+	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
+	// version is unknown.
+	fallbackVersion = "v0.7.0-dev"
 )
 
 var (

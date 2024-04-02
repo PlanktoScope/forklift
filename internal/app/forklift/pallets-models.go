@@ -83,9 +83,9 @@ type DeplDef struct {
 	// Package is the package path of the package to deploy.
 	Package string `yaml:"package"`
 	// Features is a list of features from the package which should be enabled in the deployment.
-	Features []string `yaml:"features"`
+	Features []string `yaml:"features,omitempty"`
 	// Disabled represents whether the deployment should be ignored.
-	Disabled bool `yaml:"disabled"`
+	Disabled bool `yaml:"disabled,omitempty"`
 }
 
 // Requirements
@@ -97,9 +97,9 @@ const ReqsDirName = "requirements"
 // a specific version.
 type GitRepoReq struct {
 	// GitRepoPath is the path of the required Git repository.
-	RequiredPath string
+	RequiredPath string `yaml:"-"`
 	// VersionLock specifies the version of the required Git repository.
-	VersionLock VersionLock
+	VersionLock VersionLock `yaml:"version-lock"`
 }
 
 const (
@@ -118,7 +118,7 @@ type FSPalletReq struct {
 
 // A PalletReq is a requirement for a specific pallet at a specific version.
 type PalletReq struct {
-	GitRepoReq
+	GitRepoReq `yaml:",inline"`
 }
 
 const (
@@ -137,7 +137,7 @@ type FSRepoReq struct {
 
 // A RepoReq is a requirement for a specific repo at a specific version.
 type RepoReq struct {
-	GitRepoReq
+	GitRepoReq `yaml:",inline"`
 }
 
 // A PkgReq is a requirement for a package at a specific version.
