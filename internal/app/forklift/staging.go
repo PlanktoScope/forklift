@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -34,32 +35,43 @@ func (s *FSStageStore) LoadFSBundle(repoPath string, version string) (*FSBundle,
 	return nil, errors.New("Unimplemented")
 }
 
-// IdentifyLast identifies the staged pallet in the store with the highest index. Only nonnegative
-// indices are considered.
-// If the cache is empty, an error is returned instead.
-func (s *FSStageStore) IdentifyLast() (index int, err error) {
-	index = -1
+// List returns a numerically-sorted (in ascending order) list of staged pallet bundles in the
+// store. Only negative indices are included.
+func (s *FSStageStore) List() (indices []int, err error) {
+	indices = make([]int, 0)
 	dirEntries, err := fs.ReadDir(s.FS, ".")
 	if err != nil {
-		return 0, errors.Wrapf(err, "couldn't search for staged pallets in %s", s.FS.Path())
+		return nil, errors.Wrapf(err, "couldn't list staged pallet bundles in %s", s.FS.Path())
 	}
 	for _, dirEntry := range dirEntries {
 		if !dirEntry.IsDir() {
 			continue
 		}
-		currentIndex, err := strconv.Atoi(dirEntry.Name())
+		index, err := strconv.Atoi(dirEntry.Name())
 		if err != nil { // i.e. directory is not a staged pallet
 			continue
 		}
-		if currentIndex <= index {
+		if index < 0 {
 			continue
 		}
-		index = currentIndex
+		indices = append(indices, index)
 	}
-	if index < 0 {
-		return 0, errors.New("No staged pallets were found in the store")
+	slices.Sort(indices)
+	return indices, nil
+}
+
+// IdentifyLast identifies the staged pallet in the store with the highest index. Only nonnegative
+// indices are considered.
+// If the cache is empty, an error is returned instead.
+func (s *FSStageStore) IdentifyLast() (index int, err error) {
+	indices, err := s.List()
+	if err != nil {
+		return 0, err
 	}
-	return index, nil
+	if len(indices) == 0 {
+		return 0, errors.New("No staged pallet bundles were found in the store")
+	}
+	return slices.Max(indices), nil
 }
 
 // AllocateNew creates a new directory for a staged pallet in the store with a new highest

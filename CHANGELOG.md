@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - (cli) Added a `[dev] plt stage` subcommand to stage the pallet so that it can be applied in the future.
+- (cli) Added a `stage ls-bun` subcommand to list staged pallet bundles.
 
 ## 0.6.0 - 2024-02-28
 
