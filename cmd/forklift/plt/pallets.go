@@ -302,7 +302,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.StagePallet(pallet, stageStore, cache, versions.NewStage); err != nil {
+		if err = fcli.StagePallet(pallet, stageStore, cache, versions.NewBundle); err != nil {
 			return err
 		}
 		fmt.Println("Done! To apply the staged pallet, you can run `sudo -E forklift stage apply`.")

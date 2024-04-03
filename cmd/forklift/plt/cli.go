@@ -2,6 +2,8 @@
 package plt
 
 import (
+	"slices"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -9,41 +11,34 @@ type Versions struct {
 	Tool               string
 	MinSupportedRepo   string
 	MinSupportedPallet string
-	NewStage           string
+	NewBundle          string
 	NewStageStore      string
 }
 
 func MakeCmd(versions Versions) *cli.Command {
-	subcommands := []*cli.Command{
-		{
-			Name:      "switch",
-			Usage:     "(Re)initializes the local pallet, updates the cache, and deploys the pallet",
-			ArgsUsage: "[github_repository_path@release]",
-			Action:    switchAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize updating of deployments",
+	return &cli.Command{
+		Name:    "plt",
+		Aliases: []string{"pallet"},
+		Usage:   "Manages the local pallet",
+		Subcommands: slices.Concat(
+			[]*cli.Command{
+				{
+					Name:      "switch",
+					Usage:     "(Re)initializes the local pallet, updates the cache, and deploys the pallet",
+					ArgsUsage: "[github_repository_path@release]",
+					Action:    switchAction(versions),
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "parallel",
+							Usage: "parallelize updating of deployments",
+						},
+					},
 				},
 			},
-		},
-	}
-	for _, group := range makeSubcommandGroups(versions) {
-		subcommands = append(subcommands, group...)
-	}
-	return &cli.Command{
-		Name:        "plt",
-		Aliases:     []string{"pallet"},
-		Usage:       "Manages the local pallet",
-		Subcommands: subcommands,
-	}
-}
-
-func makeSubcommandGroups(versions Versions) [][]*cli.Command {
-	return [][]*cli.Command{
-		makeUseSubcmds(versions),
-		makeQuerySubcmds(),
-		makeModifySubcmds(),
+			makeUseSubcmds(versions),
+			makeQuerySubcmds(),
+			makeModifySubcmds(),
+		),
 	}
 }
 

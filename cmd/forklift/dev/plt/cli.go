@@ -2,6 +2,8 @@
 package plt
 
 import (
+	"slices"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -9,15 +11,11 @@ type Versions struct {
 	Tool               string
 	MinSupportedRepo   string
 	MinSupportedPallet string
-	NewStage           string
+	NewBundle          string
 	NewStageStore      string
 }
 
 func MakeCmd(versions Versions) *cli.Command {
-	var subcommands []*cli.Command
-	for _, group := range makeSubcommandGroups(versions) {
-		subcommands = append(subcommands, group...)
-	}
 	return &cli.Command{
 		Name:    "plt",
 		Aliases: []string{"pallet"},
@@ -30,15 +28,11 @@ func MakeCmd(versions Versions) *cli.Command {
 					"the specified directory paths",
 			},
 		},
-		Subcommands: subcommands,
-	}
-}
-
-func makeSubcommandGroups(versions Versions) [][]*cli.Command {
-	return [][]*cli.Command{
-		makeUseSubcmds(versions),
-		makeQuerySubcmds(),
-		makeModifySubcmds(versions),
+		Subcommands: slices.Concat(
+			makeUseSubcmds(versions),
+			makeQuerySubcmds(),
+			makeModifySubcmds(versions),
+		),
 	}
 }
 

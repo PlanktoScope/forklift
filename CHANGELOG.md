@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `stage show-bun` subcommand to show info about a staged pallet bundle.
 - (cli) Added a `stage show-bun-depl` subcommand to show info about package deployment of a staged pallet bundle.
 - (cli) Added a `stage locate-bun-depl-pkg` subcommand to show the absolute file path of the package for a package deployment of a staged pallet bundle.
+- (cli) Added a `stage add-bun-name` subcommand to assign a name to a staged pallet bundle.
+- (cli) Added a `stage ls-bun-names` subcommand to list all assigned names for staged pallet bundles.
+- (cli) Added a `stage rm-bun-name` subcommand to unassign a name for a staged pallet bundle.
 
 ## 0.6.0 - 2024-02-28
 

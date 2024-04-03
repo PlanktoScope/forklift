@@ -116,13 +116,29 @@ func (s *FSStageStore) SetNext(index int) {
 	s.Def.Stages.Next = index
 }
 
-// LastSuccess returns the last stage which was successfully applied. It returns not-`ok` if no
-// stage has been successfully applie so far.
-func (s *FSStageStore) LastSuccess() (index int, ok bool) {
+// GetNext returns the next stage to be applied. It returns not-`ok` if no stage has been
+// is to be applied.
+func (s *FSStageStore) GetNext() (index int, ok bool) {
+	return s.Def.Stages.Next, s.Def.Stages.Next > 0
+}
+
+// GetCurrent returns the last stage which was successfully applied. It returns not-`ok` if no
+// stage has been successfully applied so far.
+func (s *FSStageStore) GetCurrent() (index int, ok bool) {
 	if len(s.Def.Stages.History) == 0 {
 		return 0, false
 	}
 	return s.Def.Stages.History[len(s.Def.Stages.History)-1], true
+}
+
+// GetRollback returns the previous stage which was successfully applied before the last stage which
+// was successfully applied. It returns not-`ok` if no such stage exists.
+func (s *FSStageStore) GetRollback() (index int, ok bool) {
+	const rollbackOffset = 1
+	if len(s.Def.Stages.History) < rollbackOffset+1 {
+		return 0, false
+	}
+	return s.Def.Stages.History[len(s.Def.Stages.History)-1-rollbackOffset], true
 }
 
 // RecordNextSuccess records the stage which was to be applied as having successfully been applied.
@@ -172,6 +188,9 @@ func loadStageStoreDef(fsys core.PathedFS, filePath string) (StageStoreDef, erro
 	config := StageStoreDef{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
 		return StageStoreDef{}, errors.Wrap(err, "couldn't parse stage store state")
+	}
+	if config.Stages.Names == nil {
+		config.Stages.Names = make(map[string]int)
 	}
 	return config, nil
 }

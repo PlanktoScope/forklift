@@ -32,13 +32,13 @@ var app = &cli.App{
 			Tool:               toolVersion,
 			MinSupportedRepo:   repoMinVersion,
 			MinSupportedPallet: palletMinVersion,
-			NewStage:           newStageVersion,
+			NewBundle:          newBundleVersion,
 			NewStageStore:      newStageStoreVersion,
 		}),
 		stage.MakeCmd(stage.Versions{
-			Tool:              toolVersion,
-			MinSupportedStage: stageMinVersion,
-			NewStageStore:     newStageStoreVersion,
+			Tool:               toolVersion,
+			MinSupportedBundle: bundleMinVersion,
+			NewStageStore:      newStageStoreVersion,
 		}),
 		cache.Cmd,
 		host.Cmd,
@@ -46,7 +46,7 @@ var app = &cli.App{
 			Tool:               toolVersion,
 			MinSupportedRepo:   repoMinVersion,
 			MinSupportedPallet: palletMinVersion,
-			NewStage:           newStageVersion,
+			NewBundle:          newBundleVersion,
 			NewStageStore:      newStageStoreVersion,
 		}),
 	},
@@ -77,12 +77,12 @@ const (
 	// palletMinVersion is the minimum supported Forklift version among pallets. A pallet with a
 	// lower Forklift version cannot be used.
 	palletMinVersion = "v0.4.0"
-	// stageMinVersion is the minimum supported Forklift version among staged pallet bundles. A
+	// bundleMinVersion is the minimum supported Forklift version among staged pallet bundles. A
 	// bundle with a lower Forklift version cannot be used.
-	stageMinVersion = "v0.7.0-dev"
-	// newStageVersion is the Forklift version reported in new staged pallet bundles made by Forklift.
+	bundleMinVersion = "v0.7.0-dev"
+	// newBundleVersion is the Forklift version reported in new staged pallet bundles made by Forklift.
 	// Older versions of the Forklift tool cannot use such bundles.
-	newStageVersion = "v0.7.0-dev"
+	newBundleVersion = "v0.7.0-dev"
 	// newStageStoreVersion is the Forklift version reported in a stage store initialized by Forklift.
 	// Older versions of the Forklift tool cannot use the state store.
 	newStageStoreVersion = "v0.7.0-dev"
