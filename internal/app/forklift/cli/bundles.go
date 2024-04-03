@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/pkg/errors"
+
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 )
 
@@ -108,4 +110,15 @@ func printBundleDeployments(indent int, deployments map[string]forklift.DeplDef)
 	for _, path := range sortedPaths {
 		IndentedPrintf(indent, "%s: %s\n", path, deployments[path].Package)
 	}
+}
+
+func PrintBundleDeplPkgPath(indent int, bundle *forklift.FSBundle, deplName string) error {
+	resolved, err := bundle.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load deployment %s from bundle %s", deplName, bundle.FS.Path(),
+		)
+	}
+	fmt.Println(resolved.Pkg.FS.Path())
+	return nil
 }

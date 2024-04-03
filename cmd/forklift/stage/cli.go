@@ -30,9 +30,18 @@ func MakeCmd(toolVersion, newStageVersion string) *cli.Command {
 			Name:      "show-bun-depl",
 			Aliases:   []string{"show-bundle-deployment"},
 			Category:  "Query the stage store",
-			Usage:     "Describes package deployment of a staged pallet bundle",
+			Usage:     "Describes the specified package deployment of the specified staged pallet bundle",
 			ArgsUsage: "bundle_index deployment_name",
 			Action:    showBunDeplAction,
+		},
+		{
+			Name:     "locate-bun-depl-pkg",
+			Aliases:  []string{"locate-bundle-deployment-package"},
+			Category: "Query the stage store",
+			Usage: "Prints the absolute filesystem path of the package for the specified package " +
+				"deployment of the specified staged pallet bundle",
+			ArgsUsage: "bundle_index deployment_name",
+			Action:    locateBunDeplPkgAction,
 		},
 	}
 	return &cli.Command{
