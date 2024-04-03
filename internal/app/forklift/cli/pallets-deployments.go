@@ -39,21 +39,18 @@ func PrintDeplInfo(
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
-	if err = printResolvedDepl(indent, cache, resolved); err != nil {
+	if err = PrintResolvedDepl(indent, cache, resolved); err != nil {
 		return errors.Wrapf(err, "couldn't print resolved package deployment %s", depl.Name)
 	}
 	return nil
 }
 
-func printResolvedDepl(
+func PrintResolvedDepl(
 	indent int, cache forklift.PathedRepoCache, resolved *forklift.ResolvedDepl,
 ) error {
 	printDepl(indent, cache, resolved)
 	indent++
 
-	if resolved.Pkg == nil {
-		return nil
-	}
 	definesApp, err := resolved.DefinesApp()
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine whether package deployment defines a Compose app")
@@ -95,12 +92,6 @@ func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.Resolv
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
-	if depl.Pkg == nil {
-		for _, name := range depl.Def.Features {
-			IndentedPrintln(indent+1, name)
-		}
-		return
-	}
 	enabledFeatures, err := depl.EnabledFeatures()
 	if err != nil {
 		IndentedPrintf(indent, "Warning: couldn't determine enabled features: %s\n", err.Error())
@@ -120,13 +111,8 @@ func printDeplPkg(indent int, cache forklift.PathedRepoCache, depl *forklift.Res
 	IndentedPrintf(indent, "Deploys package: %s\n", depl.Def.Package)
 	indent++
 
-	if depl.Pkg == nil {
-		return
-	}
 	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
-	if cache != nil {
-		printPkgRepo(indent, cache, depl.Pkg)
-	}
+	printPkgRepo(indent, cache, depl.Pkg)
 }
 
 func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {

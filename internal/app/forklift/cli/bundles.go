@@ -106,6 +106,6 @@ func printBundleDeployments(indent int, deployments map[string]forklift.DeplDef)
 	}
 	slices.Sort(sortedPaths)
 	for _, path := range sortedPaths {
-		IndentedPrintln(indent, path)
+		IndentedPrintf(indent, "%s: %s\n", path, deployments[path].Package)
 	}
 }

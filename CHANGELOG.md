@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - (cli) Added a `[dev] plt stage` subcommand to stage the pallet so that it can be applied in the future.
 - (cli) Added a `stage ls-bun` subcommand to list staged pallet bundles.
+- (cli) Added a `stage show-bun` subcommand to show info about a staged pallet bundle.
+- (cli) Added a `stage show-bun-depl` subcommand to show info about package deployment of a staged pallet bundle.
 
 ## 0.6.0 - 2024-02-28
 

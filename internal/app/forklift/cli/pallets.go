@@ -895,6 +895,9 @@ func buildBundle(
 		}
 	}
 
+	if err = outputBundle.WriteRepoDefFile(); err != nil {
+		return err
+	}
 	return outputBundle.WriteDefFile()
 }
 

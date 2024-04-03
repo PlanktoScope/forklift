@@ -68,3 +68,31 @@ func showBunAction(c *cli.Context) error {
 	fcli.PrintStagedBundle(0, store, bundle, index)
 	return nil
 }
+
+// show-bun-depl
+
+func showBunDeplAction(c *cli.Context) error {
+	store, err := getStageStore(c.String("workspace"), false)
+	if err != nil {
+		return err
+	}
+	if !store.Exists() {
+		return errMissingStore
+	}
+
+	rawIndex := c.Args().First()
+	index, err := strconv.Atoi(rawIndex)
+	if err != nil {
+		return errors.Wrapf(err, "Couldn't parse staged bundle index %s as an integer", rawIndex)
+	}
+	deplName := c.Args().Get(1)
+	bundle, err := store.LoadFSBundle(index)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load staged bundle %d", index)
+	}
+	resolved, err := bundle.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load deployment %s from bundle %d", deplName, index)
+	}
+	return fcli.PrintResolvedDepl(0, bundle, resolved)
+}

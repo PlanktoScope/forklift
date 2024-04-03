@@ -23,8 +23,16 @@ func MakeCmd(toolVersion, newStageVersion string) *cli.Command {
 			Aliases:   []string{"show-bundle"},
 			Category:  "Query the stage store",
 			Usage:     "Describes a staged pallet bundle",
-			ArgsUsage: "index",
+			ArgsUsage: "bundle_index",
 			Action:    showBunAction,
+		},
+		{
+			Name:      "show-bun-depl",
+			Aliases:   []string{"show-bundle-deployment"},
+			Category:  "Query the stage store",
+			Usage:     "Describes package deployment of a staged pallet bundle",
+			ArgsUsage: "bundle_index deployment_name",
+			Action:    showBunDeplAction,
 		},
 	}
 	return &cli.Command{

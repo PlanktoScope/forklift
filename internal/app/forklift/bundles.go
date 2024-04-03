@@ -51,6 +51,10 @@ func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error
 	return b, nil
 }
 
+func (b *FSBundle) Path() string {
+	return b.FS.Path()
+}
+
 // FSBundle: Deployments
 
 func (b *FSBundle) AddDepl(depl *ResolvedDepl) error {
@@ -68,8 +72,66 @@ func (b *FSBundle) AddDepl(depl *ResolvedDepl) error {
 	return nil
 }
 
+func (b *FSBundle) LoadDepl(name string) (depl *ResolvedDepl, err error) {
+	resolved := &ResolvedDepl{
+		Depl: Depl{
+			Name: name,
+			Def:  b.Def.Deploys[name],
+		},
+	}
+	pkgPath := b.Def.Deploys[name].Package
+	/*if resolved.PkgReq, err = b.LoadPkgReq(pkgPath); err != nil {
+	  return depl, err
+	}*/
+	if resolved.Pkg, err = b.LoadFSPkg(pkgPath, ""); err != nil {
+		return depl, errors.Wrapf(err, "couldn't load package %s from bundle", pkgPath)
+	}
+	return resolved, nil
+}
+
+/*func (b *FSBundle) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
+  if path.IsAbs(pkgPath) {
+    return PkgReq{
+      PkgSubdir: strings.TrimLeft(pkgPath, "/"),
+      RepoReq: RepoReq{
+        GitRepoReq{RequiredPath: b.Def.Pallet.Path},
+      }
+    }, nil
+  }
+
+  return PkgReq{
+    PkgSubdir: "",
+    Repo: RepoReq{
+      GitRepoReq: GitRepoReq{
+        RequiredPath: "",
+        VersionLock: VersionLock{},
+      },
+    },
+  }, nil
+}*/
+
+// FSBundle: Packages
+
 func (b *FSBundle) getPackagesPath() string {
 	return path.Join(b.FS.Path(), packagesDirName)
+}
+
+// WriteRepoDefFile creates a repo definition file at the packages path, so that all loaded packages
+// are associated with a repo.
+func (b *FSBundle) WriteRepoDefFile() error {
+	repoDef := core.RepoDef{
+		ForkliftVersion: b.Def.ForkliftVersion,
+	}
+	marshaled, err := yaml.Marshal(repoDef)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal bundle definition")
+	}
+	outputPath := filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile))
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save bundle definition to %s", outputPath)
+	}
+	return nil
 }
 
 // FSBundle: Definition
@@ -85,6 +147,50 @@ func (b *FSBundle) WriteDefFile() error {
 		return errors.Wrapf(err, "couldn't save bundle definition to %s", outputPath)
 	}
 	return nil
+}
+
+// FSBundle: FSRepoLoader
+
+func (b *FSBundle) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	return core.LoadFSRepo(b.FS, path.Join(packagesDirName, repoPath))
+}
+
+func (b *FSBundle) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	return core.LoadFSRepos(b.FS, path.Join(packagesDirName, searchPattern))
+}
+
+// FSBundle: FSPkgLoader
+
+func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	repo, err := b.LoadFSRepo(".", "")
+	if err != nil {
+		return nil, err
+	}
+	return repo.LoadFSPkg(pkgPath)
+}
+
+func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	repo, err := b.LoadFSRepo(".", "")
+	if err != nil {
+		return nil, err
+	}
+	return repo.LoadFSPkgs(searchPattern)
 }
 
 // BundleDef
