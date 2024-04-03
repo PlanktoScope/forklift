@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"io/fs"
 	"os"
 	"path"
 
@@ -76,18 +77,27 @@ func (w *FSWorkspace) GetStageStorePath() string {
 	return path.Join(w.GetDataPath(), dataStageStoreDirName)
 }
 
-func (w *FSWorkspace) GetStageStore() (*FSStageStore, error) {
+// GetStageStore loads the workspace's stage store from the path, initializing a state file (which
+// has the specified minimum supported Forklift tool version) if it does not already exist.
+func (w *FSWorkspace) GetStageStore(newStateStoreVersion string) (*FSStageStore, error) {
 	fsys, err := w.getDataFS()
 	if err != nil {
 		return nil, err
 	}
-	pathedFS, err := fsys.Sub(dataStageStoreDirName)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get stage store from workspace")
+	if err = EnsureExists(w.GetStageStorePath()); err != nil {
+		return nil, errors.Wrap(err, "couldn't ensure the existence of the stage store")
 	}
-	return &FSStageStore{
-		FS: pathedFS,
-	}, nil
+	if _, err = fs.Stat(
+		fsys, path.Join(dataStageStoreDirName, StageStoreDefFile),
+	); errors.Is(err, fs.ErrNotExist) {
+		def := StageStoreDef{
+			ForkliftVersion: newStateStoreVersion,
+		}
+		if err := def.Write(path.Join(w.GetStageStorePath(), StageStoreDefFile)); err != nil {
+			return nil, errors.Wrapf(err, "couldn't initialize stage store state file")
+		}
+	}
+	return loadFSStageStore(fsys, dataStageStoreDirName)
 }
 
 // Cache

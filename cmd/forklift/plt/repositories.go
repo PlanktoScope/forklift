@@ -10,14 +10,15 @@ import (
 
 // cache-repo
 
-func cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func cacheRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, false)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

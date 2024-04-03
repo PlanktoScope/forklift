@@ -5,11 +5,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion string) *cli.Command {
+type Versions struct {
+	Tool               string
+	MinSupportedRepo   string
+	MinSupportedPallet string
+	NewStage           string
+	NewStageStore      string
+}
+
+func MakeCmd(versions Versions) *cli.Command {
 	var subcommands []*cli.Command
-	for _, group := range makeSubcommandGroups(
-		toolVersion, repoMinVersion, palletMinVersion, newStageVersion,
-	) {
+	for _, group := range makeSubcommandGroups(versions) {
 		subcommands = append(subcommands, group...)
 	}
 	return &cli.Command{
@@ -28,34 +34,30 @@ func MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion stri
 	}
 }
 
-func makeSubcommandGroups(
-	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
-) [][]*cli.Command {
+func makeSubcommandGroups(versions Versions) [][]*cli.Command {
 	return [][]*cli.Command{
-		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
+		makeUseSubcmds(versions),
 		makeQuerySubcmds(),
-		makeModifySubcmds(toolVersion, repoMinVersion, palletMinVersion),
+		makeModifySubcmds(versions),
 	}
 }
 
-func makeUseSubcmds(
-	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
-) []*cli.Command {
+func makeUseSubcmds(versions Versions) []*cli.Command {
 	const category = "Use the pallet"
 	return append(
-		makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion),
+		makeUseCacheSubcmds(versions),
 		&cli.Command{
 			Name:     "check",
 			Category: category,
 			Usage:    "Checks whether the development pallet's resource constraints are satisfied",
-			Action:   checkAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   checkAction(versions),
 		},
 		&cli.Command{
 			Name:     "plan",
 			Category: category,
 			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
 				"specified by the local pallet",
-			Action: planAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action: planAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
@@ -67,13 +69,13 @@ func makeUseSubcmds(
 			Name:     "stage",
 			Category: category,
 			Usage:    "Builds and stages a bundle of the development pallet to be applied later",
-			Action:   stageAction(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
+			Action:   stageAction(versions),
 		},
 		&cli.Command{
 			Name:     "apply",
 			Category: category,
 			Usage:    "Immediately updates the Docker host to match the development pallet",
-			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   applyAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
@@ -84,14 +86,14 @@ func makeUseSubcmds(
 	)
 }
 
-func makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 	const category = "Use the pallet"
 	return []*cli.Command{
 		{
 			Name:     "cache-all",
 			Category: category,
 			Usage:    "Updates the cache with everything needed to apply the development pallet",
-			Action:   cacheAllAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   cacheAllAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
@@ -108,14 +110,14 @@ func makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion string) [
 			Aliases:  []string{"cache-repositories"},
 			Category: category,
 			Usage:    "Updates the cache with the repos available in the development pallet",
-			Action:   cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   cacheRepoAction(versions),
 		},
 		{
 			Name:     "cache-img",
 			Aliases:  []string{"cache-images"},
 			Category: category,
 			Usage:    "Pre-downloads the Docker container images required by the development pallet",
-			Action:   cacheImgAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   cacheImgAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
@@ -209,7 +211,7 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 	}
 }
 
-func makeModifySubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+func makeModifySubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
 	return []*cli.Command{
 		{
@@ -218,7 +220,7 @@ func makeModifySubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*
 			Category:  category,
 			Usage:     "Adds repos to the pallet, tracking specified versions or branches",
 			ArgsUsage: "[repo_path@version_query]...",
-			Action:    addRepoAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:    addRepoAction(versions),
 		},
 		// TODO: add an rm-repo action
 		// TODO: add an add-depl action

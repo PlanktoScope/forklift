@@ -40,14 +40,15 @@ func getPallet(wpath string) (pallet *forklift.FSPallet, err error) {
 
 // cache-all
 
-func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func cacheAllAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, false)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -69,7 +70,7 @@ func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Ac
 
 // switch
 
-func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func switchAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		wpath := c.String("workspace")
 		if !forklift.Exists(wpath) {
@@ -105,7 +106,8 @@ func switchAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Acti
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -233,14 +235,15 @@ func showAction(c *cli.Context) error {
 
 // check
 
-func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -254,14 +257,15 @@ func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Actio
 
 // plan
 
-func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -277,16 +281,15 @@ func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Action
 
 // stage
 
-func stageAction(
-	toolVersion, repoMinVersion, palletMinVersion, newStageVersion string,
-) cli.ActionFunc {
+func stageAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -295,11 +298,11 @@ func stageAction(
 		if err != nil {
 			return err
 		}
-		stageStore, err := workspace.GetStageStore()
+		stageStore, err := workspace.GetStageStore(versions.NewStageStore)
 		if err != nil {
 			return err
 		}
-		if err = fcli.StagePallet(pallet, stageStore, cache, newStageVersion); err != nil {
+		if err = fcli.StagePallet(pallet, stageStore, cache, versions.NewStage); err != nil {
 			return err
 		}
 		fmt.Println("Done! To apply the staged pallet, you can run `sudo -E forklift stage apply`.")
@@ -309,14 +312,15 @@ func stageAction(
 
 // apply
 
-func applyAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

@@ -854,22 +854,25 @@ func compareDeplNames(r, s string) int {
 // Stage
 
 func StagePallet(
-	pallet *forklift.FSPallet, stages *forklift.FSStageStore,
+	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore,
 	repoCache forklift.PathedRepoCache, bundleForkliftVersion string,
 ) error {
-	index, err := stages.AllocateNew()
+	index, err := stageStore.AllocateNew()
 	if err != nil {
 		return errors.Wrap(err, "couldn't allocate a directory for staging")
 	}
 	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
 	if err = buildBundle(
-		pallet, repoCache, bundleForkliftVersion, path.Join(stages.FS.Path(), fmt.Sprintf("%d", index)),
+		pallet, repoCache, bundleForkliftVersion,
+		path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
-	fmt.Printf("Committing stage %d to be applied subesequently...\n", index)
-	// TODO: commit the newly-staged pallet for the next stage application, with a new file at
-	// ~/.local/share/forklift/staged-next or something?
+	fmt.Printf("Committing stage %d to be applied subsequently...\n", index)
+	stageStore.SetNext(index)
+	if err = stageStore.CommitState(); err != nil {
+		return errors.Wrapf(err, "couldn't commit stage %d as the next stage to be applied...", index)
+	}
 	return nil
 }
 

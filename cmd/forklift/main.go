@@ -28,11 +28,27 @@ var app = &cli.App{
 	Version: toolVersion,
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
-		plt.MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
-		stage.MakeCmd(toolVersion, stageMinVersion),
+		plt.MakeCmd(plt.Versions{
+			Tool:               toolVersion,
+			MinSupportedRepo:   repoMinVersion,
+			MinSupportedPallet: palletMinVersion,
+			NewStage:           newStageVersion,
+			NewStageStore:      newStageStoreVersion,
+		}),
+		stage.MakeCmd(stage.Versions{
+			Tool:              toolVersion,
+			MinSupportedStage: stageMinVersion,
+			NewStageStore:     newStageStoreVersion,
+		}),
 		cache.Cmd,
 		host.Cmd,
-		dev.MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
+		dev.MakeCmd(dev.Versions{
+			Tool:               toolVersion,
+			MinSupportedRepo:   repoMinVersion,
+			MinSupportedPallet: palletMinVersion,
+			NewStage:           newStageVersion,
+			NewStageStore:      newStageStoreVersion,
+		}),
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -61,12 +77,15 @@ const (
 	// palletMinVersion is the minimum supported Forklift version among pallets. A pallet with a
 	// lower Forklift version cannot be used.
 	palletMinVersion = "v0.4.0"
-	// palletMinVersion is the minimum supported Forklift version among staged pallet bundles. A
+	// stageMinVersion is the minimum supported Forklift version among staged pallet bundles. A
 	// bundle with a lower Forklift version cannot be used.
 	stageMinVersion = "v0.7.0-dev"
 	// newStageVersion is the Forklift version reported in new staged pallet bundles made by Forklift.
 	// Older versions of the Forklift tool cannot use such bundles.
 	newStageVersion = "v0.7.0-dev"
+	// newStageStoreVersion is the Forklift version reported in a stage store initialized by Forklift.
+	// Older versions of the Forklift tool cannot use the state store.
+	newStageStoreVersion = "v0.7.0-dev"
 	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
 	// version is unknown.
 	fallbackVersion = "v0.7.0-dev"

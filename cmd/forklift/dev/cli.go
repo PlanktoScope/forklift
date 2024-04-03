@@ -11,13 +11,15 @@ import (
 
 var defaultWorkingDir, _ = os.Getwd()
 
-func MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion string) *cli.Command {
+type Versions = plt.Versions
+
+func MakeCmd(versions Versions) *cli.Command {
 	return &cli.Command{
 		Name:    "dev",
 		Aliases: []string{"development"},
 		Usage:   "Facilitates development and maintenance in the current working directory",
 		Subcommands: []*cli.Command{
-			plt.MakeCmd(toolVersion, repoMinVersion, palletMinVersion, newStageVersion),
+			plt.MakeCmd(versions),
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
