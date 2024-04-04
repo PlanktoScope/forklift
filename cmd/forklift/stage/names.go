@@ -11,6 +11,13 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 )
 
+const (
+	rollbackStageName = "rollback"
+	currentStageName  = "current"
+	nextStageName     = "next"
+	pendingStageName  = "pending"
+)
+
 // ls-bun-names
 
 func lsBunNamesAction(versions Versions) cli.ActionFunc {
@@ -33,16 +40,16 @@ func lsBunNamesAction(versions Versions) cli.ActionFunc {
 			printNamedBundleSummary(store, name, index)
 		}
 		if index, ok := store.GetRollback(); ok {
-			printNamedBundleSummary(store, "rollback", index)
+			printNamedBundleSummary(store, rollbackStageName, index)
 		}
 		if index, ok := store.GetCurrent(); ok {
-			printNamedBundleSummary(store, "current", index)
+			printNamedBundleSummary(store, currentStageName, index)
 		}
 		if index, ok := store.GetNext(); ok {
-			printNamedBundleSummary(store, "next", index)
+			printNamedBundleSummary(store, nextStageName, index)
 		}
 		if index, ok := store.GetPending(); ok {
-			printNamedBundleSummary(store, "pending", index)
+			printNamedBundleSummary(store, pendingStageName, index)
 		}
 		return nil
 	}
@@ -80,17 +87,17 @@ func addBunNameAction(versions Versions) cli.ActionFunc {
 		}
 
 		name := c.Args().First()
-		if name == "next" || name == "current" || name == "rollback" {
+		if name == rollbackStageName || name == currentStageName ||
+			name == nextStageName || name == pendingStageName {
 			return errors.Errorf("'%s' is an automatically-set name, so it can't be set manually", name)
 		}
 		if _, err := strconv.Atoi(name); err == nil {
 			return errors.Errorf("integers cannot be used as bundle names: %s", name)
 		}
 
-		rawIndex := c.Args().Get(1)
-		index, err := strconv.Atoi(rawIndex)
+		index, err := resolveBundleIdentifier(c.Args().Get(1), store)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't parse staged bundle index %s as an integer", rawIndex)
+			return err
 		}
 		if _, err = store.LoadFSBundle(index); err != nil {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", index)
@@ -114,8 +121,9 @@ func rmBunNameAction(versions Versions) cli.ActionFunc {
 		}
 
 		name := c.Args().First()
-		if name == "next" || name == "current" || name == "rollback" {
-			return errors.Errorf("'%s' is not allowed to be manually set as a name", name)
+		if name == rollbackStageName || name == currentStageName ||
+			name == nextStageName || name == pendingStageName {
+			return errors.Errorf("'%s' is an automatically-set name, so it can't be removed", name)
 		}
 		if _, err := strconv.Atoi(name); err == nil {
 			return errors.Errorf("integers cannot be used as bundle names: %s", name)

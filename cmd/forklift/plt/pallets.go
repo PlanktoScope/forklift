@@ -73,9 +73,6 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 func switchAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		wpath := c.String("workspace")
-		if !forklift.Exists(wpath) {
-			fmt.Printf("Making a new workspace at %s...", wpath)
-		}
 		if err := forklift.EnsureExists(wpath); err != nil {
 			return errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
@@ -117,7 +114,15 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		// apply pallet
+		if !c.Bool("apply") {
+			// stage pallet
+			if err = stagePallet(workspace, pallet, repoCache, versions); err != nil {
+				return err
+			}
+			fmt.Println("Done! To apply the staged pallet, run `forklift stage apply`.")
+			return nil
+		}
+		// stage and apply pallet
 		if err = fcli.ApplyPallet(
 			pallet, repoCache, workspace, versions.NewStageStore, versions.NewBundle, c.Bool("parallel"),
 		); err != nil {
@@ -126,6 +131,20 @@ func switchAction(versions Versions) cli.ActionFunc {
 		fmt.Println("Done!")
 		return nil
 	}
+}
+
+func stagePallet(
+	workspace *forklift.FSWorkspace, pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache,
+	versions Versions,
+) error {
+	stageStore, err := workspace.GetStageStore(versions.NewStageStore)
+	if err != nil {
+		return err
+	}
+	if _, err = fcli.StagePallet(pallet, stageStore, repoCache, versions.NewBundle); err != nil {
+		return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
+	}
+	return nil
 }
 
 // clone

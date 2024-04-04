@@ -98,7 +98,7 @@ func makeQuerySubcmds(versions Versions) []*cli.Command {
 			Aliases:   []string{"show-bundle"},
 			Category:  category,
 			Usage:     "Describes a staged pallet bundle",
-			ArgsUsage: "bundle_index",
+			ArgsUsage: "bundle_index_or_name",
 			Action:    showBunAction(versions),
 		},
 		{
@@ -106,7 +106,7 @@ func makeQuerySubcmds(versions Versions) []*cli.Command {
 			Aliases:   []string{"show-bundle-deployment"},
 			Category:  category,
 			Usage:     "Describes the specified package deployment of the specified staged pallet bundle",
-			ArgsUsage: "bundle_index deployment_name",
+			ArgsUsage: "bundle_index_or_name deployment_name",
 			Action:    showBunDeplAction(versions),
 		},
 		{
@@ -115,7 +115,7 @@ func makeQuerySubcmds(versions Versions) []*cli.Command {
 			Category: category,
 			Usage: "Prints the absolute filesystem path of the package for the specified package " +
 				"deployment of the specified staged pallet bundle",
-			ArgsUsage: "bundle_index deployment_name",
+			ArgsUsage: "bundle_index_or_name deployment_name",
 			Action:    locateBunDeplPkgAction(versions),
 		},
 	}
@@ -125,18 +125,19 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 	category := "Modify the stage store"
 	return []*cli.Command{
 		{
-			Name:     "set-next",
-			Category: category,
-			Usage:    "Sets the specified staged pallet bundle as the next one to be applied.",
-			Action:   setNextAction(versions),
+			Name:      "set-next",
+			Category:  category,
+			Usage:     "Sets the specified staged pallet bundle as the next one to be applied.",
+			ArgsUsage: "bundle_index_or_name",
+			Action:    setNextAction(versions),
 		},
 		{
 			Name:     "add-bun-name",
 			Aliases:  []string{"add-bundle-name"},
 			Category: category,
-			Usage: "Assigns a name to the specified staged pallet bundle; if the name was already " +
-				"assigned, it's reassigned",
-			ArgsUsage: "bundle_name bundle_index",
+			Usage: "Assigns the specified name to the specified staged pallet bundle; if the name was " +
+				"already assigned, it's reassigned",
+			ArgsUsage: "bundle_name_to_assign bundle_index_or_name",
 			Action:    addBunNameAction(versions),
 		},
 		{

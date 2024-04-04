@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - (cli) The `[dev] plt apply` and `plt switch` subcommands now automatically bundle and stage the pallet before applying it.
+- (Breaking change: cli) By default, the `plt switch` subcommand no longer applies the pallet after staging it; instead, `stage apply` must be run afterwards to apply the staged pallet. The previous behavior (immediate application of the pallet) is now available through `plt switch --apply`.
 
 ## 0.6.0 - 2024-02-28
 

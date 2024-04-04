@@ -256,10 +256,9 @@ func setNextAction(versions Versions) cli.ActionFunc {
 			return errMissingStore
 		}
 
-		rawNewNext := c.Args().First()
-		newNext, err := strconv.Atoi(rawNewNext)
+		newNext, err := resolveBundleIdentifier(c.Args().First(), store)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't parse staged bundle index %s as an integer", rawNewNext)
+			return err
 		}
 		if _, err = store.LoadFSBundle(newNext); err != nil {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", newNext)
@@ -277,6 +276,68 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		fmt.Println("Done!")
 		return nil
 	}
+}
+
+// resolveBundleIdentifier parses/resolves a staged bundle index or name (provided as a string)
+// into an index of a staged bundle in the store.
+func resolveBundleIdentifier(
+	identifier string, store *forklift.FSStageStore,
+) (index int, err error) {
+	index, indexParseErr := strconv.Atoi(identifier)
+	if indexParseErr == nil {
+		return index, nil
+	}
+
+	// TODO: add special handling for rollback, current, next, and pending names
+	switch identifier {
+	case rollbackStageName:
+		index, ok := store.GetRollback()
+		if !ok {
+			return 0, errors.New(
+				"there have not yet been enough successfully-applied staged bundles for a rollback " +
+					"stage to exist yet!",
+			)
+		}
+		return index, nil
+	case currentStageName:
+		index, ok := store.GetCurrent()
+		if !ok {
+			return 0, errors.New("there has yet been a successfully-applied staged bundle!")
+		}
+		return index, nil
+	case nextStageName:
+		index, ok := store.GetNext()
+		if !ok {
+			return 0, errors.New("no staged bundle has been set as the next one to apply!")
+		}
+		return index, nil
+	case pendingStageName:
+		index, ok := store.GetPending()
+		if !ok {
+			if currentIndex, ok := store.GetCurrent(); ok && index == currentIndex {
+				return 0, errors.New(
+					"the next staged bundle has already been applied successfully, so it's no longer " +
+						"pending!",
+				)
+			}
+			if _, ok := store.GetNext(); !ok {
+				return 0, errors.New("no staged bundle has been set as the next one to apply!")
+			}
+			return 0, errors.New(
+				"there is currently no staged bundle waiting to be applied for the first time!",
+			)
+		}
+		return index, nil
+	}
+
+	index, ok := store.Def.Stages.Names[identifier]
+	if !ok {
+		return 0, errors.Errorf(
+			"identifier %s is neither a staged bundle index nor a name assigned to a staged bundle!",
+			identifier,
+		)
+	}
+	return index, nil
 }
 
 // check

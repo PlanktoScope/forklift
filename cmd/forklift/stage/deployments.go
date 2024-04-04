@@ -1,8 +1,6 @@
 package stage
 
 import (
-	"strconv"
-
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
@@ -21,10 +19,9 @@ func showBunDeplAction(versions Versions) cli.ActionFunc {
 			return errMissingStore
 		}
 
-		rawIndex := c.Args().First()
-		index, err := strconv.Atoi(rawIndex)
+		index, err := resolveBundleIdentifier(c.Args().First(), store)
 		if err != nil {
-			return errors.Wrapf(err, "Couldn't parse staged bundle index %s as an integer", rawIndex)
+			return err
 		}
 		deplName := c.Args().Get(1)
 		bundle, err := store.LoadFSBundle(index)
@@ -51,10 +48,9 @@ func locateBunDeplPkgAction(versions Versions) cli.ActionFunc {
 			return errMissingStore
 		}
 
-		rawIndex := c.Args().First()
-		index, err := strconv.Atoi(rawIndex)
+		index, err := resolveBundleIdentifier(c.Args().First(), store)
 		if err != nil {
-			return errors.Wrapf(err, "Couldn't parse staged bundle index %s as an integer", rawIndex)
+			return err
 		}
 		bundle, err := store.LoadFSBundle(index)
 		if err != nil {

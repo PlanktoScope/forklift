@@ -3,7 +3,6 @@ package stage
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -46,16 +45,16 @@ func getBundleNames(store *forklift.FSStageStore) map[int][]string {
 		slices.Sort(indexNames)
 	}
 	if index, ok := store.GetRollback(); ok {
-		names[index] = slices.Concat([]string{"rollback"}, names[index])
+		names[index] = slices.Concat([]string{rollbackStageName}, names[index])
 	}
 	if index, ok := store.GetNext(); ok {
-		names[index] = slices.Concat([]string{"next"}, names[index])
+		names[index] = slices.Concat([]string{nextStageName}, names[index])
 	}
 	if index, ok := store.GetCurrent(); ok {
-		names[index] = slices.Concat([]string{"current"}, names[index])
+		names[index] = slices.Concat([]string{currentStageName}, names[index])
 	}
 	if index, ok := store.GetPending(); ok {
-		names[index] = slices.Concat([]string{"pending"}, names[index])
+		names[index] = slices.Concat([]string{pendingStageName}, names[index])
 	}
 	return names
 }
@@ -92,10 +91,9 @@ func showBunAction(versions Versions) cli.ActionFunc {
 			return errMissingStore
 		}
 
-		rawIndex := c.Args().First()
-		index, err := strconv.Atoi(rawIndex)
+		index, err := resolveBundleIdentifier(c.Args().First(), store)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't parse staged bundle index %s as an integer", rawIndex)
+			return err
 		}
 		bundle, err := store.LoadFSBundle(index)
 		if err != nil {
