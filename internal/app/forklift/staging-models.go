@@ -33,10 +33,14 @@ type StageStoreDef struct {
 
 // StagesSpec defines the basic state of a stage store.
 type StagesSpec struct {
-	// Next is the index of the next staged pallet bundle which should be applied.
+	// Next is the index of the next staged pallet bundle which should be applied. Once it's applied
+	// successfully, it'll be pushed onto the History stack.
 	Next int `yaml:"next,omitempty"`
+	// NextFailed records whether the next staged pallet bundle had failed to be applied.
+	NextFailed bool `yaml:"next-failed,omitempty"`
 	// History is the stack of staged pallet bundles which have been applied successfully, with the
-	// most-recently-applied bundle last.
+	// most-recently-applied bundle last. The most-recently-applied bundle can be used as a fallback
+	// If the next staged pallet bundle (if it exists) is not applied successfully.
 	History []int `yaml:"history,omitempty"`
 	// Names is a list of aliases for staged pallet bundles.
 	Names map[string]int `yaml:"names,omitempty"`

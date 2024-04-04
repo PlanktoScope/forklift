@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- (cli) Added a `[dev] plt stage` subcommand to stage the pallet so that it can be applied in the future.
+- (cli) Added a `[dev] plt stage` subcommand to bundle and stage the pallet as the next one to be applied.
 - (cli) Added a `stage ls-bun` subcommand to list staged pallet bundles.
 - (cli) Added a `stage show-bun` subcommand to show info about a staged pallet bundle.
 - (cli) Added a `stage show-bun-depl` subcommand to show info about package deployment of a staged pallet bundle.
@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `stage add-bun-name` subcommand to assign a name to a staged pallet bundle.
 - (cli) Added a `stage ls-bun-names` subcommand to list all assigned names for staged pallet bundles.
 - (cli) Added a `stage rm-bun-name` subcommand to unassign a name for a staged pallet bundle.
+- (cli) Added `stage check` and `stage plan` subcommands which provide equivalent functionality as `[dev] plt check` and `[dev] plt plan`, but for the next staged pallet bundle to be applied.
+- (cli) Added a `stage apply` subcommand which tries to apply the next staged pallet bundle and then, if that bundle could not be successfully applied, falls back to applying the last successfully-applied bundle in subsequent invocations.
+- (cli) Added a `stage set-next` subcommand which changes which staged pallet bundle will be applied next (and resets `stage apply`'s tracking of whether the next staged pallet bundle to be applied has encountered a failure in the past)
+- (cli) Added a `stage show` subcommand which shows a summary of the staged pallets and what will happen when on the next invocation of the `stage apply` subcommand.
+- (cli) Added a `stage show-hist` subcommand which lists all staged pallet bundles which have been successfully applied in the past.
+
+### Changed
+
+- (cli) The `[dev] plt apply` and `plt switch` subcommands now automatically bundle and stage the pallet before applying it.
 
 ## 0.6.0 - 2024-02-28
 

@@ -24,13 +24,17 @@ func MakeCmd(versions Versions) *cli.Command {
 			[]*cli.Command{
 				{
 					Name:      "switch",
-					Usage:     "(Re)initializes the local pallet, updates the cache, and deploys the pallet",
+					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
 					ArgsUsage: "[github_repository_path@release]",
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  "parallel",
 							Usage: "parallelize updating of deployments",
+						},
+						&cli.BoolFlag{
+							Name:  "apply",
+							Usage: "immediately apply the pallet after staging it",
 						},
 					},
 				},
@@ -55,7 +59,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 		&cli.Command{
 			Name:     "plan",
 			Category: category,
-			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
+			Usage: "Determines the changes needed to update the host to match the deployments " +
 				"specified by the local pallet",
 			Action: planAction(versions),
 			Flags: []cli.Flag{
@@ -74,8 +78,9 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 		&cli.Command{
 			Name:     "apply",
 			Category: category,
-			Usage:    "Updates the Docker host to match the deployments specified by the local pallet",
-			Action:   applyAction(versions),
+			Usage: "Builds, stages, and immediately applies a bundle of the local pallet to update the " +
+				"host to match the deployments specified by the local pallet",
+			Action: applyAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",

@@ -59,7 +59,6 @@ func PrintResolvedDepl(
 		return nil
 	}
 
-	fmt.Println()
 	appDef, err := loadAppDefinition(resolved)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load Compose app definition")
@@ -112,7 +111,9 @@ func printDeplPkg(indent int, cache forklift.PathedRepoCache, depl *forklift.Res
 	indent++
 
 	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
-	printPkgRepo(indent, cache, depl.Pkg)
+	if depl.Pkg.Repo.Def.Repo != (core.RepoSpec{}) {
+		printPkgRepo(indent, cache, depl.Pkg)
+	}
 }
 
 func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {

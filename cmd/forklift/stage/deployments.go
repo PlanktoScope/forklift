@@ -31,7 +31,7 @@ func showBunDeplAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", index)
 		}
-		resolved, err := bundle.LoadDepl(deplName)
+		resolved, err := bundle.LoadResolvedDepl(deplName)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load deployment %s from bundle %d", deplName, index)
 		}

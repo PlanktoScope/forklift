@@ -78,10 +78,10 @@ func (s *FSStageStore) List() (indices []int, err error) {
 	return indices, nil
 }
 
-// IdentifyLast identifies the staged pallet in the store with the highest index. Only positive
+// IdentifyHighest identifies the staged pallet in the store with the highest index. Only positive
 // indices are considered.
 // If the cache is empty, an error is returned with zero as an index.
-func (s *FSStageStore) IdentifyLast() (index int, err error) {
+func (s *FSStageStore) IdentifyHighest() (index int, err error) {
 	indices, err := s.List()
 	if err != nil {
 		return 0, err
@@ -95,7 +95,7 @@ func (s *FSStageStore) IdentifyLast() (index int, err error) {
 // AllocateNew creates a new directory for a staged pallet in the store with a new highest
 // index.
 func (s *FSStageStore) AllocateNew() (index int, err error) {
-	prevIndex, _ := s.IdentifyLast()
+	prevIndex, _ := s.IdentifyHighest()
 	// Warning: we're assuming that no pallets have been staged so far if we can't identify the last
 	// staged pallet. This might be an invalid assumption?
 	// Note: if no pallets have been staged so far, the first index we allow is 1. This way, a "0"
@@ -111,13 +111,16 @@ func (s *FSStageStore) AllocateNew() (index int, err error) {
 	return index, nil
 }
 
-// SetNext sets the specified stage as the next one to be applied.
+// SetNext sets the specified stage as the next one to be applied and resets the flag tracking
+// whether the next stage to be applied has failed. It assumes that the specified
+// stage actually exists. Setting a value of 0 will clear the state of the next stage to be applied,
+// so no stage will be applied next.
 func (s *FSStageStore) SetNext(index int) {
+	s.Def.Stages.NextFailed = false
 	s.Def.Stages.Next = index
 }
 
-// GetNext returns the next stage to be applied. It returns not-`ok` if no stage has been
-// is to be applied.
+// GetNext returns the next stage to be applied. It returns not-`ok` if no stage is to be applied.
 func (s *FSStageStore) GetNext() (index int, ok bool) {
 	return s.Def.Stages.Next, s.Def.Stages.Next > 0
 }
@@ -131,6 +134,18 @@ func (s *FSStageStore) GetCurrent() (index int, ok bool) {
 	return s.Def.Stages.History[len(s.Def.Stages.History)-1], true
 }
 
+// GetPending returns the next stage to be applied, if it's different from the last stage which was
+// successfully applied. It returns not-`ok` if there is no next stage to be applied or if the two
+// stages are identical.
+func (s *FSStageStore) GetPending() (index int, ok bool) {
+	current, _ := s.GetCurrent()
+	next, hasNext := s.GetNext()
+	if !hasNext {
+		return 0, false
+	}
+	return next, current != next
+}
+
 // GetRollback returns the previous stage which was successfully applied before the last stage which
 // was successfully applied. It returns not-`ok` if no such stage exists.
 func (s *FSStageStore) GetRollback() (index int, ok bool) {
@@ -141,9 +156,23 @@ func (s *FSStageStore) GetRollback() (index int, ok bool) {
 	return s.Def.Stages.History[len(s.Def.Stages.History)-1-rollbackOffset], true
 }
 
-// RecordNextSuccess records the stage which was to be applied as having successfully been applied.
-func (s *FSStageStore) RecordNextSuccess() {
+// RecordNextSuccess records the whether stage which was to be applied had a successful application.
+func (s *FSStageStore) RecordNextSuccess(succeeded bool) {
+	if s.Def.Stages.Next == 0 {
+		return
+	}
+	s.Def.Stages.NextFailed = !succeeded
+	if !succeeded {
+		return
+	}
+	if current, ok := s.GetCurrent(); ok && s.Def.Stages.Next == current {
+		return
+	}
 	s.Def.Stages.History = append(s.Def.Stages.History, s.Def.Stages.Next)
+}
+
+func (s *FSStageStore) NextFailed() bool {
+	return s.Def.Stages.NextFailed
 }
 
 // CommitState atomically updates the stage store's definition file.

@@ -25,7 +25,7 @@ func CheckCompatibility(
 		)
 	}
 
-	if err := checkArtifactCompatibility(
+	if err := CheckArtifactCompatibility(
 		pallet.Def.ForkliftVersion, toolVersion, palletMinVersion, pallet.Path(), ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
@@ -44,7 +44,7 @@ func CheckCompatibility(
 		)
 	}
 	for _, v := range versions {
-		if err := checkArtifactCompatibility(
+		if err := CheckArtifactCompatibility(
 			v.forkliftVersion, toolVersion, repoMinVersion, v.reqPath+"@"+v.reqVersion, ignoreTool,
 		); err != nil {
 			return errors.Wrapf(
@@ -71,7 +71,7 @@ func CheckShallowCompatibility(
 		)
 	}
 
-	if err := checkArtifactCompatibility(
+	if err := CheckArtifactCompatibility(
 		pallet.Def.ForkliftVersion, toolVersion, palletMinVersion, pallet.Path(), ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
@@ -81,12 +81,12 @@ func CheckShallowCompatibility(
 	return nil
 }
 
-// checkArtifactCompatibility determines whether the version of Forklift required by an artifact (a
+// CheckArtifactCompatibility determines whether the version of Forklift required by an artifact (a
 // repo or pallet), as declared by that artifact's Forklift version, is compatible with the actual
 // version of the Forklift tool, and whether the artifact's Forklift version is compatible with the
 // tool's minimum supported Forklift version for artifacts.  compatErr is non-nil when the versions
 // fail the compatibility check, while checkErr is non-nil when any specified version is invalid.
-func checkArtifactCompatibility(
+func CheckArtifactCompatibility(
 	artifactVersion, toolVersion, minArtifactVersion, artifactPath string, ignoreTool bool,
 ) error {
 	if artifactVersion == "" { // special case for pre-v0.4.0 pallets/repos

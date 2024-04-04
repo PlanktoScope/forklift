@@ -49,7 +49,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 		&cli.Command{
 			Name:     "plan",
 			Category: category,
-			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
+			Usage: "Determines the changes needed to update the host to match the deployments " +
 				"specified by the local pallet",
 			Action: planAction(versions),
 			Flags: []cli.Flag{
@@ -68,8 +68,9 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 		&cli.Command{
 			Name:     "apply",
 			Category: category,
-			Usage:    "Immediately updates the Docker host to match the development pallet",
-			Action:   applyAction(versions),
+			Usage: "Builds, stages, and immediately applies a bundle of the development pallet to " +
+				"update the host to match the deployments specified by the development pallet",
+			Action: applyAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",

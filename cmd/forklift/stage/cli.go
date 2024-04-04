@@ -18,16 +18,74 @@ func MakeCmd(versions Versions) *cli.Command {
 		Name:  "stage",
 		Usage: "Manages the local stage store",
 		Subcommands: slices.Concat(
+			makeUseSubcmds(versions),
 			makeQuerySubcmds(versions),
 			makeModifySubcmds(versions),
 		),
 	}
 }
 
+func makeUseSubcmds(versions Versions) []*cli.Command {
+	const category = "Use the stage store"
+	return []*cli.Command{
+		{
+			Name:     "check",
+			Category: category,
+			Usage:    "Checks whether the next staged pallet's resource constraints are satisfied",
+			Action:   checkAction(versions),
+		},
+		{
+			Name:     "plan",
+			Category: category,
+			Usage: "Determines the changes needed to update the host to match the deployments " +
+				"specified by the next staged pallet",
+			Action: planAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
+		},
+		{
+			Name:     "apply",
+			Category: category,
+			Usage: "Updates the host to match the package deployments specified by the next staged " +
+				"pallet",
+			Action: applyAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize updating of package deployments",
+				},
+			},
+		},
+	}
+}
+
 func makeQuerySubcmds(versions Versions) []*cli.Command {
 	const category = "Query the stage store"
 	return []*cli.Command{
-		// TODO: add a show-history command
+		{
+			Name:     "show",
+			Category: category,
+			Usage:    "Describes the state of the stage store",
+			Action:   showAction(versions),
+		},
+		{
+			Name:     "show-hist",
+			Aliases:  []string{"show-history"},
+			Category: category,
+			Usage:    "Shows the history of successfully-applied staged pallet bundles",
+			Action:   showHistAction(versions),
+		},
+		{
+			Name:     "ls-bun-names",
+			Aliases:  []string{"list-bundle-names"},
+			Category: category,
+			Usage:    "Lists all named staged pallet bundles",
+			Action:   lsBunNamesAction(versions),
+		},
 		{
 			Name:     "ls-bun",
 			Aliases:  []string{"list-bundles"},
@@ -60,21 +118,22 @@ func makeQuerySubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "bundle_index deployment_name",
 			Action:    locateBunDeplPkgAction(versions),
 		},
-		{
-			Name:     "ls-bun-names",
-			Category: category,
-			Usage:    "Lists all named staged pallet bundles",
-			Action:   lsBunNamesAction(versions),
-		},
 	}
 }
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
+	category := "Modify the stage store"
 	return []*cli.Command{
+		{
+			Name:     "set-next",
+			Category: category,
+			Usage:    "Sets the specified staged pallet bundle as the next one to be applied.",
+			Action:   setNextAction(versions),
+		},
 		{
 			Name:     "add-bun-name",
 			Aliases:  []string{"add-bundle-name"},
-			Category: "Modify the stage store",
+			Category: category,
 			Usage: "Assigns a name to the specified staged pallet bundle; if the name was already " +
 				"assigned, it's reassigned",
 			ArgsUsage: "bundle_name bundle_index",
@@ -83,7 +142,7 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 		{
 			Name:      "rm-bun-name",
 			Aliases:   []string{"remove-bundle-name"},
-			Category:  "Modify the stage store",
+			Category:  category,
 			Usage:     "Unsets a name for a staged pallet bundle",
 			ArgsUsage: "bundle_name",
 			Action:    rmBunNameAction(versions),

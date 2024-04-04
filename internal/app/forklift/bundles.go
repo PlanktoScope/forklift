@@ -5,7 +5,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
+	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	cp "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -55,9 +58,26 @@ func (b *FSBundle) Path() string {
 	return b.FS.Path()
 }
 
+// FSBundle: Pallets
+
+func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
+	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
+	// https://github.com/golang/go/issues/62484)
+	if err := cp.Copy(pallet.FS.Path(), filepath.FromSlash(b.getBundledPalletPath())); err != nil {
+		return errors.Wrapf(
+			err, "couldn't bundle files for pallet %s from %s", pallet.Path(), pallet.FS.Path(),
+		)
+	}
+	return nil
+}
+
+func (b *FSBundle) getBundledPalletPath() string {
+	return path.Join(b.FS.Path(), bundledPalletDirName)
+}
+
 // FSBundle: Deployments
 
-func (b *FSBundle) AddDepl(depl *ResolvedDepl) error {
+func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) error {
 	b.Def.Deploys[depl.Name] = depl.Depl.Def
 	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
 	// https://github.com/golang/go/issues/62484)
@@ -72,7 +92,44 @@ func (b *FSBundle) AddDepl(depl *ResolvedDepl) error {
 	return nil
 }
 
-func (b *FSBundle) LoadDepl(name string) (depl *ResolvedDepl, err error) {
+func (b *FSBundle) LoadDepl(name string) (Depl, error) {
+	depl, ok := b.Def.Deploys[name]
+	if !ok {
+		return Depl{}, errors.Errorf("bundle does not contain package deployment %s", name)
+	}
+	return Depl{
+		Name: name,
+		Def:  depl,
+	}, nil
+}
+
+func (b *FSBundle) LoadDepls(searchPattern string) ([]Depl, error) {
+	deplNames := make([]string, 0, len(b.Def.Deploys))
+	for deplName := range b.Def.Deploys {
+		match, err := doublestar.Match(searchPattern, deplName)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "couldn't search for package deployment configs matching %s", searchPattern,
+			)
+		}
+		if !match {
+			continue
+		}
+		deplNames = append(deplNames, deplName)
+	}
+	slices.Sort(deplNames)
+	depls := make([]Depl, 0, len(deplNames))
+	for _, deplName := range deplNames {
+		depl, err := b.LoadDepl(deplName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't load package deployment %s from bundle", deplName)
+		}
+		depls = append(depls, depl)
+	}
+	return depls, nil
+}
+
+func (b *FSBundle) LoadResolvedDepl(name string) (depl *ResolvedDepl, err error) {
 	resolved := &ResolvedDepl{
 		Depl: Depl{
 			Name: name,
@@ -80,35 +137,20 @@ func (b *FSBundle) LoadDepl(name string) (depl *ResolvedDepl, err error) {
 		},
 	}
 	pkgPath := b.Def.Deploys[name].Package
-	/*if resolved.PkgReq, err = b.LoadPkgReq(pkgPath); err != nil {
-	  return depl, err
-	}*/
+	if resolved.PkgReq, err = b.LoadPkgReq(pkgPath); err != nil {
+		return depl, err
+	}
 	if resolved.Pkg, err = b.LoadFSPkg(pkgPath, ""); err != nil {
-		return depl, errors.Wrapf(err, "couldn't load package %s from bundle", pkgPath)
+		return depl, errors.Wrapf(err, "couldn't load package deployment %s from bundle", pkgPath)
 	}
 	return resolved, nil
 }
 
-/*func (b *FSBundle) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-  if path.IsAbs(pkgPath) {
-    return PkgReq{
-      PkgSubdir: strings.TrimLeft(pkgPath, "/"),
-      RepoReq: RepoReq{
-        GitRepoReq{RequiredPath: b.Def.Pallet.Path},
-      }
-    }, nil
-  }
-
-  return PkgReq{
-    PkgSubdir: "",
-    Repo: RepoReq{
-      GitRepoReq: GitRepoReq{
-        RequiredPath: "",
-        VersionLock: VersionLock{},
-      },
-    },
-  }, nil
-}*/
+func (b *FSBundle) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
+	return PkgReq{
+		PkgSubdir: strings.TrimLeft(pkgPath, "/"),
+	}, nil
+}
 
 // FSBundle: Packages
 

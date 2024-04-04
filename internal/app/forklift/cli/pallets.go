@@ -8,11 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v2/pkg/api"
 	ggit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
@@ -239,7 +237,7 @@ func DownloadRequiredPallets(
 // Cache
 
 func CacheAllRequirements(
-	pallet *forklift.FSPallet, repoCachePath string, loader forklift.FSPkgLoader,
+	pallet *forklift.FSPallet, repoCachePath string, pkgLoader forklift.FSPkgLoader,
 	includeDisabled, parallel bool,
 ) (changed bool, err error) {
 	fmt.Println("Downloading repos specified by the local pallet...")
@@ -252,7 +250,7 @@ func CacheAllRequirements(
 	// forklift version is incompatible or ahead of the pallet version
 
 	fmt.Println("Downloading Docker container images specified by the local pallet...")
-	if err := DownloadImages(0, pallet, loader, includeDisabled, parallel); err != nil {
+	if err := DownloadImages(0, pallet, pkgLoader, includeDisabled, parallel); err != nil {
 		return false, err
 	}
 	return changed, nil
@@ -260,16 +258,21 @@ func CacheAllRequirements(
 
 // Check
 
-// CheckPallet checks the resource constraints among package deployments in the pallet.
-func CheckPallet(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+type ResolvedDeplsLoader interface {
+	forklift.PkgReqLoader
+	LoadDepls(searchPattern string) ([]forklift.Depl, error)
+}
+
+// Check checks the resource constraints among package deployments in the pallet or bundle.
+func Check(
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 ) ([]*forklift.ResolvedDepl, []forklift.SatisfiedDeplDeps, error) {
-	depls, err := pallet.LoadDepls("**/*")
+	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, nil, err
 	}
 	depls = forklift.FilterDeplsForEnabled(depls)
-	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
+	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -282,8 +285,11 @@ func CheckPallet(
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(conflicts) > 0 || len(missingDeps) > 0 {
-		return nil, nil, errors.New("pallet failed resource constraint checks")
+	if len(conflicts)+len(missingDeps) > 0 {
+		return nil, nil, errors.Errorf(
+			"resource constraint checks failed (%d conflicts, %d missing dependencies)",
+			len(conflicts), len(missingDeps),
+		)
 	}
 	return resolved, satisfied, nil
 }
@@ -542,14 +548,14 @@ func newRemoveReconciliationChange(appName string, app api.Stack) *Reconciliatio
 	}
 }
 
-// PlanPallet builds a plan for changes to make to the Docker host in order to reconcile it with the
-// desired state as expressed by the pallet. The plan is expressed as a dependency graph which can
-// be used to build a partial ordering of the changes (where each change is a node in the graph)
-// for concurrent execution, and - if serial execution is required either because the parallel arg
-// is set to true or because a dependency cycle was detected - a total ordering of the changes for
-// serial (rather than concurrent) execution.
-func PlanPallet(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, parallel bool,
+// Plan builds a plan for changes to make to the Docker host in order to reconcile it with the
+// desired state as expressed by the pallet or bundle. The plan is expressed as a dependency graph
+// which can be used to build a partial ordering of the changes (where each change is a node in the
+// graph) for concurrent execution, and - if serial execution is required either because the
+// parallel arg is set to true or because a dependency cycle was detected - a total ordering of the
+// changes for serial (rather than concurrent) execution.
+func Plan(
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, parallel bool,
 ) (
 	changeDeps structures.Digraph[*ReconciliationChange], serialization []*ReconciliationChange,
 	err error,
@@ -559,9 +565,9 @@ func PlanPallet(
 		return nil, nil, errors.Wrap(err, "couldn't make Docker API client")
 	}
 
-	depls, satisfiedDeps, err := CheckPallet(indent, pallet, loader)
+	depls, satisfiedDeps, err := Check(indent, deplsLoader, pkgLoader)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't ensure pallet validity")
+		return nil, nil, errors.Wrap(err, "couldn't ensure validity")
 	}
 	// Always skip nonblocking dependency relationships - even for serial execution, they don't need
 	// to be considered for a total ordering. And we don't want nonblocking dependency relationships
@@ -856,24 +862,26 @@ func compareDeplNames(r, s string) int {
 func StagePallet(
 	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore,
 	repoCache forklift.PathedRepoCache, bundleForkliftVersion string,
-) error {
-	index, err := stageStore.AllocateNew()
+) (index int, err error) {
+	index, err = stageStore.AllocateNew()
 	if err != nil {
-		return errors.Wrap(err, "couldn't allocate a directory for staging")
+		return 0, errors.Wrap(err, "couldn't allocate a directory for staging")
 	}
 	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
 	if err = buildBundle(
 		pallet, repoCache, bundleForkliftVersion,
 		path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
-		return errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
+		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
 	fmt.Printf("Committing stage %d to be applied subsequently...\n", index)
 	stageStore.SetNext(index)
 	if err = stageStore.CommitState(); err != nil {
-		return errors.Wrapf(err, "couldn't commit stage %d as the next stage to be applied...", index)
+		return index, errors.Wrapf(
+			err, "couldn't commit stage %d as the next stage to be applied...", index,
+		)
 	}
-	return nil
+	return index, nil
 }
 
 func buildBundle(
@@ -888,16 +896,19 @@ func buildBundle(
 		return errors.Wrapf(err, "couldn't create bundle definition for %s", outputBundle.FS.Path())
 	}
 
-	depls, _, err := CheckPallet(0, pallet, repoCache)
+	depls, _, err := Check(0, pallet, repoCache)
 	if err != nil {
 		return errors.Wrap(err, "couldn't ensure pallet validity")
 	}
 	for _, depl := range depls {
-		if err := outputBundle.AddDepl(depl); err != nil {
+		if err := outputBundle.AddResolvedDepl(depl); err != nil {
 			return err
 		}
 	}
 
+	if err := outputBundle.SetBundledPallet(pallet); err != nil {
+		return err
+	}
 	if err = outputBundle.WriteRepoDefFile(); err != nil {
 		return err
 	}
@@ -998,145 +1009,23 @@ func newBundleRepoInclusion(
 // Apply
 
 func ApplyPallet(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, parallel bool,
+	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, workspace *forklift.FSWorkspace,
+	newStageStoreForkliftVersion string, newBundleForkliftVersion string, parallel bool,
 ) error {
-	concurrentPlan, serialPlan, err := PlanPallet(indent, pallet, loader, parallel)
+	stageStore, err := workspace.GetStageStore(newStageStoreForkliftVersion)
 	if err != nil {
 		return err
 	}
-
-	// TODO: stage the pallet
-
-	if serialPlan != nil {
-		return applyChangesSerially(indent, serialPlan)
-	}
-	return applyChangesConcurrently(indent, concurrentPlan)
-}
-
-func applyChangesSerially(indent int, plan []*ReconciliationChange) error {
-	dc, err := docker.NewClient()
+	index, err := StagePallet(pallet, stageStore, repoCache, newBundleForkliftVersion)
 	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker API client")
+		return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
 	}
-
-	fmt.Println()
-	fmt.Println("Applying changes serially...")
-	for _, change := range plan {
-		fmt.Println()
-		if err := applyReconciliationChange(context.Background(), indent+1, change, dc); err != nil {
-			return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
-		}
+	bundle, err := stageStore.LoadFSBundle(index)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
+	}
+	if err = ApplyNextOrCurrentBundle(0, stageStore, bundle, parallel); err != nil {
+		return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
 	}
 	return nil
-}
-
-func applyReconciliationChange(
-	ctx context.Context, indent int, change *ReconciliationChange, dc *docker.Client,
-) error {
-	switch change.Type {
-	default:
-		return errors.Errorf("unknown change type '%s'", change.Type)
-	case addReconciliationChange:
-		IndentedPrintf(
-			indent, "Adding package deployment %s as Compose app %s...\n", change.Depl.Name, change.Name,
-		)
-		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
-			return errors.Wrapf(err, "couldn't add %s", change.Name)
-		}
-		return nil
-	case removeReconciliationChange:
-		// Note: removeReconciliationChange has a nil Depl field
-		IndentedPrintf(indent, "Removing Compose app %s (unknown deployment)...\n", change.Name)
-		if err := dc.RemoveApps(ctx, []string{change.Name}); err != nil {
-			return errors.Wrapf(err, "couldn't remove %s", change.Name)
-		}
-		return nil
-	case updateReconciliationChange:
-		IndentedPrintf(
-			indent, "Updating package deployment %s as Compose app %s...\n",
-			change.Depl.Name, change.Name,
-		)
-		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
-			return errors.Wrapf(err, "couldn't add %s", change.Name)
-		}
-		return nil
-	}
-}
-
-func deployApp(
-	ctx context.Context, indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client,
-) error {
-	definesApp, err := depl.DefinesApp()
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
-		)
-	}
-	if !definesApp {
-		IndentedPrintln(indent, "No Docker Compose app to deploy!")
-		return nil
-	}
-
-	appDef, err := loadAppDefinition(depl)
-	if err != nil {
-		return errors.Wrap(err, "couldn't load Compose app definition")
-	}
-	if err = dc.DeployApp(ctx, appDef, 0); err != nil {
-		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
-	}
-	return nil
-}
-
-func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
-	composeFiles, err := depl.GetComposeFilenames()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine Compose files for deployment")
-	}
-
-	appDef, err := docker.LoadAppDefinition(
-		depl.Pkg.FS, getAppName(depl.Name), composeFiles, nil,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load Docker Compose app definition for deployment %s of %s",
-			depl.Name, depl.Pkg.FS.Path(),
-		)
-	}
-	return appDef, nil
-}
-
-func applyChangesConcurrently(indent int, plan structures.Digraph[*ReconciliationChange]) error {
-	dc, err := docker.NewClient(docker.WithConcurrencySafeOutput())
-	if err != nil {
-		return errors.Wrap(err, "couldn't make Docker API client")
-	}
-	fmt.Println()
-	fmt.Println("Applying changes concurrently...")
-	changeDone := make(map[*ReconciliationChange]chan struct{})
-	for change := range plan {
-		changeDone[change] = make(chan struct{})
-	}
-	// We don't use the errgroup's context because we don't want one failing service to prevent
-	// bringup of all other services.
-	eg, _ := errgroup.WithContext(context.Background())
-	for change, deps := range plan {
-		eg.Go(func(
-			change *ReconciliationChange, deps structures.Set[*ReconciliationChange],
-		) func() error {
-			return func() error {
-				defer close(changeDone[change])
-
-				for dep := range deps {
-					<-changeDone[dep]
-				}
-				if err := applyReconciliationChange(
-					context.Background(), indent, change, dc,
-				); err != nil {
-					return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
-				}
-				return nil
-			}
-		}(change, deps))
-	}
-	return eg.Wait()
 }

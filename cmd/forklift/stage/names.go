@@ -28,20 +28,21 @@ func lsBunNamesAction(versions Versions) cli.ActionFunc {
 			names = append(names, name)
 		}
 		slices.Sort(names)
-		if index, ok := store.GetNext(); ok {
-			printNamedBundleSummary(store, "next", index)
-		}
-		if index, ok := store.GetCurrent(); ok {
-			printNamedBundleSummary(store, "current", index)
+		for _, name := range names {
+			index := store.Def.Stages.Names[name]
+			printNamedBundleSummary(store, name, index)
 		}
 		if index, ok := store.GetRollback(); ok {
 			printNamedBundleSummary(store, "rollback", index)
 		}
-		for _, name := range names {
-			index := store.Def.Stages.Names[name]
-			printNamedBundleSummary(store, name, index)
-			// TODO: add label for the last successfully-applied bundle, and the next one staged to be
-			// deployed, i.e. the pending apply (if it exists), and the rollback bundle (if it exists)
+		if index, ok := store.GetCurrent(); ok {
+			printNamedBundleSummary(store, "current", index)
+		}
+		if index, ok := store.GetNext(); ok {
+			printNamedBundleSummary(store, "next", index)
+		}
+		if index, ok := store.GetPending(); ok {
+			printNamedBundleSummary(store, "pending", index)
 		}
 		return nil
 	}
@@ -89,7 +90,7 @@ func addBunNameAction(versions Versions) cli.ActionFunc {
 		rawIndex := c.Args().Get(1)
 		index, err := strconv.Atoi(rawIndex)
 		if err != nil {
-			return errors.Wrapf(err, "Couldn't parse staged bundle index %s as an integer", rawIndex)
+			return errors.Wrapf(err, "couldn't parse staged bundle index %s as an integer", rawIndex)
 		}
 		if _, err = store.LoadFSBundle(index); err != nil {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", index)
