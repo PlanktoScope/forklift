@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `stage set-next` subcommand which changes which staged pallet bundle will be applied next (and resets `stage apply`'s tracking of whether the next staged pallet bundle to be applied has encountered a failure in the past)
 - (cli) Added a `stage show` subcommand which shows a summary of the staged pallets and what will happen when on the next invocation of the `stage apply` subcommand.
 - (cli) Added a `stage show-hist` subcommand which lists all staged pallet bundles which have been successfully applied in the past.
+- (cli) Added a `stage rm-bun` subcommand to delete a staged pallet bundle.
 
 ### Changed
 

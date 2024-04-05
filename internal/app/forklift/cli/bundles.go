@@ -143,8 +143,10 @@ func ApplyNextOrCurrentBundle(
 ) error {
 	applyingFallback := store.NextFailed()
 	applyErr := applyBundle(0, bundle, parallel)
+	current, _ := store.GetCurrent()
+	next, _ := store.GetNext()
 	fmt.Println()
-	if !applyingFallback {
+	if !applyingFallback || current == next {
 		store.RecordNextSuccess(applyErr == nil)
 	}
 	if applyErr != nil {

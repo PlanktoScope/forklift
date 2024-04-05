@@ -26,7 +26,7 @@ func loadNextBundle(
 		return nil, store, errMissingStore
 	}
 
-	index, ok := store.GetNext()
+	next, ok := store.GetNext()
 	if !ok {
 		return nil, store, errors.Errorf(
 			"no next staged pallet bundle to apply: you first must set a pallet to stage next, " +
@@ -34,27 +34,33 @@ func loadNextBundle(
 		)
 	}
 	if store.NextFailed() {
-		fmt.Printf("Next stage failed in the past, so we won't use it: %d\n", index)
-		if index, ok = store.GetCurrent(); !ok {
+		fmt.Printf("Next stage failed in the past: %d\n", next)
+		current, ok := store.GetCurrent()
+		switch {
+		case !ok:
 			return nil, store, errors.Errorf(
 				"the next staged pallet bundle already failed, and no staged pallet bundle was " +
 					"applied successfully in the past, so we have no fallback!",
 			)
+		case current != next:
+			fmt.Printf("Current stage will be used instead, as a fallback: %d\n", current)
+		default:
+			fmt.Println("Trying again, since it had succeeded in the past!")
 		}
-		fmt.Printf("Current stage, as a fallback: %d\n", index)
+		next = current
 	} else {
-		if pending, ok := store.GetPending(); ok && index == pending {
-			fmt.Printf("Next stage is pending: %d\n", index)
-		} else if current, ok := store.GetCurrent(); ok && index == current {
-			fmt.Printf("Next stage previously had a successful apply: %d\n", index)
+		if pending, ok := store.GetPending(); ok && next == pending {
+			fmt.Printf("Next stage is pending: %d\n", next)
+		} else if current, ok := store.GetCurrent(); ok && next == current {
+			fmt.Printf("Next stage previously had a successful apply: %d\n", next)
 		} else {
-			fmt.Printf("Next stage: %d\n", index)
+			fmt.Printf("Next stage: %d\n", next)
 		}
 	}
 
-	bundle, err := store.LoadFSBundle(index)
+	bundle, err := store.LoadFSBundle(next)
 	if err != nil {
-		return nil, store, errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
+		return nil, store, errors.Wrapf(err, "couldn't load staged pallet bundle %d", next)
 	}
 	return bundle, store, nil
 }

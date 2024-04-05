@@ -111,6 +111,12 @@ func (s *FSStageStore) AllocateNew() (index int, err error) {
 	return index, nil
 }
 
+// GetBundlePath returns the full filesystem path of the pallet bundle at the specified index,
+// whether or not a bundle actually exists on the filesystem at that index.
+func (s *FSStageStore) GetBundlePath(index int) string {
+	return path.Join(s.FS.Path(), fmt.Sprintf("%d", index))
+}
+
 // SetNext sets the specified stage as the next one to be applied and resets the flag tracking
 // whether the next stage to be applied has failed. It assumes that the specified
 // stage actually exists. Setting a value of 0 will clear the state of the next stage to be applied,
@@ -171,8 +177,31 @@ func (s *FSStageStore) RecordNextSuccess(succeeded bool) {
 	s.Def.Stages.History = append(s.Def.Stages.History, s.Def.Stages.Next)
 }
 
+// NextFailed returns whether the next stage to be applied has encountered a failed application.
 func (s *FSStageStore) NextFailed() bool {
 	return s.Def.Stages.NextFailed
+}
+
+// RemoveBundleNames removes all names for the specified bundle.
+func (s *FSStageStore) RemoveBundleNames(index int) {
+	for name, namedIndex := range s.Def.Stages.Names {
+		if index != namedIndex {
+			continue
+		}
+		delete(s.Def.Stages.Names, name)
+	}
+}
+
+// RemoveBundleHistory removes the specified bundle from the history.
+func (s *FSStageStore) RemoveBundleHistory(index int) {
+	newHistory := make([]int, 0, len(s.Def.Stages.History))
+	for _, historyIndex := range s.Def.Stages.History {
+		if index == historyIndex {
+			continue
+		}
+		newHistory = append(newHistory, historyIndex)
+	}
+	s.Def.Stages.History = newHistory
 }
 
 // CommitState atomically updates the stage store's definition file.
