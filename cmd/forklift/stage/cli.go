@@ -156,6 +156,12 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "bundle_index_or_name",
 			Action:    rmBunAction(versions),
 		},
-		// TODO: add a prune command which deletes bundles not in the history and not in any names
+		{
+			Name:     "prune-bun",
+			Aliases:  []string{"prune-bundles"},
+			Category: category,
+			Usage:    "Deletes all staged pallet bundles not referenced in names or in the history",
+			Action:   pruneBunAction(versions),
+		},
 	}
 }

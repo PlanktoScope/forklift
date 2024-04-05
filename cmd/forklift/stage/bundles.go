@@ -12,6 +12,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // ls-bun
@@ -167,5 +168,53 @@ func rmBunAction(versions Versions) cli.ActionFunc {
 		}
 		fmt.Println("Deleting the staged pallet bundle from the filesystem...")
 		return os.RemoveAll(filepath.FromSlash(store.GetBundlePath(deleteIndex)))
+	}
+}
+
+// prune-bun
+
+func pruneBunAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		bundleNames := getBundleNames(store)
+		allIndices, err := store.List()
+		if err != nil {
+			return err
+		}
+		historyIndices := make(structures.Set[int])
+		for _, index := range store.Def.Stages.History {
+			historyIndices.Add(index)
+		}
+
+		deleteIndices := make([]int, 0, len(allIndices))
+		for _, index := range allIndices {
+			if len(bundleNames[index]) > 0 || historyIndices.Has(index) {
+				continue
+			}
+			deleteIndices = append(deleteIndices, index)
+		}
+		if len(deleteIndices) == 0 {
+			fmt.Println("There are no staged pallet bundles to prune!")
+			return nil
+		}
+
+		fmt.Printf("Deleting staged pallet bundles: %+v\n", deleteIndices)
+		failedIndices := make([]int, 0, len(deleteIndices))
+		for _, index := range deleteIndices {
+			if err = os.RemoveAll(filepath.FromSlash(store.GetBundlePath(index))); err != nil {
+				failedIndices = append(failedIndices, index)
+			}
+		}
+		if len(failedIndices) > 0 {
+			return errors.Errorf("couldn't delete some staged pallet bundles: %+v", failedIndices)
+		}
+		return nil
 	}
 }

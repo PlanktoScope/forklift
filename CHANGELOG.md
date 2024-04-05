@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `stage show` subcommand which shows a summary of the staged pallets and what will happen when on the next invocation of the `stage apply` subcommand.
 - (cli) Added a `stage show-hist` subcommand which lists all staged pallet bundles which have been successfully applied in the past.
 - (cli) Added a `stage rm-bun` subcommand to delete a staged pallet bundle.
+- (cli) Added a `stage prune-bun` subcommand to delete all staged pallet bundle not referred to by names or by the history of successfully-applied bundles.
 
 ### Changed
 
