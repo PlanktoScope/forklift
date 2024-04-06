@@ -29,17 +29,29 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 	const category = "Use the stage store"
 	return []*cli.Command{
 		{
+			Name:     "cache-img",
+			Aliases:  []string{"cache-images"},
+			Category: category,
+			Usage:    "Pre-downloads the Docker container images required for the next apply",
+			Action:   cacheImgAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
+		},
+		{
 			Name:     "check",
 			Category: category,
-			Usage:    "Checks whether the next staged pallet's resource constraints are satisfied",
+			Usage:    "Checks whether the next resource constraints are satisfied for the next apply",
 			Action:   checkAction(versions),
 		},
 		{
 			Name:     "plan",
 			Category: category,
-			Usage: "Determines the changes needed to update the host to match the deployments " +
-				"specified by the next staged pallet",
-			Action: planAction(versions),
+			Usage:    "Determines the changes needed to update the host for the next apply",
+			Action:   planAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
@@ -50,8 +62,8 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 		{
 			Name:     "apply",
 			Category: category,
-			Usage: "Updates the host to match the package deployments specified by the next staged " +
-				"pallet",
+			Usage: "Updates the host according to the next staged pallet, falling back to the last " +
+				"successfully-staged pallet if the next one already failed",
 			Action: applyAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{

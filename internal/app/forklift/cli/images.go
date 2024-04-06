@@ -16,10 +16,10 @@ import (
 // Download
 
 func DownloadImages(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 	includeDisabled, parallel bool,
 ) error {
-	orderedImages, err := listRequiredImages(indent, pallet, loader, includeDisabled)
+	orderedImages, err := listRequiredImages(indent, deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -36,16 +36,17 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, includeDisabled bool,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
+	includeDisabled bool,
 ) ([]string, error) {
-	depls, err := pallet.LoadDepls("**/*")
+	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, err
 	}
 	if !includeDisabled {
 		depls = forklift.FilterDeplsForEnabled(depls)
 	}
-	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
+	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, err
 	}

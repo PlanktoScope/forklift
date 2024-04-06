@@ -392,9 +392,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		bundle, store, err := loadNextBundle(c.String("workspace"), versions)
 		if err != nil {
-			return errors.Wrap(
-				err, "couldn't load last successfully-applied pallet bundle as a fallback",
-			)
+			return err
 		}
 		if err = checkShallowCompatibility(
 			bundle, versions, c.Bool("ignore-tool-version"),

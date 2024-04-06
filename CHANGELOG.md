@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `stage add-bun-name` subcommand to assign a name to a staged pallet bundle.
 - (cli) Added a `stage ls-bun-names` subcommand to list all assigned names for staged pallet bundles.
 - (cli) Added a `stage rm-bun-name` subcommand to unassign a name for a staged pallet bundle.
+- (cli) Added a `stage cache-img` subcommand to cache all Docker container images required by the next staged pallet bundle to be applied, and all container images required by the last successfully-applied bundle (if it is different) as a fallback in case the next staged bundle fails to be applied.
 - (cli) Added `stage check` and `stage plan` subcommands which provide equivalent functionality as `[dev] plt check` and `[dev] plt plan`, but for the next staged pallet bundle to be applied.
 - (cli) Added a `stage apply` subcommand which tries to apply the next staged pallet bundle and then, if that bundle could not be successfully applied, falls back to applying the last successfully-applied bundle in subsequent invocations.
 - (cli) Added a `stage set-next` subcommand which changes which staged pallet bundle will be applied next (and resets `stage apply`'s tracking of whether the next staged pallet bundle to be applied has encountered a failure in the past)
