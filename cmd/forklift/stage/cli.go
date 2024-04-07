@@ -142,6 +142,12 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			Usage:     "Sets the specified staged pallet bundle as the next one to be applied.",
 			ArgsUsage: "bundle_index_or_name",
 			Action:    setNextAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
 		},
 		{
 			Name:     "add-bun-name",

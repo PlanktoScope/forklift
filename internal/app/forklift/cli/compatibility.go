@@ -9,6 +9,8 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 )
 
+// Pallets
+
 // CheckCompatibility returns an error upon any version compatibility errors between a pallet, its
 // required pallets & repos (as loaded by repoLoader), and - unless the ignoreTool flag is set - the
 // Forklift tool (whose version is specified as toolVersion, and whose minimum compatible Forklift
@@ -150,6 +152,30 @@ func checkVersionConsistency(
 				palletForkliftVersion, v.reqPath, v.forkliftVersion,
 			)
 		}
+	}
+	return nil
+}
+
+// Bundles
+
+func CheckBundleShallowCompatibility(
+	bundle *forklift.FSBundle, toolVersion, bundleMinVersion string, ignoreTool bool,
+) error {
+	if ignoreTool {
+		fmt.Printf(
+			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
+			toolVersion,
+		)
+	}
+
+	if err := CheckArtifactCompatibility(
+		bundle.Def.ForkliftVersion, toolVersion, bundleMinVersion, bundle.Path(),
+		ignoreTool,
+	); err != nil {
+		return errors.Wrapf(
+			err, "forklift tool has a version incompatibility with staged pallet bundle %s",
+			bundle.Path(),
+		)
 	}
 	return nil
 }

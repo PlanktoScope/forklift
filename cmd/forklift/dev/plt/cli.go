@@ -11,6 +11,7 @@ type Versions struct {
 	Tool               string
 	MinSupportedRepo   string
 	MinSupportedPallet string
+	MinSupportedBundle string
 	NewBundle          string
 	NewStageStore      string
 }
@@ -64,6 +65,12 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Category: category,
 			Usage:    "Builds and stages a bundle of the development pallet to be applied later",
 			Action:   stageAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of images",
+				},
+			},
 		},
 		&cli.Command{
 			Name:     "apply",

@@ -77,28 +77,6 @@ func getStageStore(wpath string, versions Versions) (*forklift.FSStageStore, err
 	return store, nil
 }
 
-func checkShallowCompatibility(
-	bundle *forklift.FSBundle, versions Versions, ignoreTool bool,
-) error {
-	if ignoreTool {
-		fmt.Printf(
-			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
-			versions.Tool,
-		)
-	}
-
-	if err := fcli.CheckArtifactCompatibility(
-		bundle.Def.ForkliftVersion, versions.Tool, versions.MinSupportedBundle, bundle.Path(),
-		ignoreTool,
-	); err != nil {
-		return errors.Wrapf(
-			err, "forklift tool has a version incompatibility with staged pallet bundle %s",
-			bundle.Path(),
-		)
-	}
-	return nil
-}
-
 // show
 
 func showAction(versions Versions) cli.ActionFunc {
@@ -279,6 +257,14 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		if err = store.CommitState(); err != nil {
 			return errors.Wrap(err, "couldn't commit updated stage store state")
 		}
+
+		fmt.Println("Caching Docker container images required to apply...")
+		if err = fcli.DownloadImagesForStoreApply(
+			store, versions.Tool, versions.MinSupportedBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
 		fmt.Println("Done!")
 		return nil
 	}
@@ -354,8 +340,8 @@ func checkAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = checkShallowCompatibility(
-			bundle, versions, c.Bool("ignore-tool-version"),
+		if err = fcli.CheckBundleShallowCompatibility(
+			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -374,8 +360,8 @@ func planAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = checkShallowCompatibility(
-			bundle, versions, c.Bool("ignore-tool-version"),
+		if err = fcli.CheckBundleShallowCompatibility(
+			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -394,8 +380,8 @@ func applyAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = checkShallowCompatibility(
-			bundle, versions, c.Bool("ignore-tool-version"),
+		if err = fcli.CheckBundleShallowCompatibility(
+			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

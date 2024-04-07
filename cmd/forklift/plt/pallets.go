@@ -72,16 +72,9 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 
 func switchAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		wpath := c.String("workspace")
-		if err := forklift.EnsureExists(wpath); err != nil {
-			return errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
-		}
-		workspace, err := forklift.LoadWorkspace(wpath)
+		workspace, err := ensureWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
-		}
-		if err = forklift.EnsureExists(workspace.GetDataPath()); err != nil {
-			return errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
 		}
 
 		// clone pallet
@@ -116,13 +109,15 @@ func switchAction(versions Versions) cli.ActionFunc {
 
 		if !c.Bool("apply") {
 			// stage pallet
-			if err = stagePallet(workspace, pallet, repoCache, versions); err != nil {
+			if err = stagePallet(
+				workspace, pallet, repoCache, versions, c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			); err != nil {
 				return err
 			}
 			fmt.Println("Done! To apply the staged pallet, run `forklift stage apply`.")
 			return nil
 		}
-		// stage and apply pallet
+		// apply pallet
 		if err = fcli.ApplyPallet(
 			pallet, repoCache, workspace, versions.NewStageStore, versions.NewBundle, c.Bool("parallel"),
 		); err != nil {
@@ -133,9 +128,23 @@ func switchAction(versions Versions) cli.ActionFunc {
 	}
 }
 
+func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
+	if err := forklift.EnsureExists(wpath); err != nil {
+		return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
+	}
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	if err = forklift.EnsureExists(workspace.GetDataPath()); err != nil {
+		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
+	}
+	return workspace, nil
+}
+
 func stagePallet(
 	workspace *forklift.FSWorkspace, pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache,
-	versions Versions,
+	versions Versions, parallel, ignoreToolVersion bool,
 ) error {
 	stageStore, err := workspace.GetStageStore(versions.NewStageStore)
 	if err != nil {
@@ -143,6 +152,11 @@ func stagePallet(
 	}
 	if _, err = fcli.StagePallet(pallet, stageStore, repoCache, versions.NewBundle); err != nil {
 		return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
+	}
+	if err = fcli.DownloadImagesForStoreApply(
+		stageStore, versions.Tool, versions.MinSupportedBundle, parallel, ignoreToolVersion,
+	); err != nil {
+		return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
 	}
 	return nil
 }

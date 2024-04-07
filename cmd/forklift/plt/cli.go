@@ -11,6 +11,7 @@ type Versions struct {
 	Tool               string
 	MinSupportedRepo   string
 	MinSupportedPallet string
+	MinSupportedBundle string
 	NewBundle          string
 	NewStageStore      string
 }
