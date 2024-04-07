@@ -1,6 +1,6 @@
 module github.com/PlanktoScope/forklift
 
-go 1.21
+go 1.22
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -13,6 +13,7 @@ require (
 	github.com/docker/docker v26.0.0+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.27.1
 	golang.org/x/mod v0.16.0

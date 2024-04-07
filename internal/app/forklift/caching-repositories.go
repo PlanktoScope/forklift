@@ -36,6 +36,10 @@ func (c *FSRepoCache) Path() string {
 // LoadFSRepo loads the FSRepo with the specified path and version.
 // The loaded FSRepo instance is fully initialized.
 func (c *FSRepoCache) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	repo, err := core.LoadFSRepo(c.FS, fmt.Sprintf("%s@%s", repoPath, version))
 	if err != nil {
 		return nil, err
@@ -49,6 +53,10 @@ func (c *FSRepoCache) LoadFSRepo(repoPath string, version string) (*core.FSRepo,
 // search for.
 // The loaded FSRepo instances are fully initialized.
 func (c *FSRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	repos, err := core.LoadFSRepos(c.FS, searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load repos from cache")
@@ -80,6 +88,10 @@ func (c *FSRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) 
 // LoadFSPkg loads the FSPkg with the specified path and version.
 // The loaded FSPkg instance is fully initialized.
 func (c *FSRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	// Search for the package by starting with the shortest possible package subdirectory path and the
 	// longest possible repo path, and shifting path components from the repo path to the package
 	// subdirectory path until we successfully load the package.
@@ -109,6 +121,10 @@ func (c *FSRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, er
 // to search for.
 // The loaded FSPkg instances are fully initialized.
 func (c *FSRepoCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	pkgs, err := core.LoadFSPkgs(c.FS, searchPattern)
 	if err != nil {
 		return nil, err
@@ -133,6 +149,10 @@ func (c *FSRepoCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 func (c *FSRepoCache) loadFSRepoContaining(
 	subdirPath string,
 ) (repo *core.FSRepo, err error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	if repo, err = core.LoadFSRepoContaining(c.FS, subdirPath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't find any repo containing %s", subdirPath)
 	}
@@ -167,6 +187,10 @@ func (c *LayeredRepoCache) Path() string {
 func (c *LayeredRepoCache) LoadFSRepo(
 	repoPath string, version string,
 ) (*core.FSRepo, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	if c.Overlay.IncludesFSRepo(repoPath, version) {
 		repo, err := c.Overlay.LoadFSRepo(repoPath, version)
 		return repo, errors.Wrap(err, "couldn't load repo from overlay")
@@ -183,6 +207,10 @@ func (c *LayeredRepoCache) LoadFSRepo(
 // underlay cache will also be included, except for those repos which the overlay cache expected
 // to have.
 func (c *LayeredRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	loadedRepos, err := c.Overlay.LoadFSRepos(searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load repos from overlay")
@@ -210,6 +238,10 @@ func (c *LayeredRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, er
 // If the overlay cache expects to have the package, it will attempt to load the package; otherwise,
 // the underlay cache will attempt to load the package.
 func (c *LayeredRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	if c.Overlay.IncludesFSPkg(pkgPath, version) {
 		pkg, err := c.Overlay.LoadFSPkg(pkgPath, version)
 		return pkg, errors.Wrap(err, "couldn't load package from overlay")
@@ -227,6 +259,10 @@ func (c *LayeredRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPk
 // underlay cache will also be included, except for those packages which the overlay cache expected
 // to have.
 func (c *LayeredRepoCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	pkgs, err := c.Overlay.LoadFSPkgs(searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load packages from overlay")
@@ -320,6 +356,10 @@ func (c *RepoOverrideCache) IncludesFSRepo(repoPath string, version string) bool
 // for the repo in the cache.
 // The loaded FSRepo instance is fully initialized.
 func (c *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	repo, ok := c.repos[repoPath]
 	if !ok {
 		return nil, errors.Errorf("couldn't find a repo with path %s", repoPath)
@@ -335,6 +375,10 @@ func (c *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.F
 // for.
 // The loaded FSRepo instances are fully initialized.
 func (c *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	loadedRepos := make(map[string]*core.FSRepo) // indexed by repo cache path
 	repoCachePaths := make([]string, 0)
 	for _, repoPath := range c.repoPaths {
@@ -371,6 +415,7 @@ func (c *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
 	if c == nil {
 		return false
 	}
+
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
 	for _, repo := range c.repos {
@@ -387,6 +432,10 @@ func (c *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
 // the package's repo in the cache.
 // The loaded FSPkg instance is fully initialized.
 func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
 	for _, repo := range c.repos {
@@ -408,6 +457,10 @@ func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSP
 // to search for.
 // The loaded FSPkg instances are fully initialized.
 func (c *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
 	pkgs := make(map[string]*core.FSPkg) // indexed by package cache path
 	pkgCachePaths := make([]string, 0)
 	for _, repoPath := range c.repoPaths {

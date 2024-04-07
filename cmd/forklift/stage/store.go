@@ -1,0 +1,396 @@
+package stage
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
+
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
+)
+
+var errMissingStore = errors.Errorf(
+	"no pallets have been staged yet: you first must stage a pallet, e.g. with `forklift plt stage`",
+)
+
+func loadNextBundle(
+	wpath string, versions Versions,
+) (*forklift.FSBundle, *forklift.FSStageStore, error) {
+	store, err := getStageStore(wpath, versions)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !store.Exists() {
+		return nil, store, errMissingStore
+	}
+
+	next, ok := store.GetNext()
+	if !ok {
+		return nil, store, errors.Errorf(
+			"no next staged pallet bundle to apply: you first must set a pallet to stage next, " +
+				"e.g. with `forklift stage set-next`",
+		)
+	}
+	if store.NextFailed() {
+		fmt.Printf("Next stage failed in the past: %d\n", next)
+		current, ok := store.GetCurrent()
+		switch {
+		case !ok:
+			return nil, store, errors.Errorf(
+				"the next staged pallet bundle already failed, and no staged pallet bundle was " +
+					"applied successfully in the past, so we have no fallback!",
+			)
+		case current != next:
+			fmt.Printf("Current stage will be used instead, as a fallback: %d\n", current)
+		default:
+			fmt.Println("Trying again, since it had succeeded in the past!")
+		}
+		next = current
+	} else {
+		if pending, ok := store.GetPending(); ok && next == pending {
+			fmt.Printf("Next stage is pending: %d\n", next)
+		} else if current, ok := store.GetCurrent(); ok && next == current {
+			fmt.Printf("Next stage previously had a successful apply: %d\n", next)
+		} else {
+			fmt.Printf("Next stage: %d\n", next)
+		}
+	}
+
+	bundle, err := store.LoadFSBundle(next)
+	if err != nil {
+		return nil, store, errors.Wrapf(err, "couldn't load staged pallet bundle %d", next)
+	}
+	return bundle, store, nil
+}
+
+func getStageStore(wpath string, versions Versions) (*forklift.FSStageStore, error) {
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	store, err := workspace.GetStageStore(versions.NewStageStore)
+	if err != nil {
+		return nil, err
+	}
+	return store, nil
+}
+
+// show
+
+func showAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		indent := 0
+		fcli.IndentedPrintf(indent, "Stage store %s:\n", store.Path())
+		indent++
+		names := getBundleNames(store)
+
+		// TODO: display info about whether the swapfile exists
+		fcli.IndentedPrint(indent, "Next staged pallet bundle to be applied:")
+		next, hasNext := store.GetNext()
+		if !hasNext {
+			fmt.Println(" (none)")
+		} else {
+			fmt.Printf(" %d\n", next)
+			printNextSummary(indent+1, store, next, names[next])
+		}
+
+		fcli.IndentedPrint(indent, "Last successfully-applied staged pallet bundle:")
+		current, hasCurrent := store.GetCurrent()
+		switch {
+		case !hasCurrent:
+			fmt.Println(" (none)")
+		case next == current:
+			fmt.Printf(" %d (see above)\n", current)
+		default:
+			fmt.Printf(" %d\n", current)
+			printCurrentSummary(indent+1, store, current, names[current])
+		}
+
+		fcli.IndentedPrint(indent, "Previous successfully-applied staged pallet bundle:")
+		rollback, hasRollback := store.GetRollback()
+		if !hasRollback {
+			fmt.Println(" (none)")
+		} else {
+			fmt.Printf(" %d\n", rollback)
+			printRollbackSummary(indent+1, store, rollback, names[rollback])
+		}
+
+		return nil
+	}
+}
+
+func printNextSummary(indent int, store *forklift.FSStageStore, index int, names []string) {
+	bundle, err := store.LoadFSBundle(index)
+	if err != nil {
+		fmt.Printf("Error: couldn't load staged bundle d (was it deleted?): %s\n", err.Error())
+		return
+	}
+
+	printBasicSummary(indent, bundle, names)
+	failed := store.NextFailed()
+	pending, hasPending := store.GetPending()
+	isPending := (hasPending && index == pending)
+	current, hasCurrent := store.GetCurrent()
+	isCurrent := (hasCurrent && index == current)
+	if failed || isPending || isCurrent {
+		fcli.IndentedPrint(indent, "Status: ")
+		switch {
+		case failed && hasCurrent:
+			fmt.Printf(
+				"failed to be applied; the last successfully-applied staged pallet bundle (%d) will be "+
+					"used instead\n",
+				current,
+			)
+		case failed:
+			fmt.Println(
+				"failed to be applied; no pallet will be applied until another pallet is staged",
+			)
+		case isPending:
+			fmt.Println("not yet applied; will be used for the next apply")
+		case hasCurrent && index == current:
+			fmt.Println("already applied; will still be used for the next apply")
+		}
+	}
+}
+
+func printBasicSummary(indent int, bundle *forklift.FSBundle, names []string) {
+	fcli.IndentedPrint(indent, "Staged names:")
+	if len(names) == 0 {
+		fmt.Println(" (none)")
+	} else {
+		fmt.Println()
+		for _, name := range names {
+			fcli.BulletedPrintln(indent+1, name)
+		}
+	}
+
+	fcli.IndentedPrintf(indent, "Pallet: %s@%s\n", bundle.Def.Pallet.Path, bundle.Def.Pallet.Version)
+
+	indent++
+	if !bundle.Def.Pallet.Clean {
+		fcli.BulletedPrintln(indent, "Staged with uncommitted pallet changes")
+	}
+	if bundle.Def.Includes.HasOverrides() {
+		fcli.BulletedPrint(indent, "Staged with overridden pallet requirements")
+	}
+}
+
+func printCurrentSummary(indent int, store *forklift.FSStageStore, index int, names []string) {
+	bundle, err := store.LoadFSBundle(index)
+	if err != nil {
+		fmt.Printf("Error: couldn't load staged bundle %d (was it deleted?): %s\n", index, err.Error())
+		return
+	}
+
+	printBasicSummary(indent, bundle, names)
+}
+
+func printRollbackSummary(indent int, store *forklift.FSStageStore, index int, names []string) {
+	bundle, err := store.LoadFSBundle(index)
+	if err != nil {
+		fmt.Printf("Error: couldn't load staged bundle %d (was it deleted?): %s\n", index, err.Error())
+		return
+	}
+
+	printBasicSummary(indent, bundle, names)
+}
+
+// show-hist
+
+func showHistAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		names := getBundleNames(store)
+		for _, index := range store.Def.Stages.History {
+			printBundleSummary(store, index, names)
+		}
+		if index, ok := store.GetPending(); ok {
+			printBundleSummary(store, index, names)
+		}
+		return nil
+	}
+}
+
+// set-next
+
+func setNextAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		newNext, err := resolveBundleIdentifier(c.Args().First(), store)
+		if err != nil {
+			return err
+		}
+		if _, err = store.LoadFSBundle(newNext); err != nil {
+			return errors.Wrapf(err, "couldn't load staged bundle %d", newNext)
+		}
+
+		if next, hasNext := store.GetNext(); hasNext {
+			fmt.Printf("Changing the next staged pallet bundle from %d to %d...\n", next, newNext)
+		} else {
+			fmt.Printf("Setting the next staged pallet bundle to %d...\n", newNext)
+		}
+		store.SetNext(newNext)
+		if err = store.CommitState(); err != nil {
+			return errors.Wrap(err, "couldn't commit updated stage store state")
+		}
+
+		fmt.Println("Caching Docker container images required to apply...")
+		if err = fcli.DownloadImagesForStoreApply(
+			store, versions.Tool, versions.MinSupportedBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+		fmt.Println("Done!")
+		return nil
+	}
+}
+
+// resolveBundleIdentifier parses/resolves a staged bundle index or name (provided as a string)
+// into an index of a staged bundle in the store.
+func resolveBundleIdentifier(
+	identifier string, store *forklift.FSStageStore,
+) (index int, err error) {
+	index, indexParseErr := strconv.Atoi(identifier)
+	if indexParseErr == nil {
+		return index, nil
+	}
+
+	// TODO: add special handling for rollback, current, next, and pending names
+	switch identifier {
+	case rollbackStageName:
+		index, ok := store.GetRollback()
+		if !ok {
+			return 0, errors.New(
+				"there have not yet been enough successfully-applied staged bundles for a rollback " +
+					"stage to exist yet!",
+			)
+		}
+		return index, nil
+	case currentStageName:
+		index, ok := store.GetCurrent()
+		if !ok {
+			return 0, errors.New("there has yet been a successfully-applied staged bundle!")
+		}
+		return index, nil
+	case nextStageName:
+		index, ok := store.GetNext()
+		if !ok {
+			return 0, errors.New("no staged bundle has been set as the next one to apply!")
+		}
+		return index, nil
+	case pendingStageName:
+		index, ok := store.GetPending()
+		if !ok {
+			if currentIndex, ok := store.GetCurrent(); ok && index == currentIndex {
+				return 0, errors.New(
+					"the next staged bundle has already been applied successfully, so it's no longer " +
+						"pending!",
+				)
+			}
+			if _, ok := store.GetNext(); !ok {
+				return 0, errors.New("no staged bundle has been set as the next one to apply!")
+			}
+			return 0, errors.New(
+				"there is currently no staged bundle waiting to be applied for the first time!",
+			)
+		}
+		return index, nil
+	}
+
+	index, ok := store.Def.Stages.Names[identifier]
+	if !ok {
+		return 0, errors.Errorf(
+			"identifier %s is neither a staged bundle index nor a name assigned to a staged bundle!",
+			identifier,
+		)
+	}
+	return index, nil
+}
+
+// check
+
+func checkAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		bundle, _, err := loadNextBundle(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckBundleShallowCompatibility(
+			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+		if _, _, err = fcli.Check(0, bundle, bundle); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+// plan
+
+func planAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		bundle, _, err := loadNextBundle(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckBundleShallowCompatibility(
+			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+		if _, _, err = fcli.Plan(0, bundle, bundle, c.Bool("parallel")); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+// apply
+
+func applyAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		bundle, store, err := loadNextBundle(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckBundleShallowCompatibility(
+			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+		fmt.Println()
+
+		if err = fcli.ApplyNextOrCurrentBundle(0, store, bundle, c.Bool("parallel")); err != nil {
+			return err
+		}
+		fmt.Println("Done!")
+		return nil
+	}
+}

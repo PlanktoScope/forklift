@@ -15,11 +15,61 @@ import (
 
 // Download
 
+func DownloadImagesForStoreApply(
+	store *forklift.FSStageStore, toolVersion, bundleMinVersion string,
+	parallel, ignoreToolVersion bool,
+) error {
+	next, hasNext := store.GetNext()
+	current, hasCurrent := store.GetCurrent()
+
+	if hasCurrent && current != next {
+		bundle, err := store.LoadFSBundle(current)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", current)
+		}
+		if err = CheckBundleShallowCompatibility(
+			bundle, toolVersion, bundleMinVersion, ignoreToolVersion,
+		); err != nil {
+			return err
+		}
+		fmt.Println(
+			"Downloading Docker container images specified by the last successfully-applied staged " +
+				"pallet bundle, in case the next to be applied fails to be applied",
+		)
+		if err := DownloadImages(0, bundle, bundle, false, parallel); err != nil {
+			return err
+		}
+		fmt.Println()
+	}
+	if hasNext {
+		bundle, err := store.LoadFSBundle(next)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", next)
+		}
+		if err = CheckBundleShallowCompatibility(
+			bundle, toolVersion, bundleMinVersion, ignoreToolVersion,
+		); err != nil {
+			return err
+		}
+		fmt.Println(
+			"Downloading Docker container images specified by the next staged pallet bundle to be " +
+				"applied...",
+		)
+		if err := DownloadImages(0, bundle, bundle, false, parallel); err != nil {
+			return err
+		}
+		fmt.Println()
+	}
+
+	fmt.Println("Done! Cached images will be used when you run `sudo -E forklift stage apply`.")
+	return nil
+}
+
 func DownloadImages(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 	includeDisabled, parallel bool,
 ) error {
-	orderedImages, err := listRequiredImages(indent, pallet, loader, includeDisabled)
+	orderedImages, err := listRequiredImages(indent, deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -36,16 +86,17 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, includeDisabled bool,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
+	includeDisabled bool,
 ) ([]string, error) {
-	depls, err := pallet.LoadDepls("**/*")
+	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, err
 	}
 	if !includeDisabled {
 		depls = forklift.FilterDeplsForEnabled(depls)
 	}
-	resolved, err := forklift.ResolveDepls(pallet, loader, depls)
+	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, err
 	}

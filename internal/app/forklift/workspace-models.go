@@ -19,6 +19,7 @@ const (
 // in $HOME/.local/share/forklift:
 
 const (
-	dataDirPath          = ".local/share/forklift"
-	currentPalletDirName = "pallet" // TODO: cache pallets and track the "current" one in a file?
+	dataDirPath              = ".local/share/forklift"
+	dataCurrentPalletDirName = "pallet" // TODO: cache pallets and track the "current" one in a file?
+	dataStageStoreDirName    = "stages"
 )

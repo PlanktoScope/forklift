@@ -12,6 +12,7 @@ import (
 	"github.com/PlanktoScope/forklift/cmd/forklift/dev"
 	"github.com/PlanktoScope/forklift/cmd/forklift/host"
 	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
+	"github.com/PlanktoScope/forklift/cmd/forklift/stage"
 )
 
 func main() {
@@ -27,10 +28,29 @@ var app = &cli.App{
 	Version: toolVersion,
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
-		plt.MakeCmd(toolVersion, repoMinVersion, palletMinVersion),
+		plt.MakeCmd(plt.Versions{
+			Tool:               toolVersion,
+			MinSupportedRepo:   repoMinVersion,
+			MinSupportedPallet: palletMinVersion,
+			MinSupportedBundle: bundleMinVersion,
+			NewBundle:          newBundleVersion,
+			NewStageStore:      newStageStoreVersion,
+		}),
+		stage.MakeCmd(stage.Versions{
+			Tool:               toolVersion,
+			MinSupportedBundle: bundleMinVersion,
+			NewStageStore:      newStageStoreVersion,
+		}),
 		cache.Cmd,
 		host.Cmd,
-		dev.MakeCmd(toolVersion, repoMinVersion, palletMinVersion),
+		dev.MakeCmd(dev.Versions{
+			Tool:               toolVersion,
+			MinSupportedRepo:   repoMinVersion,
+			MinSupportedPallet: palletMinVersion,
+			MinSupportedBundle: bundleMinVersion,
+			NewBundle:          newBundleVersion,
+			NewStageStore:      newStageStoreVersion,
+		}),
 	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -53,9 +73,24 @@ var app = &cli.App{
 // Versioning
 
 const (
-	repoMinVersion   = "v0.4.0"     // minimum supported Forklift version among repos
-	palletMinVersion = "v0.4.0"     // minimum supported Forklift version among pallets
-	fallbackVersion  = "v0.5.3-dev" // version reported by Forklift tool if actual version is unknown
+	// repoMinVersion is the minimum supported Forklift version among repos. A repo with a lower
+	// Forklift version cannot be used.
+	repoMinVersion = "v0.4.0"
+	// palletMinVersion is the minimum supported Forklift version among pallets. A pallet with a
+	// lower Forklift version cannot be used.
+	palletMinVersion = "v0.4.0"
+	// bundleMinVersion is the minimum supported Forklift version among staged pallet bundles. A
+	// bundle with a lower Forklift version cannot be used.
+	bundleMinVersion = "v0.7.0-dev"
+	// newBundleVersion is the Forklift version reported in new staged pallet bundles made by Forklift.
+	// Older versions of the Forklift tool cannot use such bundles.
+	newBundleVersion = "v0.7.0-dev"
+	// newStageStoreVersion is the Forklift version reported in a stage store initialized by Forklift.
+	// Older versions of the Forklift tool cannot use the state store.
+	newStageStoreVersion = "v0.7.0-dev"
+	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
+	// version is unknown.
+	fallbackVersion = "v0.7.0-dev"
 )
 
 var (

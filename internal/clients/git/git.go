@@ -90,6 +90,14 @@ func (r *Repo) Refs() (refs []*plumbing.Reference, err error) {
 	return refs, err
 }
 
+func (r *Repo) GetHead() (string, error) {
+	ref, err := r.repository.Head()
+	if err != nil {
+		return "", err
+	}
+	return ref.Hash().String(), nil
+}
+
 func (r *Repo) GetCommitFullHash(commit string) (string, error) {
 	hash, err := r.resolveCommit(commit)
 	if err != nil {
@@ -315,6 +323,14 @@ func (r *Repo) SetRemoteURLs(remoteName string, urls []string) error {
 		return errors.Wrapf(err, "couldn't delete remote %s", remoteName)
 	}
 	return nil
+}
+
+func (r *Repo) Status() (status git.Status, err error) {
+	worktree, err := r.repository.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	return worktree.Status()
 }
 
 var ErrRepositoryAlreadyExists = git.ErrRepositoryAlreadyExists

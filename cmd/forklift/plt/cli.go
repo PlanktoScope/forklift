@@ -2,59 +2,67 @@
 package plt
 
 import (
+	"slices"
+
 	"github.com/urfave/cli/v2"
 )
 
-func MakeCmd(toolVersion, repoMinVersion, palletMinVersion string) *cli.Command {
-	subcommands := []*cli.Command{
-		{
-			Name:      "switch",
-			Usage:     "(Re)initializes the local pallet, updates the cache, and deploys the pallet",
-			ArgsUsage: "[github_repository_path@release]",
-			Action:    switchAction(toolVersion, repoMinVersion, palletMinVersion),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize updating of deployments",
+type Versions struct {
+	Tool               string
+	MinSupportedRepo   string
+	MinSupportedPallet string
+	MinSupportedBundle string
+	NewBundle          string
+	NewStageStore      string
+}
+
+func MakeCmd(versions Versions) *cli.Command {
+	return &cli.Command{
+		Name:    "plt",
+		Aliases: []string{"pallet"},
+		Usage:   "Manages the local pallet",
+		Subcommands: slices.Concat(
+			[]*cli.Command{
+				{
+					Name:      "switch",
+					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
+					ArgsUsage: "[github_repository_path@release]",
+					Action:    switchAction(versions),
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "parallel",
+							Usage: "parallelize updating of deployments",
+						},
+						&cli.BoolFlag{
+							Name:  "apply",
+							Usage: "immediately apply the pallet after staging it",
+						},
+					},
 				},
 			},
-		},
-	}
-	for _, group := range makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion) {
-		subcommands = append(subcommands, group...)
-	}
-	return &cli.Command{
-		Name:        "plt",
-		Aliases:     []string{"pallet"},
-		Usage:       "Manages the local pallet",
-		Subcommands: subcommands,
+			makeUseSubcmds(versions),
+			makeQuerySubcmds(),
+			makeModifySubcmds(),
+		),
 	}
 }
 
-func makeSubcommandGroups(toolVersion, repoMinVersion, palletMinVersion string) [][]*cli.Command {
-	return [][]*cli.Command{
-		makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion),
-		makeQuerySubcmds(),
-		makeModifySubcmds(),
-	}
-}
-
-func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+func makeUseSubcmds(versions Versions) []*cli.Command {
 	const category = "Use the pallet"
 	return append(
-		makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion),
+		makeUseCacheSubcmds(versions),
 		&cli.Command{
 			Name:     "check",
 			Category: category,
 			Usage:    "Checks whether the local pallet's resource constraints are satisfied",
-			Action:   checkAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   checkAction(versions),
 		},
 		&cli.Command{
 			Name:     "plan",
 			Category: category,
-			Usage: "Determines the changes needed to update the Docker host to match the deployments " +
+			Usage: "Determines the changes needed to update the host to match the deployments " +
 				"specified by the local pallet",
-			Action: planAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action: planAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
@@ -63,10 +71,17 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 			},
 		},
 		&cli.Command{
+			Name:     "stage",
+			Category: category,
+			Usage:    "Builds and stages a bundle of the local pallet to be applied later",
+			Action:   stageAction(versions),
+		},
+		&cli.Command{
 			Name:     "apply",
 			Category: category,
-			Usage:    "Updates the Docker host to match the deployments specified by the local pallet",
-			Action:   applyAction(toolVersion, repoMinVersion, palletMinVersion),
+			Usage: "Builds, stages, and immediately applies a bundle of the local pallet to update the " +
+				"host to match the deployments specified by the local pallet",
+			Action: applyAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
@@ -77,14 +92,14 @@ func makeUseSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli
 	)
 }
 
-func makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion string) []*cli.Command {
+func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 	const category = "Use the pallet"
 	return []*cli.Command{
 		{
 			Name:     "cache-all",
 			Category: category,
 			Usage:    "Updates the cache with everything needed by the local pallet",
-			Action:   cacheAllAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   cacheAllAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
@@ -101,14 +116,14 @@ func makeUseCacheSubcmds(toolVersion, repoMinVersion, palletMinVersion string) [
 			Aliases:  []string{"cache-repositories"},
 			Category: category,
 			Usage:    "Updates the cache with the repos available in the local pallet",
-			Action:   cacheRepoAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   cacheRepoAction(versions),
 		},
 		{
 			Name:     "cache-img",
 			Aliases:  []string{"cache-images"},
 			Category: category,
 			Usage:    "Pre-downloads the Docker container images required by the local pallet",
-			Action:   cacheImgAction(toolVersion, repoMinVersion, palletMinVersion),
+			Action:   cacheImgAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",

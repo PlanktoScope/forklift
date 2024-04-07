@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"io/fs"
 	"os"
 	"path"
 
@@ -38,31 +39,89 @@ func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
 	}, nil
 }
 
-func (w *FSWorkspace) GetCurrentPalletPath() string {
-	return path.Join(w.GetDataPath(), currentPalletDirName)
-}
+// Data
 
 func (w *FSWorkspace) GetDataPath() string {
 	return path.Join(w.FS.Path(), dataDirPath)
 }
 
-func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
+func (w *FSWorkspace) getDataFS() (core.PathedFS, error) {
 	if err := EnsureExists(w.GetDataPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.GetDataPath())
 	}
-	return LoadFSPallet(w.FS, path.Join(dataDirPath, currentPalletDirName))
+
+	fsys, err := w.FS.Sub(dataDirPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get data directory from workspace")
+	}
+	return fsys, nil
 }
 
-func (w *FSWorkspace) GetRepoCachePath() string {
-	return path.Join(w.getCachePath(), cacheReposDirName)
+// Data: Current Pallet
+
+func (w *FSWorkspace) GetCurrentPalletPath() string {
+	return path.Join(w.GetDataPath(), dataCurrentPalletDirName)
 }
 
-func (w *FSWorkspace) GetPalletCachePath() string {
-	return path.Join(w.getCachePath(), cachePalletsDirName)
+func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
+	fsys, err := w.getDataFS()
+	if err != nil {
+		return nil, err
+	}
+	return LoadFSPallet(fsys, dataCurrentPalletDirName)
 }
+
+// Data: Stages (i.e. pallet bundles which have been staged to be applied)
+
+func (w *FSWorkspace) GetStageStorePath() string {
+	return path.Join(w.GetDataPath(), dataStageStoreDirName)
+}
+
+// GetStageStore loads the workspace's stage store from the path, initializing a state file (which
+// has the specified minimum supported Forklift tool version) if it does not already exist.
+func (w *FSWorkspace) GetStageStore(newStateStoreVersion string) (*FSStageStore, error) {
+	fsys, err := w.getDataFS()
+	if err != nil {
+		return nil, err
+	}
+	if err = EnsureExists(w.GetStageStorePath()); err != nil {
+		return nil, errors.Wrap(err, "couldn't ensure the existence of the stage store")
+	}
+	if _, err = fs.Stat(
+		fsys, path.Join(dataStageStoreDirName, StageStoreDefFile),
+	); errors.Is(err, fs.ErrNotExist) {
+		def := StageStoreDef{
+			ForkliftVersion: newStateStoreVersion,
+		}
+		if err := def.Write(path.Join(w.GetStageStorePath(), StageStoreDefFile)); err != nil {
+			return nil, errors.Wrapf(err, "couldn't initialize stage store state file")
+		}
+	}
+	return loadFSStageStore(fsys, dataStageStoreDirName)
+}
+
+// Cache
 
 func (w *FSWorkspace) getCachePath() string {
 	return path.Join(w.FS.Path(), cacheDirPath)
+}
+
+func (w *FSWorkspace) getCacheFS() (core.PathedFS, error) {
+	if err := EnsureExists(w.getCachePath()); err != nil {
+		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getCachePath())
+	}
+
+	fsys, err := w.FS.Sub(cacheDirPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get cache directory from workspace")
+	}
+	return fsys, nil
+}
+
+// Cache: Repos
+
+func (w *FSWorkspace) GetRepoCachePath() string {
+	return path.Join(w.getCachePath(), cacheReposDirName)
 }
 
 func (w *FSWorkspace) GetRepoCache() (*FSRepoCache, error) {
@@ -79,6 +138,12 @@ func (w *FSWorkspace) GetRepoCache() (*FSRepoCache, error) {
 	}, nil
 }
 
+// Cache: Pallets
+
+func (w *FSWorkspace) GetPalletCachePath() string {
+	return path.Join(w.getCachePath(), cachePalletsDirName)
+}
+
 func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 	fsys, err := w.getCacheFS()
 	if err != nil {
@@ -91,16 +156,4 @@ func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 	return &FSPalletCache{
 		FS: pathedFS,
 	}, nil
-}
-
-func (w *FSWorkspace) getCacheFS() (core.PathedFS, error) {
-	if err := EnsureExists(w.getCachePath()); err != nil {
-		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getCachePath())
-	}
-
-	fsys, err := w.FS.Sub(cacheDirPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get cache from workspace")
-	}
-	return fsys, nil
 }

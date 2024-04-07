@@ -111,14 +111,15 @@ func setOverrideCacheVersions(
 
 // cache-all
 
-func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func cacheAllAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, false, false)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -133,7 +134,7 @@ func cacheAllAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Ac
 			fmt.Println("Done! No further actions are needed at this time.")
 			return nil
 		}
-		fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
+		fmt.Println("Done! Next, you might want to run `forklift dev plt stage`.")
 		return nil
 	}
 }
@@ -150,19 +151,20 @@ func showAction(c *cli.Context) error {
 
 // check
 
-func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err := fcli.CheckPallet(0, pallet, cache); err != nil {
+		if _, _, err := fcli.Check(0, pallet, cache); err != nil {
 			return err
 		}
 		return nil
@@ -171,43 +173,87 @@ func checkAction(toolVersion, repoMinVersion, palletMinVersion string) cli.Actio
 
 // plan
 
-func planAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err = fcli.PlanPallet(0, pallet, cache, c.Bool("parallel")); err != nil {
+		if _, _, err = fcli.Plan(0, pallet, cache, c.Bool("parallel")); err != nil {
 			return err
 		}
 		return nil
 	}
 }
 
-// apply
+// stage
 
-func applyAction(toolVersion, repoMinVersion, palletMinVersion string) cli.ActionFunc {
+func stageAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		pallet, cache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, toolVersion, repoMinVersion, palletMinVersion, c.Bool("ignore-tool-version"),
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if err := fcli.ApplyPallet(0, pallet, cache, c.Bool("parallel")); err != nil {
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
 			return err
 		}
-		fmt.Println()
+		stageStore, err := workspace.GetStageStore(versions.NewStageStore)
+		if err != nil {
+			return err
+		}
+		if _, err = fcli.StagePallet(pallet, stageStore, cache, versions.NewBundle); err != nil {
+			return err
+		}
+		if err = fcli.DownloadImagesForStoreApply(
+			stageStore, versions.Tool, versions.MinSupportedBundle, c.Bool("parallel"),
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
+		}
+		fmt.Println("Done! To apply the staged pallet, you can run `sudo -E forklift stage apply`.")
+		return nil
+	}
+}
+
+// apply
+
+func applyAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, repoCache, err := processFullBaseArgs(c, true, true)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckCompatibility(
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+
+		if err = fcli.ApplyPallet(
+			pallet, repoCache, workspace, versions.NewStageStore, versions.NewBundle, c.Bool("parallel"),
+		); err != nil {
+			return err
+		}
 		fmt.Println("Done!")
 		return nil
 	}
