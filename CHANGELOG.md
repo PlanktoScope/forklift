@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.7.0-alpha.0 - 2024-04-10
+
 ### Added
 
 - (cli) Added a `[dev] plt stage` subcommand to bundle and stage the pallet as the next one to be applied.
