@@ -34,7 +34,7 @@ func DownloadImagesForStoreApply(
 		}
 		fmt.Println(
 			"Downloading Docker container images specified by the last successfully-applied staged " +
-				"pallet bundle, in case the next to be applied fails to be applied",
+				"pallet bundle, in case the next to be applied fails to be applied...",
 		)
 		if err := DownloadImages(0, bundle, bundle, false, parallel); err != nil {
 			return err
@@ -61,7 +61,7 @@ func DownloadImagesForStoreApply(
 		fmt.Println()
 	}
 
-	fmt.Println("Done! Cached images will be used when you run `sudo -E forklift stage apply`.")
+	fmt.Println("Done caching images! They will be used when you run `sudo -E forklift stage apply`.")
 	return nil
 }
 
@@ -134,7 +134,6 @@ func listRequiredImages(
 
 func downloadImagesParallel(indent int, images []string, dc *docker.Client) error {
 	eg, egctx := errgroup.WithContext(context.Background())
-	fmt.Println()
 	for _, image := range images {
 		eg.Go(func(image string) func() error {
 			return func() error {
@@ -158,7 +157,6 @@ func downloadImagesParallel(indent int, images []string, dc *docker.Client) erro
 
 func downloadImagesSerial(indent int, images []string, dc *docker.Client) error {
 	for _, image := range images {
-		fmt.Println()
 		IndentedPrintf(indent, "Downloading %s...\n", image)
 		pulled, err := dc.PullImage(context.Background(), image, docker.NewOutStream(os.Stdout))
 		if err != nil {

@@ -240,6 +240,25 @@ func CacheAllRequirements(
 	pallet *forklift.FSPallet, repoCachePath string, pkgLoader forklift.FSPkgLoader,
 	includeDisabled, parallel bool,
 ) (changed bool, err error) {
+	changed, err = CacheStagingRequirements(pallet, repoCachePath)
+	if err != nil {
+		return false, err
+	}
+	fmt.Println()
+
+	fmt.Println("Downloading Docker container images specified by the local pallet...")
+	if err := DownloadImages(0, pallet, pkgLoader, includeDisabled, parallel); err != nil {
+		return false, err
+	}
+	return changed, nil
+}
+
+func CacheStagingRequirements(
+	pallet *forklift.FSPallet, repoCachePath string,
+) (changed bool, err error) {
+	// TODO: download required pallets, once we allow layering pallets; then merge the pallets into
+	// a composite before downloading required repos
+
 	fmt.Println("Downloading repos specified by the local pallet...")
 	changed, err = DownloadRequiredRepos(0, pallet, repoCachePath)
 	if err != nil {
@@ -249,10 +268,6 @@ func CacheAllRequirements(
 	// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
 	// forklift version is incompatible or ahead of the pallet version
 
-	fmt.Println("Downloading Docker container images specified by the local pallet...")
-	if err := DownloadImages(0, pallet, pkgLoader, includeDisabled, parallel); err != nil {
-		return false, err
-	}
 	return changed, nil
 }
 

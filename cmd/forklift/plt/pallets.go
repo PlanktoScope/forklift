@@ -101,11 +101,10 @@ func switchAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		if _, err = fcli.CacheAllRequirements(
-			pallet, repoCache.Path(), repoCache, c.Bool("include-disabled"), c.Bool("parallel"),
-		); err != nil {
+		if _, err = fcli.CacheStagingRequirements(pallet, repoCache.Path()); err != nil {
 			return err
 		}
+		fmt.Println()
 
 		if !c.Bool("apply") {
 			// stage pallet
@@ -114,7 +113,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 			); err != nil {
 				return err
 			}
-			fmt.Println("Done! To apply the staged pallet, run `forklift stage apply`.")
+			fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
 			return nil
 		}
 		// apply pallet
@@ -153,6 +152,8 @@ func stagePallet(
 	if _, err = fcli.StagePallet(pallet, stageStore, repoCache, versions.NewBundle); err != nil {
 		return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
 	}
+
+	fmt.Println()
 	if err = fcli.DownloadImagesForStoreApply(
 		stageStore, versions.Tool, versions.MinSupportedBundle, parallel, ignoreToolVersion,
 	); err != nil {
@@ -339,7 +340,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if _, err = fcli.StagePallet(pallet, stageStore, cache, versions.NewBundle); err != nil {
 			return err
 		}
-		fmt.Println("Done! To apply the staged pallet, you can run `sudo -E forklift stage apply`.")
+		fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
 		return nil
 	}
 }
