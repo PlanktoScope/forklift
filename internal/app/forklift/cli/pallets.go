@@ -361,6 +361,12 @@ func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
 			return errors.Wrap(err, "couldn't print conflicting filesets")
 		}
 	}
+	if conflict.HasFileExportConflict() {
+		IndentedPrintln(indent, "Conflicting file exports:")
+		if err := printResConflicts(indent+1, conflict.FileExports); err != nil {
+			return errors.Wrap(err, "couldn't print conflicting file exports")
+		}
+	}
 	return nil
 }
 

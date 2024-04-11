@@ -188,6 +188,10 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		Filesets: core.CheckResConflicts(
 			d.providedFilesets(enabledFeatures), candidate.providedFilesets(candidateEnabledFeatures),
 		),
+		FileExports: core.CheckResConflicts(
+			d.providedFileExports(enabledFeatures),
+			candidate.providedFileExports(candidateEnabledFeatures),
+		),
 	}, nil
 }
 
@@ -245,6 +249,14 @@ func (d *ResolvedDepl) providedFilesets(
 	enabledFeatures map[string]core.PkgFeatureSpec,
 ) (provided []core.AttachedRes[core.FilesetRes]) {
 	return d.Pkg.ProvidedFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
+}
+
+// providedFileExports returns a slice of all file exports provided by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
+func (d *ResolvedDepl) providedFileExports(
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (provided []core.AttachedRes[core.FileExportRes]) {
+	return d.Pkg.ProvidedFileExports(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // CheckAllConflicts produces a slice of reports of all resource conflicts between the ResolvedDepl

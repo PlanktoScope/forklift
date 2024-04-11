@@ -1,5 +1,9 @@
 package forklift
 
+import (
+	"cmp"
+)
+
 // DeplConflict
 
 func (c DeplConflict) HasNameConflict() bool {
@@ -22,10 +26,19 @@ func (c DeplConflict) HasFilesetConflict() bool {
 	return len(c.Filesets) > 0
 }
 
+func (c DeplConflict) HasFileExportConflict() bool {
+	return len(c.FileExports) > 0
+}
+
 func (c DeplConflict) HasConflict() bool {
-	return c.HasNameConflict() ||
-		c.HasListenerConflict() || c.HasNetworkConflict() || c.HasServiceConflict() ||
-		c.HasFilesetConflict()
+	return cmp.Or(
+		c.HasNameConflict(),
+		c.HasListenerConflict(),
+		c.HasNetworkConflict(),
+		c.HasServiceConflict(),
+		c.HasFilesetConflict(),
+		c.HasFileExportConflict(),
+	)
 }
 
 // SatisfiedDeplDeps
@@ -43,7 +56,11 @@ func (d SatisfiedDeplDeps) HasSatisfiedFilesetDep() bool {
 }
 
 func (d SatisfiedDeplDeps) HasSatisfiedDep() bool {
-	return d.HasSatisfiedNetworkDep() || d.HasSatisfiedServiceDep() || d.HasSatisfiedFilesetDep()
+	return cmp.Or(
+		d.HasSatisfiedNetworkDep(),
+		d.HasSatisfiedServiceDep(),
+		d.HasSatisfiedFilesetDep(),
+	)
 }
 
 // MissingDeplDeps
@@ -61,5 +78,9 @@ func (d MissingDeplDeps) HasMissingFilesetDep() bool {
 }
 
 func (d MissingDeplDeps) HasMissingDep() bool {
-	return d.HasMissingNetworkDep() || d.HasMissingServiceDep() || d.HasMissingFilesetDep()
+	return cmp.Or(
+		d.HasMissingNetworkDep(),
+		d.HasMissingServiceDep(),
+		d.HasMissingFilesetDep(),
+	)
 }

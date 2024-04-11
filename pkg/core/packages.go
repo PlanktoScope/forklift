@@ -257,6 +257,18 @@ func (p Pkg) ProvidedFilesets(
 	)
 }
 
+// ProvidedFileExports returns a slice of all file exports provided by a deployment of the package
+// with the specified features enabled.
+func (p Pkg) ProvidedFileExports(
+	parentSource []string, enabledFeatures []string,
+) (provided []AttachedRes[FileExportRes]) {
+	return providedResources[FileExportRes](
+		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FileExportRes] {
+			return res.AttachedFileExports
+		},
+	)
+}
+
 // PkgDef
 
 // LoadPkgDef loads a PkgDef from the specified file path in the provided base filesystem.

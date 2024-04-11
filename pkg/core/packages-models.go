@@ -125,6 +125,8 @@ type ProvidedRes struct {
 	Services []ServiceRes `yaml:"services,omitempty"`
 	// Filesets is a list of files/directories.
 	Filesets []FilesetRes `yaml:"filesets,omitempty"`
+	// FileExports is a list of files/directories.
+	FileExports []FileExportRes `yaml:"file-exports,omitempty"`
 }
 
 // ListenerRes describes a host port listener.
@@ -143,7 +145,7 @@ type NetworkRes struct {
 	// Description is a short description of the Docker network to be shown to users.
 	Description string `yaml:"description,omitempty"`
 	// Name is the name of the Docker network.
-	Name string `yaml:"name,omitempty"`
+	Name string `yaml:"name"`
 }
 
 // ServiceRes describes a network service.
@@ -174,8 +176,21 @@ type FilesetRes struct {
 	Tags []string `yaml:"tags,omitempty"`
 	// Paths is a list of paths where the fileset exists. A path may also be a prefix, indicated
 	// by ending the path with an asterisk (`*`).
-	Paths []string `yaml:"paths,omitempty"`
+	Paths []string `yaml:"paths"`
 	// Nonblocking, when specified as a resource requirement, specifies that the program requiring the
 	// fileset does not need to wait for the fileset to exist before the program can start.
 	Nonblocking bool `yaml:"nonblocking,omitempty"`
+}
+
+// FileExportRes describes a file exported by Forklift.
+type FileExportRes struct {
+	// Description is a short description of the file export to be shown to users.
+	Description string `yaml:"description,omitempty"`
+	// Tags is a list of strings associated with the file export. Tags are not considered in checking
+	// resource constraints.
+	Tags []string `yaml:"tags,omitempty"`
+	// Source is the path in the package of the file to be exported.
+	Source string `yaml:"source"`
+	// Targets is a list of paths where the file will be exported to, relative to an export directory.
+	Targets []string `yaml:"targets"`
 }
