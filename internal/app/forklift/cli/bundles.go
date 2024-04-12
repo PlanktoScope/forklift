@@ -151,17 +151,6 @@ func printBundleExports(indent int, exports map[string][]string) {
 	}
 }
 
-func PrintBundleDeplPkgPath(indent int, bundle *forklift.FSBundle, deplName string) error {
-	resolved, err := bundle.LoadResolvedDepl(deplName)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load deployment %s from bundle %s", deplName, bundle.FS.Path(),
-		)
-	}
-	fmt.Println(resolved.Pkg.FS.Path())
-	return nil
-}
-
 // Apply
 
 func ApplyNextOrCurrentBundle(

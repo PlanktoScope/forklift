@@ -107,6 +107,27 @@ func showBunAction(versions Versions) cli.ActionFunc {
 	}
 }
 
+// locate-bun
+
+func locateBunAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		index, err := resolveBundleIdentifier(c.Args().First(), store)
+		if err != nil {
+			return err
+		}
+		fmt.Println(store.GetBundlePath(index))
+		return nil
+	}
+}
+
 // rm-bun
 
 func rmBunAction(versions Versions) cli.ActionFunc {

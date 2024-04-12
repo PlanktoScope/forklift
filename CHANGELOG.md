@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) When information about a package deployment is shown (e.g. with `stage show-bun-depl` or `[dev] plt show-depl`), the target paths of file exports are also shown.
 - (cli) When information about a staged pallet bundle is shown (e.g. with `stage show-bun`), the target paths of file exports are also shown for each package deployment.
 - (cli) Information about the target paths of file exports for each package deployment in a staged pallet bundle is now recorded in the staged pallet bundle's manifest file.
+- (cli) Added a `stage locate-bun` subcommand to show the absolute file path of the specified staged pallet bundle.
 
 ## 0.7.0-alpha.0 - 2024-04-10
 
