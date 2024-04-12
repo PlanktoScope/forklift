@@ -30,13 +30,13 @@ func lsBunNamesAction(versions Versions) cli.ActionFunc {
 			return errMissingStore
 		}
 
-		names := make([]string, 0, len(store.Def.Stages.Names))
-		for name := range store.Def.Stages.Names {
+		names := make([]string, 0, len(store.Manifest.Stages.Names))
+		for name := range store.Manifest.Stages.Names {
 			names = append(names, name)
 		}
 		slices.Sort(names)
 		for _, name := range names {
-			index := store.Def.Stages.Names[name]
+			index := store.Manifest.Stages.Names[name]
 			printNamedBundleSummary(store, name, index)
 		}
 		if index, ok := store.GetRollback(); ok {
@@ -64,11 +64,13 @@ func printNamedBundleSummary(store *forklift.FSStageStore, name string, index in
 		return
 	}
 
-	fmt.Printf("%s -> %d: %s@%s", name, index, bundle.Def.Pallet.Path, bundle.Def.Pallet.Version)
-	if !bundle.Def.Pallet.Clean {
+	fmt.Printf(
+		"%s -> %d: %s@%s", name, index, bundle.Manifest.Pallet.Path, bundle.Manifest.Pallet.Version,
+	)
+	if !bundle.Manifest.Pallet.Clean {
 		fmt.Print(" (staged with uncommitted pallet changes)")
 	}
-	if bundle.Def.Includes.HasOverrides() {
+	if bundle.Manifest.Includes.HasOverrides() {
 		fmt.Print(" (staged with overridden pallet requirements)")
 	}
 	fmt.Println()
@@ -103,7 +105,7 @@ func addBunNameAction(versions Versions) cli.ActionFunc {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", index)
 		}
 
-		store.Def.Stages.Names[name] = index
+		store.Manifest.Stages.Names[name] = index
 		return store.CommitState()
 	}
 }
@@ -129,7 +131,7 @@ func rmBunNameAction(versions Versions) cli.ActionFunc {
 			return errors.Errorf("integers cannot be used as bundle names: %s", name)
 		}
 
-		delete(store.Def.Stages.Names, name)
+		delete(store.Manifest.Stages.Names, name)
 		return store.CommitState()
 	}
 }

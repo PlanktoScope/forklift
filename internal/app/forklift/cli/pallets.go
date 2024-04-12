@@ -913,9 +913,9 @@ func buildBundle(
 	outputBundle := forklift.NewFSBundle(outputPath)
 	// TODO: once we can overlay pallets, save the result of overlaying the pallets to a `overlay`
 	// subdir
-	outputBundle.Def, err = newBundleDef(pallet, repoCache, forkliftVersion)
+	outputBundle.Manifest, err = newBundleManifest(pallet, repoCache, forkliftVersion)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't create bundle definition for %s", outputBundle.FS.Path())
+		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
 	}
 
 	depls, _, err := Check(0, pallet, repoCache)
@@ -937,13 +937,13 @@ func buildBundle(
 	if err = outputBundle.WriteFileExports(); err != nil {
 		return err
 	}
-	return outputBundle.WriteDefFile()
+	return outputBundle.WriteManifestFile()
 }
 
-func newBundleDef(
+func newBundleManifest(
 	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, forkliftVersion string,
-) (forklift.BundleDef, error) {
-	desc := forklift.BundleDef{
+) (forklift.BundleManifest, error) {
+	desc := forklift.BundleManifest{
 		ForkliftVersion: forkliftVersion,
 		Pallet: forklift.BundlePallet{
 			Path:        pallet.Path(),

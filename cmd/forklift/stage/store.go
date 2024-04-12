@@ -174,13 +174,15 @@ func printBasicSummary(indent int, bundle *forklift.FSBundle, names []string) {
 		}
 	}
 
-	fcli.IndentedPrintf(indent, "Pallet: %s@%s\n", bundle.Def.Pallet.Path, bundle.Def.Pallet.Version)
+	fcli.IndentedPrintf(
+		indent, "Pallet: %s@%s\n", bundle.Manifest.Pallet.Path, bundle.Manifest.Pallet.Version,
+	)
 
 	indent++
-	if !bundle.Def.Pallet.Clean {
+	if !bundle.Manifest.Pallet.Clean {
 		fcli.BulletedPrintln(indent, "Staged with uncommitted pallet changes")
 	}
-	if bundle.Def.Includes.HasOverrides() {
+	if bundle.Manifest.Includes.HasOverrides() {
 		fcli.BulletedPrint(indent, "Staged with overridden pallet requirements")
 	}
 }
@@ -218,7 +220,7 @@ func showHistAction(versions Versions) cli.ActionFunc {
 		}
 
 		names := getBundleNames(store)
-		for _, index := range store.Def.Stages.History {
+		for _, index := range store.Manifest.Stages.History {
 			printBundleSummary(store, index, names)
 		}
 		if index, ok := store.GetPending(); ok {
@@ -317,7 +319,7 @@ func resolveBundleIdentifier(
 		return index, nil
 	}
 
-	index, ok := store.Def.Stages.Names[identifier]
+	index, ok := store.Manifest.Stages.Names[identifier]
 	if !ok {
 		return 0, errors.Errorf(
 			"identifier %s is neither a staged bundle index nor a name assigned to a staged bundle!",

@@ -41,7 +41,7 @@ func lsBunAction(versions Versions) cli.ActionFunc {
 
 func getBundleNames(store *forklift.FSStageStore) map[int][]string {
 	names := make(map[int][]string)
-	for name, index := range store.Def.Stages.Names {
+	for name, index := range store.Manifest.Stages.Names {
 		names[index] = append(names[index], name)
 	}
 	for _, indexNames := range names {
@@ -72,11 +72,11 @@ func printBundleSummary(store *forklift.FSStageStore, index int, names map[int][
 	if indexNames := names[index]; len(indexNames) > 0 {
 		fmt.Printf(" (%s)", strings.Join(indexNames, ", "))
 	}
-	fmt.Printf(": %s@%s", bundle.Def.Pallet.Path, bundle.Def.Pallet.Version)
-	if !bundle.Def.Pallet.Clean {
+	fmt.Printf(": %s@%s", bundle.Manifest.Pallet.Path, bundle.Manifest.Pallet.Version)
+	if !bundle.Manifest.Pallet.Clean {
 		fmt.Print(" (staged with uncommitted pallet changes)")
 	}
-	if bundle.Def.Includes.HasOverrides() {
+	if bundle.Manifest.Includes.HasOverrides() {
 		fmt.Print(" (staged with overridden pallet requirements)")
 	}
 	fmt.Println()
@@ -189,7 +189,7 @@ func pruneBunAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		historyIndices := make(structures.Set[int])
-		for _, index := range store.Def.Stages.History {
+		for _, index := range store.Manifest.Stages.History {
 			historyIndices.Add(index)
 		}
 

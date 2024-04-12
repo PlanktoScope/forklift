@@ -88,12 +88,12 @@ func (w *FSWorkspace) GetStageStore(newStateStoreVersion string) (*FSStageStore,
 		return nil, errors.Wrap(err, "couldn't ensure the existence of the stage store")
 	}
 	if _, err = fs.Stat(
-		fsys, path.Join(dataStageStoreDirName, StageStoreDefFile),
+		fsys, path.Join(dataStageStoreDirName, StageStoreManifestFile),
 	); errors.Is(err, fs.ErrNotExist) {
-		def := StageStoreDef{
+		def := StageStoreManifest{
 			ForkliftVersion: newStateStoreVersion,
 		}
-		if err := def.Write(path.Join(w.GetStageStorePath(), StageStoreDefFile)); err != nil {
+		if err := def.Write(path.Join(w.GetStageStorePath(), StageStoreManifestFile)); err != nil {
 			return nil, errors.Wrapf(err, "couldn't initialize stage store state file")
 		}
 	}

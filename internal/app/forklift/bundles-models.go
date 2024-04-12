@@ -28,15 +28,15 @@ type FSBundle struct {
 // images) needed for a pallet to be applied to a Docker host. Required repos & pallets are included
 // directly in the bundle.
 type Bundle struct {
-	// Def is the Forklift bundle definition for the pallet bundle.
-	Def BundleDef
+	// Manifest is the Forklift bundle manifest for the pallet bundle.
+	Manifest BundleManifest
 }
 
-// BundleDefFile is the name of the file defining each Forklift pallet bundle.
-const BundleDefFile = "forklift-bundle.yml"
+// BundleManifestFile is the name of the file describing each Forklift pallet bundle.
+const BundleManifestFile = "forklift-bundle.yml"
 
-// A BundleDef defines a Forklift pallet bundle.
-type BundleDef struct {
+// A BundleManifest describes a Forklift pallet bundle.
+type BundleManifest struct {
 	// ForkliftVersion indicates that the pallet bundle was created assuming the semantics of a given
 	// version of Forklift. The version must be a valid Forklift version, and it sets the minimum
 	// version of Forklift required to use the pallet bundle. The Forklift tool refuses to use pallet
@@ -44,10 +44,9 @@ type BundleDef struct {
 	// Forklift version of the pallet bundle must be greater than or equal to the Forklift version of
 	// every required Forklift repo or pallet bundle.
 	ForkliftVersion string `yaml:"forklift-version"`
-	// Pallet defines the basic metadata for the bundled pallet.
+	// Pallet describes the basic metadata for the bundled pallet.
 	Pallet BundlePallet `yaml:"pallet"`
-	// Includes describes repos and pallets used by the bundled pallet to define the bundle's
-	// package deployments.
+	// Includes describes repos and pallets used to define the bundle's package deployments.
 	Includes BundleInclusions `yaml:"includes,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`

@@ -33,22 +33,22 @@ func PrintStagedBundle(
 	}
 
 	IndentedPrintln(indent, "Pallet:")
-	printBundlePallet(indent+1, bundle.Def.Pallet)
+	printBundlePallet(indent+1, bundle.Manifest.Pallet)
 
 	IndentedPrint(indent, "Includes:")
-	if !bundle.Def.Includes.HasInclusions() {
+	if !bundle.Manifest.Includes.HasInclusions() {
 		fmt.Println(" (none)")
 	} else {
 		fmt.Println()
-		printBundleInclusions(indent+1, bundle.Def.Includes)
+		printBundleInclusions(indent+1, bundle.Manifest.Includes)
 	}
 
 	IndentedPrint(indent, "Deploys:")
-	if len(bundle.Def.Deploys) == 0 {
+	if len(bundle.Manifest.Deploys) == 0 {
 		fmt.Println(" (none)")
 	} else {
 		fmt.Println()
-		printBundleDeployments(indent+1, bundle.Def.Deploys)
+		printBundleDeployments(indent+1, bundle.Manifest.Deploys)
 	}
 }
 

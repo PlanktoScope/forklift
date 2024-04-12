@@ -32,37 +32,37 @@ func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if b.Bundle.Def, err = loadBundleDef(b.FS, BundleDefFile); err != nil {
-		return nil, errors.Errorf("couldn't load bundle definition")
+	if b.Bundle.Manifest, err = loadBundleManifest(b.FS, BundleManifestFile); err != nil {
+		return nil, errors.Errorf("couldn't load bundle manifest")
 	}
-	for path, req := range b.Bundle.Def.Includes.Pallets {
+	for path, req := range b.Bundle.Manifest.Includes.Pallets {
 		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Def.Version(); err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine requirement version of included pallet %s", path,
 			)
 		}
-		b.Bundle.Def.Includes.Pallets[path] = req
+		b.Bundle.Manifest.Includes.Pallets[path] = req
 	}
-	for path, req := range b.Bundle.Def.Includes.Repos {
+	for path, req := range b.Bundle.Manifest.Includes.Repos {
 		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Def.Version(); err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine requirement version of included repo %s", path,
 			)
 		}
-		b.Bundle.Def.Includes.Repos[path] = req
+		b.Bundle.Manifest.Includes.Repos[path] = req
 	}
 	return b, nil
 }
 
-func (b *FSBundle) WriteDefFile() error {
-	marshaled, err := yaml.Marshal(b.Def)
+func (b *FSBundle) WriteManifestFile() error {
+	marshaled, err := yaml.Marshal(b.Manifest)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal bundle definition")
+		return errors.Wrapf(err, "couldn't marshal bundle manifest")
 	}
-	outputPath := filepath.FromSlash(path.Join(b.FS.Path(), BundleDefFile))
+	outputPath := filepath.FromSlash(path.Join(b.FS.Path(), BundleManifestFile))
 	const perm = 0o644 // owner rw, group r, public r
 	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save bundle definition to %s", outputPath)
+		return errors.Wrapf(err, "couldn't save bundle manifest to %s", outputPath)
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func (b *FSBundle) getBundledPalletPath() string {
 // FSBundle: Deployments
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) error {
-	b.Def.Deploys[depl.Name] = depl.Depl.Def
+	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
 	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
 	// https://github.com/golang/go/issues/62484)
 	if err := cp.Copy(filepath.FromSlash(depl.Pkg.FS.Path()), filepath.FromSlash(
@@ -108,7 +108,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) error {
 }
 
 func (b *FSBundle) LoadDepl(name string) (Depl, error) {
-	depl, ok := b.Def.Deploys[name]
+	depl, ok := b.Manifest.Deploys[name]
 	if !ok {
 		return Depl{}, errors.Errorf("bundle does not contain package deployment %s", name)
 	}
@@ -119,8 +119,8 @@ func (b *FSBundle) LoadDepl(name string) (Depl, error) {
 }
 
 func (b *FSBundle) LoadDepls(searchPattern string) ([]Depl, error) {
-	deplNames := make([]string, 0, len(b.Def.Deploys))
-	for deplName := range b.Def.Deploys {
+	deplNames := make([]string, 0, len(b.Manifest.Deploys))
+	for deplName := range b.Manifest.Deploys {
 		match, err := doublestar.Match(searchPattern, deplName)
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -148,10 +148,10 @@ func (b *FSBundle) LoadResolvedDepl(name string) (depl *ResolvedDepl, err error)
 	resolved := &ResolvedDepl{
 		Depl: Depl{
 			Name: name,
-			Def:  b.Def.Deploys[name],
+			Def:  b.Manifest.Deploys[name],
 		},
 	}
-	pkgPath := b.Def.Deploys[name].Package
+	pkgPath := b.Manifest.Deploys[name].Package
 	if resolved.PkgReq, err = b.LoadPkgReq(pkgPath); err != nil {
 		return depl, err
 	}
@@ -177,16 +177,16 @@ func (b *FSBundle) getPackagesPath() string {
 // are associated with a repo.
 func (b *FSBundle) WriteRepoDefFile() error {
 	repoDef := core.RepoDef{
-		ForkliftVersion: b.Def.ForkliftVersion,
+		ForkliftVersion: b.Manifest.ForkliftVersion,
 	}
 	marshaled, err := yaml.Marshal(repoDef)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal bundle definition")
+		return errors.Wrapf(err, "couldn't marshal bundle manifest")
 	}
 	outputPath := filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile))
 	const perm = 0o644 // owner rw, group r, public r
 	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save bundle definition to %s", outputPath)
+		return errors.Wrapf(err, "couldn't save bundle manifest to %s", outputPath)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func (b *FSBundle) WriteFileExports() error {
 	if err := EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
 		return errors.Wrapf(err, "couldn't make directory for all file exports")
 	}
-	for deplName := range b.Def.Deploys {
+	for deplName := range b.Manifest.Deploys {
 		resolved, err := b.LoadResolvedDepl(deplName)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't resolve deployment %s", deplName)
@@ -276,19 +276,20 @@ func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 	return repo.LoadFSPkgs(searchPattern)
 }
 
-// BundleDef
+// BundleManifest
 
-// loadBundleDef loads a BundleDef from the specified file path in the provided base filesystem.
-func loadBundleDef(fsys core.PathedFS, filePath string) (BundleDef, error) {
+// loadBundleManifest loads a BundleManifest from the specified file path in the provided base
+// filesystem.
+func loadBundleManifest(fsys core.PathedFS, filePath string) (BundleManifest, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return BundleDef{}, errors.Wrapf(
+		return BundleManifest{}, errors.Wrapf(
 			err, "couldn't read bundle config file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := BundleDef{}
+	config := BundleManifest{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return BundleDef{}, errors.Wrap(err, "couldn't parse bundle config")
+		return BundleManifest{}, errors.Wrap(err, "couldn't parse bundle config")
 	}
 	return config, nil
 }
