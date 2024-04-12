@@ -954,6 +954,7 @@ func newBundleManifest(
 			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},
 		Deploys: make(map[string]forklift.DeplDef),
+		Exports: make(map[string][]string),
 	}
 	desc.Pallet.Version, desc.Pallet.Clean = checkGitRepoVersion(pallet.FS.Path())
 	palletReqs, err := pallet.LoadFSPalletReqs("**")

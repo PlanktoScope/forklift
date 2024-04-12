@@ -92,11 +92,14 @@ func (b *FSBundle) getBundledPalletPath() string {
 
 // FSBundle: Deployments
 
-func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) error {
+func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
+	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
+		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
+	}
 	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
 	// https://github.com/golang/go/issues/62484)
-	if err := cp.Copy(filepath.FromSlash(depl.Pkg.FS.Path()), filepath.FromSlash(
+	if err = cp.Copy(filepath.FromSlash(depl.Pkg.FS.Path()), filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
 	)); err != nil {
 		return errors.Wrapf(

@@ -50,6 +50,14 @@ func PrintStagedBundle(
 		fmt.Println()
 		printBundleDeployments(indent+1, bundle.Manifest.Deploys)
 	}
+
+	IndentedPrint(indent, "Exports:")
+	if len(bundle.Manifest.Exports) == 0 {
+		fmt.Println(" (none)")
+	} else {
+		fmt.Println()
+		printBundleExports(indent+1, bundle.Manifest.Exports)
+	}
 }
 
 func printBundlePallet(indent int, pallet forklift.BundlePallet) {
@@ -115,13 +123,31 @@ func printBundleRepoInclusion(indent int, path string, inclusion forklift.Bundle
 }
 
 func printBundleDeployments(indent int, deployments map[string]forklift.DeplDef) {
-	sortedPaths := make([]string, 0, len(deployments))
-	for path := range deployments {
-		sortedPaths = append(sortedPaths, path)
+	sortedDeplNames := make([]string, 0, len(deployments))
+	for deplName := range deployments {
+		sortedDeplNames = append(sortedDeplNames, deplName)
 	}
-	slices.Sort(sortedPaths)
-	for _, path := range sortedPaths {
-		IndentedPrintf(indent, "%s: %s\n", path, deployments[path].Package)
+	slices.Sort(sortedDeplNames)
+	for _, deplName := range sortedDeplNames {
+		IndentedPrintf(indent, "%s: %s\n", deplName, deployments[deplName].Package)
+	}
+}
+
+func printBundleExports(indent int, exports map[string][]string) {
+	sortedDeplNames := make([]string, 0, len(exports))
+	for deplName := range exports {
+		sortedDeplNames = append(sortedDeplNames, deplName)
+	}
+	slices.Sort(sortedDeplNames)
+	for _, deplName := range sortedDeplNames {
+		IndentedPrintf(indent, "%s:", deplName)
+		if len(exports[deplName]) == 0 {
+			fmt.Print(" (none)")
+		}
+		fmt.Println()
+		for _, targetPath := range exports[deplName] {
+			BulletedPrintln(indent+1, targetPath)
+		}
 	}
 }
 
