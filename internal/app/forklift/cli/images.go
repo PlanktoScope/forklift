@@ -21,6 +21,10 @@ func DownloadImagesForStoreApply(
 ) error {
 	next, hasNext := store.GetNext()
 	current, hasCurrent := store.GetCurrent()
+	indent := 0
+	if parallel {
+		indent++ // parallel downloads enable indented printing
+	}
 
 	if hasCurrent && current != next {
 		bundle, err := store.LoadFSBundle(current)
@@ -36,10 +40,12 @@ func DownloadImagesForStoreApply(
 			"Downloading Docker container images specified by the last successfully-applied staged " +
 				"pallet bundle, in case the next to be applied fails to be applied...",
 		)
-		if err := DownloadImages(0, bundle, bundle, false, parallel); err != nil {
+		if err := DownloadImages(indent, bundle, bundle, false, parallel); err != nil {
 			return err
 		}
-		fmt.Println()
+		if !parallel {
+			fmt.Println() // serial downloads don't support indented printing, so we separate with a line
+		}
 	}
 	if hasNext {
 		bundle, err := store.LoadFSBundle(next)
@@ -55,13 +61,11 @@ func DownloadImagesForStoreApply(
 			"Downloading Docker container images specified by the next staged pallet bundle to be " +
 				"applied...",
 		)
-		if err := DownloadImages(0, bundle, bundle, false, parallel); err != nil {
+		if err := DownloadImages(indent, bundle, bundle, false, parallel); err != nil {
 			return err
 		}
 		fmt.Println()
 	}
-
-	fmt.Println("Done caching images! They will be used when you run `sudo -E forklift stage apply`.")
 	return nil
 }
 
@@ -69,7 +73,7 @@ func DownloadImages(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 	includeDisabled, parallel bool,
 ) error {
-	orderedImages, err := listRequiredImages(indent, deplsLoader, pkgLoader, includeDisabled)
+	orderedImages, err := listRequiredImages(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -86,8 +90,7 @@ func DownloadImages(
 }
 
 func listRequiredImages(
-	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
-	includeDisabled bool,
+	deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, includeDisabled bool,
 ) ([]string, error) {
 	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
@@ -104,9 +107,6 @@ func listRequiredImages(
 	orderedImages := make([]string, 0, len(resolved))
 	images := make(map[string]struct{})
 	for _, depl := range resolved {
-		IndentedPrintf(
-			indent, "Checking Docker container images used by package deployment %s...\n", depl.Name,
-		)
 		definesApp, err := depl.DefinesApp()
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -122,7 +122,6 @@ func listRequiredImages(
 			return nil, errors.Wrap(err, "couldn't load Compose app definition")
 		}
 		for _, service := range appDef.Services {
-			BulletedPrintf(indent+1, "%s: %s\n", service.Name, service.Image)
 			if _, ok := images[service.Image]; !ok {
 				images[service.Image] = struct{}{}
 				orderedImages = append(orderedImages, service.Image)

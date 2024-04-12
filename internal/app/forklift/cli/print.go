@@ -18,24 +18,19 @@ const (
 // Indented
 
 func IndentedPrintf(indent int, format string, a ...any) {
-	for i := 0; i < indent; i++ {
-		fmt.Print(indentation)
-	}
-	fmt.Printf(format, a...)
+	fmt.Printf("%s%s", makeIndentation(indent), fmt.Sprintf(format, a...))
+}
+
+func makeIndentation(indent int) string {
+	return strings.Repeat(indentation, indent)
 }
 
 func IndentedPrint(indent int, a ...any) {
-	for i := 0; i < indent; i++ {
-		fmt.Print(indentation)
-	}
-	fmt.Print(a...)
+	fmt.Printf("%s%s", makeIndentation(indent), fmt.Sprint(a...))
 }
 
 func IndentedPrintln(indent int, a ...any) {
-	for i := 0; i < indent; i++ {
-		fmt.Print(indentation)
-	}
-	fmt.Println(a...)
+	fmt.Printf("%s%s\n", makeIndentation(indent), fmt.Sprint(a...))
 }
 
 func IndentedPrintYaml(indent int, a any) error {
@@ -60,27 +55,19 @@ func IndentedPrintYaml(indent int, a any) error {
 // Bulleted
 
 func BulletedPrintf(indent int, format string, a ...any) {
-	for i := 0; i < indent; i++ {
-		fmt.Print(indentation)
-	}
-	fmt.Print(bullet)
-	fmt.Printf(format, a...)
+	fmt.Printf("%s%s", makeBullet(indent), fmt.Sprintf(format, a...))
+}
+
+func makeBullet(indent int) string {
+	return strings.Repeat(indentation, indent) + bullet
 }
 
 func BulletedPrint(indent int, a ...any) {
-	for i := 0; i < indent; i++ {
-		fmt.Print(indentation)
-	}
-	fmt.Print(bullet)
-	fmt.Print(a...)
+	fmt.Printf("%s%s", makeBullet(indent), fmt.Sprint(a...))
 }
 
 func BulletedPrintln(indent int, a ...any) {
-	for i := 0; i < indent; i++ {
-		fmt.Print(indentation)
-	}
-	fmt.Print(bullet)
-	fmt.Println(a...)
+	fmt.Printf("%s%s\n", makeBullet(indent), fmt.Sprint(a...))
 }
 
 func BulletedPrintYaml(indent int, a any) error {

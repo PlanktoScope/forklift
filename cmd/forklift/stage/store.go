@@ -253,15 +253,10 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		} else {
 			fmt.Printf("Setting the next staged pallet bundle to %d...\n", newNext)
 		}
-		store.SetNext(newNext)
-		if err = store.CommitState(); err != nil {
-			return errors.Wrap(err, "couldn't commit updated stage store state")
-		}
 
-		fmt.Println("Caching Docker container images required to apply...")
-		if err = fcli.DownloadImagesForStoreApply(
-			store, versions.Tool, versions.MinSupportedBundle,
-			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		if err = fcli.SetNextStagedBundle(
+			store, newNext, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
