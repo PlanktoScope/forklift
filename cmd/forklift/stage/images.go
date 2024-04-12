@@ -12,7 +12,7 @@ import (
 
 func cacheImgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}

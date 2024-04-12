@@ -60,6 +60,13 @@ var app = &cli.App{
 			Usage:   "Path of the forklift workspace",
 			EnvVars: []string{"FORKLIFT_WORKSPACE"},
 		},
+		&cli.StringFlag{
+			Name:    "stage-store",
+			Aliases: []string{"ss"},
+			Value:   "",
+			Usage:   "Path of the forklift stage store, overriding the default path in the workspace",
+			EnvVars: []string{"FORKLIFT_STAGE_STORE"},
+		},
 		&cli.BoolFlag{
 			Name:    "ignore-tool-version",
 			Value:   false,

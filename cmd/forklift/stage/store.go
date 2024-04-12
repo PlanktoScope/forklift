@@ -16,9 +16,9 @@ var errMissingStore = errors.Errorf(
 )
 
 func loadNextBundle(
-	wpath string, versions Versions,
+	wpath, sspath string, versions Versions,
 ) (*forklift.FSBundle, *forklift.FSStageStore, error) {
-	store, err := getStageStore(wpath, versions)
+	store, err := getStageStore(wpath, sspath, versions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,12 +65,12 @@ func loadNextBundle(
 	return bundle, store, nil
 }
 
-func getStageStore(wpath string, versions Versions) (*forklift.FSStageStore, error) {
+func getStageStore(wpath, sspath string, versions Versions) (*forklift.FSStageStore, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
-	store, err := workspace.GetStageStore(versions.NewStageStore)
+	store, err := fcli.GetStageStore(workspace, sspath, versions.NewStageStore)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func getStageStore(wpath string, versions Versions) (*forklift.FSStageStore, err
 
 func showAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -211,7 +211,7 @@ func printRollbackSummary(indent int, store *forklift.FSStageStore, index int, n
 
 func showHistAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -234,7 +234,7 @@ func showHistAction(versions Versions) cli.ActionFunc {
 
 func setNextAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -333,7 +333,7 @@ func resolveBundleIdentifier(
 
 func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		bundle, _, err := loadNextBundle(c.String("workspace"), versions)
+		bundle, _, err := loadNextBundle(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -353,7 +353,7 @@ func checkAction(versions Versions) cli.ActionFunc {
 
 func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		bundle, _, err := loadNextBundle(c.String("workspace"), versions)
+		bundle, _, err := loadNextBundle(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -373,7 +373,7 @@ func planAction(versions Versions) cli.ActionFunc {
 
 func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		bundle, store, err := loadNextBundle(c.String("workspace"), versions)
+		bundle, store, err := loadNextBundle(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}

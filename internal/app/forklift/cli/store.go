@@ -2,11 +2,27 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
+
+func GetStageStore(
+	workspace *forklift.FSWorkspace, stageStorePath, newStageStoreVersion string,
+) (*forklift.FSStageStore, error) {
+	if stageStorePath == "" {
+		return workspace.GetStageStore(newStageStoreVersion)
+	}
+
+	fsys := core.AttachPath(os.DirFS(stageStorePath), stageStorePath)
+	if err := forklift.EnsureFSStageStore(fsys, ".", newStageStoreVersion); err != nil {
+		return nil, err
+	}
+	return forklift.LoadFSStageStore(fsys, ".")
+}
 
 func SetNextStagedBundle(
 	store *forklift.FSStageStore, index int, exportPath, toolVersion, bundleMinVersion string,

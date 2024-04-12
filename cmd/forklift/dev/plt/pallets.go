@@ -212,7 +212,9 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		stageStore, err := workspace.GetStageStore(versions.NewStageStore)
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
 		if err != nil {
 			return err
 		}
@@ -247,7 +249,9 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		stageStore, err := workspace.GetStageStore(versions.NewStageStore)
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
 		if err != nil {
 			return err
 		}

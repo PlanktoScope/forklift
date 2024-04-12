@@ -19,7 +19,7 @@ import (
 
 func lsBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -86,7 +86,7 @@ func printBundleSummary(store *forklift.FSStageStore, index int, names map[int][
 
 func showBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func showBunAction(versions Versions) cli.ActionFunc {
 
 func locateBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func locateBunAction(versions Versions) cli.ActionFunc {
 
 func rmBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func rmBunAction(versions Versions) cli.ActionFunc {
 
 func pruneBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}

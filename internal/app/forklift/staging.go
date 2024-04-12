@@ -17,9 +17,32 @@ import (
 
 // FSStageStore
 
-// loadFSStageStore loads a FSStageStore from the specified directory path in the provided base
+// EnsureFSStageStore initializes a FSStageStore at the specified directory path in the provided
+// base filesystem, if a stage store is not already initialized there.
+func EnsureFSStageStore(fsys core.PathedFS, subdirPath, newStateStoreVersion string) error {
+	storePath := path.Join(fsys.Path(), subdirPath)
+	if err := EnsureExists(filepath.FromSlash(storePath)); err != nil {
+		return errors.Wrapf(
+			err, "couldn't ensure the existence of the stage store at %s", storePath,
+		)
+	}
+	if _, err := fs.Stat(
+		fsys, path.Join(subdirPath, StageStoreManifestFile),
+	); errors.Is(err, fs.ErrNotExist) {
+		manifest := StageStoreManifest{
+			ForkliftVersion: newStateStoreVersion,
+		}
+		manifestPath := path.Join(fsys.Path(), subdirPath, StageStoreManifestFile)
+		if err = manifest.Write(manifestPath); err != nil {
+			return errors.Wrapf(err, "couldn't initialize stage store manifest file at %s", manifestPath)
+		}
+	}
+	return nil
+}
+
+// LoadFSStageStore loads a FSStageStore from the specified directory path in the provided base
 // filesystem.
-func loadFSStageStore(fsys core.PathedFS, subdirPath string) (s *FSStageStore, err error) {
+func LoadFSStageStore(fsys core.PathedFS, subdirPath string) (s *FSStageStore, err error) {
 	s = &FSStageStore{}
 	if s.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -242,7 +265,7 @@ func loadStageStoreManifest(fsys core.PathedFS, filePath string) (StageStoreMani
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return StageStoreManifest{}, errors.Wrapf(
-			err, "couldn't read stage store state file %s/%s", fsys.Path(), filePath,
+			err, "couldn't read stage store manifest file %s/%s", fsys.Path(), filePath,
 		)
 	}
 	config := StageStoreManifest{}
@@ -261,7 +284,7 @@ func (m StageStoreManifest) Write(outputPath string) error {
 		return errors.Wrapf(err, "couldn't marshal stage store state")
 	}
 	const perm = 0o644 // owner rw, group r, public r
-	if err = os.WriteFile(outputPath, marshaled, perm); err != nil {
+	if err = os.WriteFile(filepath.FromSlash(outputPath), marshaled, perm); err != nil {
 		return errors.Wrapf(err, "couldn't save stage store to %s", outputPath)
 	}
 	return nil
