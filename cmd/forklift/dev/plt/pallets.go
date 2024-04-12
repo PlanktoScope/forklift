@@ -219,6 +219,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if _, err = fcli.StagePallet(pallet, stageStore, cache, versions.NewBundle); err != nil {
 			return err
 		}
+		fmt.Println()
 		if err = fcli.DownloadImagesForStoreApply(
 			stageStore, versions.Tool, versions.MinSupportedBundle, c.Bool("parallel"),
 			c.Bool("ignore-tool-version"),

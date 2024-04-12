@@ -54,6 +54,19 @@ func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error
 	return b, nil
 }
 
+func (b *FSBundle) WriteDefFile() error {
+	marshaled, err := yaml.Marshal(b.Def)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal bundle definition")
+	}
+	outputPath := filepath.FromSlash(path.Join(b.FS.Path(), BundleDefFile))
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save bundle definition to %s", outputPath)
+	}
+	return nil
+}
+
 func (b *FSBundle) Path() string {
 	return b.FS.Path()
 }
@@ -63,7 +76,9 @@ func (b *FSBundle) Path() string {
 func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
 	// https://github.com/golang/go/issues/62484)
-	if err := cp.Copy(pallet.FS.Path(), filepath.FromSlash(b.getBundledPalletPath())); err != nil {
+	if err := cp.Copy(
+		filepath.FromSlash(pallet.FS.Path()), filepath.FromSlash(b.getBundledPalletPath()),
+	); err != nil {
 		return errors.Wrapf(
 			err, "couldn't bundle files for pallet %s from %s", pallet.Path(), pallet.FS.Path(),
 		)
@@ -81,7 +96,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) error {
 	b.Def.Deploys[depl.Name] = depl.Depl.Def
 	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
 	// https://github.com/golang/go/issues/62484)
-	if err := cp.Copy(depl.Pkg.FS.Path(), filepath.FromSlash(
+	if err := cp.Copy(filepath.FromSlash(depl.Pkg.FS.Path()), filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
 	)); err != nil {
 		return errors.Wrapf(
@@ -176,17 +191,43 @@ func (b *FSBundle) WriteRepoDefFile() error {
 	return nil
 }
 
-// FSBundle: Definition
+// FSBundle: Exports
 
-func (b *FSBundle) WriteDefFile() error {
-	marshaled, err := yaml.Marshal(b.Def)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal bundle definition")
+func (b *FSBundle) getExportsPath() string {
+	return path.Join(b.FS.Path(), exportsDirName)
+}
+
+func (b *FSBundle) WriteFileExports() error {
+	if err := EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
+		return errors.Wrapf(err, "couldn't make directory for all file exports")
 	}
-	outputPath := filepath.FromSlash(path.Join(b.FS.Path(), BundleDefFile))
-	const perm = 0o644 // owner rw, group r, public r
-	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save bundle definition to %s", outputPath)
+	for deplName := range b.Def.Deploys {
+		resolved, err := b.LoadResolvedDepl(deplName)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't resolve deployment %s", deplName)
+		}
+		exports, err := resolved.GetFileExports()
+		if err != nil {
+			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", deplName)
+		}
+		for _, export := range exports {
+			sourcePath := path.Join(resolved.Pkg.FS.Path(), export.Source)
+			for _, target := range export.Targets {
+				exportPath := path.Join(b.getExportsPath(), target)
+				if err := EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {
+					return errors.Wrapf(
+						err, "couldn't make export directory %s in bundle", path.Dir(exportPath),
+					)
+				}
+				// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
+				// https://github.com/golang/go/issues/62484)
+				if err := cp.Copy(
+					filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath),
+				); err != nil {
+					return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -220,7 +261,7 @@ func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error
 	if err != nil {
 		return nil, err
 	}
-	return repo.LoadFSPkg(pkgPath)
+	return repo.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
 }
 
 func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {

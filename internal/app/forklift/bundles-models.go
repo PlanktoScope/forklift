@@ -7,10 +7,13 @@ import (
 // Bundle
 
 const (
+	// bundledPalletDirName is the name of the directory containing the bundled pallet.
+	bundledPalletDirName = "pallet"
 	// packagesDirName is the name of the directory containing bundled files for each package.
 	packagesDirName = "packages"
-	// bundledPalletDirName is the name of the directory containing bundled pallet.
-	bundledPalletDirName = "pallet"
+	// exportsDirName is the name of the directory containing exported files for all package
+	// deployments, collected together.
+	exportsDirName = "exports"
 )
 
 // A FSBundle is a Forklift pallet bundle stored at the root of a [fs.FS] filesystem.
