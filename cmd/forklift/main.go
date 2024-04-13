@@ -88,16 +88,16 @@ const (
 	palletMinVersion = "v0.4.0"
 	// bundleMinVersion is the minimum supported Forklift version among staged pallet bundles. A
 	// bundle with a lower Forklift version cannot be used.
-	bundleMinVersion = "v0.7.0-alpha.0"
+	bundleMinVersion = "v0.7.0-alpha.1"
 	// newBundleVersion is the Forklift version reported in new staged pallet bundles made by Forklift.
 	// Older versions of the Forklift tool cannot use such bundles.
-	newBundleVersion = "v0.7.0-alpha.0"
+	newBundleVersion = "v0.7.0-alpha.1"
 	// newStageStoreVersion is the Forklift version reported in a stage store initialized by Forklift.
 	// Older versions of the Forklift tool cannot use the state store.
-	newStageStoreVersion = "v0.7.0-alpha.0"
+	newStageStoreVersion = "v0.7.0-alpha.1"
 	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
 	// version is unknown.
-	fallbackVersion = "v0.7.0-alpha.0"
+	fallbackVersion = "v0.7.0-alpha.2-dev"
 )
 
 var (

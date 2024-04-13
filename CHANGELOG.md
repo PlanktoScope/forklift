@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.7.0-alpha.1 - 2024-04-13
+
 ### Added
 
 - (spec) Added a file export resource type as a resource which packages can provide as part of their deployments and/or feature flags.
