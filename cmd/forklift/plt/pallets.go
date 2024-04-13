@@ -91,7 +91,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 		index, err := fcli.StagePallet(
 			pallet, stageStore, repoCache, c.String("exports"),
 			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
-			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			c.Bool("no-cache-img") || c.Bool("apply"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		)
 		if err != nil {
 			return err
@@ -339,7 +339,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if _, err = fcli.StagePallet(
 			pallet, stageStore, cache, c.String("exports"),
 			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
-			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -376,7 +376,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 		index, err := fcli.StagePallet(
 			pallet, stageStore, repoCache, c.String("exports"),
 			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
-			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		)
 		if err != nil {
 			return errors.Wrap(err, "couldn't stage pallet to be applied immediately")

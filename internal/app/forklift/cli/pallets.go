@@ -883,7 +883,7 @@ func compareDeplNames(r, s string) int {
 func StagePallet(
 	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore, repoCache forklift.PathedRepoCache,
 	exportPath, toolVersion, bundleMinVersion, newBundleForkliftVersion string,
-	parallel, ignoreToolVersion bool,
+	skipImageCaching, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
 	index, err = stageStore.AllocateNew()
 	if err != nil {
@@ -897,7 +897,8 @@ func StagePallet(
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
 	if err = SetNextStagedBundle(
-		stageStore, index, exportPath, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
+		stageStore, index, exportPath, toolVersion, bundleMinVersion,
+		skipImageCaching, parallel, ignoreToolVersion,
 	); err != nil {
 		return index, errors.Wrapf(
 			err, "couldn't prepare staged pallet bundle %d to be applied next", index,

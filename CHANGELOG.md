@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 0.7.0-alpha.1 - 2024-04-13
+## 0.7.0-alpha.2 - 2024-04-13
+
+### Added
+
+- (cli) Added a `--no-cache-img` flag to all `plt switch`, `[dev] plt stage`, and `stage set-next` to enable non-root execution in setup scripts where the Docker socket can only be accessed with root permissions.
+
+### Fixed
+
+- (cli) Added missing a `--parallel` flag to `plt stage`.
+- (cli) Fixed incorrect usage descriptions for the `--parallel` flag for `[dev] plt plan`, `[dev] plt apply`, and `stage plan`.
 
 ### Added
 
