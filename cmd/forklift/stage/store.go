@@ -65,13 +65,20 @@ func loadNextBundle(
 	return bundle, store, nil
 }
 
-func getStageStore(wpath, sspath string, versions Versions) (*forklift.FSStageStore, error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return nil, err
+func getStageStore(
+	wpath, sspath string, versions Versions,
+) (store *forklift.FSStageStore, err error) {
+	var workspace *forklift.FSWorkspace
+	if sspath == "" {
+		workspace, err = forklift.LoadWorkspace(wpath)
+		if err != nil {
+			return nil, errors.Wrap(
+				err, "couldn't load workspace to load the stage store, since no explicit path was "+
+					"provided for the stage store",
+			)
+		}
 	}
-	store, err := fcli.GetStageStore(workspace, sspath, versions.NewStageStore)
-	if err != nil {
+	if store, err = fcli.GetStageStore(workspace, sspath, versions.NewStageStore); err != nil {
 		return nil, err
 	}
 	return store, nil
