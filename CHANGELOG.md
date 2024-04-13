@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.7.0-alpha.3 - 2024-04-13
+
+### Fixed
+
+- (cli) Subcommands under `stage` no longer require the workspace to be set via `--workspace` or `FORKLIFT_WORKSPACE` (which defaults to `$HOME`, which may be unset in systemd system services) if the path to the stage store is explicitly set via `--stage-store` or `FORKLIFT_STAGE_STORE`.
+
 ## 0.7.0-alpha.2 - 2024-04-13
 
 ### Added
