@@ -30,8 +30,12 @@ func MakeCmd(versions Versions) *cli.Command {
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
+							Name:  "no-cache-img",
+							Usage: "don't download container images (this flag is ignored if --apply is set)",
+						},
+						&cli.BoolFlag{
 							Name:  "parallel",
-							Usage: "parallelize updating of deployments",
+							Usage: "parallelize updating of package deployments",
 						},
 						&cli.BoolFlag{
 							Name:  "apply",
@@ -66,7 +70,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "construct a plan for parallel updating of deployments",
 				},
 			},
 		},
@@ -75,6 +79,16 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Category: category,
 			Usage:    "Builds and stages a bundle of the local pallet to be applied later",
 			Action:   stageAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "no-cache-img",
+					Usage: "don't download container images",
+				},
+				&cli.BoolFlag{
+					Name:  "parallel",
+					Usage: "parallelize downloading of container images",
+				},
+			},
 		},
 		&cli.Command{
 			Name:     "apply",
@@ -85,7 +99,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize updating of deployments",
+					Usage: "parallelize updating of package deployments",
 				},
 			},
 		},
@@ -107,7 +121,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},
@@ -131,7 +145,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},

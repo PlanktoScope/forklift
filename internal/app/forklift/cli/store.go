@@ -26,7 +26,7 @@ func GetStageStore(
 
 func SetNextStagedBundle(
 	store *forklift.FSStageStore, index int, exportPath, toolVersion, bundleMinVersion string,
-	parallel, ignoreToolVersion bool,
+	skipImageCaching, parallel, ignoreToolVersion bool,
 ) error {
 	store.SetNext(index)
 	fmt.Printf(
@@ -34,6 +34,10 @@ func SetNextStagedBundle(
 	)
 	if err := store.CommitState(); err != nil {
 		return errors.Wrap(err, "couldn't commit updated stage store state")
+	}
+
+	if skipImageCaching {
+		return nil
 	}
 
 	if err := DownloadImagesForStoreApply(

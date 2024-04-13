@@ -56,7 +56,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "construct a plan for parallel updating of deployments",
 				},
 			},
 		},
@@ -67,8 +67,12 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Action:   stageAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
+					Name:  "no-cache-img",
+					Usage: "don't download container images",
+				},
+				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},
@@ -81,7 +85,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize updating of package deployments",
 				},
 			},
 		},
@@ -103,7 +107,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},
@@ -127,7 +131,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 				},
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},

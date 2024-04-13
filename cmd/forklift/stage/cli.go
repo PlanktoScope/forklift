@@ -37,7 +37,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},
@@ -55,7 +55,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "construct a plan for parallel updating of deployments",
 				},
 			},
 		},
@@ -154,15 +154,20 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 	category := "Modify the stage store"
 	return []*cli.Command{
 		{
-			Name:      "set-next",
-			Category:  category,
-			Usage:     "Sets the specified staged pallet bundle as the next one to be applied.",
+			Name:     "set-next",
+			Category: category,
+			Usage: "Sets the specified staged pallet bundle as the next one to be applied, then " +
+				"caches required images",
 			ArgsUsage: "bundle_index_or_name",
 			Action:    setNextAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
+					Name:  "no-cache-img",
+					Usage: "don't download container images",
+				},
+				&cli.BoolFlag{
 					Name:  "parallel",
-					Usage: "parallelize downloading of images",
+					Usage: "parallelize downloading of container images",
 				},
 			},
 		},
