@@ -33,22 +33,30 @@ func PrintStagedBundle(
 	}
 
 	IndentedPrintln(indent, "Pallet:")
-	printBundlePallet(indent+1, bundle.Def.Pallet)
+	printBundlePallet(indent+1, bundle.Manifest.Pallet)
 
 	IndentedPrint(indent, "Includes:")
-	if !bundle.Def.Includes.HasInclusions() {
+	if !bundle.Manifest.Includes.HasInclusions() {
 		fmt.Println(" (none)")
 	} else {
 		fmt.Println()
-		printBundleInclusions(indent+1, bundle.Def.Includes)
+		printBundleInclusions(indent+1, bundle.Manifest.Includes)
 	}
 
 	IndentedPrint(indent, "Deploys:")
-	if len(bundle.Def.Deploys) == 0 {
+	if len(bundle.Manifest.Deploys) == 0 {
 		fmt.Println(" (none)")
 	} else {
 		fmt.Println()
-		printBundleDeployments(indent+1, bundle.Def.Deploys)
+		printBundleDeployments(indent+1, bundle.Manifest.Deploys)
+	}
+
+	IndentedPrint(indent, "Exports:")
+	if len(bundle.Manifest.Exports) == 0 {
+		fmt.Println(" (none)")
+	} else {
+		fmt.Println()
+		printBundleExports(indent+1, bundle.Manifest.Exports)
 	}
 }
 
@@ -115,25 +123,32 @@ func printBundleRepoInclusion(indent int, path string, inclusion forklift.Bundle
 }
 
 func printBundleDeployments(indent int, deployments map[string]forklift.DeplDef) {
-	sortedPaths := make([]string, 0, len(deployments))
-	for path := range deployments {
-		sortedPaths = append(sortedPaths, path)
+	sortedDeplNames := make([]string, 0, len(deployments))
+	for deplName := range deployments {
+		sortedDeplNames = append(sortedDeplNames, deplName)
 	}
-	slices.Sort(sortedPaths)
-	for _, path := range sortedPaths {
-		IndentedPrintf(indent, "%s: %s\n", path, deployments[path].Package)
+	slices.Sort(sortedDeplNames)
+	for _, deplName := range sortedDeplNames {
+		IndentedPrintf(indent, "%s: %s\n", deplName, deployments[deplName].Package)
 	}
 }
 
-func PrintBundleDeplPkgPath(indent int, bundle *forklift.FSBundle, deplName string) error {
-	resolved, err := bundle.LoadResolvedDepl(deplName)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load deployment %s from bundle %s", deplName, bundle.FS.Path(),
-		)
+func printBundleExports(indent int, exports map[string][]string) {
+	sortedDeplNames := make([]string, 0, len(exports))
+	for deplName := range exports {
+		sortedDeplNames = append(sortedDeplNames, deplName)
 	}
-	fmt.Println(resolved.Pkg.FS.Path())
-	return nil
+	slices.Sort(sortedDeplNames)
+	for _, deplName := range sortedDeplNames {
+		IndentedPrintf(indent, "%s:", deplName)
+		if len(exports[deplName]) == 0 {
+			fmt.Print(" (none)")
+		}
+		fmt.Println()
+		for _, targetPath := range exports[deplName] {
+			BulletedPrintln(indent+1, targetPath)
+		}
+	}
 }
 
 // Apply

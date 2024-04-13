@@ -48,7 +48,9 @@ func PrintDeplInfo(
 func PrintResolvedDepl(
 	indent int, cache forklift.PathedRepoCache, resolved *forklift.ResolvedDepl,
 ) error {
-	printDepl(indent, cache, resolved)
+	if err := printDepl(indent, cache, resolved); err != nil {
+		return err
+	}
 	indent++
 
 	definesApp, err := resolved.DefinesApp()
@@ -76,7 +78,7 @@ func PrintResolvedDepl(
 	return nil
 }
 
-func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) {
+func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) error {
 	IndentedPrint(indent, "Package deployment")
 	if depl.Depl.Def.Disabled {
 		fmt.Print(" (disabled!)")
@@ -93,7 +95,7 @@ func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.Resolv
 	fmt.Println()
 	enabledFeatures, err := depl.EnabledFeatures()
 	if err != nil {
-		IndentedPrintf(indent, "Warning: couldn't determine enabled features: %s\n", err.Error())
+		return errors.Wrap(err, "couldn't determine enabled features")
 	}
 	printFeatures(indent+1, enabledFeatures)
 
@@ -104,6 +106,20 @@ func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.Resolv
 	}
 	fmt.Println()
 	printFeatures(indent+1, disabledFeatures)
+
+	fileExportTargets, err := depl.GetFileExportTargets()
+	if err != nil {
+		return errors.Wrap(err, "couldn't determine export file targets")
+	}
+	IndentedPrint(indent, "File export targets:")
+	if len(fileExportTargets) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	for _, fileExport := range fileExportTargets {
+		BulletedPrintln(indent+1, fileExport)
+	}
+	return nil
 }
 
 func printDeplPkg(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) {

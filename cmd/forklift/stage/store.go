@@ -16,9 +16,9 @@ var errMissingStore = errors.Errorf(
 )
 
 func loadNextBundle(
-	wpath string, versions Versions,
+	wpath, sspath string, versions Versions,
 ) (*forklift.FSBundle, *forklift.FSStageStore, error) {
-	store, err := getStageStore(wpath, versions)
+	store, err := getStageStore(wpath, sspath, versions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,12 +65,12 @@ func loadNextBundle(
 	return bundle, store, nil
 }
 
-func getStageStore(wpath string, versions Versions) (*forklift.FSStageStore, error) {
+func getStageStore(wpath, sspath string, versions Versions) (*forklift.FSStageStore, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
-	store, err := workspace.GetStageStore(versions.NewStageStore)
+	store, err := fcli.GetStageStore(workspace, sspath, versions.NewStageStore)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func getStageStore(wpath string, versions Versions) (*forklift.FSStageStore, err
 
 func showAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -174,13 +174,15 @@ func printBasicSummary(indent int, bundle *forklift.FSBundle, names []string) {
 		}
 	}
 
-	fcli.IndentedPrintf(indent, "Pallet: %s@%s\n", bundle.Def.Pallet.Path, bundle.Def.Pallet.Version)
+	fcli.IndentedPrintf(
+		indent, "Pallet: %s@%s\n", bundle.Manifest.Pallet.Path, bundle.Manifest.Pallet.Version,
+	)
 
 	indent++
-	if !bundle.Def.Pallet.Clean {
+	if !bundle.Manifest.Pallet.Clean {
 		fcli.BulletedPrintln(indent, "Staged with uncommitted pallet changes")
 	}
-	if bundle.Def.Includes.HasOverrides() {
+	if bundle.Manifest.Includes.HasOverrides() {
 		fcli.BulletedPrint(indent, "Staged with overridden pallet requirements")
 	}
 }
@@ -209,7 +211,7 @@ func printRollbackSummary(indent int, store *forklift.FSStageStore, index int, n
 
 func showHistAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -218,7 +220,7 @@ func showHistAction(versions Versions) cli.ActionFunc {
 		}
 
 		names := getBundleNames(store)
-		for _, index := range store.Def.Stages.History {
+		for _, index := range store.Manifest.Stages.History {
 			printBundleSummary(store, index, names)
 		}
 		if index, ok := store.GetPending(); ok {
@@ -232,7 +234,7 @@ func showHistAction(versions Versions) cli.ActionFunc {
 
 func setNextAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -253,15 +255,10 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		} else {
 			fmt.Printf("Setting the next staged pallet bundle to %d...\n", newNext)
 		}
-		store.SetNext(newNext)
-		if err = store.CommitState(); err != nil {
-			return errors.Wrap(err, "couldn't commit updated stage store state")
-		}
 
-		fmt.Println("Caching Docker container images required to apply...")
-		if err = fcli.DownloadImagesForStoreApply(
-			store, versions.Tool, versions.MinSupportedBundle,
-			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		if err = fcli.SetNextStagedBundle(
+			store, newNext, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -322,7 +319,7 @@ func resolveBundleIdentifier(
 		return index, nil
 	}
 
-	index, ok := store.Def.Stages.Names[identifier]
+	index, ok := store.Manifest.Stages.Names[identifier]
 	if !ok {
 		return 0, errors.Errorf(
 			"identifier %s is neither a staged bundle index nor a name assigned to a staged bundle!",
@@ -336,7 +333,7 @@ func resolveBundleIdentifier(
 
 func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		bundle, _, err := loadNextBundle(c.String("workspace"), versions)
+		bundle, _, err := loadNextBundle(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -356,7 +353,7 @@ func checkAction(versions Versions) cli.ActionFunc {
 
 func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		bundle, _, err := loadNextBundle(c.String("workspace"), versions)
+		bundle, _, err := loadNextBundle(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -376,7 +373,7 @@ func planAction(versions Versions) cli.ActionFunc {
 
 func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		bundle, store, err := loadNextBundle(c.String("workspace"), versions)
+		bundle, store, err := loadNextBundle(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}

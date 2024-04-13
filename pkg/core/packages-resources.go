@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // ProvidedRes
@@ -40,6 +42,13 @@ func (r ProvidedRes) AttachedServices(source []string) []AttachedRes[ServiceRes]
 // elements which describes the source of the ProvidedRes instance.
 func (r ProvidedRes) AttachedFilesets(source []string) []AttachedRes[FilesetRes] {
 	return attachRes(r.Filesets, append(source, providesSourcePart))
+}
+
+// AttachedFileExports returns a list of [AttachedRes] instances for each respective file export
+// in the ProvidedRes instance, adding a string to the provided list of source
+// elements which describes the source of the ProvidedRes instance.
+func (r ProvidedRes) AttachedFileExports(source []string) []AttachedRes[FileExportRes] {
+	return attachRes(r.FileExports, append(source, providesSourcePart))
 }
 
 // RequiredRes
@@ -121,9 +130,9 @@ func (r ServiceRes) CheckDep(candidate ServiceRes) (errs []error) {
 	}
 
 	// TODO: precompute candidatePaths and candidatePathPrefixes, if this is a performance bottleneck
-	candidatePaths, candidatePathPrefixes := parsePaths(candidate.Paths)
+	candidatePaths, candidatePathPrefixes := parsePathsWithPrefixes(candidate.Paths)
 	for _, path := range r.Paths {
-		if pathMatchesExactly(path, candidatePaths) {
+		if candidatePaths.Has(path) {
 			continue
 		}
 		if match, _ := pathMatchesPrefix(path, candidatePathPrefixes); match {
@@ -132,12 +141,12 @@ func (r ServiceRes) CheckDep(candidate ServiceRes) (errs []error) {
 		errs = append(errs, fmt.Errorf("unmatched path '%s'", path))
 	}
 
-	candidateTags := make(map[string]struct{})
+	candidateTags := make(structures.Set[string])
 	for _, tag := range candidate.Tags {
-		candidateTags[tag] = struct{}{}
+		candidateTags.Add(tag)
 	}
 	for _, tag := range r.Tags {
-		if _, ok := candidateTags[tag]; ok {
+		if candidateTags.Has(tag) {
 			continue
 		}
 		errs = append(errs, fmt.Errorf("unmatched tag '%s'", tag))
@@ -146,29 +155,25 @@ func (r ServiceRes) CheckDep(candidate ServiceRes) (errs []error) {
 	return errs
 }
 
-// parsePaths splits the provided list of paths into a set of exact paths and a set of prefix
-// paths, with the trailing asterisk (`*`) removed from the prefixes.
-func parsePaths(paths []string) (exact, prefixes map[string]struct{}) {
-	exact = make(map[string]struct{})
-	prefixes = make(map[string]struct{})
+// parsePathsWithPrefixes splits the provided list of paths into a set of exact paths and a set of
+// prefix paths, with the trailing asterisk (`*`) removed from the prefixes.
+func parsePathsWithPrefixes(paths []string) (exact, prefixes structures.Set[string]) {
+	exact = make(structures.Set[string])
+	prefixes = make(structures.Set[string])
 	for _, path := range paths {
-		exact[path] = struct{}{} // even prefix paths are stored here, for fast exact matching
+		exact.Add(path) // even prefix paths are stored here, for fast exact matching
 		if strings.HasSuffix(path, "*") {
 			prefix := strings.TrimSuffix(path, "*")
-			prefixes[prefix] = struct{}{}
+			prefixes.Add(prefix)
 		}
 	}
 	return exact, prefixes
 }
 
-// pathMatchesExactly checks whether the provided path matches the provided set of exact paths.
-func pathMatchesExactly(path string, exactPaths map[string]struct{}) bool {
-	_, ok := exactPaths[path]
-	return ok
-}
-
 // pathMatchesPrefix checks whether the provided path matches the provided set of prefix paths.
-func pathMatchesPrefix(path string, pathPrefixes map[string]struct{}) (match bool, prefix string) {
+func pathMatchesPrefix(
+	path string, pathPrefixes structures.Set[string],
+) (match bool, prefix string) {
 	for prefix := range pathPrefixes {
 		if strings.HasPrefix(strings.TrimSuffix(path, "*"), prefix) {
 			return true, prefix
@@ -191,26 +196,27 @@ func (r ServiceRes) CheckConflict(candidate ServiceRes) (errs []error) {
 		return errs
 	}
 
-	errs = append(errs, checkConflictingPaths(r.Paths, candidate.Paths)...)
+	errs = append(errs, checkConflictingPathsWithPrefixes(r.Paths, candidate.Paths)...)
 
 	// Tags should be ignored in checking conflicts
 	return errs
 }
 
-// checkConflictingPaths checks every path in the list of provided paths against every path in the
-// list of candidate paths to identify any conflicts between the two lists of paths.
-func checkConflictingPaths(provided, candidate []string) (errs []error) {
-	pathConflicts := make(map[string]struct{})
-	candidatePaths, candidatePathPrefixes := parsePaths(candidate)
-	providedPaths, providedPathPrefixes := parsePaths(provided)
+// checkConflictingPathsWithPrefixes checks every path in the list of provided paths against every
+// path in the list of candidate paths to identify any conflicts between the two lists of paths,
+// where paths can be specified as prefixes using `*` as a suffix.
+func checkConflictingPathsWithPrefixes(provided, candidate []string) (errs []error) {
+	pathConflicts := make(structures.Set[string])
+	candidatePaths, candidatePathPrefixes := parsePathsWithPrefixes(candidate)
+	providedPaths, providedPathPrefixes := parsePathsWithPrefixes(provided)
 
 	for _, path := range provided {
-		if pathMatchesExactly(path, candidatePaths) {
+		if candidatePaths.Has(path) {
 			errorMessage := fmt.Sprintf("same path '%s'", path)
-			if _, ok := pathConflicts[errorMessage]; ok {
+			if pathConflicts.Has(errorMessage) {
 				continue
 			}
-			pathConflicts[errorMessage] = struct{}{}
+			pathConflicts.Add(errorMessage)
 			errs = append(errs, fmt.Errorf(errorMessage))
 			continue
 		}
@@ -219,15 +225,15 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 			errorMessage := fmt.Sprintf(
 				"overlapping paths '%s' and '%s*'", path, prefix,
 			)
-			if _, ok := pathConflicts[errorMessage]; ok {
+			if pathConflicts.Has(errorMessage) {
 				continue
 			}
-			pathConflicts[errorMessage] = struct{}{}
+			pathConflicts.Add(errorMessage)
 			errs = append(errs, errors.New(errorMessage))
 		}
 	}
 	for _, candidatePath := range candidate {
-		if pathMatchesExactly(candidatePath, providedPaths) {
+		if providedPaths.Has(candidatePath) {
 			// Exact matches were already handled in the previous for loop
 			continue
 		}
@@ -235,10 +241,10 @@ func checkConflictingPaths(provided, candidate []string) (errs []error) {
 			errorMessage := fmt.Sprintf(
 				"overlapping paths '%s*' and '%s'", prefix, candidatePath,
 			)
-			if _, ok := pathConflicts[errorMessage]; ok {
+			if pathConflicts.Has(errorMessage) {
 				continue
 			}
-			pathConflicts[errorMessage] = struct{}{}
+			pathConflicts.Add(errorMessage)
 			errs = append(errs, errors.New(errorMessage))
 		}
 	}
@@ -273,9 +279,9 @@ func SplitServicesByPath(serviceRes []AttachedRes[ServiceRes]) (split []Attached
 // FilesetRes instance, is satisfied by the candidate fileset resource.
 func (r FilesetRes) CheckDep(candidate FilesetRes) (errs []error) {
 	// TODO: precompute candidatePaths and candidatePathPrefixes, if this is a performance bottleneck
-	candidatePaths, candidatePathPrefixes := parsePaths(candidate.Paths)
+	candidatePaths, candidatePathPrefixes := parsePathsWithPrefixes(candidate.Paths)
 	for _, path := range r.Paths {
-		if pathMatchesExactly(path, candidatePaths) {
+		if candidatePaths.Has(path) {
 			continue
 		}
 		if match, _ := pathMatchesPrefix(path, candidatePathPrefixes); match {
@@ -284,12 +290,12 @@ func (r FilesetRes) CheckDep(candidate FilesetRes) (errs []error) {
 		errs = append(errs, fmt.Errorf("unmatched path '%s'", path))
 	}
 
-	candidateTags := make(map[string]struct{})
+	candidateTags := make(structures.Set[string])
 	for _, tag := range candidate.Tags {
-		candidateTags[tag] = struct{}{}
+		candidateTags.Add(tag)
 	}
 	for _, tag := range r.Tags {
-		if _, ok := candidateTags[tag]; ok {
+		if candidateTags.Has(tag) {
 			continue
 		}
 		errs = append(errs, fmt.Errorf("unmatched tag '%s'", tag))
@@ -301,12 +307,12 @@ func (r FilesetRes) CheckDep(candidate FilesetRes) (errs []error) {
 // CheckConflict checks whether the fileset resource, represented by the FilesetRes
 // instance, conflicts with the candidate fileset resource.
 func (r FilesetRes) CheckConflict(candidate FilesetRes) (errs []error) {
-	if len(r.Paths) == 0 && len(candidate.Paths) == 0 {
+	if len(r.Paths) == 0 || len(candidate.Paths) == 0 {
 		errs = append(errs, errors.New("no specified fileset paths"))
 		return errs
 	}
 
-	errs = append(errs, checkConflictingPaths(r.Paths, candidate.Paths)...)
+	errs = append(errs, checkConflictingPathsWithPrefixes(r.Paths, candidate.Paths)...)
 
 	// Tags should be ignored in checking conflicts
 	return errs
@@ -327,6 +333,111 @@ func SplitFilesetsByPath(filesetRes []AttachedRes[FilesetRes]) (split []Attached
 			split = append(split, AttachedRes[FilesetRes]{
 				Res:    pathFileset,
 				Source: fileset.Source,
+			})
+		}
+	}
+	return split
+}
+
+// FileExportRes
+
+// CheckConflict checks whether the file export resource, represented by the FileExportRes
+// instance, conflicts with the candidate file export resource.
+func (r FileExportRes) CheckConflict(candidate FileExportRes) (errs []error) {
+	if len(r.Targets) == 0 || len(candidate.Targets) == 0 {
+		errs = append(errs, errors.New("no specified file export targets"))
+		return errs
+	}
+
+	errs = append(errs, checkConflictingPathsWithParents(r.Targets, candidate.Targets)...)
+
+	// Tags should be ignored in checking conflicts
+	return errs
+}
+
+// checkConflictingPathsWithParents checks every path in the list of provided paths against every
+// path in the list of candidate paths to identify any conflicts between the two lists of paths,
+// where a path which is a file matching a parent directory of the other path will conflict with
+// that other path.
+func checkConflictingPathsWithParents(provided, candidate []string) (errs []error) {
+	pathConflicts := make(structures.Set[string])
+	candidatePaths := make(structures.Set[string])
+	for _, path := range candidate {
+		candidatePaths.Add(path)
+	}
+	providedPaths := make(structures.Set[string])
+	for _, path := range provided {
+		providedPaths.Add(path)
+	}
+
+	for _, path := range provided {
+		if candidatePaths.Has(path) {
+			errorMessage := fmt.Sprintf("same path '%s'", path)
+			if pathConflicts.Has(errorMessage) {
+				continue
+			}
+			pathConflicts.Add(errorMessage)
+			errs = append(errs, fmt.Errorf(errorMessage))
+			continue
+		}
+
+		if match, parent := pathMatchesParent(path, candidatePaths); match {
+			errorMessage := fmt.Sprintf("overlapping paths '%s' and '%s'", path, parent)
+			if pathConflicts.Has(errorMessage) {
+				continue
+			}
+			pathConflicts.Add(errorMessage)
+			errs = append(errs, errors.New(errorMessage))
+		}
+	}
+	for _, candidatePath := range candidate {
+		if providedPaths.Has(candidatePath) {
+			// Exact matches were already handled in the previous for loop
+			continue
+		}
+		if match, parent := pathMatchesParent(candidatePath, providedPaths); match {
+			errorMessage := fmt.Sprintf("overlapping paths '%s' and '%s'", parent, candidatePath)
+			if pathConflicts.Has(errorMessage) {
+				continue
+			}
+			pathConflicts.Add(errorMessage)
+			errs = append(errs, errors.New(errorMessage))
+		}
+	}
+
+	return errs
+}
+
+// pathMatchesParent checks whether the provided path is in a subdirectory of any of the parent
+// paths (where all parent paths are interpreted as if they were directories).
+func pathMatchesParent(
+	path string, parentPaths structures.Set[string],
+) (match bool, parent string) {
+	for parent := range parentPaths {
+		if strings.HasPrefix(path, strings.TrimSuffix(parent, "/")+"/") {
+			return true, parent
+		}
+	}
+	return false, ""
+}
+
+// SplitFileExportsByTarget produces a slice of file export resources from the input slice, where
+// each file export resource in the input slice with multiple paths targets results in multiple
+// corresponding file export resources with one target path each.
+func SplitFileExportsByTarget(
+	fileExportRes []AttachedRes[FileExportRes],
+) (split []AttachedRes[FileExportRes]) {
+	split = make([]AttachedRes[FileExportRes], 0, len(fileExportRes))
+	for _, fileExport := range fileExportRes {
+		if len(fileExport.Res.Targets) == 0 {
+			split = append(split, fileExport)
+		}
+		for _, path := range fileExport.Res.Targets {
+			pathFileExport := fileExport.Res
+			pathFileExport.Targets = []string{path}
+			split = append(split, AttachedRes[FileExportRes]{
+				Res:    pathFileExport,
+				Source: fileExport.Source,
 			})
 		}
 	}

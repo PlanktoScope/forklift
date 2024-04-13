@@ -76,53 +76,39 @@ func switchAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-
-		// clone pallet
-		if err = os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
-			return errors.Wrap(err, "couldn't remove local pallet")
-		}
-		if err = fcli.CloneQueriedGitRepoUsingLocalMirror(
-			0, workspace.GetPalletCachePath(), c.Args().First(), workspace.GetCurrentPalletPath(),
-		); err != nil {
-			return err
-		}
-		fmt.Println()
-		// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
-		// version is incompatible
-
-		// cache everything required by pallet
-		pallet, repoCache, err := processFullBaseArgs(c, false)
+		pallet, repoCache, err := preparePallet(c, workspace, versions)
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
-		); err != nil {
-			return err
-		}
-		if _, err = fcli.CacheStagingRequirements(pallet, repoCache.Path()); err != nil {
-			return err
-		}
 		fmt.Println()
 
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
+		if err != nil {
+			return err
+		}
+		index, err := fcli.StagePallet(
+			pallet, stageStore, repoCache, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		)
+		if err != nil {
+			return err
+		}
 		if !c.Bool("apply") {
-			// stage pallet
-			if err = stagePallet(
-				workspace, pallet, repoCache, versions, c.Bool("parallel"), c.Bool("ignore-tool-version"),
-			); err != nil {
-				return err
-			}
 			fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
 			return nil
 		}
-		// apply pallet
-		if err = fcli.ApplyPallet(
-			pallet, repoCache, workspace, versions.NewStageStore, versions.NewBundle, c.Bool("parallel"),
-		); err != nil {
-			return err
+
+		bundle, err := stageStore.LoadFSBundle(index)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
 		}
-		fmt.Println("Done!")
+		if err = fcli.ApplyNextOrCurrentBundle(0, stageStore, bundle, c.Bool("parallel")); err != nil {
+			return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
+		}
+		fmt.Println("Done! You may need to reboot for some changes to take effect.")
 		return nil
 	}
 }
@@ -141,25 +127,36 @@ func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 	return workspace, nil
 }
 
-func stagePallet(
-	workspace *forklift.FSWorkspace, pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache,
-	versions Versions, parallel, ignoreToolVersion bool,
-) error {
-	stageStore, err := workspace.GetStageStore(versions.NewStageStore)
-	if err != nil {
-		return err
+func preparePallet(
+	c *cli.Context, workspace *forklift.FSWorkspace, versions Versions,
+) (pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, err error) {
+	// clone pallet
+	if err = os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+		return nil, nil, errors.Wrap(err, "couldn't remove local pallet")
 	}
-	if _, err = fcli.StagePallet(pallet, stageStore, repoCache, versions.NewBundle); err != nil {
-		return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
-	}
-
-	fmt.Println()
-	if err = fcli.DownloadImagesForStoreApply(
-		stageStore, versions.Tool, versions.MinSupportedBundle, parallel, ignoreToolVersion,
+	if err = fcli.CloneQueriedGitRepoUsingLocalMirror(
+		0, workspace.GetPalletCachePath(), c.Args().First(), workspace.GetCurrentPalletPath(),
 	); err != nil {
-		return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
+		return nil, nil, err
 	}
-	return nil
+	fmt.Println()
+	// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
+	// version is incompatible
+
+	// cache everything required by pallet
+	if pallet, repoCache, err = processFullBaseArgs(c, false); err != nil {
+		return nil, nil, err
+	}
+	if err = fcli.CheckShallowCompatibility(
+		pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+		c.Bool("ignore-tool-version"),
+	); err != nil {
+		return pallet, repoCache, err
+	}
+	if _, err = fcli.CacheStagingRequirements(pallet, repoCache.Path()); err != nil {
+		return pallet, repoCache, err
+	}
+	return pallet, repoCache, nil
 }
 
 // clone
@@ -333,11 +330,17 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		stageStore, err := workspace.GetStageStore(versions.NewStageStore)
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
 		if err != nil {
 			return err
 		}
-		if _, err = fcli.StagePallet(pallet, stageStore, cache, versions.NewBundle); err != nil {
+		if _, err = fcli.StagePallet(
+			pallet, stageStore, cache, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 		fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
@@ -364,12 +367,29 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.ApplyPallet(
-			pallet, repoCache, workspace, versions.NewStageStore, versions.NewBundle, c.Bool("parallel"),
-		); err != nil {
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
+		if err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		index, err := fcli.StagePallet(
+			pallet, stageStore, repoCache, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		)
+		if err != nil {
+			return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
+		}
+
+		bundle, err := stageStore.LoadFSBundle(index)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
+		}
+		if err = fcli.ApplyNextOrCurrentBundle(0, stageStore, bundle, c.Bool("parallel")); err != nil {
+			return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
+		}
+		fmt.Println("Done! You may need to reboot for some changes to take effect.")
 		return nil
 	}
 }

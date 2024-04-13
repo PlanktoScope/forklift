@@ -169,7 +169,7 @@ func CheckBundleShallowCompatibility(
 	}
 
 	if err := CheckArtifactCompatibility(
-		bundle.Def.ForkliftVersion, toolVersion, bundleMinVersion, bundle.Path(),
+		bundle.Manifest.ForkliftVersion, toolVersion, bundleMinVersion, bundle.Path(),
 		ignoreTool,
 	); err != nil {
 		return errors.Wrapf(

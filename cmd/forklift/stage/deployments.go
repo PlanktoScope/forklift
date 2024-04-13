@@ -1,6 +1,8 @@
 package stage
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
@@ -11,7 +13,7 @@ import (
 
 func showBunDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -40,7 +42,7 @@ func showBunDeplAction(versions Versions) cli.ActionFunc {
 
 func locateBunDeplPkgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		store, err := getStageStore(c.String("workspace"), versions)
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
 			return err
 		}
@@ -57,6 +59,13 @@ func locateBunDeplPkgAction(versions Versions) cli.ActionFunc {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", index)
 		}
 		deplName := c.Args().Get(1)
-		return fcli.PrintBundleDeplPkgPath(0, bundle, deplName)
+		resolved, err := bundle.LoadResolvedDepl(deplName)
+		if err != nil {
+			return errors.Wrapf(
+				err, "couldn't load deployment %s from bundle %s", deplName, bundle.FS.Path(),
+			)
+		}
+		fmt.Println(resolved.Pkg.FS.Path())
+		return nil
 	}
 }

@@ -9,11 +9,12 @@ type DeplConflict struct {
 	Second *ResolvedDepl
 
 	// Possible conflicts
-	Name      bool
-	Listeners []core.ResConflict[core.ListenerRes]
-	Networks  []core.ResConflict[core.NetworkRes]
-	Services  []core.ResConflict[core.ServiceRes]
-	Filesets  []core.ResConflict[core.FilesetRes]
+	Name        bool
+	Listeners   []core.ResConflict[core.ListenerRes]
+	Networks    []core.ResConflict[core.NetworkRes]
+	Services    []core.ResConflict[core.ServiceRes]
+	Filesets    []core.ResConflict[core.FilesetRes]
+	FileExports []core.ResConflict[core.FileExportRes]
 }
 
 type SatisfiedDeplDeps struct {

@@ -1,13 +1,13 @@
 # Forklift design
 
-Forklift was created to enable the [PlanktoScope](https://www.planktoscope.org/) project's software (a heavily-customized Raspberry Pi OS image) to gain various benefits of atomic operating systems - traditionally referred to as [immutable operating systems](https://ceur-ws.org/Vol-3386/paper9.pdf) - without requiring the PlanktoScope project to migrate all its legacy software (which, unfortunately, is quite closely-coupled to the Raspberry Pi OS) to an immutable Linux distro. Our resulting approach to modular composition and decentralized distribution is heavily inspired by the simple, transparent, and powerful [design of the Go programming language](https://cacm.acm.org/magazines/2022/5/260357-the-go-programming-language-and-environment/fulltext) and [Go’s Modules system](https://go.dev/doc/modules/developing).
+Forklift was created to enable the [PlanktoScope](https://www.planktoscope.org/) project's operating system (based on the Raspberry Pi OS) to gain various benefits of atomic operating systems - traditionally referred to as [immutable operating systems](https://ceur-ws.org/Vol-3386/paper9.pdf) - without requiring the PlanktoScope project to migrate all its legacy software (which, unfortunately, is quite closely-coupled to the Raspberry Pi OS) to an immutable Linux distro. Our resulting approach to modular composition and decentralized distribution is heavily inspired by the simple, transparent, and powerful [design of the Go programming language](https://cacm.acm.org/magazines/2022/5/260357-the-go-programming-language-and-environment/fulltext) and [Go’s Modules system](https://go.dev/doc/modules/developing).
 
 ## Values
 
 Forklift's design is guided by the following values for infrastructural software in the PlanktoScope software:
 
 - Autonomy: It must empower people to make their own decisions specific to their needs and contexts, and to exercise full control over their operations of the PlanktoScope, independent of the PlanktoScope project’s longevity.
-- Compatibility: It must work well together with legacy systems such as the PlanktoScope distro, with the diverse programs which might be managed by it, and with the variety of operational contexts for PlanktoScope deployment. When compatibility is infeasible, incremental migration must be feasible.
+- Compatibility: It must work well together with legacy systems such as the [PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), with the diverse programs which might be managed by it, and with the variety of operational contexts for PlanktoScope deployment. When compatibility is infeasible, incremental migration must be feasible.
 - Integrity: It must be trustworthy and reliable in its behavior. It must not corrupt the state of systems built around it. It must be honest to users about what it is doing.
 - Productivity: It must help people, teams, and communities to efficiently develop, operate, and maintain their projects; including both the PlanktoScope project and novel extensions and uses for the PlanktoScope. It must be easy to learn, fast enough to use in iterative prototyping, and reliable enough to use in production. It must minimize any complexity and novelty which would distract people from their higher-level goals.
 - Thoughtfulness: Its design must be rigorous, deliberate, and considerate of how it will impact people. We must not commit to new features or changes in system behavior until we thoroughly understand their consequences.
@@ -31,12 +31,14 @@ Together, the Forklift specifications and the `forklift` tool can be used by pro
 5. Apply a specified version of a pallet to a computer, replacing any previous deployments of apps on that computer.
 
 ## Forklift specifications
+
 Below, we summarize key design decisions in the Forklift specifications as implemented by the `forklift` tool; the full specifications can be found in the [`specs` subdirectory](./specs).
 
 ### App packaging and distribution
+
 Forklift uses software containers according to the [OCI specifications](https://github.com/opencontainers) for packaging, distributing, and running containerized software. Thus, Forklift is compatible with the vast collection of open-source applications distributed through container registries such as [Docker Hub](https://hub.docker.com/) and the [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 
-Containers are composed into applications using the [Compose specification](https://github.com/compose-spec/compose-spec) as implemented by [Docker Compose](https://github.com/docker/compose). Each application’s Compose files, configuration files, and additional metadata - including information used for mechanisms to customize and verify app configurations, as discussed below - are organized into a *package*. Package metadata is specified in the [YAML format](https://github.com/yaml/yaml-spec), chosen for familiarity with Compose file syntax.
+Containers are composed into applications using the [Compose specification](https://github.com/compose-spec/compose-spec) as implemented by [Docker Compose](https://github.com/docker/compose). Each application’s Compose files, configuration files, and additional metadata - including information used for mechanisms to customize and verify app configurations, as discussed below - are organized into a *package*. In a package, a program's executable files (i.e. binaries or scripts, whether or not they are distributed in OCI containers) can be specified together with that program's configuration files, so that all files are bound together in the same lifecycle for deployment, upgrading, and removal. Package metadata is specified in the [YAML format](https://github.com/yaml/yaml-spec), chosen for familiarity with Compose file syntax.
 
 Related packages are organized into a *repository*, which is just a Git repository with a specific metadata file and some packages. Each repository must be published to a Git host such as GitHub, [GitLab](https://gitlab.com/gitlab-org/gitlab), or [Gitea](https://github.com/go-gitea/gitea), with a stable URL for identifying and downloading the repository. Repository releases are versioned using Git tags, and all packages in a repository are versioned, released, and updated together.
 
@@ -44,7 +46,9 @@ Related packages are organized into a *repository*, which is just a Git reposito
 
 Each package can specify a *resource interface*, including the system resources which a deployment of that package provides - such as files, bind mounts, network port listeners, and service APIs - and the resources which a deployment of that package requires. Resource interfaces are used for verifying correctness of app deployment configurations.
 
-To make a package customizable, maintainers can define *feature flags* for it, each with an optional list of provided and required resources and an optional list of additional Compose files to [merge](https://github.com/compose-spec/compose-spec/blob/master/13-merge.md) into the app. These lists are only active in a package deployment for which the pallet (defined below) has enabled the corresponding feature flag.
+Each package can also specify particular files which should be *exported* (i.e. copied) into a path. This enables tools to make certain files (e.g. systemd service definitions) available on the operating system via an overlay filesystem.
+
+To make a package customizable, maintainers can define *feature flags* for it, each with an optional list of provided and required resources (such as exported files) and an optional list of additional Compose files to [merge](https://github.com/compose-spec/compose-spec/blob/master/13-merge.md) into the app. These lists are only active in a package deployment for which the pallet (defined below) has enabled the corresponding feature flag.
 
 ### App deployment configuration
 
@@ -59,6 +63,7 @@ An end-user can initialize a custom pallet from a published pallet, without havi
 [fig-customization]: (include a diagram showing how packages across repositories can be recombined in pallets, and how pallets can be overridden and layered can be composed for customization)
 
 ## `forklift` tool
+
 The `forklift` tool also provides tool-specific behaviors not described in the Forklift configuration specification:
 
 ### App deployment configuration
@@ -73,18 +78,16 @@ The `forklift` tool also provides tool-specific behaviors not described in the F
 
 (talk about automatic updates, version upgrades/downgrades/pinning; using Docker compose to get GitOps-style reconciliation)
 
-(talk about how we need to run forklift apply upon every boot, due to Docker Compose’s design; currently we always have reconciliation upon boot, and a distro could add a cronjob or systemd timer for automatically-scheduled reconciliation, but in the future we could have continuous automatic reconciliation)
+(talk about staged apply, and how in the PlanktoScope OS we need to run forklift apply upon every boot, due to Docker Compose’s design and the PlanktoScope OS's use of forklift to manage various systemd units which only run at boot)
 
 Resource requirement constraints are used in planning the order of changes needed for applying a pallet to a device ([fig-reconciliation-planning]).
 
 [fig-reconciliation-planning]: show an example of resource constraint relationships and the resulting partial order with some example state
 
-### Bind mounts
+### File exporting
 
 (talk about how we prepare bind mounts)
 
 ### User interfacing
 
 (talk about the CLI, including the way we organize and name subcommands)
-
-(talk about the GUI, once it exists)

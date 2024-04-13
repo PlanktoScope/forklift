@@ -361,6 +361,12 @@ func printDeplConflict(indent int, conflict forklift.DeplConflict) error {
 			return errors.Wrap(err, "couldn't print conflicting filesets")
 		}
 	}
+	if conflict.HasFileExportConflict() {
+		IndentedPrintln(indent, "Conflicting file exports:")
+		if err := printResConflicts(indent+1, conflict.FileExports); err != nil {
+			return errors.Wrap(err, "couldn't print conflicting file exports")
+		}
+	}
 	return nil
 }
 
@@ -875,8 +881,9 @@ func compareDeplNames(r, s string) int {
 // Stage
 
 func StagePallet(
-	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore,
-	repoCache forklift.PathedRepoCache, bundleForkliftVersion string,
+	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore, repoCache forklift.PathedRepoCache,
+	exportPath, toolVersion, bundleMinVersion, newBundleForkliftVersion string,
+	parallel, ignoreToolVersion bool,
 ) (index int, err error) {
 	index, err = stageStore.AllocateNew()
 	if err != nil {
@@ -884,16 +891,16 @@ func StagePallet(
 	}
 	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
 	if err = buildBundle(
-		pallet, repoCache, bundleForkliftVersion,
+		pallet, repoCache, newBundleForkliftVersion,
 		path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
-	fmt.Printf("Committing stage %d to be applied subsequently...\n", index)
-	stageStore.SetNext(index)
-	if err = stageStore.CommitState(); err != nil {
+	if err = SetNextStagedBundle(
+		stageStore, index, exportPath, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
+	); err != nil {
 		return index, errors.Wrapf(
-			err, "couldn't commit stage %d as the next stage to be applied...", index,
+			err, "couldn't prepare staged pallet bundle %d to be applied next", index,
 		)
 	}
 	return index, nil
@@ -906,9 +913,9 @@ func buildBundle(
 	outputBundle := forklift.NewFSBundle(outputPath)
 	// TODO: once we can overlay pallets, save the result of overlaying the pallets to a `overlay`
 	// subdir
-	outputBundle.Def, err = newBundleDef(pallet, repoCache, forkliftVersion)
+	outputBundle.Manifest, err = newBundleManifest(pallet, repoCache, forkliftVersion)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't create bundle definition for %s", outputBundle.FS.Path())
+		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
 	}
 
 	depls, _, err := Check(0, pallet, repoCache)
@@ -927,13 +934,16 @@ func buildBundle(
 	if err = outputBundle.WriteRepoDefFile(); err != nil {
 		return err
 	}
-	return outputBundle.WriteDefFile()
+	if err = outputBundle.WriteFileExports(); err != nil {
+		return err
+	}
+	return outputBundle.WriteManifestFile()
 }
 
-func newBundleDef(
+func newBundleManifest(
 	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, forkliftVersion string,
-) (forklift.BundleDef, error) {
-	desc := forklift.BundleDef{
+) (forklift.BundleManifest, error) {
+	desc := forklift.BundleManifest{
 		ForkliftVersion: forkliftVersion,
 		Pallet: forklift.BundlePallet{
 			Path:        pallet.Path(),
@@ -944,6 +954,7 @@ func newBundleDef(
 			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},
 		Deploys: make(map[string]forklift.DeplDef),
+		Exports: make(map[string][]string),
 	}
 	desc.Pallet.Version, desc.Pallet.Clean = checkGitRepoVersion(pallet.FS.Path())
 	palletReqs, err := pallet.LoadFSPalletReqs("**")
@@ -1019,28 +1030,4 @@ func newBundleRepoInclusion(
 		}
 		repoCache = layeredCache.Underlay
 	}
-}
-
-// Apply
-
-func ApplyPallet(
-	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, workspace *forklift.FSWorkspace,
-	newStageStoreForkliftVersion string, newBundleForkliftVersion string, parallel bool,
-) error {
-	stageStore, err := workspace.GetStageStore(newStageStoreForkliftVersion)
-	if err != nil {
-		return err
-	}
-	index, err := StagePallet(pallet, stageStore, repoCache, newBundleForkliftVersion)
-	if err != nil {
-		return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
-	}
-	bundle, err := stageStore.LoadFSBundle(index)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
-	}
-	if err = ApplyNextOrCurrentBundle(0, stageStore, bundle, parallel); err != nil {
-		return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
-	}
-	return nil
 }

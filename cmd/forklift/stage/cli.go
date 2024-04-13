@@ -77,20 +77,29 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 
 func makeQuerySubcmds(versions Versions) []*cli.Command {
 	const category = "Query the stage store"
+	return append(
+		[]*cli.Command{
+			{
+				Name:     "show",
+				Category: category,
+				Usage:    "Describes the state of the stage store",
+				Action:   showAction(versions),
+			},
+			{
+				Name:     "show-hist",
+				Aliases:  []string{"show-history"},
+				Category: category,
+				Usage:    "Shows the history of successfully-applied staged pallet bundles",
+				Action:   showHistAction(versions),
+			},
+		},
+		makeQueryBunSubcmds(versions)...,
+	)
+}
+
+func makeQueryBunSubcmds(versions Versions) []*cli.Command {
+	const category = "Query the stage store"
 	return []*cli.Command{
-		{
-			Name:     "show",
-			Category: category,
-			Usage:    "Describes the state of the stage store",
-			Action:   showAction(versions),
-		},
-		{
-			Name:     "show-hist",
-			Aliases:  []string{"show-history"},
-			Category: category,
-			Usage:    "Shows the history of successfully-applied staged pallet bundles",
-			Action:   showHistAction(versions),
-		},
 		{
 			Name:     "ls-bun-names",
 			Aliases:  []string{"list-bundle-names"},
@@ -120,6 +129,14 @@ func makeQuerySubcmds(versions Versions) []*cli.Command {
 			Usage:     "Describes the specified package deployment of the specified staged pallet bundle",
 			ArgsUsage: "bundle_index_or_name deployment_name",
 			Action:    showBunDeplAction(versions),
+		},
+		{
+			Name:      "locate-bun",
+			Aliases:   []string{"locate-bundle"},
+			Category:  category,
+			Usage:     "Prints the absolute filesystem path of the specified staged pallet bundle",
+			ArgsUsage: "bundle_index_or_name",
+			Action:    locateBunAction(versions),
 		},
 		{
 			Name:     "locate-bun-depl-pkg",

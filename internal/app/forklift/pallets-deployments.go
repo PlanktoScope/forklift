@@ -1,9 +1,10 @@
 package forklift
 
 import (
+	"cmp"
 	"fmt"
 	"io/fs"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -80,12 +81,17 @@ func (d *ResolvedDepl) Check() (errs []error) {
 func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec, err error) {
 	all := d.Pkg.Def.Features
 	enabled = make(map[string]core.PkgFeatureSpec)
+	unrecognized := make([]string, 0, len(d.Def.Features))
 	for _, name := range d.Def.Features {
 		featureSpec, ok := all[name]
 		if !ok {
-			return nil, errors.Errorf("unrecognized feature %s", name)
+			unrecognized = append(unrecognized, name)
+			continue
 		}
 		enabled[name] = featureSpec
+	}
+	if len(unrecognized) > 0 {
+		return enabled, errors.Errorf("unrecognized feature flags: %+v", unrecognized)
 	}
 	return enabled, nil
 }
@@ -94,13 +100,13 @@ func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec
 // configuration, with feature names as the keys of the map.
 func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
 	all := d.Pkg.Def.Features
-	enabled := make(map[string]struct{})
+	enabled := make(structures.Set[string])
 	for _, name := range d.Def.Features {
-		enabled[name] = struct{}{}
+		enabled.Add(name)
 	}
 	disabled := make(map[string]core.PkgFeatureSpec)
 	for name := range all {
-		if _, ok := enabled[name]; ok {
+		if enabled.Has(name) {
 			continue
 		}
 		disabled[name] = all[name]
@@ -108,17 +114,7 @@ func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
 	return disabled
 }
 
-// sortKeys returns an alphabetically sorted slice of the keys of a map with string keys.
-func sortKeys[Value any](m map[string]Value) (sorted []string) {
-	sorted = make([]string, 0, len(m))
-	for key := range m {
-		sorted = append(sorted, key)
-	}
-	sort.Strings(sorted)
-	return sorted
-}
-
-// GetComposeFilenames returns a list of the names of the Compose files which must be merged into
+// GetComposeFilenames returns a list of the paths of the Compose files which must be merged into
 // the Compose app, with feature-flagged Compose files ordered based on the alphabetical order of
 // enabled feature flags.
 func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
@@ -133,7 +129,7 @@ func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
 	for name := range enabledFeatures {
 		orderedNames = append(orderedNames, name)
 	}
-	sort.Strings(orderedNames)
+	slices.Sort(orderedNames)
 	for _, name := range orderedNames {
 		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
 	}
@@ -155,6 +151,47 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// GetFileExportTargets returns a list of the target paths of the files to be exported by the
+// package deployment, with all target file paths sorted alphabetically.
+func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
+	exportTargets := make([]string, 0)
+	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+		exportTargets = append(exportTargets, export.Targets...)
+	}
+	enabledFeatures, err := d.EnabledFeatures()
+	if err != nil {
+		return exportTargets, errors.Wrapf(
+			err, "couldn't determine exported file targets of deployment %s", d.Name,
+		)
+	}
+	for _, feature := range enabledFeatures {
+		for _, export := range feature.Provides.FileExports {
+			exportTargets = append(exportTargets, export.Targets...)
+		}
+	}
+	slices.Sort(exportTargets)
+	return exportTargets, nil
+}
+
+// GetFileExports returns a list of file exports to be exported by the package deployment, with
+// file export objects sorted alphabetically by their source file paths.
+func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
+	exports := append([]core.FileExportRes{}, d.Pkg.Def.Deployment.Provides.FileExports...)
+	enabledFeatures, err := d.EnabledFeatures()
+	if err != nil {
+		return exports, errors.Wrapf(
+			err, "couldn't determine exported file targets of deployment %s", d.Name,
+		)
+	}
+	for _, feature := range enabledFeatures {
+		exports = append(exports, feature.Provides.FileExports...)
+	}
+	slices.SortFunc(exports, func(a, b core.FileExportRes) int {
+		return cmp.Compare(a.Source, b.Source)
+	})
+	return exports, nil
 }
 
 // CheckConflicts produces a report of all resource conflicts between the ResolvedDepl instance and
@@ -188,6 +225,10 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		Filesets: core.CheckResConflicts(
 			d.providedFilesets(enabledFeatures), candidate.providedFilesets(candidateEnabledFeatures),
 		),
+		FileExports: core.CheckResConflicts(
+			d.providedFileExports(enabledFeatures),
+			candidate.providedFileExports(candidateEnabledFeatures),
+		),
 	}, nil
 }
 
@@ -197,6 +238,16 @@ func (d *ResolvedDepl) providedListeners(
 	enabledFeatures map[string]core.PkgFeatureSpec,
 ) (provided []core.AttachedRes[core.ListenerRes]) {
 	return d.Pkg.ProvidedListeners(d.ResAttachmentSource(), sortKeys(enabledFeatures))
+}
+
+// sortKeys returns an alphabetically sorted slice of the keys of a map with string keys.
+func sortKeys[Value any](m map[string]Value) (sorted []string) {
+	sorted = make([]string, 0, len(m))
+	for key := range m {
+		sorted = append(sorted, key)
+	}
+	slices.Sort(sorted)
+	return sorted
 }
 
 // requiredNetworks returns a slice of all Docker networks required by the package deployment,
@@ -245,6 +296,14 @@ func (d *ResolvedDepl) providedFilesets(
 	enabledFeatures map[string]core.PkgFeatureSpec,
 ) (provided []core.AttachedRes[core.FilesetRes]) {
 	return d.Pkg.ProvidedFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
+}
+
+// providedFileExports returns a slice of all file exports provided by the package deployment,
+// depending on the enabled features, with feature names as the keys of the map.
+func (d *ResolvedDepl) providedFileExports(
+	enabledFeatures map[string]core.PkgFeatureSpec,
+) (provided []core.AttachedRes[core.FileExportRes]) {
+	return d.Pkg.ProvidedFileExports(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // CheckAllConflicts produces a slice of reports of all resource conflicts between the ResolvedDepl

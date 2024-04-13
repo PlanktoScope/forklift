@@ -212,20 +212,20 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		stageStore, err := workspace.GetStageStore(versions.NewStageStore)
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
 		if err != nil {
 			return err
 		}
-		if _, err = fcli.StagePallet(pallet, stageStore, cache, versions.NewBundle); err != nil {
+		if _, err = fcli.StagePallet(
+			pallet, stageStore, cache, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
-		if err = fcli.DownloadImagesForStoreApply(
-			stageStore, versions.Tool, versions.MinSupportedBundle, c.Bool("parallel"),
-			c.Bool("ignore-tool-version"),
-		); err != nil {
-			return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
-		}
-		fmt.Println("Done! To apply the staged pallet, you can run `sudo -E forklift stage apply`.")
+		fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
 		return nil
 	}
 }
@@ -249,12 +249,29 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.ApplyPallet(
-			pallet, repoCache, workspace, versions.NewStageStore, versions.NewBundle, c.Bool("parallel"),
-		); err != nil {
+		stageStore, err := fcli.GetStageStore(
+			workspace, c.String("stage-store"), versions.NewStageStore,
+		)
+		if err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		index, err := fcli.StagePallet(
+			pallet, stageStore, repoCache, c.String("exports"),
+			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
+			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+		)
+		if err != nil {
+			return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
+		}
+
+		bundle, err := stageStore.LoadFSBundle(index)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
+		}
+		if err = fcli.ApplyNextOrCurrentBundle(0, stageStore, bundle, c.Bool("parallel")); err != nil {
+			return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
+		}
+		fmt.Println("Done! You may need to reboot for some changes to take effect.")
 		return nil
 	}
 }
