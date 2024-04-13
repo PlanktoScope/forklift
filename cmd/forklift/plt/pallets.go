@@ -97,7 +97,9 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !c.Bool("apply") {
-			fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
+			fmt.Println(
+        "Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.",
+      )
 			return nil
 		}
 
@@ -343,7 +345,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done! To apply the staged pallet, run `sudo -E forklift stage apply`.")
+		fmt.Println("Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.")
 		return nil
 	}
 }

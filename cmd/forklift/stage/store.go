@@ -269,7 +269,7 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Println("Done! To apply changes immediately, run `sudo -E forklift stage apply`")
 		return nil
 	}
 }
