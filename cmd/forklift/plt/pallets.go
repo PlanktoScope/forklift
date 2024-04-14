@@ -98,8 +98,8 @@ func switchAction(versions Versions) cli.ActionFunc {
 		}
 		if !c.Bool("apply") {
 			fmt.Println(
-        "Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.",
-      )
+				"Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.",
+			)
 			return nil
 		}
 
