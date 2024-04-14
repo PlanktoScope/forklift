@@ -42,26 +42,43 @@ Then you may need to move the `forklift` binary into a directory in your system 
 
 ### Deploy a published pallet
 
-Once you have forklift, you will need to clone a pallet and apply it to your Docker host. For example, you can clone the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet using the command:
-```
-forklift plt clone github.com/ethanjli/pallet-example-minimal@main
-```
+To deploy a published pallet to your computer, you will need to clone a pallet and stage it to be applied, and then you will need to apply the staged pallet. If you are running Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
 
-Then you may need to download everything required by your local pallet into your local cache. You can download the necessary requirements using the command:
-```
-forklift plt cache-all
-```
+- If you want to apply the pallet immediately, you can run `forklift pallet switch --apply` with your specified pallet. For example, to deploy the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet, you can run:
 
-Then you will need to stage and apply the package deployments (as configured by your local pallet). You can stage and apply the deployments using the following commands (note that you need `sudo -E` unless you are running the Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
-```
-forklift plt stage
-sudo -E forklift stage apply
-```
+  ```
+  forklift pallet switch --apply github.com/ethanjli/pallet-example-minimal@main
+  ```
 
-If your user is in the `docker` group, then you can just run a single command which does all four steps above (this way you don't have to run those three commands each time you want to get a newer version and apply it):
-```
-forklift plt switch github.com/ethanjli/pallet-example-minimal@main
-```
+- If you want to apply the pallet later, you can first stage the pallet, and then later apply the staged pallet using a separate `forklift stage apply` command. For example:
+
+  ```
+  # Run now:
+  forklift pallet switch github.com/ethanjli/pallet-example-minimal@main
+  # Run when you want to apply the pallet:
+  forklift stage apply
+  ```
+
+If you aren't running Docker in rootless mode or if your user isn't in a `docker` group, we recommend a slightly different set of commands:
+
+- If you want to apply the pallet immediately, you can run `forklift pallet switch --no-cache` as a regular user, and then run `forklift stage apply` as root; the `--no-cache` flag prevents `forklift pallet switch` from attempting to make Docker pre-download all container images required by the pallet, as doing so would require root permissions for Forklift to talk to Docker. For example, to deploy the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet, you can run:
+
+  ```
+  forklift pallet switch --no-cache-img github.com/ethanjli/pallet-example-minimal@main
+  sudo -E forklift stage apply
+  ```
+
+- If you want to apply the pallet later, you can first stage the pallet and pre-download all container images required by the pallet, and then later apply the staged pallet using a separate `forklift stage apply` command (which you can then run even when you don't have internet access). For example:
+
+  ```
+  # Run now:
+  forklift pallet switch github.com/ethanjli/pallet-example-minimal@main
+  sudo -E forklift stage cache-img
+  # Run when you want to apply the pallet:
+  sudo -E forklift stage apply
+  ```
+
+Note: in the above commands, you can replace `forklift pallet` with `forklift plt` if you want to type fewer characters when running those commands.
 
 ### Work on a development pallet
 
@@ -90,9 +107,9 @@ cd /etc/
 /home/pi/forklift dev --cwd /home/pi/dev/pallet-example-minimal plt show
 ```
 
-You can also use the `forklift dev plt add-repo` command to add additional Forklift repositories to your development pallet, and to change the versions of Forklift repositories already added to your development pallet.
+You can also use the `forklift dev plt add-repo` command to add additional Forklift repositories to your development pallet, and/or to change the versions of Forklift repositories already added to your development pallet.
 
-You can also run commands like `forklift dev plt cache-all` and `forklift dev plt stage` (with appropriate values in the `--cwd` flag if necessary) to download the Forklift repositories specified by your development pallet into your local cache and stage your development pallet to be applied with `sudo -E forklift stage apply`. This is useful if, for example, you want to make some experimental changes to your development pallet and test them on your local machine before committing and pushing those changes onto GitHub.
+You can also run commands like `forklift dev plt cache-all` and `forklift dev plt stage --no-cache-img` (with appropriate values in the `--cwd` flag if necessary) to download the Forklift repositories specified by your development pallet into your local cache and stage your development pallet to be applied with `sudo -E forklift stage apply`. This is useful if, for example, you want to make some experimental changes to your development pallet and test them on your local machine before committing and pushing those changes onto GitHub.
 
 Finally, you can run the `forklift dev plt check` command to check the pallet for any problems, such as violations of resource constraints between package deployments.
 
@@ -111,17 +128,17 @@ The following projects solve related problems with containers for application so
 - Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Docker Swarms from a Terraform configuration: <https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs>
 - swarm-pack (an inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages to a Docker Swarm: <https://github.com/swarm-pack/swarm-pack>
 - SwarmManagement uses a single YAML file for declarative configuration of an entire Docker Swarm: <https://github.com/hansehe/SwarmManagement>
-- Podman Quadlets enable management of containers, volumes, and networks using declarative systemd units: <https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html>
+- Podman Quadlets enable management of containers, volumes, and networks using declarative systemd units: <https://github.com/containers/podlet> & <https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html>
 - FetchIt enables Git-based management of containers in Podman: <https://github.com/containers/fetchit>
 - Projects developing GitOps tools such as ArgoCD, Flux, etc., store container environment configurations as Git repositories but are generally designed for Kubernetes: <https://www.gitops.tech/>
 
-The following projects solve related problems with the base OS, though they make different trade-offs compared to Forklift (especially because of the PlanktoScope project's legacy software):
+The following projects solve related problems in the base OS, though they make different trade-offs compared to Forklift (especially because of the PlanktoScope project's legacy software):
 
 - systemd-sysext and systemd-confext provide a way to atomically overlay system files onto the base OS: <https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html>
 - systemd's Portable Services pattern and `portablectl` tool provide a way to atomically add system services: <https://systemd.io/PORTABLE_SERVICES/>
 - ostree enables atomic updates of the base OS, but [it is not supported by Raspberry Pi OS](https://github.com/ostreedev/ostree/issues/2223): <https://ostreedev.github.io/ostree/>
 - The bootc project enables the entire operating system to be delivered as a bootable OCI container image, but currently it relies on ostree: <https://containers.github.io/bootc/>
-- gokrazy enables atomic deployment of Go programs (and also of software containers!), but it has a very different architecture compared traditional Linux distros: <https://gokrazy.org/>
+- gokrazy enables atomic deployment of Go programs (and also of software containers!), but it has a very different architecture compared to traditional Linux distros: <https://gokrazy.org/>
 
 Other related OS-level projects can be found at [github.com/castrojo/awesome-immutable](https://github.com/castrojo/awesome-immutable).
 
