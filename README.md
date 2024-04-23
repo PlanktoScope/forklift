@@ -42,9 +42,11 @@ Then you may need to move the `forklift` binary into a directory in your system 
 
 ### Deploy a published pallet
 
-To deploy a published pallet to your computer, you will need to clone a pallet and stage it to be applied, and then you will need to apply the staged pallet. If you are running Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
+To deploy a particular version of a published pallet to your computer, you will need to clone a pallet and stage it to be applied, and then you will need to apply the staged pallet. Pallets are identified by the path of their Git repository and a version query (which can be a Git branch name, a Git tag name, or an abbreviated or full Git commit hash). For example, the most recent commit on the `main` branch of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) can be identified as `github.com/ethanjli/pallet-example-minimal@main` - this is what we use in the example commands in this section.
 
-- If you want to apply the pallet immediately, you can run `forklift pallet switch --apply` with your specified pallet. For example, to deploy the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet, you can run:
+If you are running Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or your user is in [the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
+
+- If you want to apply the pallet immediately, you can run `forklift pallet switch --apply` with your specified pallet. For example:
 
   ```
   forklift pallet switch --apply github.com/ethanjli/pallet-example-minimal@main
@@ -59,9 +61,9 @@ To deploy a published pallet to your computer, you will need to clone a pallet a
   forklift stage apply
   ```
 
-If you aren't running Docker in rootless mode or if your user isn't in a `docker` group, we recommend a slightly different set of commands:
+If you aren't running Docker in rootless mode and your user isn't in a `docker` group, we recommend a slightly different set of commands:
 
-- If you want to apply the pallet immediately, you can run `forklift pallet switch --no-cache` as a regular user, and then run `forklift stage apply` as root; the `--no-cache` flag prevents `forklift pallet switch` from attempting to make Docker pre-download all container images required by the pallet, as doing so would require root permissions for Forklift to talk to Docker. For example, to deploy the latest unstable version (on the `main` branch) of the [`github.com/ethanjli/pallet-example-minimal`](https://github.com/ethanjli/pallet-example-minimal) pallet, you can run:
+- If you want to apply the pallet immediately, you can run `forklift pallet switch --no-cache` as a regular user, and then run `forklift stage apply` as root; the `--no-cache` flag prevents `forklift pallet switch` from attempting to make Docker pre-download all container images required by the pallet, as doing so would require root permissions for Forklift to talk to Docker. For example:
 
   ```
   forklift pallet switch --no-cache-img github.com/ethanjli/pallet-example-minimal@main
@@ -134,10 +136,10 @@ The following projects solve related problems with containers for application so
 
 The following projects solve related problems in the base OS, though they make different trade-offs compared to Forklift (especially because of the PlanktoScope project's legacy software):
 
-- systemd-sysext and systemd-confext provide a way to atomically overlay system files onto the base OS: <https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html>
-- systemd's Portable Services pattern and `portablectl` tool provide a way to atomically add system services: <https://systemd.io/PORTABLE_SERVICES/>
+- systemd-sysext and systemd-confext provide a more structured/constrained way (compared to Forklift) to atomically overlay system files onto the base OS; however, Forklift can also be used as a way to deploy sysexts/confexts onto an OS (see [this demo](https://github.com/ethanjli/ublue-forklift-sysext-demo?tab=readme-ov-file#explanation)): <https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html>
+- systemd's Portable Services pattern and `portablectl` tool provide a more structured/constrained/sandboxed way (compared to Forklift) to atomically add system services: <https://systemd.io/PORTABLE_SERVICES/>
 - ostree enables atomic updates of the base OS, but [it is not supported by Raspberry Pi OS](https://github.com/ostreedev/ostree/issues/2223): <https://ostreedev.github.io/ostree/>
-- The bootc project enables the entire operating system to be delivered as a bootable OCI container image, but currently it relies on ostree: <https://containers.github.io/bootc/>
+- The bootc project enables the entire operating system to be delivered as a bootable OCI container image, but currently it relies on bootupd, which [currently only works on RPM-based distros](https://github.com/coreos/bootupd/issues/468): <https://containers.github.io/bootc/>
 - gokrazy enables atomic deployment of Go programs (and also of software containers!), but it has a very different architecture compared to traditional Linux distros: <https://gokrazy.org/>
 
 Other related OS-level projects can be found at [github.com/castrojo/awesome-immutable](https://github.com/castrojo/awesome-immutable).
