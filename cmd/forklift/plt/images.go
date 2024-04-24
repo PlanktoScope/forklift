@@ -30,7 +30,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		fmt.Println()
-		fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
+		fmt.Println("Done!")
 		return nil
 	}
 }

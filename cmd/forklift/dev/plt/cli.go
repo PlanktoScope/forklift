@@ -203,7 +203,14 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
 				"or branches",
 			ArgsUsage: "[repo_path@version_query]...",
-			Action:    addRepoAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet after adding " +
+						"the repo",
+				},
+			},
+			Action: addRepoAction(versions),
 		},
 		// TODO: add an rm-repo action with alias "drop-repo"; it should ensure no depls depend on it
 		// or delete those depls if `--force` is set

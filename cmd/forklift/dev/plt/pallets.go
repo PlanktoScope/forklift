@@ -134,7 +134,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 			fmt.Println("Done! No further actions are needed at this time.")
 			return nil
 		}
-		fmt.Println("Done! Next, you might want to run `forklift dev plt stage`.")
+		fmt.Println("Done!")
 		return nil
 	}
 }
@@ -225,7 +225,10 @@ func stageAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.")
+		fmt.Println(
+      "Done! To apply the staged pallet, you may need to reboot or run " +
+      "`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
+    )
 		return nil
 	}
 }

@@ -63,7 +63,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 			fmt.Println("Done! No further actions are needed at this time.")
 			return nil
 		}
-		fmt.Println("Done! Next, you'll probably want to run `forklift plt stage`.")
+		fmt.Println("Done!")
 		return nil
 	}
 }
@@ -99,9 +99,10 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !c.Bool("apply") {
-			fmt.Println(
-				"Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.",
-			)
+      fmt.Println(
+        "Done! To apply the staged pallet, you may need to reboot or run " +
+        "`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
+      )
 			return nil
 		}
 
@@ -217,26 +218,45 @@ func fetchAction(c *cli.Context) error {
 
 // pull
 
-func pullAction(c *cli.Context) error {
-	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
-	if err != nil {
-		return err
-	}
-	palletPath := workspace.GetCurrentPalletPath()
+func pullAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+		palletPath := workspace.GetCurrentPalletPath()
 
-	fmt.Println("Attempting to fast-forward the local pallet...")
-	updated, err := git.Pull(palletPath)
-	if err != nil {
-		return errors.Wrap(err, "couldn't fast-forward the local pallet")
-	}
-	if !updated {
-		fmt.Println("No changes from the remote release.")
-	}
+		fmt.Println("Attempting to fast-forward the local pallet...")
+		updated, err := git.Pull(palletPath)
+		if err != nil {
+			return errors.Wrap(err, "couldn't fast-forward the local pallet")
+		}
+		if !updated {
+			fmt.Println("No changes from the remote release.")
+		}
+		// TODO: display changes
 
-	// TODO: warn if the git repo doesn't appear to be an actual pallet, or if the pallet's forklift
-	// version is incompatible
-	// TODO: display changes
-	return nil
+		fmt.Println()
+
+		pallet, repoCache, err := processFullBaseArgs(c.String("workspace"), false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		if !c.Bool("no-cache-req") {
+			if _, err = fcli.CacheStagingRequirements(pallet, repoCache.Path()); err != nil {
+				return err
+			}
+		}
+		fmt.Println("Done!")
+		return nil
+	}
 }
 
 // rm

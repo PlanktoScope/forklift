@@ -35,7 +35,7 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 
 		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
 		// forklift version is incompatible or ahead of the pallet version
-		fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
+		fmt.Println("Done!")
 		return nil
 	}
 }
@@ -65,21 +65,27 @@ func showRepoAction(c *cli.Context) error {
 
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, false, false)
+		pallet, repoCache, err := processFullBaseArgs(c, false, false)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
 		if err = fcli.AddRepoRequirements(
-			0, pallet, cache.Underlay.Path(), c.Args().Slice(),
+			0, pallet, repoCache.Underlay.Path(), c.Args().Slice(),
 		); err != nil {
 			return err
+		}
+
+		if !c.Bool("no-cache-req") {
+			if _, err = fcli.CacheStagingRequirements(pallet, repoCache.Path()); err != nil {
+				return err
+			}
 		}
 		fmt.Println("Done!")
 		return nil

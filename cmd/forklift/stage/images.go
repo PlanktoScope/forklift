@@ -26,9 +26,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println(
-			"Done caching images! They will be used when you run `sudo -E forklift stage apply`.",
-		)
+		fmt.Println("Done caching images! They will be used when the staged pallet bundle is applied.")
 		return nil
 	}
 }
