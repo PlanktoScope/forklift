@@ -134,8 +134,9 @@ func makeQueryBunSubcmds(versions Versions) []*cli.Command {
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	category := "Modify the stage store"
-	return []*cli.Command{
-		{
+	return append(
+		makeModifyBunSubcmds(versions),
+		&cli.Command{
 			Name:     "set-next",
 			Category: category,
 			Usage: "Sets the specified staged pallet bundle as the next one to be applied, then " +
@@ -145,10 +146,29 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
-					Usage: "don't download container images",
+					Usage: "Don't download container images",
 				},
 			},
 		},
+		&cli.Command{
+			Name:     "unset-next",
+			Category: category,
+			Usage:    "Updates the store so that no staged pallet bundle will be applied next",
+			Action:   unsetNextAction(versions),
+		},
+		&cli.Command{
+			Name:      "set-next-result",
+			Category:  category,
+			Usage:     "Manually records that the next staged pallet to apply was applied (un)successfully",
+			ArgsUsage: "pending|success|failure",
+			Action:    setNextResultAction(versions),
+		},
+	)
+}
+
+func makeModifyBunSubcmds(versions Versions) []*cli.Command {
+	category := "Modify the stage store"
+	return []*cli.Command{
 		{
 			Name:     "add-bun-name",
 			Aliases:  []string{"add-bundle-name"},

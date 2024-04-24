@@ -226,9 +226,9 @@ func stageAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		fmt.Println(
-      "Done! To apply the staged pallet, you may need to reboot or run " +
-      "`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
-    )
+			"Done! To apply the staged pallet, you may need to reboot or run " +
+				"`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
+		)
 		return nil
 	}
 }

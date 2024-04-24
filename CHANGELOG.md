@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `plt add-repo` subcommand which is just like `dev plt add-repo` (including its new `require-repo` and `require-repositories` aliases).
 - (cli) By default, now the `[dev] plt add-repo` subcommand will also cache all repos required by the pallet after adding/updating a repo requirement (or multiple repo requirements). This added behavior can be disabled with a new `--no-cache-req` flag.
 - (cli) By default, now the `plt clone` and `plt pull` subcommands will also cache all required repos after cloning/pulling the pallet. This added behavior can be disabled with a new `--no-cache-req` flag.
+- (cli) Added a `stage unset-next` subcommand which will update the stage store so that no staged pallet bundle will be applied next.
+- (cli) Now the `stage set-next` subcommand will accept an index of 0, which will update the stage store so that no staged pallet bundle will be applied next.
+- (cli) Added a `stage set-next-result` subcommand which can be used on non-Docker systems (where `forklift stage apply` doesn't work) to record whether the next staged pallet bundle to be applied has been successfully applied or has failed to be applied (or to reset its state from "failed" to "pending", representing that we don't know whether it has been applied successfully or unsuccessfully). This is intended to be used by systems which need to use the files exported by the next staged pallet bundle but might encounter unrecoverable errors.
 
 ### Changed
 
