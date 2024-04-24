@@ -2,9 +2,13 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 	"sort"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/pkg/core"
@@ -126,6 +130,49 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 	IndentedPrintf(indent, "Repo: %s\n", req.Path())
 	indent++
 	IndentedPrintf(indent, "Locked repo version: %s\n", req.VersionLock.Version)
+}
+
+// Add
+
+func AddRepoRequirements(
+	indent int, pallet *forklift.FSPallet, cachePath string, repoQueries []string,
+) error {
+	if err := validateGitRepoQueries(repoQueries); err != nil {
+		return errors.Wrap(err, "one or more repo queries is invalid")
+	}
+	resolved, err := resolveQueriesUsingLocalMirrors(0, cachePath, repoQueries)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
+	for _, repoQuery := range repoQueries {
+		req, ok := resolved[repoQuery]
+		if !ok {
+			return errors.Errorf("couldn't find configuration for %s", repoQuery)
+		}
+		reqsReposFS, err := pallet.GetRepoReqsFS()
+		if err != nil {
+			return err
+		}
+		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
+		marshaled, err := yaml.Marshal(req.VersionLock.Def)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't marshal repo requirement from %s", repoReqPath)
+		}
+		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
+			return errors.Wrapf(
+				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
+			)
+		}
+		const perm = 0o644 // owner rw, group r, public r
+		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
+			return errors.Wrapf(
+				err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
+			)
+		}
+	}
+	return nil
 }
 
 // Download

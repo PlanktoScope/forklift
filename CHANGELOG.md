@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- (cli) The `dev plt add-repo` subcommand now has additional aliases with clearer names: `require-repo` and `require-repositories`.
+- (cli) Added a `plt add-repo` subcommand which is just like `dev plt add-repo` (including its new `require-repo` and `require-repositories` aliases).
+- (cli) By default, now the `[dev] plt add-repo` subcommand will also cache all repos required by the pallet after adding/updating a repo requirement (or multiple repo requirements). This added behavior can be disabled with a new `--no-cache-req` flag.
+- (cli) By default, now the `plt clone` and `plt pull` subcommands will also cache all required repos after cloning/pulling the pallet. This added behavior can be disabled with a new `--no-cache-req` flag.
+- (cli) Added a `stage unset-next` subcommand which will update the stage store so that no staged pallet bundle will be applied next.
+- (cli) Now the `stage set-next` subcommand will accept an index of 0, which will update the stage store so that no staged pallet bundle will be applied next.
+- (cli) Added a `stage set-next-result` subcommand which can be used on non-Docker systems (where `forklift stage apply` doesn't work) to record whether the next staged pallet bundle to be applied has been successfully applied or has failed to be applied (or to reset its state from "failed" to "pending", representing that we don't know whether it has been applied successfully or unsuccessfully). This is intended to be used by systems which need to use the files exported by the next staged pallet bundle but might encounter unrecoverable errors.
+
+### Changed
+
+- (Breaking change; cli) The `--parallel` flag for various subcommands has now been consolidated and moved to the top level (e.g. `forklift --parallel plt cache-img` instead of `forklift plt cache-img --parallel`). Additionally, now the flag is enabled by default (because sequential downloading of images and bringup of Docker containers is so much slower than parallel downloading/bringup); to avoid parallel execution, use `--parallel=false` (e.g. `forklift --parallel=false plt cache-img`).
+- (Breaking change; cli) `plt clone` no longer deletes the `.git` directory after cloning a pallet, because the new pallet staging functionality makes it feasible to keep a long-running local pallet which can change independently of what is actually applied on a computer.
+
 ## 0.7.0-alpha.3 - 2024-04-13
 
 ### Fixed

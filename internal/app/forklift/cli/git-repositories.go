@@ -21,10 +21,10 @@ import (
 func DownloadQueriedGitReposUsingLocalMirrors(
 	indent int, cachePath string, queries []string,
 ) (resolved map[string]forklift.GitRepoReq, changed map[forklift.GitRepoReq]bool, err error) {
-	if err = ValidateGitRepoQueries(queries); err != nil {
+	if err = validateGitRepoQueries(queries); err != nil {
 		return nil, nil, errors.Wrap(err, "one or more arguments is invalid")
 	}
-	if resolved, err = ResolveQueriesUsingLocalMirrors(indent, cachePath, queries); err != nil {
+	if resolved, err = resolveQueriesUsingLocalMirrors(indent, cachePath, queries); err != nil {
 		return nil, nil, err
 	}
 
@@ -51,7 +51,7 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 	return resolved, changed, nil
 }
 
-func ValidateGitRepoQueries(queries []string) error {
+func validateGitRepoQueries(queries []string) error {
 	if len(queries) == 0 {
 		return errors.Errorf("at least one query must be specified")
 	}
@@ -63,7 +63,7 @@ func ValidateGitRepoQueries(queries []string) error {
 	return nil
 }
 
-func ResolveQueriesUsingLocalMirrors(
+func resolveQueriesUsingLocalMirrors(
 	indent int, cachePath string, queries []string,
 ) (resolved map[string]forklift.GitRepoReq, err error) {
 	IndentedPrintln(indent, "Resolving version queries using local mirrors of remote Git repos...")
@@ -420,7 +420,7 @@ func CloneQueriedGitRepoUsingLocalMirror(
 	}
 
 	queries := []string{query}
-	if _, err := ResolveQueriesUsingLocalMirrors(indent, cachePath, queries); err != nil {
+	if _, err := resolveQueriesUsingLocalMirrors(indent, cachePath, queries); err != nil {
 		return err
 	}
 

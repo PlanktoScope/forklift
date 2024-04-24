@@ -249,6 +249,15 @@ func setNextAction(versions Versions) cli.ActionFunc {
 			return errMissingStore
 		}
 
+		if c.Args().First() == "0" {
+			store.SetNext(0)
+			fmt.Println("Committing update to the stage store so that no stage will be applied next...")
+			if err := store.CommitState(); err != nil {
+				return errors.Wrap(err, "couldn't commit updated stage store state")
+			}
+			return nil
+		}
+
 		newNext, err := resolveBundleIdentifier(c.Args().First(), store)
 		if err != nil {
 			return err
@@ -269,7 +278,31 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done! To apply changes immediately, run `sudo -E forklift stage apply`")
+		fmt.Println(
+			"Done! To apply the staged pallet, you may need to reboot or run " +
+				"`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
+		)
+		return nil
+	}
+}
+
+// unset-next
+
+func unsetNextAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		store.SetNext(0)
+		fmt.Println("Committing update to the stage store so that no stage will be applied next...")
+		if err := store.CommitState(); err != nil {
+			return errors.Wrap(err, "couldn't commit updated stage store state")
+		}
 		return nil
 	}
 }
@@ -393,6 +426,39 @@ func applyAction(versions Versions) cli.ActionFunc {
 
 		if err = fcli.ApplyNextOrCurrentBundle(0, store, bundle, c.Bool("parallel")); err != nil {
 			return err
+		}
+		fmt.Println("Done!")
+		return nil
+	}
+}
+
+// set-next-result
+
+func setNextResultAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		switch result := c.Args().First(); result {
+		case "success":
+			store.RecordNextSuccess(true)
+		case "pending":
+			store.Manifest.Stages.NextFailed = false
+		case "failure":
+			store.RecordNextSuccess(false)
+		default:
+			return errors.Errorf(
+				"unknown result (must be 'pending', 'success', or 'failure'): %s", result,
+			)
+		}
+		fmt.Println("Committing result to the stage store...")
+		if err := store.CommitState(); err != nil {
+			return errors.Wrap(err, "couldn't commit updated stage store state")
 		}
 		fmt.Println("Done!")
 		return nil

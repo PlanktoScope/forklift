@@ -73,6 +73,13 @@ var app = &cli.App{
 			Usage:   "Ignore the version of the forklift tool in version compatibility checks",
 			EnvVars: []string{"FORKLIFT_IGNORE_TOOL_VERSION"},
 		},
+		&cli.BoolFlag{
+			Name:  "parallel",
+			Value: true,
+			Usage: "Allow parallel execution of I/O-bound tasks, such as downloading container images " +
+				"or starting containers",
+			EnvVars: []string{"FORKLIFT_PARALLEL"},
+		},
 	},
 	Suggest: true,
 }

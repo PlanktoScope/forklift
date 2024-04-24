@@ -12,7 +12,7 @@ import (
 
 func cacheImgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, true)
+		pallet, cache, err := processFullBaseArgs(c.String("workspace"), true)
 		if err != nil {
 			return err
 		}
@@ -30,7 +30,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		fmt.Println()
-		fmt.Println("Done! Next, you'll probably want to run `sudo -E forklift plt apply`.")
+		fmt.Println("Done!")
 		return nil
 	}
 }

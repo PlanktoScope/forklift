@@ -31,22 +31,18 @@ func MakeCmd(versions Versions) *cli.Command {
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  "no-cache-img",
-							Usage: "don't download container images (this flag is ignored if --apply is set)",
-						},
-						&cli.BoolFlag{
-							Name:  "parallel",
-							Usage: "parallelize updating of package deployments",
+							Usage: "Don't download container images (this flag is ignored if --apply is set)",
 						},
 						&cli.BoolFlag{
 							Name:  "apply",
-							Usage: "immediately apply the pallet after staging it",
+							Usage: "Immediately apply the pallet after staging it",
 						},
 					},
 				},
 			},
 			makeUseSubcmds(versions),
 			makeQuerySubcmds(),
-			makeModifySubcmds(),
+			makeModifySubcmds(versions),
 		),
 	}
 }
@@ -67,12 +63,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Usage: "Determines the changes needed to update the host to match the deployments " +
 				"specified by the local pallet",
 			Action: planAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "construct a plan for parallel updating of deployments",
-				},
-			},
 		},
 		&cli.Command{
 			Name:     "stage",
@@ -82,11 +72,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
-					Usage: "don't download container images",
-				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
+					Usage: "Don't download container images",
 				},
 			},
 		},
@@ -96,12 +82,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Usage: "Builds, stages, and immediately applies a bundle of the local pallet to update the " +
 				"host to match the deployments specified by the local pallet",
 			Action: applyAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize updating of package deployments",
-				},
-			},
 		},
 	)
 }
@@ -117,11 +97,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
-					Usage: "also cache things needed for disabled package deployments",
-				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
+					Usage: "Also cache things needed for disabled package deployments",
 				},
 			},
 		},
@@ -141,11 +117,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
-					Usage: "also download images for disabled package deployments",
-				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
+					Usage: "Also download images for disabled package deployments",
 				},
 			},
 		},
@@ -224,14 +196,50 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "allow-disabled",
-					Usage: "locates the package even if the specified deployment is disabled",
+					Usage: "Locates the package even if the specified deployment is disabled",
 				},
 			},
 		},
 	}
 }
 
-func makeModifySubcmds() []*cli.Command {
+func makeModifySubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet"
+	return append(
+		makeModifyGitSubcmds(versions),
+		&cli.Command{
+			Name:     "rm",
+			Aliases:  []string{"remove"},
+			Category: category,
+			Usage:    "Removes the local pallet",
+			Action:   rmAction,
+		},
+		&cli.Command{
+			Name:     "add-repo",
+			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
+			Category: category,
+			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
+				"or branches",
+			ArgsUsage: "[repo_path@version_query]...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet after adding " +
+						"the repo",
+				},
+			},
+			Action: addRepoAction(versions),
+		},
+	// TODO: add an rm-repo action with alias "drop-repo"; it should ensure no depls depend on it
+	// or delete those depls if `--force` is set
+	// TODO: add an add-depl --features=... depl_path package_path action
+	// TODO: add an rm-depl action
+	// TODO: add an add-depl-feat depl_path [feature]... action
+	// TODO: add an rm-depl-feat depl_path [feature]... action
+	)
+}
+
+func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
 	return []*cli.Command{
 		{
@@ -244,9 +252,14 @@ func makeModifySubcmds() []*cli.Command {
 					Name:  "force",
 					Usage: "Deletes the local pallet if it already exists",
 				},
+				&cli.BoolFlag{
+					Name:  "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet",
+				},
 			},
-			Action: cloneAction,
+			Action: cloneAction(versions),
 		},
+		// TODO: add a "checkout" action
 		{
 			Name:     "fetch",
 			Category: category,
@@ -257,7 +270,14 @@ func makeModifySubcmds() []*cli.Command {
 			Name:     "pull",
 			Category: category,
 			Usage:    "Fast-forwards the local pallet to match the remote release",
-			Action:   pullAction,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet after adding " +
+						"the repo",
+				},
+			},
+			Action: pullAction(versions),
 		},
 		// {
 		// 	Name:  "push",
@@ -268,18 +288,7 @@ func makeModifySubcmds() []*cli.Command {
 		// 		return nil
 		// 	},
 		// },
-		{
-			Name:     "rm",
-			Aliases:  []string{"remove"},
-			Category: category,
-			Usage:    "Removes the local pallet",
-			Action:   rmAction,
-		},
 		// remoteCmd,
-		// TODO: add an add-repo action
-		// TODO: add an rm-repo action
-		// TODO: add an add-depl action
-		// TODO: add an rm-depl action
 	}
 }
 

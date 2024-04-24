@@ -77,6 +77,11 @@ func DownloadImages(
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
+	if len(orderedImages) == 0 {
+		// When there are no images to download, don't cause an error if we can't initialize the
+		// Docker API client!
+		return nil
+	}
 
 	dc, err := docker.NewClient()
 	if err != nil {

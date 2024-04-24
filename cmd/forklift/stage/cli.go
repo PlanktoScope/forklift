@@ -34,12 +34,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Category: category,
 			Usage:    "Pre-downloads the Docker container images required for the next apply",
 			Action:   cacheImgAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
-				},
-			},
 		},
 		{
 			Name:     "check",
@@ -52,12 +46,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Category: category,
 			Usage:    "Determines the changes needed to update the host for the next apply",
 			Action:   planAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "construct a plan for parallel updating of deployments",
-				},
-			},
 		},
 		{
 			Name:     "apply",
@@ -65,12 +53,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Usage: "Updates the host according to the next staged pallet, falling back to the last " +
 				"successfully-staged pallet if the next one already failed",
 			Action: applyAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize updating of package deployments",
-				},
-			},
 		},
 	}
 }
@@ -152,8 +134,9 @@ func makeQueryBunSubcmds(versions Versions) []*cli.Command {
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	category := "Modify the stage store"
-	return []*cli.Command{
-		{
+	return append(
+		makeModifyBunSubcmds(versions),
+		&cli.Command{
 			Name:     "set-next",
 			Category: category,
 			Usage: "Sets the specified staged pallet bundle as the next one to be applied, then " +
@@ -163,14 +146,29 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
-					Usage: "don't download container images",
-				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
+					Usage: "Don't download container images",
 				},
 			},
 		},
+		&cli.Command{
+			Name:     "unset-next",
+			Category: category,
+			Usage:    "Updates the store so that no staged pallet bundle will be applied next",
+			Action:   unsetNextAction(versions),
+		},
+		&cli.Command{
+			Name:      "set-next-result",
+			Category:  category,
+			Usage:     "Manually records that the next staged pallet to apply was applied (un)successfully",
+			ArgsUsage: "pending|success|failure",
+			Action:    setNextResultAction(versions),
+		},
+	)
+}
+
+func makeModifyBunSubcmds(versions Versions) []*cli.Command {
+	category := "Modify the stage store"
+	return []*cli.Command{
 		{
 			Name:     "add-bun-name",
 			Aliases:  []string{"add-bundle-name"},

@@ -94,7 +94,7 @@ func rmGitRepoAction[Cache remover](
 			return err
 		}
 
-		fmt.Printf("Clearing %s cache...", gitRepoType)
+		fmt.Printf("Clearing %s cache...\n", gitRepoType)
 		if err = cache.Remove(); err != nil {
 			return errors.Wrapf(err, "couldn't clear %s cache", gitRepoType)
 		}

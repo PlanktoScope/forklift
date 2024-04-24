@@ -2,15 +2,9 @@ package plt
 
 import (
 	"fmt"
-	"os"
-	"path"
-	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
@@ -41,7 +35,7 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 
 		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
 		// forklift version is incompatible or ahead of the pallet version
-		fmt.Println("Done! Next, you might want to run `sudo -E forklift dev plt apply`.")
+		fmt.Println("Done!")
 		return nil
 	}
 }
@@ -64,59 +58,33 @@ func showRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, pallet, cache, repoPath)
+	return fcli.PrintRepoInfo(0, pallet, cache, c.Args().First())
 }
 
 // add-repo
 
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, false, false)
+		pallet, repoCache, err := processFullBaseArgs(c, false, false)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		repoQueries := c.Args().Slice()
-		if err = fcli.ValidateGitRepoQueries(repoQueries); err != nil {
-			return errors.Wrap(err, "one or more arguments is invalid")
-		}
-		resolved, err := fcli.ResolveQueriesUsingLocalMirrors(0, cache.Underlay.Path(), repoQueries)
-		if err != nil {
+		if err = fcli.AddRepoRequirements(
+			0, pallet, repoCache.Underlay.Path(), c.Args().Slice(),
+		); err != nil {
 			return err
 		}
-		fmt.Println()
-		fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
-		for _, repoQuery := range repoQueries {
-			req, ok := resolved[repoQuery]
-			if !ok {
-				return errors.Errorf("couldn't find configuration for %s", repoQuery)
-			}
-			reqsReposFS, err := pallet.GetRepoReqsFS()
-			if err != nil {
+
+		if !c.Bool("no-cache-req") {
+			if _, err = fcli.CacheStagingRequirements(pallet, repoCache.Path()); err != nil {
 				return err
-			}
-			repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
-			marshaled, err := yaml.Marshal(req.VersionLock.Def)
-			if err != nil {
-				return errors.Wrapf(err, "couldn't marshal repo requirement from %s", repoReqPath)
-			}
-			if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
-				return errors.Wrapf(
-					err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
-				)
-			}
-			const perm = 0o644 // owner rw, group r, public r
-			if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
-				return errors.Wrapf(
-					err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
-				)
 			}
 		}
 		fmt.Println("Done!")
