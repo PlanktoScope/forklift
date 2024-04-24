@@ -9,7 +9,7 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}

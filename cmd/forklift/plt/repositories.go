@@ -12,7 +12,7 @@ import (
 
 func cacheRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, false)
+		pallet, cache, err := processFullBaseArgs(c.String("workspace"), false)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func lsRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	pallet, cache, err := processFullBaseArgs(c, true)
+	pallet, cache, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func showRepoAction(c *cli.Context) error {
 
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, false)
+		pallet, cache, err := processFullBaseArgs(c.String("workspace"), false)
 		if err != nil {
 			return err
 		}

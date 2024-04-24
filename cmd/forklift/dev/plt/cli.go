@@ -62,7 +62,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
-					Usage: "don't download container images",
+					Usage: "Don't download container images",
 				},
 			},
 		},
@@ -87,7 +87,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
-					Usage: "also cache things needed for disabled package deployments",
+					Usage: "Also cache things needed for disabled package deployments",
 				},
 			},
 		},
@@ -107,7 +107,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
-					Usage: "also download images for disabled package deployments",
+					Usage: "Also download images for disabled package deployments",
 				},
 			},
 		},
@@ -186,7 +186,7 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "allow-disabled",
-					Usage: "locates the package even if the specified deployment is disabled",
+					Usage: "Locates the package even if the specified deployment is disabled",
 				},
 			},
 		},

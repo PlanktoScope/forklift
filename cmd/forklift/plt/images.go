@@ -12,7 +12,7 @@ import (
 
 func cacheImgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, true)
+		pallet, cache, err := processFullBaseArgs(c.String("workspace"), true)
 		if err != nil {
 			return err
 		}

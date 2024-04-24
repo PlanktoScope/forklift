@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - (cli) The `dev plt add-repo` subcommand now has additional aliases with clearer names: `require-repo` and `require-repositories`.
 - (cli) Added a `plt add-repo` subcommand which is just like `dev plt add-repo` (including its new `require-repo` and `require-repositories` aliases).
+- (cli) By default, now the `plt clone` subcommand will also cache all required repos after cloning the pallet. This added behavior can be disabled with a new `--no-cache-req` flag.
 
 ### Changed
 

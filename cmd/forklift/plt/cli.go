@@ -31,11 +31,11 @@ func MakeCmd(versions Versions) *cli.Command {
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
 							Name:  "no-cache-img",
-							Usage: "don't download container images (this flag is ignored if --apply is set)",
+							Usage: "Don't download container images (this flag is ignored if --apply is set)",
 						},
 						&cli.BoolFlag{
 							Name:  "apply",
-							Usage: "immediately apply the pallet after staging it",
+							Usage: "Immediately apply the pallet after staging it",
 						},
 					},
 				},
@@ -72,7 +72,7 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
-					Usage: "don't download container images",
+					Usage: "Don't download container images",
 				},
 			},
 		},
@@ -97,7 +97,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
-					Usage: "also cache things needed for disabled package deployments",
+					Usage: "Also cache things needed for disabled package deployments",
 				},
 			},
 		},
@@ -117,7 +117,7 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "include-disabled",
-					Usage: "also download images for disabled package deployments",
+					Usage: "Also download images for disabled package deployments",
 				},
 			},
 		},
@@ -196,7 +196,7 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:  "allow-disabled",
-					Usage: "locates the package even if the specified deployment is disabled",
+					Usage: "Locates the package even if the specified deployment is disabled",
 				},
 			},
 		},
@@ -206,7 +206,7 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
 	return append(
-		makeModifyGitSubcmds(),
+		makeModifyGitSubcmds(versions),
 		&cli.Command{
 			Name:     "rm",
 			Aliases:  []string{"remove"},
@@ -232,7 +232,7 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 	)
 }
 
-func makeModifyGitSubcmds() []*cli.Command {
+func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
 	return []*cli.Command{
 		{
@@ -245,8 +245,12 @@ func makeModifyGitSubcmds() []*cli.Command {
 					Name:  "force",
 					Usage: "Deletes the local pallet if it already exists",
 				},
+				&cli.BoolFlag{
+					Name:  "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet",
+				},
 			},
-			Action: cloneAction,
+			Action: cloneAction(versions),
 		},
 		// TODO: add a "checkout" action
 		{
