@@ -34,10 +34,6 @@ func MakeCmd(versions Versions) *cli.Command {
 							Usage: "don't download container images (this flag is ignored if --apply is set)",
 						},
 						&cli.BoolFlag{
-							Name:  "parallel",
-							Usage: "parallelize updating of package deployments",
-						},
-						&cli.BoolFlag{
 							Name:  "apply",
 							Usage: "immediately apply the pallet after staging it",
 						},
@@ -67,12 +63,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Usage: "Determines the changes needed to update the host to match the deployments " +
 				"specified by the local pallet",
 			Action: planAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "construct a plan for parallel updating of deployments",
-				},
-			},
 		},
 		&cli.Command{
 			Name:     "stage",
@@ -84,10 +74,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 					Name:  "no-cache-img",
 					Usage: "don't download container images",
 				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
-				},
 			},
 		},
 		&cli.Command{
@@ -96,12 +82,6 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Usage: "Builds, stages, and immediately applies a bundle of the local pallet to update the " +
 				"host to match the deployments specified by the local pallet",
 			Action: applyAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize updating of package deployments",
-				},
-			},
 		},
 	)
 }
@@ -118,10 +98,6 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 				&cli.BoolFlag{
 					Name:  "include-disabled",
 					Usage: "also cache things needed for disabled package deployments",
-				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
 				},
 			},
 		},
@@ -142,10 +118,6 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 				&cli.BoolFlag{
 					Name:  "include-disabled",
 					Usage: "also download images for disabled package deployments",
-				},
-				&cli.BoolFlag{
-					Name:  "parallel",
-					Usage: "parallelize downloading of container images",
 				},
 			},
 		},

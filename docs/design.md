@@ -24,7 +24,7 @@ As a software deployment & configuration system, Forklift consists of the follow
 
 Together, the Forklift specifications and the `forklift` tool can be used by project maintainers, contributors, and users to:
 
-1. Specify one or more apps, each of which may consist of a Docker Compose app definition and/or a set of files to make available on the operating system as bind mounts, and specify how it will integrate with other modules.
+1. Specify one or more modules, each of which may consist of a Docker Compose app definition and/or a set of files to export to a directory which can be made available on the operating system (e.g. with overlay mounts and/or bind mounts), and specify how the module will integrate with other modules.
 2. Distribute app specifications as *packages* in one or more *repositories*, each of which is a Git repository hosted online by a hosting service such as - but not limited to - GitHub.
 3. Specify the exact and complete configuration of a set of packages to be deployed as apps on a computer; the complete configuration for a computer is called a *pallet*, which is a Git repository which may be hosted online.
 4. Run continuous integration checks on a pallet - including first-class support for GitHub Actions - to automatically ensure that many kinds of changes to a pallet will not break compatibility or introduce conflicts between deployed apps.
@@ -44,7 +44,7 @@ Related packages are organized into a *repository*, which is just a Git reposito
 
 [fig-pkg-repo]: (add a nested-boxes-and-lines figure with an example directory structure, repository paths, package paths, and a schematic representation of resource interface & feature flags)
 
-Each package can specify a *resource interface*, including the system resources which a deployment of that package provides - such as files, bind mounts, network port listeners, and service APIs - and the resources which a deployment of that package requires. Resource interfaces are used for verifying correctness of app deployment configurations.
+Each package can specify a *resource interface*, including the system resources which a deployment of that package provides - such as files, network port listeners, and service APIs - and the resources which a deployment of that package requires. Resource interfaces are used for verifying correctness of app deployment configurations.
 
 Each package can also specify particular files which should be *exported* (i.e. copied) into a path. This enables tools to make certain files (e.g. systemd service definitions) available on the operating system via an overlay filesystem.
 
@@ -86,7 +86,7 @@ Resource requirement constraints are used in planning the order of changes neede
 
 ### File exporting
 
-(talk about how we prepare bind mounts)
+(talk about how we export files, and how OSes can use the export directory for bind mounts, overlay mounts, systemd-sysexts/confexts, etc.)
 
 ### User interfacing
 

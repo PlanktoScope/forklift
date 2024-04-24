@@ -74,7 +74,7 @@ If you aren't running Docker in rootless mode and your user isn't in a `docker` 
 
   ```
   # Run now:
-  forklift pallet switch github.com/ethanjli/pallet-example-minimal@main
+  forklift pallet switch --no-cache-img github.com/ethanjli/pallet-example-minimal@main
   sudo -E forklift stage cache-img
   # Run when you want to apply the pallet:
   sudo -E forklift stage apply
@@ -126,21 +126,21 @@ cd /home/pi/
 
 The following projects solve related problems with containers for application software, though they make different trade-offs compared to Forklift:
 
-- poco enables Git-based management of Docker Compose projects and collections (*catalogs*) of projects and repositories and provides some similar functionalities to forklift: <https://github.com/shiwaforce/poco>
-- Terraform (an inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Docker Swarms from a Terraform configuration: <https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs>
-- swarm-pack (an inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages to a Docker Swarm: <https://github.com/swarm-pack/swarm-pack>
-- SwarmManagement uses a single YAML file for declarative configuration of an entire Docker Swarm: <https://github.com/hansehe/SwarmManagement>
-- Podman Quadlets enable management of containers, volumes, and networks using declarative systemd units: <https://github.com/containers/podlet> & <https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html>
-- FetchIt enables Git-based management of containers in Podman: <https://github.com/containers/fetchit>
-- Projects developing GitOps tools such as ArgoCD, Flux, etc., store container environment configurations as Git repositories but are generally designed for Kubernetes: <https://www.gitops.tech/>
+- [poco](https://github.com/shiwaforce/poco) enables Git-based management of Docker Compose projects and collections (*catalogs*) of projects and repositories and provides some similar functionalities to forklift
+- [Terraform](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs) (an early inspiration for this project) has a Docker Provider which enables declarative management of Docker hosts and Docker Swarms from a Terraform configuration
+- [swarm-pack](https://github.com/swarm-pack/swarm-pack) (an early inspiration for this project) uses collections of packages from user-specified Git repositories and enables templated configuration of Docker Compose files, with imperative deployments of packages to a Docker Swarm
+- [SwarmManagement](https://github.com/hansehe/SwarmManagement) uses a single YAML file for declarative configuration of an entire Docker Swarm
+- Podman [Quadlets](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html) enable management of containers, volumes, and networks using declarative systemd units
+- [FetchIt](https://github.com/containers/fetchit) enables Git-based management of containers in Podman
+- Projects developing [GitOps](https://www.gitops.tech/) tools such as ArgoCD, Flux, etc., store container environment configurations as Git repositories but are generally designed for Kubernetes
 
 The following projects solve related problems in the base OS, though they make different trade-offs compared to Forklift (especially because of the PlanktoScope project's legacy software):
 
-- systemd-sysext and systemd-confext provide a more structured/constrained way (compared to Forklift) to atomically overlay system files onto the base OS; however, Forklift can also be used as a way to deploy sysexts/confexts onto an OS (see [this demo](https://github.com/ethanjli/ublue-forklift-sysext-demo?tab=readme-ov-file#explanation)): <https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html>
-- systemd's Portable Services pattern and `portablectl` tool provide a more structured/constrained/sandboxed way (compared to Forklift) to atomically add system services: <https://systemd.io/PORTABLE_SERVICES/>
-- ostree enables atomic updates of the base OS, but [it is not supported by Raspberry Pi OS](https://github.com/ostreedev/ostree/issues/2223): <https://ostreedev.github.io/ostree/>
-- The bootc project enables the entire operating system to be delivered as a bootable OCI container image, but currently it relies on bootupd, which [currently only works on RPM-based distros](https://github.com/coreos/bootupd/issues/468): <https://containers.github.io/bootc/>
-- gokrazy enables atomic deployment of Go programs (and also of software containers!), but it has a very different architecture compared to traditional Linux distros: <https://gokrazy.org/>
+- [systemd-sysext and systemd-confext](https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html) provide a more structured/constrained way (compared to Forklift) to atomically overlay system files onto the base OS; however, Forklift can also be used as a way to deploy sysexts/confexts onto an OS (see [this demo](https://github.com/ethanjli/ublue-forklift-sysext-demo?tab=readme-ov-file#explanation))
+- systemd's [Portable Services](https://systemd.io/PORTABLE_SERVICES/) pattern and `portablectl` tool provide a more structured/constrained/sandboxed way (compared to Forklift) to atomically add system services
+- [ostree](https://ostreedev.github.io/ostree/) enables atomic updates of the base OS, but [it is not supported by Raspberry Pi OS](https://github.com/ostreedev/ostree/issues/2223)
+- The [bootc](https://containers.github.io/bootc/) project enables the entire operating system to be delivered as a bootable OCI container image, but currently it relies on bootupd, which [currently only works on RPM-based distros](https://github.com/coreos/bootupd/issues/468)
+- [gokrazy](https://gokrazy.org/) enables atomic deployment of Go programs (and also of software containers!), but it has a very different architecture compared to traditional Linux distros
 
 Other related OS-level projects can be found at [github.com/castrojo/awesome-immutable](https://github.com/castrojo/awesome-immutable).
 

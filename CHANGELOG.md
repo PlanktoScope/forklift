@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- (Breaking change; cli) The `--parallel` flag for various subcommands has now been consolidated and moved to the top level (e.g. `forklift --parallel plt cache-img` instead of `forklift plt cache-img --parallel`). Additionally, now the flag is enabled by default (because sequential downloading of images and bringup of Docker containers is so much slower than parallel downloading/bringup); to avoid parallel execution, use `--parallel=false` (e.g. `forklift --parallel=false plt cache-img`).
+
 ## 0.7.0-alpha.3 - 2024-04-13
 
 ### Fixed
