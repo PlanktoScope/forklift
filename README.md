@@ -109,7 +109,7 @@ cd /etc/
 /home/pi/forklift dev --cwd /home/pi/dev/pallet-example-minimal plt show
 ```
 
-You can also use the `forklift dev plt add-repo` command to add additional Forklift repositories to your development pallet, and/or to change the versions of Forklift repositories already added to your development pallet.
+You can also use the `forklift dev plt require-repo` command to require additional Forklift repositories for use in your development pallet, and/or to change the versions of Forklift repositories already required by your development pallet.
 
 You can also run commands like `forklift dev plt cache-all` and `forklift dev plt stage --no-cache-img` (with appropriate values in the `--cwd` flag if necessary) to download the Forklift repositories specified by your development pallet into your local cache and stage your development pallet to be applied with `sudo -E forklift stage apply`. This is useful if, for example, you want to make some experimental changes to your development pallet and test them on your local machine before committing and pushing those changes onto GitHub.
 

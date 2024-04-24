@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- (cli) The `dev plt add-repo` subcommand now has additional aliases with clearer names: `require-repo` and `require-repositories`.
+- (cli) Added a `plt add-repo` subcommand which is just like `dev plt add-repo` (including its new `require-repo` and `require-repositories` aliases).
+
 ### Changed
 
 - (Breaking change; cli) The `--parallel` flag for various subcommands has now been consolidated and moved to the top level (e.g. `forklift --parallel plt cache-img` instead of `forklift plt cache-img --parallel`). Additionally, now the flag is enabled by default (because sequential downloading of images and bringup of Docker containers is so much slower than parallel downloading/bringup); to avoid parallel execution, use `--parallel=false` (e.g. `forklift --parallel=false plt cache-img`).
+- (Breaking change; cli) `plt clone` no longer deletes the `.git` directory after cloning a pallet, because the new pallet staging functionality makes it feasible to keep a long-running local pallet which can change independently of what is actually applied on a computer.
 
 ## 0.7.0-alpha.3 - 2024-04-13
 

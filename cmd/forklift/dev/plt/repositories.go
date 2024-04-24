@@ -2,15 +2,9 @@ package plt
 
 import (
 	"fmt"
-	"os"
-	"path"
-	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
@@ -64,8 +58,7 @@ func showRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, pallet, cache, repoPath)
+	return fcli.PrintRepoInfo(0, pallet, cache, c.Args().First())
 }
 
 // add-repo
@@ -83,41 +76,10 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		repoQueries := c.Args().Slice()
-		if err = fcli.ValidateGitRepoQueries(repoQueries); err != nil {
-			return errors.Wrap(err, "one or more arguments is invalid")
-		}
-		resolved, err := fcli.ResolveQueriesUsingLocalMirrors(0, cache.Underlay.Path(), repoQueries)
-		if err != nil {
+		if err = fcli.AddRepoRequirements(
+			0, pallet, cache.Underlay.Path(), c.Args().Slice(),
+		); err != nil {
 			return err
-		}
-		fmt.Println()
-		fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
-		for _, repoQuery := range repoQueries {
-			req, ok := resolved[repoQuery]
-			if !ok {
-				return errors.Errorf("couldn't find configuration for %s", repoQuery)
-			}
-			reqsReposFS, err := pallet.GetRepoReqsFS()
-			if err != nil {
-				return err
-			}
-			repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
-			marshaled, err := yaml.Marshal(req.VersionLock.Def)
-			if err != nil {
-				return errors.Wrapf(err, "couldn't marshal repo requirement from %s", repoReqPath)
-			}
-			if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
-				return errors.Wrapf(
-					err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
-				)
-			}
-			const perm = 0o644 // owner rw, group r, public r
-			if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
-				return errors.Wrapf(
-					err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
-				)
-			}
 		}
 		fmt.Println("Done!")
 		return nil

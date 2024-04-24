@@ -51,7 +51,7 @@ func lsRepoAction(c *cli.Context) error {
 	return fcli.PrintPalletRepos(0, pallet)
 }
 
-// show-plt
+// show-repo
 
 func showRepoAction(c *cli.Context) error {
 	pallet, cache, err := processFullBaseArgs(c, true)
@@ -59,6 +59,28 @@ func showRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	repoPath := c.Args().First()
-	return fcli.PrintRepoInfo(0, pallet, cache, repoPath)
+	return fcli.PrintRepoInfo(0, pallet, cache, c.Args().First())
+}
+
+// add-repo
+
+func addRepoAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, cache, err := processFullBaseArgs(c, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		if err = fcli.AddRepoRequirements(0, pallet, cache.Path(), c.Args().Slice()); err != nil {
+			return err
+		}
+		fmt.Println("Done!")
+		return nil
+	}
 }

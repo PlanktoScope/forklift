@@ -42,7 +42,7 @@ func MakeCmd(versions Versions) *cli.Command {
 			},
 			makeUseSubcmds(versions),
 			makeQuerySubcmds(),
-			makeModifySubcmds(),
+			makeModifySubcmds(versions),
 		),
 	}
 }
@@ -203,7 +203,36 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 	}
 }
 
-func makeModifySubcmds() []*cli.Command {
+func makeModifySubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet"
+	return append(
+		makeModifyGitSubcmds(),
+		&cli.Command{
+			Name:     "rm",
+			Aliases:  []string{"remove"},
+			Category: category,
+			Usage:    "Removes the local pallet",
+			Action:   rmAction,
+		},
+		&cli.Command{
+			Name:     "add-repo",
+			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
+			Category: category,
+			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
+				"or branches",
+			ArgsUsage: "[repo_path@version_query]...",
+			Action:    addRepoAction(versions),
+		},
+	// TODO: add an rm-repo action with alias "drop-repo"; it should ensure no depls depend on it
+	// or delete those depls if `--force` is set
+	// TODO: add an add-depl --features=... depl_path package_path action
+	// TODO: add an rm-depl action
+	// TODO: add an add-depl-feat depl_path [feature]... action
+	// TODO: add an rm-depl-feat depl_path [feature]... action
+	)
+}
+
+func makeModifyGitSubcmds() []*cli.Command {
 	const category = "Modify the pallet"
 	return []*cli.Command{
 		{
@@ -219,6 +248,7 @@ func makeModifySubcmds() []*cli.Command {
 			},
 			Action: cloneAction,
 		},
+		// TODO: add a "checkout" action
 		{
 			Name:     "fetch",
 			Category: category,
@@ -240,18 +270,7 @@ func makeModifySubcmds() []*cli.Command {
 		// 		return nil
 		// 	},
 		// },
-		{
-			Name:     "rm",
-			Aliases:  []string{"remove"},
-			Category: category,
-			Usage:    "Removes the local pallet",
-			Action:   rmAction,
-		},
 		// remoteCmd,
-		// TODO: add an add-repo action
-		// TODO: add an rm-repo action
-		// TODO: add an add-depl action
-		// TODO: add an rm-depl action
 	}
 }
 
