@@ -344,12 +344,9 @@ func SplitFilesetsByPath(filesetRes []AttachedRes[FilesetRes]) (split []Attached
 // CheckConflict checks whether the file export resource, represented by the FileExportRes
 // instance, conflicts with the candidate file export resource.
 func (r FileExportRes) CheckConflict(candidate FileExportRes) (errs []error) {
-	if len(r.Targets) == 0 || len(candidate.Targets) == 0 {
-		errs = append(errs, errors.New("no specified file export targets"))
-		return errs
-	}
-
-	errs = append(errs, checkConflictingPathsWithParents(r.Targets, candidate.Targets)...)
+	errs = append(errs, checkConflictingPathsWithParents(
+		[]string{r.Target}, []string{candidate.Target})...,
+	)
 
 	// Tags should be ignored in checking conflicts
 	return errs
@@ -419,27 +416,4 @@ func pathMatchesParent(
 		}
 	}
 	return false, ""
-}
-
-// SplitFileExportsByTarget produces a slice of file export resources from the input slice, where
-// each file export resource in the input slice with multiple paths targets results in multiple
-// corresponding file export resources with one target path each.
-func SplitFileExportsByTarget(
-	fileExportRes []AttachedRes[FileExportRes],
-) (split []AttachedRes[FileExportRes]) {
-	split = make([]AttachedRes[FileExportRes], 0, len(fileExportRes))
-	for _, fileExport := range fileExportRes {
-		if len(fileExport.Res.Targets) == 0 {
-			split = append(split, fileExport)
-		}
-		for _, path := range fileExport.Res.Targets {
-			pathFileExport := fileExport.Res
-			pathFileExport.Targets = []string{path}
-			split = append(split, AttachedRes[FileExportRes]{
-				Res:    pathFileExport,
-				Source: fileExport.Source,
-			})
-		}
-	}
-	return split
 }

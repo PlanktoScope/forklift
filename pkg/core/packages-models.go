@@ -189,8 +189,9 @@ type FileExportRes struct {
 	// Tags is a list of strings associated with the file export. Tags are not considered in checking
 	// resource constraints.
 	Tags []string `yaml:"tags,omitempty"`
-	// Source is the path in the package of the file to be exported.
-	Source string `yaml:"source"`
-	// Targets is a list of paths where the file will be exported to, relative to an export directory.
-	Targets []string `yaml:"targets"`
+	// Source is the path in the package of the file to be exported. If omitted, the source path will
+	// be inferred from the Target path.
+	Source string `yaml:"source,omitempty"`
+	// Target is the path where the file will be exported to, relative to an export directory.
+	Target string `yaml:"target"`
 }

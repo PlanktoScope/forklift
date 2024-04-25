@@ -158,7 +158,7 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
 	exportTargets := make([]string, 0)
 	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
-		exportTargets = append(exportTargets, export.Targets...)
+		exportTargets = append(exportTargets, export.Target)
 	}
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
@@ -168,7 +168,7 @@ func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
 	}
 	for _, feature := range enabledFeatures {
 		for _, export := range feature.Provides.FileExports {
-			exportTargets = append(exportTargets, export.Targets...)
+			exportTargets = append(exportTargets, export.Target)
 		}
 	}
 	slices.Sort(exportTargets)
