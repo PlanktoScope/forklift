@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.7.0-alpha.4 - 2024-04-25
 
 ### Added
 
@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- (Breaking change; spec) The file exports specification has changed so that only a single target path (instead of a list of target paths) can be specified per file export object; accordingly, the field has been renamed from `targets` to `target`. Additionally, if the `source` path is left empty, it is interpreted to have the same value as the `target` path.
 - (Breaking change; cli) The `--parallel` flag for various subcommands has now been consolidated and moved to the top level (e.g. `forklift --parallel plt cache-img` instead of `forklift plt cache-img --parallel`). Additionally, now the flag is enabled by default (because sequential downloading of images and bringup of Docker containers is so much slower than parallel downloading/bringup); to avoid parallel execution, use `--parallel=false` (e.g. `forklift --parallel=false plt cache-img`).
 - (Breaking change; cli) `plt clone` no longer deletes the `.git` directory after cloning a pallet, because the new pallet staging functionality makes it feasible to keep a long-running local pallet which can change independently of what is actually applied on a computer.
 

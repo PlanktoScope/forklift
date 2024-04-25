@@ -1268,14 +1268,12 @@ This optional field of the `provides` subsection is an array of file export obje
         - systemd-service
         - networking
       source: enable-interface-forwarding.service
-      targets:
-        - overlays/etc/systemd/system/enable-interface-forwarding.service
+      target: overlays/etc/systemd/system/enable-interface-forwarding.service
     - description: Symlink to enable the systemd service
       tags:
         - systemd-symlink
       source: enable-interface-forwarding.service.symlink
-      targets:
-        - overlays/etc/systemd/system/network-online.target.wants/enable-interface-forwarding.service
+      target: overlays/etc/systemd/system/network-online.target.wants/enable-interface-forwarding.service
   ```
 
 A file export object consists of the following fields:
@@ -1292,7 +1290,7 @@ A file export object consists of the following fields:
 
 - `source` is the path of the file to be exported, relative to the path of the package. The file must exist in the package's directory (or in a subdirectory).
   
-   - This field is required.
+   - This field is optional: if it's not specified, it's assumed to be the path set by the `target` field.
   
    - Example:
      
@@ -1300,7 +1298,7 @@ A file export object consists of the following fields:
      source: dhcp-and-dns.conf
      ```
 
-- `targets` is an array of strings which are paths where the file should be exported to (e.g. by copying the file to those paths), relative to an export directory defined by the tool which implements the Forklift packaging specification.
+- `target` is the path where the file should be exported to (e.g. by copying the file to that path), relative to an export directory defined by the tool which implements the Forklift packaging specification.
   
    - This field is required.
   

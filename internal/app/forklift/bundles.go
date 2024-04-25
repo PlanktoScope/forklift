@@ -215,20 +215,21 @@ func (b *FSBundle) WriteFileExports() error {
 		}
 		for _, export := range exports {
 			sourcePath := path.Join(resolved.Pkg.FS.Path(), export.Source)
-			for _, target := range export.Targets {
-				exportPath := path.Join(b.getExportsPath(), target)
-				if err := EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {
-					return errors.Wrapf(
-						err, "couldn't make export directory %s in bundle", path.Dir(exportPath),
-					)
-				}
-				// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
-				// https://github.com/golang/go/issues/62484)
-				if err := cp.Copy(
-					filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath),
-				); err != nil {
-					return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
-				}
+			if export.Source == "" {
+				sourcePath = path.Join(resolved.Pkg.FS.Path(), export.Target)
+			}
+			exportPath := path.Join(b.getExportsPath(), export.Target)
+			if err := EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {
+				return errors.Wrapf(
+					err, "couldn't make export directory %s in bundle", path.Dir(exportPath),
+				)
+			}
+			// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
+			// https://github.com/golang/go/issues/62484)
+			if err := cp.Copy(
+				filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath),
+			); err != nil {
+				return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
 			}
 		}
 	}
