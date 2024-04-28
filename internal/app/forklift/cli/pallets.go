@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"io/fs"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/docker/compose/v2/pkg/api"
@@ -278,7 +280,7 @@ type ResolvedDeplsLoader interface {
 	LoadDepls(searchPattern string) ([]forklift.Depl, error)
 }
 
-// Check checks the resource constraints among package deployments in the pallet or bundle.
+// Check checks the validity of the pallet or bundle.
 func Check(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 ) ([]*forklift.ResolvedDepl, []forklift.SatisfiedDeplDeps, error) {
@@ -292,21 +294,121 @@ func Check(
 		return nil, nil, err
 	}
 
-	conflicts, err := checkDeplConflicts(indent, resolved)
-	if err != nil {
-		return nil, nil, err
+	fileExportsErr := checkFileExports(indent, resolved)
+	satisfied, resourcesErr := checkResources(indent, resolved)
+	// FIXME: it'd be better to use errors.Join from go's errors package, but we're using
+	// github.com/pkg/errors which doesn't have a Join function...
+	if fileExportsErr != nil {
+		return resolved, satisfied, fileExportsErr
 	}
-	satisfied, missingDeps, err := checkDeplDeps(indent, resolved)
+	return resolved, satisfied, resourcesErr
+}
+
+type invalidFileExport struct {
+	sourcePath string
+	targetPath string
+	err        error
+}
+
+// checkFileExports checks the file exports of all package deployments in the pallet or bundle
+// to ensure that the source paths of those file exports are all valid.
+func checkFileExports(indent int, depls []*forklift.ResolvedDepl) error {
+	invalidDeplNames := make([]string, 0, len(depls))
+	invalidFileExports := make(map[string][]invalidFileExport)
+	for _, depl := range depls {
+		exports, err := depl.GetFileExports()
+		if err != nil {
+			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", depl.Name)
+		}
+		for _, export := range exports {
+			sourcePath := export.Source
+			if sourcePath == "" {
+				sourcePath = export.Target
+			}
+			if err = checkFileOrSymlink(depl.Pkg.FS, sourcePath); err != nil {
+				invalidFileExports[depl.Name] = append(
+					invalidFileExports[depl.Name],
+					invalidFileExport{
+						sourcePath: sourcePath,
+						targetPath: export.Target,
+						err:        err,
+					},
+				)
+			}
+		}
+	}
+	if len(invalidFileExports) == 0 {
+		return nil
+	}
+
+	IndentedPrintln(indent, "Found invalid file exports among deployments:")
+	indent++
+	slices.Sort(invalidDeplNames)
+	for _, depl := range depls {
+		invalid := invalidFileExports[depl.Name]
+		if len(invalid) == 0 {
+			continue
+		}
+		printInvalidDeplFileExports(indent, depl, invalid)
+	}
+	return errors.Errorf(
+		"file export checks failed (%d invalid exports)", len(invalidFileExports),
+	)
+}
+
+func printInvalidDeplFileExports(
+	indent int, depl *forklift.ResolvedDepl, invalid []invalidFileExport,
+) {
+	IndentedPrintf(indent, "Deployment %s:\n", depl.Name)
+	indent++
+	for _, invalidFileExport := range invalid {
+		BulletedPrintf(indent, "File export source: %s\n", invalidFileExport.sourcePath)
+		IndentedPrintf(indent+1, "File export target: %s\n", invalidFileExport.targetPath)
+		IndentedPrintf(indent+1, "Error: %s\n", invalidFileExport.err.Error())
+	}
+}
+
+func checkFileOrSymlink(fsys core.PathedFS, file string) error {
+	if _, err := fs.Stat(fsys, file); err == nil {
+		return nil
+	}
+	// fs.Stat will return an error if the sourcePath exists but is a symlink pointing to a
+	// nonexistent location. Really we want fs.Lstat (which is not implemented yet); until fs.Lstat
+	// is implemented, when we get an error when we'll just check if a DirEntry exists for the path
+	// (and if so, we'll assume the file is valid).
+	dirEntries, err := fs.ReadDir(fsys, path.Dir(file))
 	if err != nil {
-		return nil, nil, err
+		return err
+	}
+	for _, dirEntry := range dirEntries {
+		if dirEntry.Name() == path.Base(file) {
+			return nil
+		}
+	}
+	return errors.Errorf(
+		"couldn't find %s in %s", path.Base(file), path.Join(fsys.Path(), path.Dir(file)),
+	)
+}
+
+// checkResources checks the resource constraints among package deployments in the pallet or bundle.
+func checkResources(
+	indent int, depls []*forklift.ResolvedDepl,
+) ([]forklift.SatisfiedDeplDeps, error) {
+	conflicts, err := checkDeplConflicts(indent, depls)
+	if err != nil {
+		return nil, err
+	}
+	satisfied, missingDeps, err := checkDeplDeps(indent, depls)
+	if err != nil {
+		return nil, err
 	}
 	if len(conflicts)+len(missingDeps) > 0 {
-		return nil, nil, errors.Errorf(
+		return nil, errors.Errorf(
 			"resource constraint checks failed (%d conflicts, %d missing dependencies)",
 			len(conflicts), len(missingDeps),
 		)
 	}
-	return resolved, satisfied, nil
+	return satisfied, nil
 }
 
 func checkDeplConflicts(
@@ -639,8 +741,8 @@ func printDigraph[Node comparable, Digraph structures.MapDigraph[Node]](
 	for node := range digraph {
 		sortedNodes = append(sortedNodes, node)
 	}
-	sort.Slice(sortedNodes, func(i, j int) bool {
-		return fmt.Sprintf("%v", sortedNodes[i]) < fmt.Sprintf("%v", sortedNodes[j])
+	slices.SortFunc(sortedNodes, func(i, j Node) int {
+		return cmp.Compare(fmt.Sprintf("%v", i), fmt.Sprintf("%v", j))
 	})
 	for _, node := range sortedNodes {
 		printNodeOutboundEdges(indent, digraph, node, edgeType)
@@ -654,8 +756,8 @@ func printNodeOutboundEdges[Node comparable, Digraph structures.MapDigraph[Node]
 	for dep := range digraph[node] {
 		upstreamNodes = append(upstreamNodes, dep)
 	}
-	sort.Slice(upstreamNodes, func(i, j int) bool {
-		return fmt.Sprintf("%v", upstreamNodes[i]) < fmt.Sprintf("%v", upstreamNodes[j])
+	slices.SortFunc(upstreamNodes, func(i, j Node) int {
+		return cmp.Compare(fmt.Sprintf("%v", i), fmt.Sprintf("%v", j))
 	})
 	if len(upstreamNodes) == 0 {
 		IndentedPrintf(indent, "%v %s nothing", node, edgeType)
@@ -696,10 +798,8 @@ func planChanges(
 
 	// Serialize changes with a total ordering
 	dependents := changeIndirectDeps.Invert()
-	sort.Slice(changes, func(i, j int) bool {
-		return compareChangesTotal(
-			changes[i], changes[j], changeIndirectDeps, dependents,
-		) == core.CompareLT
+	slices.SortFunc(changes, func(i, j *ReconciliationChange) int {
+		return compareChangesTotal(i, j, changeIndirectDeps, dependents)
 	})
 	return changeDirectDeps, cycles, changes, nil
 }
@@ -851,7 +951,7 @@ func compareDeplsByDepCounts(
 	r, s *ReconciliationChange, deps, dependents structures.TransitiveClosure[*ReconciliationChange],
 ) int {
 	// Deployments with greater numbers of dependents go first (needed for correct ordering among
-	// unrelated deployments sorted by sort.Slice).
+	// unrelated deployments sorted by slices.SortFunc).
 	if len(dependents[r]) > len(dependents[s]) {
 		return core.CompareLT
 	}
