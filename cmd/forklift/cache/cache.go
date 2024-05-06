@@ -13,7 +13,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 )
 
-var errMissingCache = errors.Errorf(
+var errMissingCache = errors.New(
 	"you first need to cache the repos specified by your pallet with " +
 		"`forklift plt cache-repo`",
 )

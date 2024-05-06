@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"cmp"
 	"io/fs"
 	"os"
 	"path"
@@ -94,6 +95,11 @@ func (b *FSBundle) getBundledPalletPath() string {
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
+	if b.Manifest.Downloads[depl.Name], err = depl.GetHTTPFileDownloadURLs(); err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
+		)
+	}
 	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
 	}
@@ -200,7 +206,7 @@ func (b *FSBundle) getExportsPath() string {
 	return path.Join(b.FS.Path(), exportsDirName)
 }
 
-func (b *FSBundle) WriteFileExports() error {
+func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 	if err := EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
 		return errors.Wrapf(err, "couldn't make directory for all file exports")
 	}
@@ -214,9 +220,17 @@ func (b *FSBundle) WriteFileExports() error {
 			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", deplName)
 		}
 		for _, export := range exports {
-			sourcePath := path.Join(resolved.Pkg.FS.Path(), export.Source)
-			if export.Source == "" {
-				sourcePath = path.Join(resolved.Pkg.FS.Path(), export.Target)
+			sourcePath := ""
+			export.SourceType = cmp.Or(export.SourceType, core.FileExportSourceTypeLocal)
+			switch export.SourceType {
+			case core.FileExportSourceTypeLocal:
+				sourcePath = path.Join(resolved.Pkg.FS.Path(), cmp.Or(export.Source, export.Target))
+			case core.FileExportSourceTypeHTTP:
+				if sourcePath, err = dlCache.GetFilePath(export.URL); err != nil {
+					return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
+				}
+			default:
+				return errors.Errorf("unknown file export source type: %s", export.SourceType)
 			}
 			exportPath := path.Join(b.getExportsPath(), export.Target)
 			if err := EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {

@@ -109,6 +109,13 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Action:   cacheRepoAction(versions),
 		},
 		{
+			Name:     "cache-dl",
+			Aliases:  []string{"cache-downloads"},
+			Category: category,
+			Usage:    "Pre-downloads files to be exported by the local pallet",
+			Action:   cacheDlAction(versions),
+		},
+		{
 			Name:     "cache-img",
 			Aliases:  []string{"cache-images"},
 			Category: category,

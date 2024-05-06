@@ -51,6 +51,14 @@ func PrintStagedBundle(
 		printBundleDeployments(indent+1, bundle.Manifest.Deploys)
 	}
 
+	IndentedPrint(indent, "Downloads:")
+	if len(bundle.Manifest.Downloads) == 0 {
+		fmt.Println(" (none)")
+	} else {
+		fmt.Println()
+		printBundleDownloads(indent+1, bundle.Manifest.Downloads)
+	}
+
 	IndentedPrint(indent, "Exports:")
 	if len(bundle.Manifest.Exports) == 0 {
 		fmt.Println(" (none)")
@@ -130,6 +138,24 @@ func printBundleDeployments(indent int, deployments map[string]forklift.DeplDef)
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
 		IndentedPrintf(indent, "%s: %s\n", deplName, deployments[deplName].Package)
+	}
+}
+
+func printBundleDownloads(indent int, downloads map[string][]string) {
+	sortedDeplNames := make([]string, 0, len(downloads))
+	for deplName := range downloads {
+		sortedDeplNames = append(sortedDeplNames, deplName)
+	}
+	slices.Sort(sortedDeplNames)
+	for _, deplName := range sortedDeplNames {
+		IndentedPrintf(indent, "%s:", deplName)
+		if len(downloads[deplName]) == 0 {
+			fmt.Print(" (none)")
+		}
+		fmt.Println()
+		for _, targetPath := range downloads[deplName] {
+			BulletedPrintln(indent+1, targetPath)
+		}
 	}
 }
 

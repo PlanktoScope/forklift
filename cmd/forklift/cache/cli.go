@@ -56,6 +56,13 @@ var Cmd = &cli.Command{
 			Action:    showPkgAction,
 		},
 		{
+			Name:     "ls-dl",
+			Aliases:  []string{"list-downloads"},
+			Category: "Query the cache",
+			Usage:    "Lists cached file downloads",
+			Action:   lsDlAction,
+		},
+		{
 			Name:     "ls-img",
 			Aliases:  []string{"list-images"},
 			Category: "Query the cache",

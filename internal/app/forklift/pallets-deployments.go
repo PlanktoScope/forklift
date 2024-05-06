@@ -114,6 +114,8 @@ func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
 	return disabled
 }
 
+// ResolvedDepl: Docker Compose Apps
+
 // GetComposeFilenames returns a list of the paths of the Compose files which must be merged into
 // the Compose app, with feature-flagged Compose files ordered based on the alphabetical order of
 // enabled feature flags.
@@ -153,10 +155,42 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 	return false, nil
 }
 
+// ResolvedDepl: File Downloads
+
+// GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export by
+// the package deployment, with all URLs sorted alphabetically.
+func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
+	downloadURLs := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+		if export.SourceType != core.FileExportSourceTypeHTTP {
+			continue
+		}
+		downloadURLs = append(downloadURLs, export.URL)
+	}
+	enabledFeatures, err := d.EnabledFeatures()
+	if err != nil {
+		return downloadURLs, errors.Wrapf(
+			err, "couldn't determine files to download for export from deployment %s", d.Name,
+		)
+	}
+	for _, feature := range enabledFeatures {
+		for _, export := range feature.Provides.FileExports {
+			if export.SourceType != core.FileExportSourceTypeHTTP {
+				continue
+			}
+			downloadURLs = append(downloadURLs, export.URL)
+		}
+	}
+	slices.Sort(downloadURLs)
+	return downloadURLs, nil
+}
+
+// ResolvedDepl: File Exports
+
 // GetFileExportTargets returns a list of the target paths of the files to be exported by the
 // package deployment, with all target file paths sorted alphabetically.
 func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
-	exportTargets := make([]string, 0)
+	exportTargets := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
 	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
 		exportTargets = append(exportTargets, export.Target)
 	}
@@ -193,6 +227,8 @@ func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
 	})
 	return exports, nil
 }
+
+// ResolvedDepl: Resource Constraints
 
 // CheckConflicts produces a report of all resource conflicts between the ResolvedDepl instance and
 // a candidate ResolvedDepl.

@@ -189,9 +189,19 @@ type FileExportRes struct {
 	// Tags is a list of strings associated with the file export. Tags are not considered in checking
 	// resource constraints.
 	Tags []string `yaml:"tags,omitempty"`
-	// Source is the path in the package of the file to be exported. If omitted, the source path will
-	// be inferred from the Target path.
+	// SourceType is either `local` (for a file in the package whose path is set by `Source`) or
+	// `http` (for a file which needs to be downloaded from the URL set by `URL`).
+	SourceType string `yaml:"source-type,omitempty"`
+	// Source is the path in the package of the file to be exported, for a `local` source. If omitted,
+	// the source path will be inferred from the Target path.
 	Source string `yaml:"source,omitempty"`
+	// URL is the URL of the file to be downloaded for export, for a `http` source.
+	URL string `yaml:"url,omitempty"`
 	// Target is the path where the file will be exported to, relative to an export directory.
 	Target string `yaml:"target"`
 }
+
+const (
+	FileExportSourceTypeLocal = "local"
+	FileExportSourceTypeHTTP  = "http"
+)

@@ -148,3 +148,23 @@ func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 		FS: pathedFS,
 	}, nil
 }
+
+// Cache: Downloads
+
+func (w *FSWorkspace) GetDownloadCachePath() string {
+	return path.Join(w.getCachePath(), cacheDownloadsDirName)
+}
+
+func (w *FSWorkspace) GetDownloadCache() (*FSDownloadCache, error) {
+	fsys, err := w.getCacheFS()
+	if err != nil {
+		return nil, err
+	}
+	pathedFS, err := fsys.Sub(cacheDownloadsDirName)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get downloads cache from workspace")
+	}
+	return &FSDownloadCache{
+		FS: pathedFS,
+	}, nil
+}

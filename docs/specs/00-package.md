@@ -1252,7 +1252,7 @@ This optional field of the `provides` subsection is an array of file export obje
 
 - This field is optional.
 
-- A file export is defined as a source path and a list of one or more target paths. A file export will overlap with another file export if and only if both file exports have at least one overlapping target path (for a definition of overlapping paths, refer below to description of the `path` field of the file export object).
+- A file export is defined as a source path and a target path. A file export will overlap with another file export if and only if both file exports have overlapping target paths (for a definition of overlapping paths, refer below to description of the `path` field of the file export object).
 
 - Each file export object describes a file export resource which may or may not be in conflict with other file export resources; this is because multiple file exports are not allowed to have overlapping target paths.
 
@@ -1267,12 +1267,10 @@ This optional field of the `provides` subsection is an array of file export obje
         - systemd-unit
         - systemd-service
         - networking
-      source: enable-interface-forwarding.service
       target: overlays/etc/systemd/system/enable-interface-forwarding.service
     - description: Symlink to enable the systemd service
       tags:
         - systemd-symlink
-      source: enable-interface-forwarding.service.symlink
       target: overlays/etc/systemd/system/network-online.target.wants/enable-interface-forwarding.service
   ```
 
@@ -1288,14 +1286,46 @@ A file export object consists of the following fields:
      description: Basic dnsmasq configuration
      ```
 
-- `source` is the path of the file to be exported, relative to the path of the package. The file must exist in the package's directory (or in a subdirectory).
+- `source-type` is the way that the source file is provided for export.
+  
+   - This field is optional: if it's not specified, it's assumed to be of type `local`.
+  
+   - Allowed values are:
+     
+      - `local`: the file is provided in the package's directory, or in a subdirectory of the package.
+     
+      - `http`: the file is downloaded from an HTTP/HTTPS URL.
+  
+   - Example:
+     
+     ```yaml
+     source-type: local
+     ```
+
+- `source` is the filesystem path of the file to be exported; the meaning of this field varies depending on the value of `source-type`.
   
    - This field is optional: if it's not specified, it's assumed to be the path set by the `target` field.
+  
+   - For the `local` source type, the source path is interpreted as being relative to the path of the package.
+  
+   - For the `http` source type, the source path is ignored.
   
    - Example:
      
      ```yaml
      source: dhcp-and-dns.conf
+     ```
+
+- `url` is the URL of the file to be downloaded for export; the meaning of this field varies depending on the value of `source-type`.
+  
+   - This field is required for the `http` source type and ignored for the `local` source type.
+  
+   - For the `http` source type, the URL should be of the file which is downloaded and directly exported as a file.
+  
+   - Example:
+     
+     ```yaml
+     url: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
      ```
 
 - `target` is the path where the file should be exported to (e.g. by copying the file to that path), relative to an export directory defined by the tool which implements the Forklift packaging specification.
