@@ -104,7 +104,7 @@ const (
 	newStageStoreVersion = "v0.7.0"
 	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
 	// version is unknown.
-	fallbackVersion = "v0.7.1-dev"
+	fallbackVersion = "v0.7.2-dev"
 )
 
 var (
