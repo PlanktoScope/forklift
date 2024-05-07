@@ -202,6 +202,7 @@ type FileExportRes struct {
 }
 
 const (
-	FileExportSourceTypeLocal = "local"
-	FileExportSourceTypeHTTP  = "http"
+	FileExportSourceTypeLocal       = "local"
+	FileExportSourceTypeHTTP        = "http"
+	FileExportSourceTypeHTTPArchive = "http-archive"
 )

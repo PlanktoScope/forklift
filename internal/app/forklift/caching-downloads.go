@@ -76,3 +76,16 @@ func (c *FSDownloadCache) LoadFile(downloadURL string) ([]byte, error) {
 	}
 	return fs.ReadFile(c.FS, u)
 }
+
+// OpenFile opens the file downloaded from the specified URL.
+func (c *FSDownloadCache) OpenFile(downloadURL string) (fs.File, error) {
+	if c == nil {
+		return nil, errors.New("cache is nil")
+	}
+
+	u, err := normalizeHTTPDownloadURL(downloadURL)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't process URL of cached file: %s", downloadURL)
+	}
+	return c.FS.Open(u)
+}

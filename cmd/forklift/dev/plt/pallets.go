@@ -117,7 +117,7 @@ func setOverrideCacheVersions(
 
 func cacheAllAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, dlCache, err := processFullBaseArgs(c, false, false)
+		pallet, repoCache, dlCache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}

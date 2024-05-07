@@ -1295,6 +1295,8 @@ A file export object consists of the following fields:
       - `local`: the file is provided in the package's directory, or in a subdirectory of the package.
      
       - `http`: the file is downloaded from an HTTP/HTTPS URL.
+     
+      - `http-archive`: the file is extracted from a `.tar.gz` or `.tar` archive downloaded from an HTTP/HTTPS URL.
   
    - Example:
      
@@ -1310,6 +1312,8 @@ A file export object consists of the following fields:
   
    - For the `http` source type, the source path is ignored.
   
+   - For the `http-archive` source type, the sourch path is interpreted as being relative to the root of the archive.
+  
    - Example:
      
      ```yaml
@@ -1318,9 +1322,11 @@ A file export object consists of the following fields:
 
 - `url` is the URL of the file to be downloaded for export; the meaning of this field varies depending on the value of `source-type`.
   
-   - This field is required for the `http` source type and ignored for the `local` source type.
+   - This field is required for the `http` and `http-archive` source types and ignored for the `local` source type.
   
    - For the `http` source type, the URL should be of the file which is downloaded and directly exported as a file.
+  
+   - For the `http-archive` source type, the URL should be of the `.tar.gz` or `.tar` archive which is downloaded so that a file within it can be exported as a file.
   
    - Example:
      

@@ -162,8 +162,10 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 	downloadURLs := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
 	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
-		if export.SourceType != core.FileExportSourceTypeHTTP {
+		switch export.SourceType {
+		default:
 			continue
+		case core.FileExportSourceTypeHTTP, core.FileExportSourceTypeHTTPArchive:
 		}
 		downloadURLs = append(downloadURLs, export.URL)
 	}
@@ -175,8 +177,10 @@ func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 	}
 	for _, feature := range enabledFeatures {
 		for _, export := range feature.Provides.FileExports {
-			if export.SourceType != core.FileExportSourceTypeHTTP {
+			switch export.SourceType {
+			default:
 				continue
+			case core.FileExportSourceTypeHTTP, core.FileExportSourceTypeHTTPArchive:
 			}
 			downloadURLs = append(downloadURLs, export.URL)
 		}

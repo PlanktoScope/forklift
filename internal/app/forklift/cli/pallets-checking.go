@@ -59,9 +59,10 @@ func checkFileExports(indent int, depls []*forklift.ResolvedDepl) error {
 			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", depl.Name)
 		}
 		for _, export := range exports {
-			export.SourceType = cmp.Or(export.SourceType, core.FileExportSourceTypeLocal)
-			if export.SourceType != core.FileExportSourceTypeLocal {
+			switch export.SourceType {
+			default:
 				continue
+			case core.FileExportSourceTypeLocal, "":
 			}
 			sourcePath := cmp.Or(export.Source, export.Target)
 			if err = checkFileOrSymlink(depl.Pkg.FS, sourcePath); err != nil {

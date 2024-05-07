@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.7.2-alpha.0 - 2024-05-07
+
+## Added
+
+- (spec, cli) Added `source-type` and `url` fields to the file export resource, and added `http` and `http-archive` file source types; for simplicity/backwards-compatibility, by default `source-type` is assumed to be `local` (for local files) and `url` is ignored. `url` is used for `http` and `http-archive` file source types (see next changelog item).
+- (cli) `http` and `http-archive` file sources (for file export resources) are downloaded and cached with `[dev] plt cache-dl` and `[dev] plt cache-all` subcommands, and downloaded files (whether downloaded directly from an HTTP(S) URL or extracted from a `.tar.gz`/`.tar` archive downloaded from an HTTP(S) URL) are now exported as part of the pallet's bundle when the pallet is staged. The bundle's manifest now lists the URLs of downloaded files/archives.
+
 ## 0.7.1 - 2024-04-29
 
 ## Added
