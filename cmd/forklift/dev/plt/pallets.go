@@ -14,21 +14,25 @@ import (
 )
 
 func processFullBaseArgs(c *cli.Context, ensureCache, enableOverrides bool) (
-	pallet *forklift.FSPallet, cache *forklift.LayeredRepoCache, err error,
+	pallet *forklift.FSPallet,
+	repoCache *forklift.LayeredRepoCache, dlCache *forklift.FSDownloadCache, err error,
 ) {
 	if pallet, err = getPallet(c.String("cwd")); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	if cache, _, err = fcli.GetRepoCache(c.String("workspace"), pallet, ensureCache); err != nil {
-		return nil, nil, err
+	if dlCache, err = fcli.GetDlCache(c.String("workspace"), ensureCache); err != nil {
+		return nil, nil, nil, err
+	}
+	if repoCache, _, err = fcli.GetRepoCache(c.String("workspace"), pallet, ensureCache); err != nil {
+		return nil, nil, nil, err
 	}
 	if !enableOverrides {
-		return pallet, cache, nil
+		return pallet, repoCache, dlCache, nil
 	}
-	if cache, err = overlayCacheOverrides(cache, c.StringSlice("repos"), pallet); err != nil {
-		return nil, nil, err
+	if repoCache, err = overlayCacheOverrides(repoCache, c.StringSlice("repos"), pallet); err != nil {
+		return nil, nil, nil, err
 	}
-	return pallet, cache, nil
+	return pallet, repoCache, dlCache, nil
 }
 
 func getPallet(cwdPath string) (pallet *forklift.FSPallet, err error) {
@@ -42,8 +46,8 @@ func getPallet(cwdPath string) (pallet *forklift.FSPallet, err error) {
 
 func overlayCacheOverrides(
 	underlay forklift.PathedRepoCache, repos []string, pallet *forklift.FSPallet,
-) (cache *forklift.LayeredRepoCache, err error) {
-	cache = &forklift.LayeredRepoCache{
+) (repoCache *forklift.LayeredRepoCache, err error) {
+	repoCache = &forklift.LayeredRepoCache{
 		Underlay: underlay,
 	}
 	replacementRepos, err := loadReplacementRepos(repos)
@@ -57,8 +61,8 @@ func overlayCacheOverrides(
 	if err = setOverrideCacheVersions(pallet, override); err != nil {
 		return nil, err
 	}
-	cache.Overlay = override
-	return cache, nil
+	repoCache.Overlay = override
+	return repoCache, nil
 }
 
 func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err error) {
@@ -113,26 +117,22 @@ func setOverrideCacheVersions(
 
 func cacheAllAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, false, false)
+		pallet, repoCache, dlCache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		changed, err := fcli.CacheAllRequirements(
-			pallet, cache.Underlay.Path(), cache, c.Bool("include-disabled"), c.Bool("parallel"),
-		)
-		if err != nil {
+		if err = fcli.CacheAllRequirements(
+			pallet, repoCache.Underlay.Path(), repoCache, dlCache,
+			c.Bool("include-disabled"), c.Bool("parallel"),
+		); err != nil {
 			return err
-		}
-		if !changed {
-			fmt.Println("Done! No further actions are needed at this time.")
-			return nil
 		}
 		fmt.Println("Done!")
 		return nil
@@ -153,18 +153,18 @@ func showAction(c *cli.Context) error {
 
 func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, true, true)
+		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err := fcli.Check(0, pallet, cache); err != nil {
+		if _, _, err := fcli.Check(0, pallet, repoCache); err != nil {
 			return err
 		}
 		return nil
@@ -175,18 +175,18 @@ func checkAction(versions Versions) cli.ActionFunc {
 
 func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, true, true)
+		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err = fcli.Plan(0, pallet, cache, c.Bool("parallel")); err != nil {
+		if _, _, err = fcli.Plan(0, pallet, repoCache, c.Bool("parallel")); err != nil {
 			return err
 		}
 		return nil
@@ -197,12 +197,12 @@ func planAction(versions Versions) cli.ActionFunc {
 
 func stageAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, err := processFullBaseArgs(c, true, true)
+		pallet, repoCache, dlCache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -219,7 +219,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if _, err = fcli.StagePallet(
-			pallet, stageStore, cache, c.String("exports"),
+			pallet, stageStore, repoCache, dlCache, c.String("exports"),
 			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
 			c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -237,7 +237,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 
 func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, err := processFullBaseArgs(c, true, true)
+		pallet, repoCache, dlCache, err := processFullBaseArgs(c, true, true)
 		if err != nil {
 			return err
 		}
@@ -259,7 +259,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		index, err := fcli.StagePallet(
-			pallet, stageStore, repoCache, c.String("exports"),
+			pallet, stageStore, repoCache, dlCache, c.String("exports"),
 			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
 			false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		)

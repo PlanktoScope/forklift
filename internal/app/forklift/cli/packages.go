@@ -120,7 +120,7 @@ func PrintFeatureSpec(indent int, name string, spec core.PkgFeatureSpec) {
 
 	IndentedPrintf(indent, "Compose files: ")
 	if len(spec.ComposeFiles) == 0 {
-		fmt.Printf("(none)")
+		fmt.Println("(none)")
 		return
 	}
 	fmt.Println()

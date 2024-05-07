@@ -50,7 +50,10 @@ type BundleManifest struct {
 	Includes BundleInclusions `yaml:"includes,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
-	// Deploys lists the target paths of file exports provided by the bundle's deployments. Keys are
+	// Downloads lists the URLs of files downloaded for export by the bundle's deployments. Keys are
+	// names of the bundle's deployments which export downloaded files.
+	Downloads map[string][]string `yaml:"downloads,omitempty"`
+	// Exports lists the target paths of file exports provided by the bundle's deployments. Keys are
 	// names of the bundle's deployments which provide file exports.
 	Exports map[string][]string `yaml:"exports,omitempty"`
 }

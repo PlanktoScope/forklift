@@ -1,6 +1,11 @@
 package forklift
 
 import (
+	"archive/tar"
+	"cmp"
+	"compress/gzip"
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -9,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"github.com/h2non/filetype"
+	ftt "github.com/h2non/filetype/types"
 	cp "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -94,6 +101,11 @@ func (b *FSBundle) getBundledPalletPath() string {
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
+	if b.Manifest.Downloads[depl.Name], err = depl.GetHTTPFileDownloadURLs(); err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
+		)
+	}
 	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
 	}
@@ -200,7 +212,7 @@ func (b *FSBundle) getExportsPath() string {
 	return path.Join(b.FS.Path(), exportsDirName)
 }
 
-func (b *FSBundle) WriteFileExports() error {
+func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 	if err := EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
 		return errors.Wrapf(err, "couldn't make directory for all file exports")
 	}
@@ -214,22 +226,158 @@ func (b *FSBundle) WriteFileExports() error {
 			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", deplName)
 		}
 		for _, export := range exports {
-			sourcePath := path.Join(resolved.Pkg.FS.Path(), export.Source)
-			if export.Source == "" {
-				sourcePath = path.Join(resolved.Pkg.FS.Path(), export.Target)
-			}
 			exportPath := path.Join(b.getExportsPath(), export.Target)
 			if err := EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {
 				return errors.Wrapf(
 					err, "couldn't make export directory %s in bundle", path.Dir(exportPath),
 				)
 			}
-			// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
-			// https://github.com/golang/go/issues/62484)
-			if err := cp.Copy(
-				filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath),
-			); err != nil {
-				return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
+			switch export.SourceType {
+			case core.FileExportSourceTypeLocal, "":
+				if err := exportLocalFile(resolved, export, exportPath); err != nil {
+					return err
+				}
+			case core.FileExportSourceTypeHTTP:
+				if err := exportHTTPFile(export, exportPath, dlCache); err != nil {
+					return err
+				}
+			case core.FileExportSourceTypeHTTPArchive:
+				if err := exportHTTPArchiveFile(export, exportPath, dlCache); err != nil {
+					return err
+				}
+			default:
+				return errors.Errorf("unknown file export source type: %s", export.SourceType)
+			}
+		}
+	}
+	return nil
+}
+
+func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
+	sourcePath := path.Join(resolved.Pkg.FS.Path(), cmp.Or(export.Source, export.Target))
+	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
+	// https://github.com/golang/go/issues/62484)
+	if err := cp.Copy(filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath)); err != nil {
+		return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
+	}
+	return nil
+}
+
+func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDownloadCache) error {
+	sourcePath, err := dlCache.GetFilePath(export.URL)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
+	}
+	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
+	// https://github.com/golang/go/issues/62484)
+	if err := cp.Copy(filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath)); err != nil {
+		return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
+	}
+	return nil
+}
+
+func exportHTTPArchiveFile(
+	export core.FileExportRes, exportPath string, dlCache *FSDownloadCache,
+) error {
+	kind, err := determineFileType(dlCache, export.URL)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't determine file type of cached HTTP download %s", export.URL)
+	}
+
+	archiveFile, err := dlCache.OpenFile(export.URL)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't open cached HTTP download %s", export.URL)
+	}
+	defer func() {
+		if err := archiveFile.Close(); err != nil {
+			// TODO: handle this error more rigorously
+			fmt.Printf("Error: couldn't close cached HTTP download %s\n", export.URL)
+		}
+	}()
+	var archiveReader *tar.Reader
+	switch kind.MIME.Value {
+	case "application/x-tar":
+		archiveReader = tar.NewReader(archiveFile)
+	case "application/gzip":
+		uncompressed, err := gzip.NewReader(archiveFile)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't create a gzip decompressor for %s", export.URL)
+		}
+		// TODO: check to ensure that the uncompressed file is actually a tar archive
+		defer func() {
+			_ = uncompressed.Close()
+		}()
+		archiveReader = tar.NewReader(uncompressed)
+	default:
+		return errors.Errorf(
+			"unrecognized archive file type: %s (.%s)", kind.MIME.Value, kind.Extension,
+		)
+	}
+	if err = extractFile(archiveReader, export.Source, exportPath); err != nil {
+		return errors.Wrapf(
+			err, "couldn't extract %s from cached HTTP download %s to %s",
+			export.Source, export.URL, exportPath,
+		)
+	}
+	return nil
+}
+
+func determineFileType(dlCache *FSDownloadCache, downloadURL string) (ftt.Type, error) {
+	archiveFile, err := dlCache.OpenFile(downloadURL)
+	if err != nil {
+		return filetype.Unknown, errors.Wrapf(err, "couldn't open cached HTTP download %s", downloadURL)
+	}
+	defer func() {
+		if err := archiveFile.Close(); err != nil {
+			// TODO: handle this error more rigorously
+			fmt.Printf("Error: couldn't close cached HTTP download %s\n", downloadURL)
+		}
+	}()
+	return filetype.MatchReader(archiveFile)
+}
+
+func extractFile(tarReader *tar.Reader, sourcePath string, exportPath string) error {
+	// var sourcefile *fs.File
+	fmt.Printf("exporting into %s...\n", exportPath)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if sourcePath != header.Name && !strings.HasPrefix(header.Name, sourcePath+"/") {
+			continue
+		}
+		targetPath := path.Join(exportPath, strings.TrimPrefix(header.Name, sourcePath))
+		switch header.Typeflag {
+		default:
+			return errors.Errorf(
+				"unknown type of file %s in archive: %b", header.Name, header.Typeflag,
+			)
+		case tar.TypeDir:
+			if err = EnsureExists(filepath.FromSlash(targetPath)); err != nil {
+				return errors.Wrapf(
+					err, "couldn't export %s from archive to %s", header.Name, targetPath,
+				)
+			}
+		case tar.TypeReg:
+			targetFile, err := os.Create(filepath.FromSlash(targetPath))
+			if err != nil {
+				return errors.Wrapf(err, "couldn't create export file at %s", targetPath)
+			}
+			defer func(file fs.File, filePath string) {
+				if err := file.Close(); err != nil {
+					// FIXME: handle this error better
+					fmt.Printf("Error: couldn't close export file %s\n", filePath)
+				}
+			}(targetFile, targetPath)
+
+			if _, err = io.Copy(targetFile, tarReader); err != nil {
+				return errors.Wrapf(
+					err, "couldn't copy file %s in tar archive to %s", sourcePath, targetPath,
+				)
 			}
 		}
 	}

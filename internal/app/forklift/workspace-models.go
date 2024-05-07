@@ -11,9 +11,10 @@ type FSWorkspace struct {
 // in $HOME/.cache/forklift:
 
 const (
-	cacheDirPath        = ".cache/forklift"
-	cacheReposDirName   = "repositories"
-	cachePalletsDirName = "pallets"
+	cacheDirPath          = ".cache/forklift"
+	cacheReposDirName     = "repositories"
+	cachePalletsDirName   = "pallets"
+	cacheDownloadsDirName = "downloads"
 )
 
 // in $HOME/.local/share/forklift:

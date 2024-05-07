@@ -8,11 +8,12 @@ require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/compose-spec/compose-go/v2 v2.1.0
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v26.1.0+incompatible
+	github.com/docker/cli v26.1.1+incompatible
 	github.com/docker/compose/v2 v2.27.0
-	github.com/docker/docker v26.1.0+incompatible
+	github.com/docker/docker v26.1.1+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/h2non/filetype v1.1.3
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.27.2

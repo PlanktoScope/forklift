@@ -146,3 +146,11 @@ type RepoOverrideCache struct {
 	// list of versions.
 	repoVersionSets map[string]map[string]struct{}
 }
+
+// Download
+
+// FSDownloadCache is a source of downloaded files saved on the filesystem.
+type FSDownloadCache struct {
+	// FS is the filesystem which corresponds to the cache of downloads.
+	FS core.PathedFS
+}

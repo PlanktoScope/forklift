@@ -11,6 +11,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // Download
@@ -110,7 +111,7 @@ func listRequiredImages(
 	}
 
 	orderedImages := make([]string, 0, len(resolved))
-	images := make(map[string]struct{})
+	images := make(structures.Set[string])
 	for _, depl := range resolved {
 		definesApp, err := depl.DefinesApp()
 		if err != nil {
@@ -127,8 +128,8 @@ func listRequiredImages(
 			return nil, errors.Wrap(err, "couldn't load Compose app definition")
 		}
 		for _, service := range appDef.Services {
-			if _, ok := images[service.Image]; !ok {
-				images[service.Image] = struct{}{}
+			if !images.Has(service.Image) {
+				images.Add(service.Image)
 				orderedImages = append(orderedImages, service.Image)
 			}
 		}
@@ -139,19 +140,17 @@ func listRequiredImages(
 func downloadImagesParallel(indent int, images []string, dc *docker.Client) error {
 	eg, egctx := errgroup.WithContext(context.Background())
 	for _, image := range images {
-		eg.Go(func(image string) func() error {
-			return func() error {
-				IndentedPrintf(indent, "Downloading %s...\n", image)
-				pulled, err := dc.PullImage(egctx, image, docker.NewOutStream(io.Discard))
-				if err != nil {
-					return errors.Wrapf(err, "couldn't download %s", image)
-				}
-				IndentedPrintf(
-					indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
-				)
-				return nil
+		eg.Go(func() error {
+			IndentedPrintf(indent, "Downloading %s...\n", image)
+			pulled, err := dc.PullImage(egctx, image, docker.NewOutStream(io.Discard))
+			if err != nil {
+				return errors.Wrapf(err, "couldn't download %s", image)
 			}
-		}(image))
+			IndentedPrintf(
+				indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
+			)
+			return nil
+		})
 	}
 	if err := eg.Wait(); err != nil {
 		return err
