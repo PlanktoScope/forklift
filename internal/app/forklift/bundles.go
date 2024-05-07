@@ -363,7 +363,10 @@ func extractFile(tarReader *tar.Reader, sourcePath string, exportPath string) er
 				)
 			}
 		case tar.TypeReg:
-			targetFile, err := os.Create(filepath.FromSlash(targetPath))
+			targetFile, err := os.OpenFile(
+				filepath.FromSlash(targetPath), os.O_RDWR|os.O_CREATE|os.O_TRUNC,
+				fs.FileMode(header.Mode&int64(fs.ModePerm)),
+			)
 			if err != nil {
 				return errors.Wrapf(err, "couldn't create export file at %s", targetPath)
 			}
