@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## Added
+
+- Added a `[dev] plt rm-repo` subcommand which removes requirements for the specified repo paths, as an inverse of the `[dev] plt add-repo` subcommand.
+
 ## 0.7.2-alpha.1 - 2024-05-07
 
 ## Fixed

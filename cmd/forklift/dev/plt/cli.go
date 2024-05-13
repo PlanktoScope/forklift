@@ -219,8 +219,21 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			},
 			Action: addRepoAction(versions),
 		},
-		// TODO: add an rm-repo action with alias "drop-repo"; it should ensure no depls depend on it
-		// or delete those depls if `--force` is set
+		{
+			Name:      "rm-repo",
+			Aliases:   []string{"remove-repositories", "drop-repo", "drop-repositories"},
+			Category:  category,
+			Usage:     "Removes repo requirements from the pallet",
+			ArgsUsage: "repo_path...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Remove specified repo requirements even if some declared package deployments " +
+						"depend on them",
+				},
+			},
+			Action: rmRepoAction(versions),
+		},
 		// TODO: add an add-depl --features=... depl_path package_path action
 		// TODO: add an rm-depl action
 		// TODO: add an add-depl-feat depl_path [feature]... action

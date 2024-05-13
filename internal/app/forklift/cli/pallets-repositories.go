@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -173,6 +174,90 @@ func AddRepoRequirements(
 		}
 	}
 	return nil
+}
+
+// Remove
+
+func RemoveRepoRequirements(
+	indent int, pallet *forklift.FSPallet, repoPaths []string, force bool,
+) error {
+	usedRepoReqs, err := determineUsedRepoReqs(indent, pallet, force)
+	if err != nil {
+		return errors.Wrap(
+			err,
+			"couldn't determine repos used by declared package deployments, to check which repositories "+
+				"to remove are still required by declared deployments; to skip this check, "+
+				"enable the --force flag",
+		)
+	}
+
+	fmt.Printf("Removing requirements from %s...\n", pallet.FS.Path())
+	for _, repoPath := range repoPaths {
+		if actualRepoPath, _, ok := strings.Cut(repoPath, "@"); ok {
+			IndentedPrintf(
+				indent,
+				"Warning: provided repo path %s is actually a repo query; removing %s instead...\n",
+				repoPath, actualRepoPath,
+			)
+			repoPath = actualRepoPath
+		}
+		reqsReposFS, err := pallet.GetRepoReqsFS()
+		if err != nil {
+			return err
+		}
+		repoReqPath := path.Join(reqsReposFS.Path(), repoPath)
+		if !force && len(usedRepoReqs[repoPath]) > 0 {
+			return errors.Errorf(
+				"couldn't remove requirement for repo %s because it's needed by package deployments %+v; "+
+					"to skip this check, enable the --force flag",
+				repoPath, usedRepoReqs[repoPath],
+			)
+		}
+		if err = os.RemoveAll(repoReqPath); err != nil {
+			return errors.Wrapf(
+				err, "couldn't remove requirement for repo %s, at %s", repoPath, repoReqPath,
+			)
+		}
+	}
+	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the
+	// end?
+	return nil
+}
+
+func determineUsedRepoReqs(
+	indent int, pallet *forklift.FSPallet, force bool,
+) (map[string][]string, error) {
+	depls, err := pallet.LoadDepls("**/*")
+	if err != nil {
+		err = errors.Wrap(err, "couldn't load package deployments")
+		if !force {
+			return nil, err
+		}
+		IndentedPrintf(indent, "Warning: %s\n", err.Error())
+	}
+	usedRepoReqs := make(map[string][]string)
+	for _, depl := range depls {
+		pkgPath := depl.Def.Package
+		if path.IsAbs(pkgPath) { // special case: package is provided by the pallet itself
+			continue
+		}
+		repoReqsFS, err := pallet.GetRepoReqsFS()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
+		}
+		fsRepoReq, err := forklift.LoadFSRepoReqContaining(repoReqsFS, pkgPath)
+		if err != nil {
+			err = errors.Wrapf(
+				err, "couldn't find repo requirement needed for deployment %s of package %s",
+				depl.Name, pkgPath,
+			)
+			if !force {
+				return nil, err
+			}
+		}
+		usedRepoReqs[fsRepoReq.Path()] = append(usedRepoReqs[fsRepoReq.Path()], depl.Name)
+	}
+	return usedRepoReqs, nil
 }
 
 // Download

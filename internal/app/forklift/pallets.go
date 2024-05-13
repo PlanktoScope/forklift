@@ -215,7 +215,7 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 	if err != nil {
 		return PkgReq{}, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 	}
-	fsRepoReq, err := loadFSRepoReqContaining(reposFS, pkgPath)
+	fsRepoReq, err := LoadFSRepoReqContaining(reposFS, pkgPath)
 	if err != nil {
 		return PkgReq{}, errors.Wrapf(err, "couldn't find repo providing package %s in pallet", pkgPath)
 	}
