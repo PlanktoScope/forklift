@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `[dev] plt set-depl-pkg` subcommand which modifies a package deployment at the specified deployment name, to change the deployment's package.
 - Added a `[dev] plt add-depl-feat` subcommand which modifies a package deployment at the specified deployment name, to enable the specified feature flags (for feature flags which are not already enabled).
 - Added a `[dev] plt rm-depl-feat` subcommand which modifies a package deployment at the specified deployment name, to disable the specified feature flags (for feature flags which are not already disabled), as the inverse of the `[dev] plt add-depl-feat` subcommand.
-- Added a `[dev] plt set-depl-disabled` subcommand which modifies a package deployment at the specified deployment name, to disable the deployment.
-- Added a `[dev] plt set-depl-enabled` subcommand which modifies a package deployment at the specified deployment name, to enable the deployment.
+- Added a `[dev] plt set-depl-disabled` (or `[dev] plt disable-depl`) subcommand which modifies a package deployment at the specified deployment name, to disable the deployment.
+- Added a `[dev] plt unset-depl` (or `[dev] plt enable-depl`) subcommand which modifies a package deployment at the specified deployment name, to enable the deployment.
 
 ## 0.7.2-alpha.1 - 2024-05-07
 
