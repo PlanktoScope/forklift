@@ -381,6 +381,41 @@ func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) erro
 	return nil
 }
 
+// Set Package
+
+func SetDeplPkg(
+	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
+	deplName, pkgPath string, force bool,
+) error {
+	IndentedPrintf(
+		indent, "Setting package deployment %s to deploy package %s...\n", deplName, pkgPath,
+	)
+	depl, err := pallet.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find package deployment declaration %s in pallet %s",
+			deplName, pallet.FS.Path(),
+		)
+	}
+
+	depl.Def.Package = pkgPath
+	// We want to check both the package path and the feature flags for validity, since changing the
+	// package path could change the allowed feature flags:
+	if err := checkDepl(pallet, pkgLoader, depl); err != nil {
+		if !force {
+			return errors.Wrap(
+				err, "package deployment has invalid settings; to skip this check, enable the --force flag",
+			)
+		}
+		IndentedPrintf(indent, "Warning: package deployment has invalid settings: %s", err.Error())
+	}
+
+	if err := writeDepl(pallet, depl); err != nil {
+		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
+	}
+	return nil
+}
+
 // Add Feature
 
 func AddDeplFeat(

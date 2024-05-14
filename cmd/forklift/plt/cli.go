@@ -333,7 +333,9 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 	}
 }
 
-func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
+func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's hard to split more
+	versions Versions,
+) []*cli.Command {
 	const category = "Modify the pallet"
 	return []*cli.Command{
 		{
@@ -352,8 +354,9 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 					Usage: "Add a disabled package deployment",
 				},
 				&cli.BoolFlag{
-					Name:  "force",
-					Usage: "Add specified deployment even if package_path cannot be resolved",
+					Name: "force",
+					Usage: "Add specified deployment even if package_path cannot be resolved or the " +
+						"specified feature flags are not allowed for it",
 				},
 			},
 			Action: addDeplAction(versions),
@@ -365,6 +368,21 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 			Usage:     "Removes deployment from the pallet",
 			ArgsUsage: "deployment_name...",
 			Action:    rmDeplAction(versions),
+		},
+		{
+			Name:      "set-depl-pkg",
+			Aliases:   []string{"set-deployment-package"},
+			Category:  category,
+			Usage:     "Sets the path of the package to deploy in the specified deployment",
+			ArgsUsage: "deployment_name package_path...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Use the specified package path even if it cannot be resolved or makes the " +
+						"enabled feature flags invalid",
+				},
+			},
+			Action: setDeplPkgAction(versions),
 		},
 		{
 			Name:      "add-depl-feat",
@@ -389,7 +407,6 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "deployment_name feature_name...",
 			Action:    rmDeplFeatAction(versions),
 		},
-		// TODO: add a set-depl-pkg action
 		// TODO: add a set-depl-disabled action
 	}
 }

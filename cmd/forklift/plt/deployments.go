@@ -96,6 +96,32 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 	}
 }
 
+// set-depl-pkg
+
+func setDeplPkgAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, repoCache, _, err := processFullBaseArgs(c.String("workspace"), true)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		deplName := c.Args().Slice()[0]
+		pkgPath := c.Args().Slice()[1]
+		if err = fcli.SetDeplPkg(0, pallet, repoCache, deplName, pkgPath, c.Bool("force")); err != nil {
+			return err
+		}
+
+		fmt.Println("Done!")
+		return nil
+	}
+}
+
 // add-depl-feat
 
 func addDeplFeatAction(versions Versions) cli.ActionFunc {
