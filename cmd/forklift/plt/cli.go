@@ -407,8 +407,14 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Action: setDeplPkgAction(versions),
 		},
 		{
-			Name:      "add-depl-feat",
-			Aliases:   []string{"add-deployment-feature", "add-deployment-features"},
+			Name: "add-depl-feat",
+			Aliases: []string{
+				"add-deployment-feature",
+				"add-deployment-features",
+				"enable-depl-feat",
+				"enable-deployment-feature",
+				"enable-deployment-features",
+			},
 			Category:  category,
 			Usage:     "Enables the specified package features in the specified deployment",
 			ArgsUsage: "deployment_name feature_name...",
@@ -425,8 +431,14 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Action: addDeplFeatAction(versions),
 		},
 		{
-			Name:      "rm-depl-feat",
-			Aliases:   []string{"remove-deployment-feature", "remove-deployment-features"},
+			Name: "rm-depl-feat",
+			Aliases: []string{
+				"remove-deployment-feature",
+				"remove-deployment-features",
+				"disable-depl-feat",
+				"disable-deployment-feature",
+				"disable-deployment-features",
+			},
 			Category:  category,
 			Usage:     "Disables the specified package features in the specified deployment",
 			ArgsUsage: "deployment_name feature_name...",
