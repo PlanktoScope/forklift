@@ -337,6 +337,21 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 	versions Versions,
 ) []*cli.Command {
 	const category = "Modify the pallet"
+	baseFlags := []cli.Flag{
+		&cli.BoolFlag{
+			Name: "stage",
+			Usage: "Immediately stage the pallet after making the modification (this flag is ignored " +
+				"if --apply is set)",
+		},
+		&cli.BoolFlag{
+			Name:  "no-cache-img",
+			Usage: "Don't download container images (this flag is only used if --stage is set)",
+		},
+		&cli.BoolFlag{
+			Name:  "apply",
+			Usage: "Immediately apply the pallet after staging it",
+		},
+	}
 	return []*cli.Command{
 		{
 			Name:      "add-depl",
@@ -344,21 +359,24 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Adds (or re-adds) a package deployment to the pallet",
 			ArgsUsage: "deployment_name package_path...",
-			Flags: []cli.Flag{
-				&cli.StringSliceFlag{
-					Name:  "feature",
-					Usage: "Enable the specified feature flag in the package deployment",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.StringSliceFlag{
+						Name:  "feature",
+						Usage: "Enable the specified feature flag in the package deployment",
+					},
+					&cli.BoolFlag{
+						Name:  "disabled",
+						Usage: "Add a disabled package deployment",
+					},
+					&cli.BoolFlag{
+						Name: "force",
+						Usage: "Add specified deployment even if package_path cannot be resolved or the " +
+							"specified feature flags are not allowed for it",
+					},
 				},
-				&cli.BoolFlag{
-					Name:  "disabled",
-					Usage: "Add a disabled package deployment",
-				},
-				&cli.BoolFlag{
-					Name: "force",
-					Usage: "Add specified deployment even if package_path cannot be resolved or the " +
-						"specified feature flags are not allowed for it",
-				},
-			},
+				baseFlags,
+			),
 			Action: addDeplAction(versions),
 		},
 		{
@@ -367,6 +385,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Removes deployment from the pallet",
 			ArgsUsage: "deployment_name...",
+			Flags:     baseFlags,
 			Action:    rmDeplAction(versions),
 		},
 		{
@@ -375,13 +394,16 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Sets the path of the package to deploy in the specified deployment",
 			ArgsUsage: "deployment_name package_path...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "force",
-					Usage: "Use the specified package path even if it cannot be resolved or makes the " +
-						"enabled feature flags invalid",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.BoolFlag{
+						Name: "force",
+						Usage: "Use the specified package path even if it cannot be resolved or makes the " +
+							"enabled feature flags invalid",
+					},
 				},
-			},
+				baseFlags,
+			),
 			Action: setDeplPkgAction(versions),
 		},
 		{
@@ -390,13 +412,16 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Enables the specified package features in the specified deployment",
 			ArgsUsage: "deployment_name feature_name...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "force",
-					Usage: "Enable the specified feature flags even if they're not allowed by the  " +
-						"deployment's package",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.BoolFlag{
+						Name: "force",
+						Usage: "Enable the specified feature flags even if they're not allowed by the  " +
+							"deployment's package",
+					},
 				},
-			},
+				baseFlags,
+			),
 			Action: addDeplFeatAction(versions),
 		},
 		{
@@ -405,6 +430,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Disables the specified package features in the specified deployment",
 			ArgsUsage: "deployment_name feature_name...",
+			Flags:     baseFlags,
 			Action:    rmDeplFeatAction(versions),
 		},
 		{
@@ -413,6 +439,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Disables the specified deployment",
 			ArgsUsage: "deployment_name",
+			Flags:     baseFlags,
 			Action:    setDeplDisabledAction(versions, true),
 		},
 		{
@@ -421,6 +448,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Enables the specified deployment",
 			ArgsUsage: "deployment_name",
+			Flags:     baseFlags,
 			Action:    setDeplDisabledAction(versions, false),
 		},
 	}

@@ -51,7 +51,7 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
+		if err = fcli.CheckCompatibility(
 			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -67,8 +67,15 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
@@ -80,7 +87,7 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
+		if err = fcli.CheckCompatibility(
 			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -91,8 +98,15 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
@@ -104,7 +118,7 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
+		if err = fcli.CheckCompatibility(
 			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -117,8 +131,15 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
@@ -130,7 +151,7 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
+		if err = fcli.CheckCompatibility(
 			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -145,8 +166,15 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
@@ -158,7 +186,7 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
+		if err = fcli.CheckCompatibility(
 			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -171,8 +199,15 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
@@ -184,7 +219,7 @@ func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
+		if err = fcli.CheckCompatibility(
 			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
@@ -196,7 +231,14 @@ func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
