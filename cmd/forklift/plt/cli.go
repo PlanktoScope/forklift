@@ -341,7 +341,7 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 			Aliases:   []string{"add-deployment"},
 			Category:  category,
 			Usage:     "Adds (or re-adds) a package deployment to the pallet",
-			ArgsUsage: "depl_path package_path...",
+			ArgsUsage: "deployment_name package_path...",
 			Flags: []cli.Flag{
 				&cli.StringSliceFlag{
 					Name:  "feature",
@@ -358,8 +358,17 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 			},
 			Action: addDeplAction(versions),
 		},
-		// TODO: add an rm-depl action
+		{
+			Name:      "rm-depl",
+			Aliases:   []string{"remove-deployment", "remove-deployments"},
+			Category:  category,
+			Usage:     "Removes deployment from the pallet",
+			ArgsUsage: "deployment_name...",
+			Action:    rmDeplAction(versions),
+		},
 		// TODO: add an add-depl-feat depl_path [feature]... action
 		// TODO: add an rm-depl-feat depl_path [feature]... action
+		// TODO: add a set-depl-pkg action
+		// TODO: add a set-depl-disabled action
 	}
 }

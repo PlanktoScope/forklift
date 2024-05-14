@@ -351,3 +351,24 @@ func checkDepl(
 	}
 	return nil
 }
+
+// Remove
+
+func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) error {
+	fmt.Printf("Removing package deployments from %s...\n", pallet.FS.Path())
+	for _, deplName := range deplNames {
+		deplsFS, err := pallet.GetDeplsFS()
+		if err != nil {
+			return err
+		}
+		deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", deplName))
+		if err = os.RemoveAll(deplPath); err != nil {
+			return errors.Wrapf(
+				err, "couldn't remove package deployment %s, at %s", deplName, deplPath,
+			)
+		}
+	}
+	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the
+	// end?
+	return nil
+}
