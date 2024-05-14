@@ -201,6 +201,13 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 }
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
+	return slices.Concat(
+		makeModifyRepoSubcmds(versions),
+		makeModifyDeplSubcmds(versions),
+	)
+}
+
+func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
 	return []*cli.Command{
 		{
@@ -234,7 +241,34 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			},
 			Action: rmRepoAction(versions),
 		},
-		// TODO: add an add-depl --features=... depl_path package_path action
+	}
+}
+
+func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet"
+	return []*cli.Command{
+		{
+			Name:      "add-depl",
+			Aliases:   []string{"add-deployment"},
+			Category:  category,
+			Usage:     "Adds (or re-adds) a package deployment to the pallet",
+			ArgsUsage: "depl_path package_path...",
+			Flags: []cli.Flag{
+				&cli.StringSliceFlag{
+					Name:  "feature",
+					Usage: "Enable the specified feature flag in the package deployment",
+				},
+				&cli.BoolFlag{
+					Name:  "disabled",
+					Usage: "Add a disabled package deployment",
+				},
+				&cli.BoolFlag{
+					Name:  "force",
+					Usage: "Add specified deployment even if package_path cannot be resolved",
+				},
+			},
+			Action: addDeplAction(versions),
+		},
 		// TODO: add an rm-depl action
 		// TODO: add an add-depl-feat depl_path [feature]... action
 		// TODO: add an rm-depl-feat depl_path [feature]... action

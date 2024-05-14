@@ -1,12 +1,16 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"sort"
 
 	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/pkg/core"
@@ -259,5 +263,91 @@ func PrintDeplPkgPath(
 		return errors.Errorf("package deployment %s is not enabled!", depl.Name)
 	}
 	fmt.Println(resolved.Pkg.FS.Path())
+	return nil
+}
+
+// Add
+
+func AddDepl(
+	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
+	deplName, pkgPath string, features []string, disabled, force bool,
+) error {
+	disabledString := ""
+	if disabled {
+		disabledString = "disabled "
+	}
+	featuresString := ""
+	if len(features) > 0 {
+		featuresString = fmt.Sprintf(" (with feature flags: %+v)", features)
+	}
+	IndentedPrintf(
+		indent, "Adding %spackage deployment %s for %s%s...\n",
+		disabledString, deplName, pkgPath, featuresString,
+	)
+	depl := forklift.Depl{
+		Name: deplName,
+		Def: forklift.DeplDef{
+			Package:  pkgPath,
+			Features: features,
+			Disabled: disabled,
+		},
+	}
+
+	if err := checkDepl(pallet, pkgLoader, depl); err != nil {
+		if !force {
+			return errors.Wrap(
+				err, "package deployment has invalid settings; to skip this check, enable the --force flag",
+			)
+		}
+		IndentedPrintf(indent, "Warning: package deployment has invalid settings: %s", err.Error())
+	}
+
+	deplsFS, err := pallet.GetDeplsFS()
+	if err != nil {
+		return err
+	}
+	deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", deplName))
+	buf := bytes.Buffer{}
+	encoder := yaml.NewEncoder(&buf)
+	const yamlIndent = 2
+	encoder.SetIndent(yamlIndent)
+	if err = encoder.Encode(depl.Def); err != nil {
+		return errors.Wrapf(err, "couldn't marshal package deployment for %s", deplPath)
+	}
+	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
+		return errors.Wrapf(
+			err, "couldn't make directory %s", filepath.FromSlash(path.Dir(deplPath)),
+		)
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(filepath.FromSlash(deplPath), buf.Bytes(), perm); err != nil {
+		return errors.Wrapf(
+			err, "couldn't save deployment declaration to %s", filepath.FromSlash(deplPath),
+		)
+	}
+	return nil
+}
+
+func checkDepl(
+	pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader, depl forklift.Depl,
+) error {
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, pkgLoader, depl.Def.Package)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't resolve package path %s to a package using the pallet's repo requirements",
+			depl.Def.Package,
+		)
+	}
+
+	allowedFeatures := pkg.Def.Features
+	unrecognizedFeatures := make([]string, 0, len(depl.Def.Features))
+	for _, name := range depl.Def.Features {
+		if _, ok := allowedFeatures[name]; !ok {
+			unrecognizedFeatures = append(unrecognizedFeatures, name)
+		}
+	}
+	if len(unrecognizedFeatures) > 0 {
+		return errors.Errorf("unrecognized feature flags: %+v", unrecognizedFeatures)
+	}
 	return nil
 }

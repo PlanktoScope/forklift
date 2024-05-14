@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 
 - Added a `[dev] plt rm-repo` subcommand which removes requirements for the specified repo paths, as an inverse of the `[dev] plt add-repo` subcommand.
+- Added a `[dev] plt add-depl` subcommand which adds a package deployment at the specified deployment name, for the specified package path (and optionally for the specified feature flags and enabled/disabled setting).
 
 ## 0.7.2-alpha.1 - 2024-05-07
 

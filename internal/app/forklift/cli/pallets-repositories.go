@@ -159,7 +159,7 @@ func AddRepoRequirements(
 		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
 		marshaled, err := yaml.Marshal(req.VersionLock.Def)
 		if err != nil {
-			return errors.Wrapf(err, "couldn't marshal repo requirement from %s", repoReqPath)
+			return errors.Wrapf(err, "couldn't marshal repo requirement for %s", repoReqPath)
 		}
 		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
 			return errors.Wrapf(
@@ -254,6 +254,7 @@ func determineUsedRepoReqs(
 			if !force {
 				return nil, err
 			}
+			IndentedPrintf(indent, "Warning: %s\n", err.Error())
 		}
 		usedRepoReqs[fsRepoReq.Path()] = append(usedRepoReqs[fsRepoReq.Path()], depl.Name)
 	}

@@ -212,52 +212,19 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
-	return append(
+	return slices.Concat(
 		makeModifyGitSubcmds(versions),
-		&cli.Command{
-			Name:     "rm",
-			Aliases:  []string{"remove"},
-			Category: category,
-			Usage:    "Removes the local pallet",
-			Action:   rmAction,
-		},
-		&cli.Command{
-			Name:     "add-repo",
-			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
-			Category: category,
-			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
-				"or branches",
-			ArgsUsage: "[repo_path@version_query]...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "no-cache-req",
-					Usage: "Don't download repositories and pallets required by this pallet after adding " +
-						"the repo",
-				},
+		[]*cli.Command{
+			{
+				Name:     "rm",
+				Aliases:  []string{"remove"},
+				Category: category,
+				Usage:    "Removes the local pallet",
+				Action:   rmAction,
 			},
-			Action: addRepoAction(versions),
 		},
-		&cli.Command{
-			Name:      "rm-repo",
-			Aliases:   []string{"remove-repositories", "drop-repo", "drop-repositories"},
-			Category:  category,
-			Usage:     "Removes repo requirements from the pallet",
-			ArgsUsage: "repo_path...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "force",
-					Usage: "Remove specified repo requirements even if some declared package deployments " +
-						"depend on them",
-				},
-			},
-			Action: rmRepoAction(versions),
-		},
-	// TODO: add an rm-repo action with alias "drop-repo"; it should ensure no depls depend on it
-	// or delete those depls if `--force` is set
-	// TODO: add an add-depl --features=... depl_path package_path action
-	// TODO: add an rm-depl action
-	// TODO: add an add-depl-feat depl_path [feature]... action
-	// TODO: add an rm-depl-feat depl_path [feature]... action
+		makeModifyRepoSubcmds(versions),
+		makeModifyDeplSubcmds(versions),
 	)
 }
 
@@ -328,3 +295,71 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 //			},
 //		},
 //	}
+
+func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet"
+	return []*cli.Command{
+		{
+			Name:     "add-repo",
+			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
+			Category: category,
+			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
+				"or branches",
+			ArgsUsage: "[repo_path@version_query]...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet after adding " +
+						"the repo",
+				},
+			},
+			Action: addRepoAction(versions),
+		},
+		{
+			Name:      "rm-repo",
+			Aliases:   []string{"remove-repositories", "drop-repo", "drop-repositories"},
+			Category:  category,
+			Usage:     "Removes repo requirements from the pallet",
+			ArgsUsage: "repo_path...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Remove specified repo requirements even if some declared package deployments " +
+						"depend on them",
+				},
+			},
+			Action: rmRepoAction(versions),
+		},
+	}
+}
+
+func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet"
+	return []*cli.Command{
+		{
+			Name:      "add-depl",
+			Aliases:   []string{"add-deployment"},
+			Category:  category,
+			Usage:     "Adds (or re-adds) a package deployment to the pallet",
+			ArgsUsage: "depl_path package_path...",
+			Flags: []cli.Flag{
+				&cli.StringSliceFlag{
+					Name:  "feature",
+					Usage: "Enable the specified feature flag in the package deployment",
+				},
+				&cli.BoolFlag{
+					Name:  "disabled",
+					Usage: "Add a disabled package deployment",
+				},
+				&cli.BoolFlag{
+					Name:  "force",
+					Usage: "Add specified deployment even if package_path cannot be resolved",
+				},
+			},
+			Action: addDeplAction(versions),
+		},
+		// TODO: add an rm-depl action
+		// TODO: add an add-depl-feat depl_path [feature]... action
+		// TODO: add an rm-depl-feat depl_path [feature]... action
+	}
+}
