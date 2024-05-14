@@ -130,11 +130,11 @@ func loadFSRepoReq(fsys core.PathedFS, repoPath string) (r *FSRepoReq, err error
 	return r, nil
 }
 
-// loadFSRepoReqContaining loads the FSRepoReq containing the specified sub-directory path in
+// LoadFSRepoReqContaining loads the FSRepoReq containing the specified sub-directory path in
 // the provided base filesystem.
 // The sub-directory path does not have to actually exist; however, it would usually be provided
 // as a package path.
-func loadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq, error) {
+func LoadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq, error) {
 	repoCandidatePath := subdirPath
 	for {
 		if repo, err := loadFSRepoReq(fsys, repoCandidatePath); err == nil {

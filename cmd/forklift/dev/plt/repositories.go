@@ -93,3 +93,27 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 		return nil
 	}
 }
+
+// rm-repo
+
+func rmRepoAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, repoCache, _, err := processFullBaseArgs(c, false, false)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		if err = fcli.RemoveRepoRequirements(0, pallet, c.Args().Slice(), c.Bool("force")); err != nil {
+			return err
+		}
+
+		fmt.Println("Done!")
+		return nil
+	}
+}

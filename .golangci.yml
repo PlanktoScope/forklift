@@ -43,11 +43,11 @@ linters:
     - gocyclo
     - godot
     - gofumpt
-    - gomnd
     - goprintffuncname
     - gosec
     - lll
     - misspell
+    - mnd
     - noctx
     - nolintlint
     - rowserrcheck

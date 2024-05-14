@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## 0.7.2-alpha.2 - 2024-05-13
+
+## Added
+
+- Added a `[dev] plt rm-repo` subcommand which removes requirements for the specified repo paths, as an inverse of the `[dev] plt add-repo` subcommand.
+- Added a `[dev] plt add-depl` subcommand which adds a package deployment at the specified deployment name, for the specified package path (and optionally for the specified feature flags and enabled/disabled setting).
+- Added a `[dev] plt rm-depl` subcommand which deletes the package deployment declaration(s) at the specified deployment name(s), as the inverse of the `[dev] plt add-depl` subcommand.
+- Added a `[dev] plt set-depl-pkg` subcommand which modifies a package deployment at the specified deployment name, to change the deployment's package.
+- Added a `[dev] plt add-depl-feat` (or `[dev] plt enable-depl-feat`) subcommand which modifies a package deployment at the specified deployment name, to enable the specified feature flags (for feature flags which are not already enabled).
+- Added a `[dev] plt rm-depl-feat` (or `[dev] plt disable-depl-feat`) subcommand which modifies a package deployment at the specified deployment name, to disable the specified feature flags (for feature flags which are not already disabled), as the inverse of the `[dev] plt add-depl-feat` subcommand.
+- Added a `[dev] plt set-depl-disabled` (or `[dev] plt disable-depl`) subcommand which modifies a package deployment at the specified deployment name, to disable the deployment.
+- Added a `[dev] plt unset-depl` (or `[dev] plt enable-depl`) subcommand which modifies a package deployment at the specified deployment name, to enable the deployment.
+
 ## 0.7.2-alpha.1 - 2024-05-07
 
 ## Fixed

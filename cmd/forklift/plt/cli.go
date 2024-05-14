@@ -212,37 +212,19 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet"
-	return append(
+	return slices.Concat(
 		makeModifyGitSubcmds(versions),
-		&cli.Command{
-			Name:     "rm",
-			Aliases:  []string{"remove"},
-			Category: category,
-			Usage:    "Removes the local pallet",
-			Action:   rmAction,
-		},
-		&cli.Command{
-			Name:     "add-repo",
-			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
-			Category: category,
-			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
-				"or branches",
-			ArgsUsage: "[repo_path@version_query]...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "no-cache-req",
-					Usage: "Don't download repositories and pallets required by this pallet after adding " +
-						"the repo",
-				},
+		[]*cli.Command{
+			{
+				Name:     "rm",
+				Aliases:  []string{"remove"},
+				Category: category,
+				Usage:    "Removes the local pallet",
+				Action:   rmAction,
 			},
-			Action: addRepoAction(versions),
 		},
-	// TODO: add an rm-repo action with alias "drop-repo"; it should ensure no depls depend on it
-	// or delete those depls if `--force` is set
-	// TODO: add an add-depl --features=... depl_path package_path action
-	// TODO: add an rm-depl action
-	// TODO: add an add-depl-feat depl_path [feature]... action
-	// TODO: add an rm-depl-feat depl_path [feature]... action
+		makeModifyRepoSubcmds(versions),
+		makeModifyDeplSubcmds(versions),
 	)
 }
 
@@ -313,3 +295,173 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 //			},
 //		},
 //	}
+
+func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet"
+	return []*cli.Command{
+		{
+			Name:     "add-repo",
+			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
+			Category: category,
+			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
+				"or branches",
+			ArgsUsage: "[repo_path@version_query]...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet after adding " +
+						"the repo",
+				},
+			},
+			Action: addRepoAction(versions),
+		},
+		{
+			Name:      "rm-repo",
+			Aliases:   []string{"remove-repositories", "drop-repo", "drop-repositories"},
+			Category:  category,
+			Usage:     "Removes repo requirements from the pallet",
+			ArgsUsage: "repo_path...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Remove specified repo requirements even if some declared package deployments " +
+						"depend on them",
+				},
+			},
+			Action: rmRepoAction(versions),
+		},
+	}
+}
+
+func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's hard to split more
+	versions Versions,
+) []*cli.Command {
+	const category = "Modify the pallet"
+	baseFlags := []cli.Flag{
+		&cli.BoolFlag{
+			Name: "stage",
+			Usage: "Immediately stage the pallet after making the modification (this flag is ignored " +
+				"if --apply is set)",
+		},
+		&cli.BoolFlag{
+			Name:  "no-cache-img",
+			Usage: "Don't download container images (this flag is only used if --stage is set)",
+		},
+		&cli.BoolFlag{
+			Name:  "apply",
+			Usage: "Immediately apply the pallet after staging it",
+		},
+	}
+	return []*cli.Command{
+		{
+			Name:      "add-depl",
+			Aliases:   []string{"add-deployment"},
+			Category:  category,
+			Usage:     "Adds (or re-adds) a package deployment to the pallet",
+			ArgsUsage: "deployment_name package_path...",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.StringSliceFlag{
+						Name:  "feature",
+						Usage: "Enable the specified feature flag in the package deployment",
+					},
+					&cli.BoolFlag{
+						Name:  "disabled",
+						Usage: "Add a disabled package deployment",
+					},
+					&cli.BoolFlag{
+						Name: "force",
+						Usage: "Add specified deployment even if package_path cannot be resolved or the " +
+							"specified feature flags are not allowed for it",
+					},
+				},
+				baseFlags,
+			),
+			Action: addDeplAction(versions),
+		},
+		{
+			Name:      "rm-depl",
+			Aliases:   []string{"remove-deployment", "remove-deployments"},
+			Category:  category,
+			Usage:     "Removes deployment from the pallet",
+			ArgsUsage: "deployment_name...",
+			Flags:     baseFlags,
+			Action:    rmDeplAction(versions),
+		},
+		{
+			Name:      "set-depl-pkg",
+			Aliases:   []string{"set-deployment-package"},
+			Category:  category,
+			Usage:     "Sets the path of the package to deploy in the specified deployment",
+			ArgsUsage: "deployment_name package_path...",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.BoolFlag{
+						Name: "force",
+						Usage: "Use the specified package path even if it cannot be resolved or makes the " +
+							"enabled feature flags invalid",
+					},
+				},
+				baseFlags,
+			),
+			Action: setDeplPkgAction(versions),
+		},
+		{
+			Name: "add-depl-feat",
+			Aliases: []string{
+				"add-deployment-feature",
+				"add-deployment-features",
+				"enable-depl-feat",
+				"enable-deployment-feature",
+				"enable-deployment-features",
+			},
+			Category:  category,
+			Usage:     "Enables the specified package features in the specified deployment",
+			ArgsUsage: "deployment_name feature_name...",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.BoolFlag{
+						Name: "force",
+						Usage: "Enable the specified feature flags even if they're not allowed by the  " +
+							"deployment's package",
+					},
+				},
+				baseFlags,
+			),
+			Action: addDeplFeatAction(versions),
+		},
+		{
+			Name: "rm-depl-feat",
+			Aliases: []string{
+				"remove-deployment-feature",
+				"remove-deployment-features",
+				"disable-depl-feat",
+				"disable-deployment-feature",
+				"disable-deployment-features",
+			},
+			Category:  category,
+			Usage:     "Disables the specified package features in the specified deployment",
+			ArgsUsage: "deployment_name feature_name...",
+			Flags:     baseFlags,
+			Action:    rmDeplFeatAction(versions),
+		},
+		{
+			Name:      "set-depl-disabled",
+			Aliases:   []string{"set-deployment-disabled", "disable-depl", "disable-deployment"},
+			Category:  category,
+			Usage:     "Disables the specified deployment",
+			ArgsUsage: "deployment_name",
+			Flags:     baseFlags,
+			Action:    setDeplDisabledAction(versions, true),
+		},
+		{
+			Name:      "unset-depl-disabled",
+			Aliases:   []string{"unset-deployment-disabled", "enable-depl", "enable-deployment"},
+			Category:  category,
+			Usage:     "Enables the specified deployment",
+			ArgsUsage: "deployment_name",
+			Flags:     baseFlags,
+			Action:    setDeplDisabledAction(versions, false),
+		},
+	}
+}

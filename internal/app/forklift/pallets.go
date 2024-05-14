@@ -215,7 +215,7 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 	if err != nil {
 		return PkgReq{}, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 	}
-	fsRepoReq, err := loadFSRepoReqContaining(reposFS, pkgPath)
+	fsRepoReq, err := LoadFSRepoReqContaining(reposFS, pkgPath)
 	if err != nil {
 		return PkgReq{}, errors.Wrapf(err, "couldn't find repo providing package %s in pallet", pkgPath)
 	}
@@ -226,15 +226,15 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 
 // FSPallet: Deployments
 
-// getDeplsFS returns the [fs.FS] in the pallet which contains package deployment
+// GetDeplsFS returns the [fs.FS] in the pallet which contains package deployment
 // configurations.
-func (p *FSPallet) getDeplsFS() (core.PathedFS, error) {
+func (p *FSPallet) GetDeplsFS() (core.PathedFS, error) {
 	return p.FS.Sub(DeplsDirName)
 }
 
 // LoadDepl loads the Depl with the specified name from the pallet.
 func (p *FSPallet) LoadDepl(name string) (depl Depl, err error) {
-	deplsFS, err := p.getDeplsFS()
+	deplsFS, err := p.GetDeplsFS()
 	if err != nil {
 		return Depl{}, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from pallet",
@@ -250,7 +250,7 @@ func (p *FSPallet) LoadDepl(name string) (depl Depl, err error) {
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
 func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
-	fsys, err := p.getDeplsFS()
+	fsys, err := p.GetDeplsFS()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "couldn't open directory for package deployment configurations from pallet",
