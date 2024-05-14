@@ -366,7 +366,21 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "deployment_name...",
 			Action:    rmDeplAction(versions),
 		},
-		// TODO: add an add-depl-feat depl_path [feature]... action
+		{
+			Name:      "add-depl-feat",
+			Aliases:   []string{"add-deployment-feature", "add-deployment-features"},
+			Category:  category,
+			Usage:     "Enables the specified package features in the specified deployment",
+			ArgsUsage: "deployment_name feature_name...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Enable the specified feature flags even if they're not allowed by the  " +
+						"deployment's package",
+				},
+			},
+			Action: addDeplFeatAction(versions),
+		},
 		// TODO: add an rm-depl-feat depl_path [feature]... action
 		// TODO: add a set-depl-pkg action
 		// TODO: add a set-depl-disabled action

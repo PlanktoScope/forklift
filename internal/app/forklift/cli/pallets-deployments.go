@@ -14,6 +14,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // Print
@@ -35,7 +36,7 @@ func PrintDeplInfo(
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't find package deployment specification %s in pallet %s",
+			err, "couldn't find package deployment declaration %s in pallet %s",
 			deplName, pallet.FS.Path(),
 		)
 	}
@@ -251,7 +252,7 @@ func PrintDeplPkgPath(
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't find package deployment specification %s in pallet %s",
+			err, "couldn't find package deployment declaration %s in pallet %s",
 			deplName, pallet.FS.Path(),
 		)
 	}
@@ -302,28 +303,8 @@ func AddDepl(
 		IndentedPrintf(indent, "Warning: package deployment has invalid settings: %s", err.Error())
 	}
 
-	deplsFS, err := pallet.GetDeplsFS()
-	if err != nil {
-		return err
-	}
-	deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", deplName))
-	buf := bytes.Buffer{}
-	encoder := yaml.NewEncoder(&buf)
-	const yamlIndent = 2
-	encoder.SetIndent(yamlIndent)
-	if err = encoder.Encode(depl.Def); err != nil {
-		return errors.Wrapf(err, "couldn't marshal package deployment for %s", deplPath)
-	}
-	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
-		return errors.Wrapf(
-			err, "couldn't make directory %s", filepath.FromSlash(path.Dir(deplPath)),
-		)
-	}
-	const perm = 0o644 // owner rw, group r, public r
-	if err := os.WriteFile(filepath.FromSlash(deplPath), buf.Bytes(), perm); err != nil {
-		return errors.Wrapf(
-			err, "couldn't save deployment declaration to %s", filepath.FromSlash(deplPath),
-		)
+	if err := writeDepl(pallet, depl); err != nil {
+		return errors.Wrapf(err, "couldn't save deployment %s", deplName)
 	}
 	return nil
 }
@@ -352,6 +333,33 @@ func checkDepl(
 	return nil
 }
 
+func writeDepl(pallet *forklift.FSPallet, depl forklift.Depl) error {
+	deplsFS, err := pallet.GetDeplsFS()
+	if err != nil {
+		return err
+	}
+	deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", depl.Name))
+	buf := bytes.Buffer{}
+	encoder := yaml.NewEncoder(&buf)
+	const yamlIndent = 2
+	encoder.SetIndent(yamlIndent)
+	if err = encoder.Encode(depl.Def); err != nil {
+		return errors.Wrapf(err, "couldn't marshal package deployment for %s", deplPath)
+	}
+	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
+		return errors.Wrapf(
+			err, "couldn't make directory %s", filepath.FromSlash(path.Dir(deplPath)),
+		)
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(filepath.FromSlash(deplPath), buf.Bytes(), perm); err != nil {
+		return errors.Wrapf(
+			err, "couldn't save deployment declaration to %s", filepath.FromSlash(deplPath),
+		)
+	}
+	return nil
+}
+
 // Remove
 
 func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) error {
@@ -370,5 +378,60 @@ func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) erro
 	}
 	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the
 	// end?
+	return nil
+}
+
+// Add Feature
+
+func AddDeplFeat(
+	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
+	deplName string, features []string, force bool,
+) error {
+	IndentedPrintf(indent, "Enabling features %+v in package deployment %s...\n", deplName, features)
+	depl, err := pallet.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find package deployment declaration %s in pallet %s",
+			deplName, pallet.FS.Path(),
+		)
+	}
+	resolved, err := forklift.ResolveDepl(pallet, pkgLoader, depl)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
+	}
+
+	existingFeatures := make(structures.Set[string])
+	for _, name := range resolved.Def.Features {
+		existingFeatures.Add(name)
+	}
+	allowedFeatures := resolved.Pkg.Def.Features
+	unrecognizedFeatures := make([]string, 0, len(features))
+	newFeatures := make([]string, 0, len(features))
+	for _, name := range features {
+		if _, ok := allowedFeatures[name]; !ok {
+			unrecognizedFeatures = append(unrecognizedFeatures, name)
+		}
+		if existingFeatures.Has(name) {
+			continue
+		}
+		newFeatures = append(newFeatures, name)
+		existingFeatures.Add(name) // suppress duplicates in the input features list
+	}
+	if len(unrecognizedFeatures) > 0 {
+		err := errors.Errorf(
+			"feature flags %+v are allowed by package %s; to skip this check, enable the --force flag",
+			unrecognizedFeatures, depl.Def.Package,
+		)
+		if !force {
+			return err
+		}
+		IndentedPrintf(indent, "Warning: %s", err.Error())
+	}
+
+	depl.Def.Features = append(depl.Def.Features, newFeatures...)
+
+	if err := writeDepl(pallet, depl); err != nil {
+		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
+	}
 	return nil
 }

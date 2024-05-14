@@ -58,10 +58,10 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		deplPath := c.Args().Slice()[0]
+		deplName := c.Args().Slice()[0]
 		pkgPath := c.Args().Slice()[1]
 		if err = fcli.AddDepl(
-			0, pallet, repoCache, deplPath, pkgPath, c.StringSlice("feature"), c.Bool("disabled"),
+			0, pallet, repoCache, deplName, pkgPath, c.StringSlice("feature"), c.Bool("disabled"),
 			c.Bool("force"),
 		); err != nil {
 			return err
@@ -88,6 +88,34 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.RemoveDepls(0, pallet, c.Args().Slice()); err != nil {
+			return err
+		}
+
+		fmt.Println("Done!")
+		return nil
+	}
+}
+
+// add-depl-feat
+
+func addDeplFeatAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
+		if err != nil {
+			return err
+		}
+		if err = fcli.CheckShallowCompatibility(
+			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			c.Bool("ignore-tool-version"),
+		); err != nil {
+			return err
+		}
+
+		deplName := c.Args().Slice()[0]
+		features := c.Args().Slice()[1:]
+		if err = fcli.AddDeplFeat(
+			0, pallet, repoCache, deplName, features, c.Bool("force"),
+		); err != nil {
 			return err
 		}
 
