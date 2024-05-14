@@ -292,7 +292,14 @@ func makeModifyDeplSubcmds(versions Versions) []*cli.Command {
 			},
 			Action: addDeplFeatAction(versions),
 		},
-		// TODO: add an rm-depl-feat depl_path [feature]... action
+		{
+			Name:      "rm-depl-feat",
+			Aliases:   []string{"remove-deployment-feature", "remove-deployment-features"},
+			Category:  category,
+			Usage:     "Disables the specified package features in the specified deployment",
+			ArgsUsage: "deployment_name feature_name...",
+			Action:    rmDeplFeatAction(versions),
+		},
 		// TODO: add a set-depl-pkg action
 		// TODO: add a set-depl-disabled action
 	}

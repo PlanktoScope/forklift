@@ -387,7 +387,7 @@ func AddDeplFeat(
 	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
 	deplName string, features []string, force bool,
 ) error {
-	IndentedPrintf(indent, "Enabling features %+v in package deployment %s...\n", deplName, features)
+	IndentedPrintf(indent, "Enabling features %+v in package deployment %s...\n", features, deplName)
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
@@ -401,7 +401,7 @@ func AddDeplFeat(
 	}
 
 	existingFeatures := make(structures.Set[string])
-	for _, name := range resolved.Def.Features {
+	for _, name := range depl.Def.Features {
 		existingFeatures.Add(name)
 	}
 	allowedFeatures := resolved.Pkg.Def.Features
@@ -429,7 +429,39 @@ func AddDeplFeat(
 	}
 
 	depl.Def.Features = append(depl.Def.Features, newFeatures...)
+	if err := writeDepl(pallet, depl); err != nil {
+		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
+	}
+	return nil
+}
 
+// Remove Feature
+
+func RemoveDeplFeat(
+	indent int, pallet *forklift.FSPallet, deplName string, features []string,
+) error {
+	IndentedPrintf(indent, "Disabling features %+v in package deployment %s...\n", features, deplName)
+	depl, err := pallet.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find package deployment declaration %s in pallet %s",
+			deplName, pallet.FS.Path(),
+		)
+	}
+
+	removedFeatures := make(structures.Set[string])
+	for _, name := range features {
+		removedFeatures.Add(name)
+	}
+	newFeatures := make([]string, 0, len(depl.Def.Features))
+	for _, name := range depl.Def.Features {
+		if removedFeatures.Has(name) {
+			continue
+		}
+		newFeatures = append(newFeatures, name)
+	}
+
+	depl.Def.Features = newFeatures
 	if err := writeDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `[dev] plt add-depl` subcommand which adds a package deployment at the specified deployment name, for the specified package path (and optionally for the specified feature flags and enabled/disabled setting).
 - Added a `[dev] plt rm-depl` subcommand which deletes the package deployment declaration(s) at the specified deployment name(s), as the inverse of the `[dev] plt add-depl` subcommand.
 - Added a `[dev] plt add-depl-feat` subcommand which modifies a package deployment at the specified deployment name, to enable the specified feature flags (for feature flags which are not already enabled).
+- Added a `[dev] plt rm-depl-feat` subcommand which modifies a package deployment at the specified deployment name, to disable the specified feature flags (for feature flags which are not already disabled), as the inverse of the `[dev] plt add-depl-feat` subcommand.
 
 ## 0.7.2-alpha.1 - 2024-05-07
 
