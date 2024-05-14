@@ -502,3 +502,26 @@ func RemoveDeplFeat(
 	}
 	return nil
 }
+
+// Set Disabled
+
+func SetDeplDisabled(indent int, pallet *forklift.FSPallet, deplName string, disabled bool) error {
+	if disabled {
+		IndentedPrintf(indent, "Disabling package deployment %s...\n", deplName)
+	} else {
+		IndentedPrintf(indent, "Enabling package deployment %s...\n", deplName)
+	}
+	depl, err := pallet.LoadDepl(deplName)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find package deployment declaration %s in pallet %s",
+			deplName, pallet.FS.Path(),
+		)
+	}
+
+	depl.Def.Disabled = disabled
+	if err := writeDepl(pallet, depl); err != nil {
+		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
+	}
+	return nil
+}

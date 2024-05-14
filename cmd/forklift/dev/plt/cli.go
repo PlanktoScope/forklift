@@ -318,6 +318,21 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			ArgsUsage: "deployment_name feature_name...",
 			Action:    rmDeplFeatAction(versions),
 		},
-		// TODO: add a set-depl-disabled action
+		{
+			Name:      "set-depl-disabled",
+			Aliases:   []string{"set-deployment-disabled", "disable-depl", "disable-deployment"},
+			Category:  category,
+			Usage:     "Disables the specified deployment",
+			ArgsUsage: "deployment_name",
+			Action:    setDeplDisabledAction(versions, true),
+		},
+		{
+			Name:      "unset-depl-disabled",
+			Aliases:   []string{"unset-deployment-disabled", "enable-depl", "enable-deployment"},
+			Category:  category,
+			Usage:     "Enables the specified deployment",
+			ArgsUsage: "deployment_name",
+			Action:    setDeplDisabledAction(versions, false),
+		},
 	}
 }
