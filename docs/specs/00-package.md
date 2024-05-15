@@ -1314,9 +1314,9 @@ A file export object consists of the following fields:
 
 - For the `http` source type, the source path is ignored.
 
-- For the `http-archive` source type, the source path is interpreted as being relative to the root of the archive.
+- For the `http-archive` source type, the source path is interpreted as being relative to the root of the archive. If the source path is "." or "/", all files in the archive will be exported.
 
-- For the `oci-image` source type, the source path is interpreted as being relative to the root of the container image's filesystem.
+- For the `oci-image` source type, the source path is interpreted as being relative to the root of the container image's filesystem. If the source path is "." or "/", all files in the container image will be exported.
 
 - Example:
   
