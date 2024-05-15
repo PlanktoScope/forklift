@@ -366,7 +366,9 @@ func determineFileType(
 }
 
 func extractFile(tarReader *tar.Reader, sourcePath string, exportPath string) error {
-	// var sourcefile *fs.File
+	if sourcePath == "/" || sourcePath == "." {
+		sourcePath = ""
+	}
 	fmt.Printf("exporting into %s...\n", exportPath)
 	for {
 		header, err := tarReader.Next()
@@ -376,7 +378,8 @@ func extractFile(tarReader *tar.Reader, sourcePath string, exportPath string) er
 		if err != nil {
 			return err
 		}
-		if sourcePath != header.Name && !strings.HasPrefix(header.Name, sourcePath+"/") {
+		if sourcePath != "" && sourcePath != header.Name &&
+			!strings.HasPrefix(header.Name, sourcePath+"/") {
 			continue
 		}
 		targetPath := path.Join(exportPath, strings.TrimPrefix(header.Name, sourcePath))

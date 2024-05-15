@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.7.2-alpha.4 - 2024-05-15
+
+### Fixed
+
+- (cli) Allowed the entire filetree in downloaded archives and OCI images to be used as a source for export, by specifying '/' or '.' as the source path.
+- (spec) Clarified that, for the `source` field of file export resources with `source-type` `http-archive` and `oci-image`, a value of `/` or `.` will be interpreted as specifying that all files in the archive or OCI image will be exported.
 
 ## 0.7.2-alpha.3 - 2024-05-15
 
