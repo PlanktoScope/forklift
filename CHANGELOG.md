@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.7.2-alpha.3 - 2024-05-15
+
 ### Added
 
 - (spec, cli) Added a `oci-image` file source type (for file export resources) which is downloaded and cached with `[dev] plt cache-dl` and `[dev] plt cache-all` subcommands; files can be extracted from the root filesystems of the downloaded OCI container image tarballs and exported as part of the pallet's bundle when the pallet is staged. The bundle's manifest now lists the names of downloaded OCI container images.
