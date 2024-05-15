@@ -101,7 +101,7 @@ func (b *FSBundle) getBundledPalletPath() string {
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
-	if b.Manifest.Downloads[depl.Name], err = depl.GetHTTPFileDownloadURLs(); err != nil {
+	if b.Manifest.Downloads[depl.Name], err = depl.GetDownloadURLs(); err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
 		)
@@ -241,8 +241,8 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 				if err := exportHTTPFile(export, exportPath, dlCache); err != nil {
 					return err
 				}
-			case core.FileExportSourceTypeHTTPArchive:
-				if err := exportHTTPArchiveFile(export, exportPath, dlCache); err != nil {
+			case core.FileExportSourceTypeHTTPArchive, core.FileExportSourceTypeOCIImage:
+				if err := exportArchiveFile(export, exportPath, dlCache); err != nil {
 					return err
 				}
 			default:
@@ -276,24 +276,36 @@ func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDow
 	return nil
 }
 
-func exportHTTPArchiveFile(
+func exportArchiveFile(
 	export core.FileExportRes, exportPath string, dlCache *FSDownloadCache,
 ) error {
-	kind, err := determineFileType(dlCache, export.URL)
+	kind, err := determineFileType(export, dlCache)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't determine file type of cached HTTP download %s", export.URL)
+		return errors.Wrapf(
+			err, "couldn't determine file type of cached download archive %s", export.URL,
+		)
 	}
 
-	archiveFile, err := dlCache.OpenFile(export.URL)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't open cached HTTP download %s", export.URL)
+	var archiveFile fs.File
+	switch export.SourceType {
+	default:
+		return errors.Errorf("couldn't open downloaded archive of type %s", export.SourceType)
+	case core.FileExportSourceTypeHTTPArchive:
+		if archiveFile, err = dlCache.OpenFile(export.URL); err != nil {
+			return errors.Wrapf(err, "couldn't open cached http download archive %s", export.URL)
+		}
+	case core.FileExportSourceTypeOCIImage:
+		if archiveFile, err = dlCache.OpenOCIImage(export.URL); err != nil {
+			return errors.Wrapf(err, "couldn't open cached oci image download tarball %s", export.URL)
+		}
 	}
 	defer func() {
 		if err := archiveFile.Close(); err != nil {
 			// TODO: handle this error more rigorously
-			fmt.Printf("Error: couldn't close cached HTTP download %s\n", export.URL)
+			fmt.Printf("Error: couldn't close cached download archive %s\n", export.URL)
 		}
 	}()
+
 	var archiveReader *tar.Reader
 	switch kind.MIME.Value {
 	case "application/x-tar":
@@ -315,22 +327,39 @@ func exportHTTPArchiveFile(
 	}
 	if err = extractFile(archiveReader, export.Source, exportPath); err != nil {
 		return errors.Wrapf(
-			err, "couldn't extract %s from cached HTTP download %s to %s",
+			err, "couldn't extract %s from cached download archive %s to %s",
 			export.Source, export.URL, exportPath,
 		)
 	}
 	return nil
 }
 
-func determineFileType(dlCache *FSDownloadCache, downloadURL string) (ftt.Type, error) {
-	archiveFile, err := dlCache.OpenFile(downloadURL)
-	if err != nil {
-		return filetype.Unknown, errors.Wrapf(err, "couldn't open cached HTTP download %s", downloadURL)
+func determineFileType(
+	export core.FileExportRes, dlCache *FSDownloadCache,
+) (ft ftt.Type, err error) {
+	var archiveFile fs.File
+	switch export.SourceType {
+	default:
+		return filetype.Unknown, errors.Errorf(
+			"couldn't open downloaded archive of type %s", export.SourceType,
+		)
+	case core.FileExportSourceTypeHTTPArchive:
+		if archiveFile, err = dlCache.OpenFile(export.URL); err != nil {
+			return filetype.Unknown, errors.Wrapf(
+				err, "couldn't open cached http download archive %s", export.URL,
+			)
+		}
+	case core.FileExportSourceTypeOCIImage:
+		if archiveFile, err = dlCache.OpenOCIImage(export.URL); err != nil {
+			return filetype.Unknown, errors.Wrapf(
+				err, "couldn't open cached oci image download tarball %s", export.URL,
+			)
+		}
 	}
 	defer func() {
 		if err := archiveFile.Close(); err != nil {
 			// TODO: handle this error more rigorously
-			fmt.Printf("Error: couldn't close cached HTTP download %s\n", downloadURL)
+			fmt.Printf("Error: couldn't close cached download %s\n", export.URL)
 		}
 	}()
 	return filetype.MatchReader(archiveFile)

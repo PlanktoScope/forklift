@@ -1276,90 +1276,104 @@ This optional field of the `provides` subsection is an array of file export obje
 
 A file export object consists of the following fields:
 
-- `description` is a short (one-sentence) description of the file export resource to be shown to users.
-  
-   - This field is required.
-  
-   - Example:
-     
-     ```yaml
-     description: Basic dnsmasq configuration
-     ```
+`description` is a short (one-sentence) description of the file export resource to be shown to users.
 
-- `source-type` is the way that the source file is provided for export.
-  
-   - This field is optional: if it's not specified, it's assumed to be of type `local`.
-  
-   - Allowed values are:
-     
-      - `local`: the file is provided in the package's directory, or in a subdirectory of the package.
-     
-      - `http`: the file is downloaded from an HTTP/HTTPS URL.
-     
-      - `http-archive`: the file is extracted from a `.tar.gz` or `.tar` archive downloaded from an HTTP/HTTPS URL.
-  
-   - Example:
-     
-     ```yaml
-     source-type: local
-     ```
+- This field is required.
 
-- `source` is the filesystem path of the file to be exported; the meaning of this field varies depending on the value of `source-type`.
+- Example:
   
-   - This field is optional: if it's not specified, it's assumed to be the path set by the `target` field.
-  
-   - For the `local` source type, the source path is interpreted as being relative to the path of the package.
-  
-   - For the `http` source type, the source path is ignored.
-  
-   - For the `http-archive` source type, the sourch path is interpreted as being relative to the root of the archive.
-  
-   - Example:
-     
-     ```yaml
-     source: dhcp-and-dns.conf
-     ```
+  ```yaml
+  description: Basic dnsmasq configuration
+  ```
 
-- `url` is the URL of the file to be downloaded for export; the meaning of this field varies depending on the value of `source-type`.
-  
-   - This field is required for the `http` and `http-archive` source types and ignored for the `local` source type.
-  
-   - For the `http` source type, the URL should be of the file which is downloaded and directly exported as a file.
-  
-   - For the `http-archive` source type, the URL should be of the `.tar.gz` or `.tar` archive which is downloaded so that a file within it can be exported as a file.
-  
-   - Example:
-     
-     ```yaml
-     url: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
-     ```
+`source-type` is the way that the source file is provided for export.
 
-- `target` is the path where the file should be exported to (e.g. by copying the file to that path), relative to an export directory defined by the tool which implements the Forklift packaging specification.
-  
-   - This field is required.
-  
-   - If a package deployment provides a file export with a specific target path which is identical to - or a parent directory of - the target path of a file export provided by another package deployment, those two package deployments will be in conflict with each other. For example, a file export to a target file named `overlays/etc/dnsmasq.d/dhcp-and-dns.conf` (which ensures that `overlays/etc/dnsmasq.d` is a directory) would conflict with a file export to a target file named `overlays/etc/dnsmasq.d` (which may cause `overlays/etc/dnsmasq.d` to be a non-directory file). This is because those overlapping paths would cause the file exports to overlap with each other, which is not allowed.
-  
-   - Example:
-     
-     ```yaml
-     paths:
-       - overlays/etc/dnsmasq.d/dhcp-and-dns.conf
-     ```
+- This field is optional: if it's not specified, it's assumed to be of type `local`.
 
-- `tags` is an array of strings which describe the file export. These tags are ignored in determining whether file exports conflict with each other, since they are not part of the file export's location(s).
+- Allowed values are:
   
-   - This field is optional.
+   - `local`: the file is provided in the package's directory, or in a subdirectory of the package.
   
-   - These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc.
+   - `http`: the file is downloaded from an HTTP/HTTPS URL.
   
-   - Example:
-     
-     ```yaml
-     tags:
-       - drop-in-config
-       - hostapd
-     ```
+   - `http-archive`: the file is extracted from a `.tar.gz` or `.tar` archive downloaded from an HTTP/HTTPS URL.
+  
+   - `oci-image`: the file is extracted from an [OCI v1 container image](https://github.com/opencontainers/image-spec).
+
+- Example:
+  
+  ```yaml
+  source-type: local
+  ```
+
+`source` is the filesystem path of the file to be exported; the meaning of this field varies depending on the value of `source-type`.
+
+- This field is optional: if it's not specified, it's assumed to be the path set by the `target` field.
+
+- For the `local` source type, the source path is interpreted as being relative to the path of the package.
+
+- For the `http` source type, the source path is ignored.
+
+- For the `http-archive` source type, the source path is interpreted as being relative to the root of the archive.
+
+- For the `oci-image` source type, the source path is interpreted as being relative to the root of the container image's filesystem.
+
+- Example:
+  
+  ```yaml
+  source: dhcp-and-dns.conf
+  ```
+
+`url` is the URL of the file to be downloaded for export; the meaning of this field varies depending on the value of `source-type`.
+
+This field is required for the `http` and `http-archive` source types and ignored for the `local` source type.
+
+For the `http` source type, the URL should be of the file which is downloaded and directly exported as a file.
+
+For the `http-archive` source type, the URL should be of the `.tar.gz` or `.tar` archive which is downloaded so that a file within it can be exported.
+
+For the `oci-image` source type, the URL should be the name and tag (or manifest digest) of the container image which is downloaded so that a file within it can be exported.
+
+Examples:
+
+```yaml
+url: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+```
+
+```yaml
+url: https://github.com/PlanktoScope/machine-name/releases/download/v0.1.3/machine-name_0.1.3_linux_arm.tar.gz
+```
+
+```yaml
+url: ghcr.io/planktoscope/machine-name:0.1.3
+```
+
+`target` is the path where the file should be exported to (e.g. by copying the file to that path), relative to an export directory defined by the tool which implements the Forklift packaging specification.
+
+- This field is required.
+
+- If a package deployment provides a file export with a specific target path which is identical to - or a parent directory of - the target path of a file export provided by another package deployment, those two package deployments will be in conflict with each other. For example, a file export to a target file named `overlays/etc/dnsmasq.d/dhcp-and-dns.conf` (which ensures that `overlays/etc/dnsmasq.d` is a directory) would conflict with a file export to a target file named `overlays/etc/dnsmasq.d` (which may cause `overlays/etc/dnsmasq.d` to be a non-directory file). This is because those overlapping paths would cause the file exports to overlap with each other, which is not allowed.
+
+- Example:
+  
+  ```yaml
+  paths:
+    - overlays/etc/dnsmasq.d/dhcp-and-dns.conf
+  ```
+
+`tags` is an array of strings which describe the file export. These tags are ignored in determining whether file exports conflict with each other, since they are not part of the file export's location(s).
+
+- This field is optional.
+
+- These tags have no semantic meaning within the Forklift package specification, but tag requirements can be used for arbitrary purposes. For example, tags can be used to annotate a file with information about file type, file permissions, schema versions, etc.
+
+- Example:
+  
+  ```yaml
+  tags:
+    - drop-in-config
+    - hostapd
+  ```
 
 ### `features` section
 

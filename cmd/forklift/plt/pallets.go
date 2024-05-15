@@ -76,46 +76,18 @@ func switchAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		pallet, repoCache, dlCache, err := preparePallet(
+		if err = preparePallet(
 			workspace, c.Args().First(), true, true, c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
-		)
-		if err != nil {
+		); err != nil {
 			return err
 		}
 		fmt.Println()
 
-		stageStore, err := fcli.GetStageStore(
-			workspace, c.String("stage-store"), versions.NewStageStore,
-		)
-		if err != nil {
-			return err
+		if c.Bool("apply") {
+			return applyAction(versions)(c)
 		}
-		index, err := fcli.StagePallet(
-			pallet, stageStore, repoCache, dlCache, c.String("exports"),
-			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
-			c.Bool("no-cache-img") || c.Bool("apply"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
-		)
-		if err != nil {
-			return err
-		}
-		if !c.Bool("apply") {
-			fmt.Println(
-				"Done! To apply the staged pallet, you may need to reboot or run " +
-					"`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
-			)
-			return nil
-		}
-
-		bundle, err := stageStore.LoadFSBundle(index)
-		if err != nil {
-			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", index)
-		}
-		if err = fcli.ApplyNextOrCurrentBundle(0, stageStore, bundle, c.Bool("parallel")); err != nil {
-			return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
-		}
-		fmt.Println("Done! You may need to reboot for some changes to take effect.")
-		return nil
+		return stageAction(versions)(c)
 	}
 }
 
@@ -140,33 +112,31 @@ func preparePallet(
 	workspace *forklift.FSWorkspace, gitRepoQuery string,
 	removeExistingLocalPallet, cacheStagingReqs, parallel,
 	ignoreToolVersion bool, versions Versions,
-) (
-	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
-	err error,
-) {
+) error {
 	// clone pallet
 	if removeExistingLocalPallet {
 		fmt.Println("Warning: if a local pallet already exists, it will be deleted now...")
-		if err = os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "couldn't remove local pallet")
+		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+			return errors.Wrap(err, "couldn't remove local pallet")
 		}
 	}
-	if err = fcli.CloneQueriedGitRepoUsingLocalMirror(
+	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
 		0, workspace.GetPalletCachePath(), gitRepoQuery, workspace.GetCurrentPalletPath(),
 	); err != nil {
-		return nil, nil, nil, err
+		return err
 	}
 	fmt.Println()
 	// TODO: warn if the git repo doesn't appear to be an actual pallet
 
-	if pallet, repoCache, dlCache, err = processFullBaseArgs(workspace.FS.Path(), false); err != nil {
-		return nil, nil, nil, err
+	pallet, repoCache, dlCache, err := processFullBaseArgs(workspace.FS.Path(), false)
+	if err != nil {
+		return err
 	}
 	if err = fcli.CheckShallowCompatibility(
 		pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 		ignoreToolVersion,
 	); err != nil {
-		return pallet, repoCache, dlCache, err
+		return err
 	}
 
 	// cache everything required by pallet
@@ -174,10 +144,10 @@ func preparePallet(
 		if err = fcli.CacheStagingRequirements(
 			pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
 		); err != nil {
-			return pallet, repoCache, dlCache, err
+			return err
 		}
 	}
-	return pallet, repoCache, dlCache, nil
+	return nil
 }
 
 // clone
@@ -189,7 +159,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if _, _, _, err = preparePallet(
+		if err = preparePallet(
 			workspace, c.Args().First(),
 			c.Bool("force"), !c.Bool("no-cache-req"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
@@ -197,8 +167,15 @@ func cloneAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Done!")
-		return nil
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
@@ -264,8 +241,16 @@ func pullAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 		}
-		fmt.Println("Done!")
-		return nil
+
+		switch {
+		case c.Bool("apply"):
+			return applyAction(versions)(c)
+		case c.Bool("stage"):
+			return stageAction(versions)(c)
+		default:
+			fmt.Println("Done!")
+			return nil
+		}
 	}
 }
 
