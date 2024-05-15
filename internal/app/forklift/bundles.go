@@ -365,11 +365,10 @@ func determineFileType(
 	return filetype.MatchReader(archiveFile)
 }
 
-func extractFile(tarReader *tar.Reader, sourcePath string, exportPath string) error {
+func extractFile(tarReader *tar.Reader, sourcePath, exportPath string) error {
 	if sourcePath == "/" || sourcePath == "." {
 		sourcePath = ""
 	}
-	fmt.Printf("exporting into %s...\n", exportPath)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -391,30 +390,49 @@ func extractFile(tarReader *tar.Reader, sourcePath string, exportPath string) er
 		case tar.TypeDir:
 			if err = EnsureExists(filepath.FromSlash(targetPath)); err != nil {
 				return errors.Wrapf(
-					err, "couldn't export %s from archive to %s", header.Name, targetPath,
+					err, "couldn't export directory %s from archive to %s", header.Name, targetPath,
 				)
 			}
 		case tar.TypeReg:
-			targetFile, err := os.OpenFile(
-				filepath.FromSlash(targetPath), os.O_RDWR|os.O_CREATE|os.O_TRUNC,
-				fs.FileMode(header.Mode&int64(fs.ModePerm)),
-			)
-			if err != nil {
-				return errors.Wrapf(err, "couldn't create export file at %s", targetPath)
-			}
-			defer func(file fs.File, filePath string) {
-				if err := file.Close(); err != nil {
-					// FIXME: handle this error better
-					fmt.Printf("Error: couldn't close export file %s\n", filePath)
-				}
-			}(targetFile, targetPath)
-
-			if _, err = io.Copy(targetFile, tarReader); err != nil {
+			if err = extractRegularFile(header, tarReader, sourcePath, targetPath); err != nil {
 				return errors.Wrapf(
-					err, "couldn't copy file %s in tar archive to %s", sourcePath, targetPath,
+					err, "couldn't export regular file %s from archive to %s", header.Name, targetPath,
+				)
+			}
+		case tar.TypeSymlink:
+			if err = os.Symlink(
+				filepath.FromSlash(header.Linkname), filepath.FromSlash(targetPath),
+			); err != nil {
+				return errors.Wrapf(
+					err, "couldn't export symlink %s from archive to %s", header.Name, targetPath,
 				)
 			}
 		}
+	}
+	return nil
+}
+
+func extractRegularFile(
+	header *tar.Header, tarReader *tar.Reader, sourcePath, targetPath string,
+) error {
+	targetFile, err := os.OpenFile(
+		filepath.FromSlash(targetPath), os.O_RDWR|os.O_CREATE|os.O_TRUNC,
+		fs.FileMode(header.Mode&int64(fs.ModePerm)),
+	)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't create export file at %s", targetPath)
+	}
+	defer func(file fs.File, filePath string) {
+		if err := file.Close(); err != nil {
+			// FIXME: handle this error better
+			fmt.Printf("Error: couldn't close export file %s\n", filePath)
+		}
+	}(targetFile, targetPath)
+
+	if _, err = io.Copy(targetFile, tarReader); err != nil {
+		return errors.Wrapf(
+			err, "couldn't copy file %s in tar archive to %s", sourcePath, targetPath,
+		)
 	}
 	return nil
 }
