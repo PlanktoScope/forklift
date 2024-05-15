@@ -236,16 +236,19 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Category:  category,
 			Usage:     "Initializes the local pallet from a remote release",
 			ArgsUsage: "[github_repository_path@release]",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "force",
-					Usage: "Deletes the local pallet if it already exists",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.BoolFlag{
+						Name:  "force",
+						Usage: "Deletes the local pallet if it already exists",
+					},
+					&cli.BoolFlag{
+						Name:  "no-cache-req",
+						Usage: "Don't download repositories and pallets required by this pallet after cloning",
+					},
 				},
-				&cli.BoolFlag{
-					Name:  "no-cache-req",
-					Usage: "Don't download repositories and pallets required by this pallet",
-				},
-			},
+				modifyBaseFlags,
+			),
 			Action: cloneAction(versions),
 		},
 		// TODO: add a "checkout" action
@@ -259,26 +262,36 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Name:     "pull",
 			Category: category,
 			Usage:    "Fast-forwards the local pallet to match the remote release",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "no-cache-req",
-					Usage: "Don't download repositories and pallets required by this pallet after adding " +
-						"the repo",
+			Flags: slices.Concat(
+				[]cli.Flag{
+					&cli.BoolFlag{
+						Name:  "no-cache-req",
+						Usage: "Don't download repositories and pallets required by this pallet after pulling",
+					},
 				},
-			},
+				modifyBaseFlags,
+			),
 			Action: pullAction(versions),
 		},
-		// {
-		// 	Name:  "push",
-		// 	Category:  category,
-		// 	Usage: "Updates the remote release from the local pallet",
-		// 	Action: func(c *cli.Context) error {
-		// 		fmt.Println("pushing to remote origin")
-		// 		return nil
-		// 	},
-		// },
+		// TODO: add a "push" action?
 		// remoteCmd,
 	}
+}
+
+var modifyBaseFlags []cli.Flag = []cli.Flag{
+	&cli.BoolFlag{
+		Name: "stage",
+		Usage: "Immediately stage the pallet after updating it (this flag is ignored if --apply " +
+			"is set)",
+	},
+	&cli.BoolFlag{
+		Name:  "no-cache-img",
+		Usage: "Don't download container images (this flag is only used if --stage is set)",
+	},
+	&cli.BoolFlag{
+		Name:  "apply",
+		Usage: "Immediately stage and apply the pallet after updating it",
+	},
 }
 
 //	var remoteCmd = &cli.Command{
@@ -337,21 +350,6 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 	versions Versions,
 ) []*cli.Command {
 	const category = "Modify the pallet"
-	baseFlags := []cli.Flag{
-		&cli.BoolFlag{
-			Name: "stage",
-			Usage: "Immediately stage the pallet after making the modification (this flag is ignored " +
-				"if --apply is set)",
-		},
-		&cli.BoolFlag{
-			Name:  "no-cache-img",
-			Usage: "Don't download container images (this flag is only used if --stage is set)",
-		},
-		&cli.BoolFlag{
-			Name:  "apply",
-			Usage: "Immediately apply the pallet after staging it",
-		},
-	}
 	return []*cli.Command{
 		{
 			Name:      "add-depl",
@@ -375,7 +373,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 							"specified feature flags are not allowed for it",
 					},
 				},
-				baseFlags,
+				modifyDeplBaseFlags,
 			),
 			Action: addDeplAction(versions),
 		},
@@ -385,7 +383,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Removes deployment from the pallet",
 			ArgsUsage: "deployment_name...",
-			Flags:     baseFlags,
+			Flags:     modifyDeplBaseFlags,
 			Action:    rmDeplAction(versions),
 		},
 		{
@@ -402,7 +400,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 							"enabled feature flags invalid",
 					},
 				},
-				baseFlags,
+				modifyDeplBaseFlags,
 			),
 			Action: setDeplPkgAction(versions),
 		},
@@ -426,7 +424,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 							"deployment's package",
 					},
 				},
-				baseFlags,
+				modifyDeplBaseFlags,
 			),
 			Action: addDeplFeatAction(versions),
 		},
@@ -442,7 +440,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Disables the specified package features in the specified deployment",
 			ArgsUsage: "deployment_name feature_name...",
-			Flags:     baseFlags,
+			Flags:     modifyDeplBaseFlags,
 			Action:    rmDeplFeatAction(versions),
 		},
 		{
@@ -451,7 +449,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Disables the specified deployment",
 			ArgsUsage: "deployment_name",
-			Flags:     baseFlags,
+			Flags:     modifyDeplBaseFlags,
 			Action:    setDeplDisabledAction(versions, true),
 		},
 		{
@@ -460,8 +458,24 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Category:  category,
 			Usage:     "Enables the specified deployment",
 			ArgsUsage: "deployment_name",
-			Flags:     baseFlags,
+			Flags:     modifyDeplBaseFlags,
 			Action:    setDeplDisabledAction(versions, false),
 		},
 	}
+}
+
+var modifyDeplBaseFlags []cli.Flag = []cli.Flag{
+	&cli.BoolFlag{
+		Name: "stage",
+		Usage: "Immediately stage the pallet after making the modification (this flag is ignored " +
+			"if --apply is set)",
+	},
+	&cli.BoolFlag{
+		Name:  "no-cache-img",
+		Usage: "Don't download container images (this flag is only used if --stage is set)",
+	},
+	&cli.BoolFlag{
+		Name:  "apply",
+		Usage: "Immediately stage and apply the pallet after making the modification",
+	},
 }
