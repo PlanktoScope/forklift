@@ -61,6 +61,7 @@ func checkFileExports(indent int, depls []*forklift.ResolvedDepl) error {
 		for _, export := range exports {
 			switch export.SourceType {
 			default:
+				// TODO: should we also check file exports from files in the cache of downloaded files?
 				continue
 			case core.FileExportSourceTypeLocal, "":
 			}

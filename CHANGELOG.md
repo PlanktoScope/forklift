@@ -7,35 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- (spec, cli) Added a `oci-image` file source type (for file export resources) which is downloaded and cached with `[dev] plt cache-dl` and `[dev] plt cache-all` subcommands; files can be extracted from the root filesystems of the downloaded OCI container image tarballs and exported as part of the pallet's bundle when the pallet is staged. The bundle's manifest now lists the names of downloaded OCI container images.
+
 ## 0.7.2-alpha.2 - 2024-05-13
 
-## Added
+### Added
 
-- Added a `[dev] plt rm-repo` subcommand which removes requirements for the specified repo paths, as an inverse of the `[dev] plt add-repo` subcommand.
-- Added a `[dev] plt add-depl` subcommand which adds a package deployment at the specified deployment name, for the specified package path (and optionally for the specified feature flags and enabled/disabled setting).
-- Added a `[dev] plt rm-depl` subcommand which deletes the package deployment declaration(s) at the specified deployment name(s), as the inverse of the `[dev] plt add-depl` subcommand.
-- Added a `[dev] plt set-depl-pkg` subcommand which modifies a package deployment at the specified deployment name, to change the deployment's package.
-- Added a `[dev] plt add-depl-feat` (or `[dev] plt enable-depl-feat`) subcommand which modifies a package deployment at the specified deployment name, to enable the specified feature flags (for feature flags which are not already enabled).
-- Added a `[dev] plt rm-depl-feat` (or `[dev] plt disable-depl-feat`) subcommand which modifies a package deployment at the specified deployment name, to disable the specified feature flags (for feature flags which are not already disabled), as the inverse of the `[dev] plt add-depl-feat` subcommand.
-- Added a `[dev] plt set-depl-disabled` (or `[dev] plt disable-depl`) subcommand which modifies a package deployment at the specified deployment name, to disable the deployment.
-- Added a `[dev] plt unset-depl` (or `[dev] plt enable-depl`) subcommand which modifies a package deployment at the specified deployment name, to enable the deployment.
+- (cli) Added a `[dev] plt rm-repo` subcommand which removes requirements for the specified repo paths, as an inverse of the `[dev] plt add-repo` subcommand.
+- (cli) Added a `[dev] plt add-depl` subcommand which adds a package deployment at the specified deployment name, for the specified package path (and optionally for the specified feature flags and enabled/disabled setting).
+- (cli) Added a `[dev] plt rm-depl` subcommand which deletes the package deployment declaration(s) at the specified deployment name(s), as the inverse of the `[dev] plt add-depl` subcommand.
+- (cli) Added a `[dev] plt set-depl-pkg` subcommand which modifies a package deployment at the specified deployment name, to change the deployment's package.
+- (cli) Added a `[dev] plt add-depl-feat` (or `[dev] plt enable-depl-feat`) subcommand which modifies a package deployment at the specified deployment name, to enable the specified feature flags (for feature flags which are not already enabled).
+- (cli) Added a `[dev] plt rm-depl-feat` (or `[dev] plt disable-depl-feat`) subcommand which modifies a package deployment at the specified deployment name, to disable the specified feature flags (for feature flags which are not already disabled), as the inverse of the `[dev] plt add-depl-feat` subcommand.
+- (cli) Added a `[dev] plt set-depl-disabled` (or `[dev] plt disable-depl`) subcommand which modifies a package deployment at the specified deployment name, to disable the deployment.
+- (cli) Added a `[dev] plt unset-depl` (or `[dev] plt enable-depl`) subcommand which modifies a package deployment at the specified deployment name, to enable the deployment.
 
 ## 0.7.2-alpha.1 - 2024-05-07
 
-## Fixed
+### Fixed
 
 - (cli) File permissions are now preserved in the exports of `http-archive` source files extracted from `.tar`/`.tar.gz` archives.
 
 ## 0.7.2-alpha.0 - 2024-05-07
 
-## Added
+### Added
 
 - (spec, cli) Added `source-type` and `url` fields to the file export resource, and added `http` and `http-archive` file source types; for simplicity/backwards-compatibility, by default `source-type` is assumed to be `local` (for local files) and `url` is ignored. `url` is used for `http` and `http-archive` file source types (see next changelog item).
 - (cli) `http` and `http-archive` file sources (for file export resources) are downloaded and cached with `[dev] plt cache-dl` and `[dev] plt cache-all` subcommands, and downloaded files (whether downloaded directly from an HTTP(S) URL or extracted from a `.tar.gz`/`.tar` archive downloaded from an HTTP(S) URL) are now exported as part of the pallet's bundle when the pallet is staged. The bundle's manifest now lists the URLs of downloaded files/archives.
 
 ## 0.7.1 - 2024-04-29
 
-## Added
+### Added
 
 - (cli) Added checking for validity of source paths of file exports in `[dev] plt check` and `stage check` subcommands.
 

@@ -157,8 +157,22 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 
 // ResolvedDepl: File Downloads
 
-// GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export by
-// the package deployment, with all URLs sorted alphabetically.
+// GetDownloadURLs returns a list of the URLs of files and OCI container images to be downloaded for
+// export by the package deployment, with all URLs sorted alphabetically.
+func (d *ResolvedDepl) GetDownloadURLs() ([]string, error) {
+	httpURLs, err := d.GetHTTPFileDownloadURLs()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't determine urls of http files to download")
+	}
+	ociImageNames, err := d.GetOCIImageDownloadNames()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't determine names of oci images to download")
+	}
+	return slices.Concat(httpURLs, ociImageNames), nil
+}
+
+// GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export
+// by the package deployment, with all URLs sorted alphabetically.
 func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 	downloadURLs := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
 	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
@@ -187,6 +201,34 @@ func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 	}
 	slices.Sort(downloadURLs)
 	return downloadURLs, nil
+}
+
+// GetOCIImageDownloadNames returns a list of the image names of OCI container images to be
+// downloaded for export by the package deployment, with all names sorted alphabetically.
+func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
+	imageNames := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+		if export.SourceType != core.FileExportSourceTypeOCIImage {
+			continue
+		}
+		imageNames = append(imageNames, export.URL)
+	}
+	enabledFeatures, err := d.EnabledFeatures()
+	if err != nil {
+		return imageNames, errors.Wrapf(
+			err, "couldn't determine oci images to download for export from deployment %s", d.Name,
+		)
+	}
+	for _, feature := range enabledFeatures {
+		for _, export := range feature.Provides.FileExports {
+			if export.SourceType != core.FileExportSourceTypeOCIImage {
+				continue
+			}
+			imageNames = append(imageNames, export.URL)
+		}
+	}
+	slices.Sort(imageNames)
+	return imageNames, nil
 }
 
 // ResolvedDepl: File Exports

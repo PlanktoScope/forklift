@@ -205,4 +205,5 @@ const (
 	FileExportSourceTypeLocal       = "local"
 	FileExportSourceTypeHTTP        = "http"
 	FileExportSourceTypeHTTPArchive = "http-archive"
+	FileExportSourceTypeOCIImage    = "oci-image"
 )

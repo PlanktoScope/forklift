@@ -259,7 +259,7 @@ func CacheStagingRequirements(
 		return err
 	}
 
-	fmt.Println("Downloading HTTP files to be exported by the local pallet...")
+	fmt.Println("Downloading files for export by the local pallet...")
 	if err := DownloadExportFiles(
 		1, pallet, pkgLoader, dlCache, includeDisabled, parallel,
 	); err != nil {
