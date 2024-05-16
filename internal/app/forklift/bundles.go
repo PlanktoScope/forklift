@@ -325,7 +325,7 @@ func exportArchiveFile(
 			"unrecognized archive file type: %s (.%s)", kind.MIME.Value, kind.Extension,
 		)
 	}
-	if err = extractFile(archiveReader, export.Source, exportPath); err != nil {
+	if err = extractFromArchive(archiveReader, export.Source, exportPath); err != nil {
 		return errors.Wrapf(
 			err, "couldn't extract %s from cached download archive %s to %s",
 			export.Source, export.URL, exportPath,
@@ -365,7 +365,7 @@ func determineFileType(
 	return filetype.MatchReader(archiveFile)
 }
 
-func extractFile(tarReader *tar.Reader, sourcePath, exportPath string) error {
+func extractFromArchive(tarReader *tar.Reader, sourcePath, exportPath string) error {
 	if sourcePath == "/" || sourcePath == "." {
 		sourcePath = ""
 	}
@@ -381,32 +381,49 @@ func extractFile(tarReader *tar.Reader, sourcePath, exportPath string) error {
 			!strings.HasPrefix(header.Name, sourcePath+"/") {
 			continue
 		}
-		targetPath := path.Join(exportPath, strings.TrimPrefix(header.Name, sourcePath))
-		switch header.Typeflag {
-		default:
-			return errors.Errorf(
-				"unknown type of file %s in archive: %b", header.Name, header.Typeflag,
+
+		if err = extractFile(header, tarReader, sourcePath, exportPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func extractFile(
+	header *tar.Header, tarReader *tar.Reader, sourcePath, exportPath string,
+) error {
+	targetPath := path.Join(exportPath, strings.TrimPrefix(header.Name, sourcePath))
+	switch header.Typeflag {
+	default:
+		return errors.Errorf("unknown type of file %s in archive: %b", header.Name, header.Typeflag)
+	case tar.TypeDir:
+		if err := EnsureExists(filepath.FromSlash(targetPath)); err != nil {
+			return errors.Wrapf(
+				err, "couldn't export directory %s from archive to %s", header.Name, targetPath,
 			)
-		case tar.TypeDir:
-			if err = EnsureExists(filepath.FromSlash(targetPath)); err != nil {
-				return errors.Wrapf(
-					err, "couldn't export directory %s from archive to %s", header.Name, targetPath,
-				)
-			}
-		case tar.TypeReg:
-			if err = extractRegularFile(header, tarReader, sourcePath, targetPath); err != nil {
-				return errors.Wrapf(
-					err, "couldn't export regular file %s from archive to %s", header.Name, targetPath,
-				)
-			}
-		case tar.TypeSymlink:
-			if err = os.Symlink(
-				filepath.FromSlash(header.Linkname), filepath.FromSlash(targetPath),
-			); err != nil {
-				return errors.Wrapf(
-					err, "couldn't export symlink %s from archive to %s", header.Name, targetPath,
-				)
-			}
+		}
+	case tar.TypeReg:
+		if err := extractRegularFile(header, tarReader, sourcePath, targetPath); err != nil {
+			return errors.Wrapf(
+				err, "couldn't export regular file %s from archive to %s", header.Name, targetPath,
+			)
+		}
+	case tar.TypeSymlink:
+		if err := os.Symlink(
+			filepath.FromSlash(header.Linkname), filepath.FromSlash(targetPath),
+		); err != nil {
+			return errors.Wrapf(
+				err, "couldn't export symlink %s from archive to %s", header.Name, targetPath,
+			)
+		}
+	case tar.TypeLink:
+		if err := os.Link(
+			filepath.FromSlash(path.Join(exportPath, strings.TrimPrefix(header.Linkname, sourcePath))),
+			filepath.FromSlash(targetPath),
+		); err != nil {
+			return errors.Wrapf(
+				err, "couldn't export hardlink %s from archive to %s", header.Name, targetPath,
+			)
 		}
 	}
 	return nil
