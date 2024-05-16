@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - (cli) Hard links should now be handled correctly when they need to be exported from downloaded archives or OCI images.
+- (cli) Staging a pallet now includes the download of any missing files, OCI container images, and repos required for staging.
 
 ## 0.7.2-alpha.5 - 2024-05-15
 

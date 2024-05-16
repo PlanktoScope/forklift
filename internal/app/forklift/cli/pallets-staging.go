@@ -17,6 +17,12 @@ func StagePallet(
 	exportPath, toolVersion, bundleMinVersion, newBundleForkliftVersion string,
 	skipImageCaching, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
+	if err = CacheStagingRequirements(
+		pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
+	); err != nil {
+		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")
+	}
+
 	index, err = stageStore.AllocateNew()
 	if err != nil {
 		return 0, errors.Wrap(err, "couldn't allocate a directory for staging")
