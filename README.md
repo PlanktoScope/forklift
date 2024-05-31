@@ -78,7 +78,7 @@ atomic/immutable OSes (such as
 more traditional non-atomic Linux distros (such as Raspberry Pi OS, Debian, etc.), by enabling
 atomic, composable, and reprovisionable changes for a subset of the OS. The specific scope of what
 Forklift manages depends on how Forklift gets integrated with the OS, but Forklift is intended to
-enable operators to incrementally reduce reliance on system packages, and to incrementally reduce
+enable sysadmins to incrementally reduce reliance on system packages, and to incrementally reduce
 any responsibilities of the base OS beyond acting as a container host with hardware drivers
 (e.g. for Wi-Fi).
 
