@@ -16,55 +16,74 @@
 
 <hr>
 
-A simpler, easier, and safer way to manage application/system services on embedded Linux systems.
+Composable, reprovisionable, decentralized management of apps & configs on Raspberry Pis and other
+embedded Linux systems
 
 Note: this is still an experimental prototype and is not yet ready for general use.
 
 ## Introduction
 
 Forklift is a software deployment and configuration system providing a simpler, easier, and safer
-mechanism for updating, reconfiguring, recomposing, and extending browser apps, network services,
-system services, and operating system configuration files on single-computer systems (such as a
-Raspberry Pi or a laptop), especially computers embedded in open-source scientific instruments.
+mechanism for provisioning, updating, reconfiguring, recomposing, and extending browser apps,
+network services, system services, operating system configuration files, system shell scripts and
+binaries, and other system files on single-computer systems (such as a Raspberry Pi or a laptop),
+especially computers embedded in open-source scientific instruments.
 While Forklift can also be used in other contexts, it makes tradeoffs specific to the ways in which
 many open-source scientific instruments need to be deployed and operated (e.g. intermittent internet
 access, independent administration by individual people, decentralized management & customization).
 
 For end-users operating open-source instruments with application services (e.g. network APIs or
 browser-based interfaces) and/or system services (for e.g. data backups/transfer, hardware support,
-computer networking, monitoring, etc.), Forklift aims to provide an experience for installing and
-uninstalling software similar what is achieved by app stores for mobile phones - but with more user
-control. Forklift also simplifies the process of keeping software up-to-date and the process of
-rolling software back to older versions if needed; this reduces the need to (for example) re-flash
-a Raspberry Pi's SD card with a new OS image just to update the application software running on the
-instrument while ensuring the validity of the resulting state of the system.
+computer networking, monitoring, etc.), Forklift aims to provide an experience for installing,
+updating, uninstalling software and OS customizations similar what is achieved by app stores for
+mobile phones - but with more user control. Forklift also simplifies the process of keeping software
+up-to-date and the process of rolling software back to older versions if needed; this reduces the
+need to (for example) re-flash a Raspberry Pi's SD card with a new OS image just to update the
+application software running on the instrument while ensuring the validity of the resulting state of
+the system.
 
 For open-hardware project developers, Forklift enables Linux-based devices and
-[appliances](https://en.wikipedia.org/wiki/Computer_appliance) to be retrofitted and extended with
-an open ecosystem of containerized software - device-specific or general-purpose, project-maintained
-or third-party. Forklift also provides an incremental path for migrating project-specific
-application/system services and OS configs into management by Forklift so that they can be
-configured, distributed, installed, and replaced by users just like any other app managed by
-Forklift - i.e. with version control and easy upgrades/rollbacks. The
-[PlanktoScope](https://www.planktoscope.org/), an open-source microscope for quantitative imaging of
-plankton, uses Forklift as foundational infrastructure for software releases, deployment, and
-extensibility in the
+[appliances](https://en.wikipedia.org/wiki/Computer_appliance) (especially those based on the
+Raspberry Pi) to be retrofitted and extended with an open ecosystem of containerized software -
+device-specific or general-purpose, project-maintained or third-party. Forklift also provides an
+incremental path for migrating project-specific application/system services and OS configs into
+management by Forklift so that they can be configured, distributed, installed, and replaced by users
+just like any other app managed by Forklift - i.e. with version control and easy upgrades/rollbacks.
+The [PlanktoScope](https://www.planktoscope.org/), an open-source microscope for quantitative
+imaging of plankton, uses Forklift as foundational infrastructure for software releases, deployment,
+and extensibility in the
 [PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), a
 hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
-specifically to solve the software maintenance and operations challenges experienced in the
+specifically to solve the OS/software maintenance and operations challenges experienced in the
 PlanktoScope project.
 
 For indie software developers and sysadmins familiar with DevOps and cloud-native patterns, Forklift
 is just a GitOps-inspired system which is small and simple enough to work beyond the cloud - using
-Docker Compose to avoid the architectural complexity, operational overhead, and memory usage of even
-minimal Kubernetes distributions like k0s; and bundling app deployment with the deployment of system
-files, executables, and systemd units from configuration files version-controlled in Git
-repositories. Thus, Forklift allows hassle-free management of software configurations on one or more
-machines with only occasional internet access (or, in the future, no internet access at all!) and no
-specialized ops or platform team.
+Docker Compose to avoid the unnecessary architectural complexity and overhead even minimal
+Kubernetes distributions like k3s for situations where a container workload orchestrator is
+unnecessary; and bundling app deployment with the deployment of system files, executables, and
+systemd units from configuration files version-controlled in Git repositories. Thus, Forklift allows
+hassle-free management of software configurations on one or more machines with only occasional
+internet access (or, in the future, no internet access at all!) and no specialized ops or platform
+team.
 
-For information about the design of Forklift, please refer to the
-[design document](./docs/design.md).
+For people who are Very Into Linux, Forklift is a way to bring some of the architectural benefits of
+atomic/immutable OSes (such as
+[ChromeOS](https://www.chromium.org/chromium-os/chromiumos-design-docs/filesystem-autoupdate/),
+[Fedora Atomic Desktops](https://fedoraproject.org/atomic-desktops/),
+[Universal Blue](https://universal-blue.org/),
+[Fedora CoreOS](https://fedoraproject.org/coreos/)/[IoT](https://universal-blue.org/),
+[NixOS](https://nixos.org/), [Flatcar Container Linux](https://www.flatcar.org/),
+[etc.](https://github.com/castrojo/awesome-immutable?tab=readme-ov-file#distributions)) to
+more traditional non-atomic Linux distros (such as Raspberry Pi OS, Debian, etc.), by enabling
+atomic, composable, and reprovisionable changes for a subset of the OS. The specific scope of what
+Forklift manages depends on how Forklift gets integrated with the OS, but Forklift is intended to
+enable operators to incrementally reduce reliance on system packages, and to incrementally reduce
+any responsibilities of the base OS beyond acting as a container host with hardware drivers
+(e.g. for Wi-Fi).
+
+To learn more about the design of Forklift, please refer to
+[Forklift's design document](./docs/design.md).
 
 
 ### Project Governance
