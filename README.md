@@ -25,12 +25,12 @@ Note: this is still an experimental prototype and is not yet ready for general u
 
 Forklift is a software deployment and configuration system providing a simpler, easier, and safer
 mechanism for provisioning, updating, reconfiguring, recomposing, and extending browser apps,
-network services, system services, operating system configuration files, system shell scripts and
-binaries, and other system files on single-computer systems (such as a Raspberry Pi or a laptop),
-especially computers embedded in open-source scientific instruments.
-While Forklift can also be used in other contexts, it makes tradeoffs specific to the ways in which
-many open-source scientific instruments need to be deployed and operated (e.g. intermittent internet
-access, independent administration by individual people, decentralized management & customization).
+network services, and system files on single-computer systems (such as a Raspberry Pi or a laptop).
+The design of Forklift makes tradeoffs specific to the ways in which many open-source scientific
+instruments need to be deployed and operated (e.g. intermittent internet access, independent
+administration by individual people, decentralized management & customization). For a quick
+three-minute overview of the motivation for Forklift and how it can be used, refer to
+this demo video: <https://www.youtube.com/watch?v=4lHh_NDlFKA>
 
 For end-users operating open-source instruments with application services (e.g. network APIs or
 browser-based interfaces) and/or system services (for e.g. data backups/transfer, hardware support,
