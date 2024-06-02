@@ -1,5 +1,8 @@
 #!/bin/sh
 
-echo "$ZIG_LOCAL_CACHE_DIR" >&2
-exit 1
-zig cc $@
+log="$(mktemp)"
+
+zig cc $@ 2&>1 $log
+exit_code=$?
+cat $log
+exit $exit_code
