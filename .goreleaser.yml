@@ -16,7 +16,7 @@ builds:
     - linux_arm_7
     - darwin_amd64_v1
     - darwin_arm64
-    - windows_amd64_v1
+    # - windows_amd64_v1
   overrides:
     - goos: darwin
       goarch: amd64
