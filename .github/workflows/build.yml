@@ -82,5 +82,5 @@ jobs:
 
       - name: Release test
         env:
-          MACOS_SDK=/tmp/macos-sdk-11.3
+          MACOS_SDK: /tmp/macos-sdk-11.3
         run: make build
