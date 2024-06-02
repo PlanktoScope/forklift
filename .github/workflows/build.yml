@@ -70,7 +70,7 @@ jobs:
         uses: goto-bus-stop/setup-zig@v2
 
       - name: Download macOS SDK for cross-compilation
-        uses: ethanjli/cached-download-action@v0.1.0
+        uses: ethanjli/cached-download-action@v0.1.2
         with:
           url: https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
           destination: /tmp/macos-sdk-11.3.tar.xz
@@ -82,5 +82,5 @@ jobs:
 
       - name: Release test
         env:
-          MACOS_SDK: /tmp/macos-sdk-11.3
+          MACOS_SDK: /tmp/macos-sdk-11.3/MacOSX11.3.sdk
         run: make build
