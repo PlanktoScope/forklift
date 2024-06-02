@@ -28,9 +28,6 @@ builds:
         # We use the zig toolchain for convenience:
         - CC=zig cc -target x86_64-macos
         - CXX=zig cc -target x86_64-macos
-        # These toolchains are the ones provided by the goreleaser-cross Docker image:
-        #- CC=o64-clang
-        #- CXX=o64-clang++
     - goos: darwin
       goarch: arm64
       env:
@@ -40,9 +37,6 @@ builds:
         # We use the zig toolchain for convenience:
         - CC=zig cc -target aarch64-macos
         - CXX=zig cc -target aarch64-macos
-        # These toolchains are the ones provided by the goreleaser-cross Docker image:
-        #- CC=oa64-clang
-        #- CXX=oa64-clang++
 
 archives:
   - id: forklift

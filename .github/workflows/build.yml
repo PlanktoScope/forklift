@@ -70,8 +70,5 @@ jobs:
         # Note: Zig is only used for CGo builds
         uses: goto-bus-stop/setup-zig@v2
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Release test
         run: make build
