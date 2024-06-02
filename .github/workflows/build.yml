@@ -63,11 +63,16 @@ jobs:
       - name: Set up Zig for CGo cross-compilation
         uses: goto-bus-stop/setup-zig@v2
 
-      - name: Set up Zig build cache
+      - name: Set up the zig build cache
+        run: |
+          sudo mkdir -p /tmp/zig-cache
+          sudo chown $USER /tmp/zig-cache
+
+      - name: Set up caching for the Zig build cache
         uses: Hanaasagi/zig-action-cache@v1.1.5
         env:
-          ZIG_GLOBAL_CACHE_DIR: zig-global-cache
-          ZIG_LOCAL_CACHE_DIR: zig-local-cache
+          ZIG_GLOBAL_CACHE_DIR: /tmp/zig-cache
+          ZIG_LOCAL_CACHE_DIR: /tmp/zig-cache
 
       - name: Download macOS SDK for cross-compilation
         uses: ethanjli/cached-download-action@v0.1.2
@@ -82,6 +87,5 @@ jobs:
       - name: Release test
         env:
           MACOS_SDK: /tmp/MacOSX13.3.sdk
-          ZIG_GLOBAL_CACHE_DIR: zig-global-cache
-          ZIG_LOCAL_CACHE_DIR: zig-local-cache
+          ZIG_CACHE_DIR: /tmp/zig-cache
         run: make build
