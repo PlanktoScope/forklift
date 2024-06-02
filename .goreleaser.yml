@@ -56,6 +56,8 @@ builds:
             -Wno-nullability-completeness
             -Wno-expansion-to-defined
             -Wno-macro-redefined
+        - ZIG_GLOBAL_CACHE_DIR=${{ .Env.ZIG_GLOBAL_CACHE_DIR }}
+        - ZIG_LOCAL_CACHE_DIR=${{ .Env.ZIG_LOCAL_CACHE_DIR }}
     - goos: darwin
       goarch: arm64
       env:
@@ -86,6 +88,8 @@ builds:
             -Wno-nullability-completeness
             -Wno-expansion-to-defined
             -Wno-macro-redefined
+        - ZIG_GLOBAL_CACHE_DIR=${{ .Env.ZIG_GLOBAL_CACHE_DIR }}
+        - ZIG_LOCAL_CACHE_DIR=${{ .Env.ZIG_LOCAL_CACHE_DIR }}
 
 archives:
   - id: forklift
