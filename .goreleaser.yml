@@ -34,8 +34,8 @@ builds:
         - CGO_ENABLED=1
         # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
-        - CC=echo $ZIG_LOCAL_CACHE_DIR >&2
-        - CXX=echo $ZIG_LOCAL_CACHE_DIR >&2
+        - CC=ls {{ .Env.ZIG_CACHE_DIR }} >&2
+        - CXX=ls {{ .Env.$ZIG_LOCAL_CACHE_DIR }} >&2
         # - >-
         # CC=zig cc
         #   -target x86_64-macos
@@ -68,8 +68,8 @@ builds:
         - CGO_ENABLED=1
         # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
-        - CC=echo $ZIG_LOCAL_CACHE_DIR >&2
-        - CXX=echo $ZIG_LOCAL_CACHE_DIR >&2
+        - CC=ls {{ .Env.ZIG_CACHE_DIR }} >&2
+        - CXX=ls {{ .Env.$ZIG_LOCAL_CACHE_DIR }} >&2
         # - >-
         # CC=zig cc
         #   -target aarch64-macos
