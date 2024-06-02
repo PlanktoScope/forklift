@@ -75,5 +75,5 @@ jobs:
 
       - name: Release test
         env:
-          MACOS_SDK: /MacOSX13.3.sdk
+          MACOS_SDK: MacOSX13.3.sdk
         run: make build
