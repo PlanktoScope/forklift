@@ -2,7 +2,6 @@
 
 log="$(mktemp)"
 
-zig cc $@ 2>&1 > $log
-exit_code=$?
-cat $log
+exit_code=0
+zig cc $@ --verbose 2>&1 || exit_code=$? | tee $log
 exit $exit_code
