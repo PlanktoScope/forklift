@@ -84,9 +84,7 @@ jobs:
         run: |
           tar -xJf /tmp/MacOSX13.3.sdk.tar.xz -C /tmp
           go mod download
-          echo "fsnotify:"
-          ls -l ~/go/pkg/mod/github.com/fsnotify
-          ls -lR ~/go/pkg/mod/github.com/fsnotify/fsevents@v0.1.1
+          ls -lR ~/go/pkg/mod/github.com/fsnotify/fsevents@v0.2.0
 
       - name: Release test
         env:
