@@ -83,7 +83,6 @@ jobs:
       - name: Prepare macOS SDK for cross-compilation
         run: |
           tar -xJf /tmp/MacOSX13.3.sdk.tar.xz -C /tmp
-          ls -lR ~/.cache/go-build
           ls -lR ~/.cache/go/pkg/mod/github.com/fsnotify/fsevents@v0.1.1
 
       - name: Release test
