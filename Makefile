@@ -69,7 +69,7 @@ diff: ## git diff
 build: ## goreleaser --snapshot --skip=publish --clean
 build: install
 	$(call print-target)
-	goreleaser --snapshot --skip=publish --clean
+	goreleaser --snapshot --skip=publish --clean --verbose
 
 .PHONY: release
 release: ## goreleaser --clean
