@@ -34,21 +34,20 @@ builds:
         - CGO_ENABLED=1
         # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
-        - >-
-          CC=zig cc
-            --verbose
-            -target x86_64-macos
-            --sysroot={{ .Env.MACOS_SDK }}
-            -I{{ .Env.MACOS_SDK }}/usr/include
-            -L{{ .Env.MACOS_SDK }}/usr/lib
-            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-            -framework CoreFoundation
-            -Wno-nullability-completeness
-            -Wno-expansion-to-defined
-            -Wno-macro-redefined
+        - CC=echo $ZIG_LOCAL_CACHE_DIR
+        # - >-
+        # CC=zig cc
+        #   -target x86_64-macos
+        #   --sysroot={{ .Env.MACOS_SDK }}
+        #   -I{{ .Env.MACOS_SDK }}/usr/include
+        #   -L{{ .Env.MACOS_SDK }}/usr/lib
+        #   -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+        #   -framework CoreFoundation
+        #   -Wno-nullability-completeness
+        #   -Wno-expansion-to-defined
+        #   -Wno-macro-redefined
         - >-
           CXX=zig cc
-            --verbose
             -target x86_64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -68,21 +67,20 @@ builds:
         - CGO_ENABLED=1
         # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
-        - >-
-          CC=zig cc
-            --verbose
-            -target aarch64-macos
-            --sysroot={{ .Env.MACOS_SDK }}
-            -I{{ .Env.MACOS_SDK }}/usr/include
-            -L{{ .Env.MACOS_SDK }}/usr/lib
-            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-            -framework CoreFoundation
-            -Wno-nullability-completeness
-            -Wno-expansion-to-defined
-            -Wno-macro-redefined
+        - CC=echo $ZIG_LOCAL_CACHE_DIR
+        # - >-
+        # CC=zig cc
+        #   -target aarch64-macos
+        #   --sysroot={{ .Env.MACOS_SDK }}
+        #   -I{{ .Env.MACOS_SDK }}/usr/include
+        #   -L{{ .Env.MACOS_SDK }}/usr/lib
+        #   -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+        #   -framework CoreFoundation
+        #   -Wno-nullability-completeness
+        #   -Wno-expansion-to-defined
+        #   -Wno-macro-redefined
         - >-
           CXX=zig cc
-            --verbose
             -target aarch64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
