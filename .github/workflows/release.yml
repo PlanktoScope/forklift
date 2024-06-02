@@ -27,6 +27,10 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Set up Zig
+        # Note: Zig is only used for CGo builds
+        uses: goto-bus-stop/setup-zig@v2
+
       - name: Docker login
         uses: docker/login-action@v3
         with:
