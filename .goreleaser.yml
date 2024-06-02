@@ -7,7 +7,14 @@ builds:
   main: ./cmd/forklift
   binary: forklift
   ldflags:
-    - -s -w -X main.buildVersion={{.Version}} -X main.buildCommit={{.Commit}} -X main.buildCommitTimestamp={{.CommitTimestamp}} -X main.buildSummary={{.Summary}} -X main.builtBy=goreleaser
+    - >-
+      -s
+      -w
+      -X main.buildVersion={{.Version}}
+      -X main.buildCommit={{.Commit}}
+      -X main.buildCommitTimestamp={{.CommitTimestamp}}
+      -X main.buildSummary={{.Summary}}
+      -X main.builtBy=goreleaser
   env:
     - CGO_ENABLED=0
   targets:
@@ -23,20 +30,50 @@ builds:
       goamd64: v1
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
-        # (though ideally we would remove that dependency somehow, since we don't need it)
+        # (though Forklift doesn't actually need it)
         - CGO_ENABLED=1
-        # We use the zig toolchain for convenience:
-        - CC=zig cc -target x86_64-macos
-        - CXX=zig cc -target x86_64-macos
+        # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
+        # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
+        - >-
+          CC=zig cc
+            -target x86_64-macos
+            --sysroot={{ .Env.MACOS_SDK }}
+            -I{{ .Env.MACOS_SDK }}/usr/include
+            -L{{ .Env.MACOS_SDK }}/usr/lib
+            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+            -framework CoreFoundation
+        - >-
+          CXX=zig cc
+            -target x86_64-macos
+            --sysroot={{ .Env.MACOS_SDK }}
+            -I{{ .Env.MACOS_SDK }}/usr/include
+            -L{{ .Env.MACOS_SDK }}/usr/lib
+            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+            -framework CoreFoundation
     - goos: darwin
       goarch: arm64
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
-        # (though ideally we would remove that dependency somehow, since we don't need it)
+        # (though Forklift doesn't actually need it)
         - CGO_ENABLED=1
-        # We use the zig toolchain for convenience:
-        - CC=zig cc -target aarch64-macos
-        - CXX=zig cc -target aarch64-macos
+        # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
+        # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
+        - >
+          CC=zig cc
+            -target aarch64-macos
+            --sysroot={{ .Env.MACOS_SDK }}
+            -I{{ .Env.MACOS_SDK }}/usr/include
+            -L{{ .Env.MACOS_SDK }}/usr/lib
+            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+            -framework CoreFoundation
+        - >
+          CXX=zig cc
+            -target aarch64-macos
+            --sysroot={{ .Env.MACOS_SDK }}
+            -I{{ .Env.MACOS_SDK }}/usr/include
+            -L{{ .Env.MACOS_SDK }}/usr/lib
+            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+            -framework CoreFoundation
 
 archives:
   - id: forklift
