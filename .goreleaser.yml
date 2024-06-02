@@ -35,7 +35,7 @@ builds:
         # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
         - CC=ls {{ .Env.ZIG_CACHE_DIR }} >&2
-        - CXX=ls {{ .Env.$ZIG_LOCAL_CACHE_DIR }} >&2
+        - CXX=ls {{ .Env.ZIG_LOCAL_CACHE_DIR }} >&2
         # - >-
         # CC=zig cc
         #   -target x86_64-macos
@@ -58,8 +58,8 @@ builds:
         #   -Wno-nullability-completeness
         #   -Wno-expansion-to-defined
         #   -Wno-macro-redefined
-        - ZIG_LOCAL_CACHE_DIR=${{ .Env.ZIG_CACHE_DIR }}
-        - ZIG_GLOBAL_CACHE_DIR=${{ .Env.ZIG_CACHE_DIR }}
+        - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_CACHE_DIR }}
+        - ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_CACHE_DIR }}
     - goos: darwin
       goarch: arm64
       env:
@@ -69,7 +69,7 @@ builds:
         # We use the zig toolchain for convenient and efficient cross-compiling, and so that we
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
         - CC=ls {{ .Env.ZIG_CACHE_DIR }} >&2
-        - CXX=ls {{ .Env.$ZIG_LOCAL_CACHE_DIR }} >&2
+        - CXX=ls {{ .Env.ZIG_LOCAL_CACHE_DIR }} >&2
         # - >-
         # CC=zig cc
         #   -target aarch64-macos
@@ -92,8 +92,8 @@ builds:
         #   -Wno-nullability-completeness
         #   -Wno-expansion-to-defined
         #   -Wno-macro-redefined
-        - ZIG_LOCAL_CACHE_DIR=${{ .Env.ZIG_CACHE_DIR }}
-        - ZIG_GLOBAL_CACHE_DIR=${{ .Env.ZIG_CACHE_DIR }}
+        - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_CACHE_DIR }}
+        - ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_CACHE_DIR }}
 
 archives:
   - id: forklift
