@@ -37,27 +37,27 @@ builds:
         - ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
         - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
         - >-
-          CC=zig-cc.sh
-            -target x86_64-macos
-            --sysroot={{ .Env.MACOS_SDK }}
-            -I{{ .Env.MACOS_SDK }}/usr/include
-            -L{{ .Env.MACOS_SDK }}/usr/lib
-            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-            -framework CoreFoundation
-            -Wno-nullability-completeness
-            -Wno-expansion-to-defined
-            -Wno-macro-redefined
+            CC=./zig-cc.sh
+              -target x86_64-macos
+              --sysroot={{ .Env.MACOS_SDK }}
+              -I{{ .Env.MACOS_SDK }}/usr/include
+              -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+              -framework CoreFoundation
+              -Wno-nullability-completeness
+              -Wno-expansion-to-defined
+              -Wno-macro-redefined
         - >-
-          CXX=zig-cc.sh
-            -target x86_64-macos
-            --sysroot={{ .Env.MACOS_SDK }}
-            -I{{ .Env.MACOS_SDK }}/usr/include
-            -L{{ .Env.MACOS_SDK }}/usr/lib
-            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-            -framework CoreFoundation
-            -Wno-nullability-completeness
-            -Wno-expansion-to-defined
-            -Wno-macro-redefined
+            CXX=./zig-cc.sh
+              -target x86_64-macos
+              --sysroot={{ .Env.MACOS_SDK }}
+              -I{{ .Env.MACOS_SDK }}/usr/include
+              -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+              -framework CoreFoundation
+              -Wno-nullability-completeness
+              -Wno-expansion-to-defined
+              -Wno-macro-redefined
     - goos: darwin
       goarch: arm64
       env:
@@ -69,27 +69,27 @@ builds:
         - ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
         - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
         - >-
-          CC=zig-cc.sh
-            -target aarch64-macos
-            --sysroot={{ .Env.MACOS_SDK }}
-            -I{{ .Env.MACOS_SDK }}/usr/include
-            -L{{ .Env.MACOS_SDK }}/usr/lib
-            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-            -framework CoreFoundation
-            -Wno-nullability-completeness
-            -Wno-expansion-to-defined
-            -Wno-macro-redefined
+            CC=./zig-cc.sh
+              -target aarch64-macos
+              --sysroot={{ .Env.MACOS_SDK }}
+              -I{{ .Env.MACOS_SDK }}/usr/include
+              -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+              -framework CoreFoundation
+              -Wno-nullability-completeness
+              -Wno-expansion-to-defined
+              -Wno-macro-redefined
         - >-
-          CXX=zig-cc.sh
-            -target aarch64-macos
-            --sysroot={{ .Env.MACOS_SDK }}
-            -I{{ .Env.MACOS_SDK }}/usr/include
-            -L{{ .Env.MACOS_SDK }}/usr/lib
-            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-            -framework CoreFoundation
-            -Wno-nullability-completeness
-            -Wno-expansion-to-defined
-            -Wno-macro-redefined
+            CXX=./zig-cc.sh
+              -target aarch64-macos
+              --sysroot={{ .Env.MACOS_SDK }}
+              -I{{ .Env.MACOS_SDK }}/usr/include
+              -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+              -framework CoreFoundation
+              -Wno-nullability-completeness
+              -Wno-expansion-to-defined
+              -Wno-macro-redefined
 
 archives:
   - id: forklift
