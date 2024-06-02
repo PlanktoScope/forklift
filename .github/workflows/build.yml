@@ -84,6 +84,13 @@ jobs:
         run: |
           tar -xJf /tmp/MacOSX13.3.sdk.tar.xz -C /tmp
 
+      - name: Troubleshoot Zig build caching
+        env:
+          ZIG_GLOBAL_CACHE_DIR: /tmp/zig-cache
+          ZIG_LOCAL_CACHE_DIR: /tmp/zig-cache
+        run: |
+          zig env
+
       - name: Release test
         env:
           MACOS_SDK: /tmp/MacOSX13.3.sdk
