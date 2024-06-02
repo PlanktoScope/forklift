@@ -47,17 +47,17 @@ builds:
             -Wno-nullability-completeness
             -Wno-expansion-to-defined
             -Wno-macro-redefined
-         - >-
-           CXX=zig cc
-             -target x86_64-macos
-             --sysroot={{ .Env.MACOS_SDK }}
-             -I{{ .Env.MACOS_SDK }}/usr/include
-             -L{{ .Env.MACOS_SDK }}/usr/lib
-             -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-             -framework CoreFoundation
-             -Wno-nullability-completeness
-             -Wno-expansion-to-defined
-             -Wno-macro-redefined
+        - >-
+          CXX=zig cc
+            -target x86_64-macos
+            --sysroot={{ .Env.MACOS_SDK }}
+            -I{{ .Env.MACOS_SDK }}/usr/include
+            -L{{ .Env.MACOS_SDK }}/usr/lib
+            -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
+            -framework CoreFoundation
+            -Wno-nullability-completeness
+            -Wno-expansion-to-defined
+            -Wno-macro-redefined
     - goos: darwin
       goarch: arm64
       env:
