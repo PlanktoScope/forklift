@@ -36,9 +36,9 @@ builds:
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
         - >-
           CC=
-            ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
+            "ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
             ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
-            zig cc
+            zig cc"
             -target x86_64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -50,9 +50,9 @@ builds:
             -Wno-macro-redefined
         - >-
           CXX=
-            ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
+            "ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
             ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
-            zig cc
+            zig cc"
             -target x86_64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -74,9 +74,9 @@ builds:
         - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
         - >-
           CC=
-            ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
+            "ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
             ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
-            zig cc
+            zig cc"
             -target aarch64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -88,9 +88,9 @@ builds:
             -Wno-macro-redefined
         - >-
           CXX=
-            ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
+            "ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
             ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
-            zig cc
+            zig cc"
             -target aarch64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
