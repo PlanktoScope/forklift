@@ -22,21 +22,27 @@ builds:
       goarch: amd64
       goamd64: v1
       env:
-        # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
-        # Compose CLI
+        # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
+        # (though ideally we would remove that dependency somehow, since we don't need it)
         - CGO_ENABLED=1
+        # We use the zig toolchain for convenience:
+        CC="zig cc -target x86_64-macos"
+        CXX="zig cc -target x86_64-macos"
         # These toolchains are the ones provided by the goreleaser-cross Docker image:
-        - CC=o64-clang
-        - CXX=o64-clang++
+        #- CC=o64-clang
+        #- CXX=o64-clang++
     - goos: darwin
       goarch: arm64
       env:
-        # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
-        # Compose CLI
+        # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
+        # (though ideally we would remove that dependency somehow, since we don't need it)
         - CGO_ENABLED=1
+        # We use the zig toolchain for convenience:
+        CC="zig cc -target aarch64-macos"
+        CXX="zig cc -target aarch64-macos"
         # These toolchains are the ones provided by the goreleaser-cross Docker image:
-        - CC=oa64-clang
-        - CXX=oa64-clang++
+        #- CC=oa64-clang
+        #- CXX=oa64-clang++
 
 archives:
   - id: forklift
