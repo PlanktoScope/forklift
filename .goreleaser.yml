@@ -43,6 +43,7 @@ builds:
             -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
             -framework CoreFoundation
             -Wno-nullability-completeness
+            -Wno-expansion-to-defined
         - >-
           CXX=zig cc
             -target x86_64-macos
@@ -70,6 +71,7 @@ builds:
             -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
             -framework CoreFoundation
             -Wno-nullability-completeness
+            -Wno-expansion-to-defined
         - >
           CXX=zig cc
             -target aarch64-macos
