@@ -26,8 +26,8 @@ builds:
         # (though ideally we would remove that dependency somehow, since we don't need it)
         - CGO_ENABLED=1
         # We use the zig toolchain for convenience:
-        CC="zig cc -target x86_64-macos"
-        CXX="zig cc -target x86_64-macos"
+        - CC="zig cc -target x86_64-macos"
+        - CXX="zig cc -target x86_64-macos"
         # These toolchains are the ones provided by the goreleaser-cross Docker image:
         #- CC=o64-clang
         #- CXX=o64-clang++
@@ -38,8 +38,8 @@ builds:
         # (though ideally we would remove that dependency somehow, since we don't need it)
         - CGO_ENABLED=1
         # We use the zig toolchain for convenience:
-        CC="zig cc -target aarch64-macos"
-        CXX="zig cc -target aarch64-macos"
+        - CC="zig cc -target aarch64-macos"
+        - CXX="zig cc -target aarch64-macos"
         # These toolchains are the ones provided by the goreleaser-cross Docker image:
         #- CC=oa64-clang
         #- CXX=oa64-clang++
