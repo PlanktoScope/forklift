@@ -36,6 +36,7 @@ builds:
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
         - >-
           CC=zig cc
+            -v
             -target x86_64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -47,6 +48,7 @@ builds:
             -Wno-macro-redefined
         - >-
           CXX=zig cc
+            -v
             -target x86_64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -68,6 +70,7 @@ builds:
         # don't need QEMU for arm64 builds (which would be needed by goreleaser-cross):
         - >
           CC=zig cc
+            -v
             -target aarch64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include
@@ -79,6 +82,7 @@ builds:
             -Wno-macro-redefined
         - >
           CXX=zig cc
+            -v
             -target aarch64-macos
             --sysroot={{ .Env.MACOS_SDK }}
             -I{{ .Env.MACOS_SDK }}/usr/include

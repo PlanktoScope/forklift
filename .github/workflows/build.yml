@@ -90,6 +90,7 @@ jobs:
           ZIG_LOCAL_CACHE_DIR: /tmp/zig-cache
         run: |
           zig env
+          ls -l /tmp
 
       - name: Release test
         env:
