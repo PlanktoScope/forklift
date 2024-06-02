@@ -52,6 +52,7 @@ builds:
             -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
             -framework CoreFoundation
             -Wno-nullability-completeness
+            -Wno-expansion-to-defined
     - goos: darwin
       goarch: arm64
       env:
@@ -78,6 +79,7 @@ builds:
             -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
             -framework CoreFoundation
             -Wno-nullability-completeness
+            -Wno-expansion-to-defined
 
 archives:
   - id: forklift
