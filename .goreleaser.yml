@@ -29,7 +29,7 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
-      ldflags: -s -w -v -linkmode internal
+      ldflags: -s -w -v -linkmode auto -extldflags "--verbose"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
@@ -60,7 +60,7 @@ builds:
               -Wno-deprecated-declarations
     - goos: darwin
       goarch: arm64
-      ldflags: -s -w -v -linkmode internal
+      ldflags: -s -w -v -linkmode auto -extldflags "--verbose"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
