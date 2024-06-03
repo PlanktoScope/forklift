@@ -36,12 +36,6 @@ jobs:
           name: coverage-${{ matrix.os }}
           path: coverage.*
 
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ matrix.os }}
-          path: dist
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4.4.1
         with:
@@ -95,7 +89,12 @@ jobs:
       - name: Release test
         env:
           MACOS_SDK: /tmp/MacOSX13.3.sdk
-          ZIG_CC_COMMAND: zig cc
           ZIG_GLOBAL_CACHE_DIR: ${{ steps.zig-build-cache.outputs.destination }}
           ZIG_LOCAL_CACHE_DIR: ${{ steps.zig-build-cache.outputs.destination }}
         run: make build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: dist

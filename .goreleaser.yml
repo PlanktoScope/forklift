@@ -29,7 +29,7 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
-      ldflags: -w -v
+      ldflags: -s -w -v -linkmode internal
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
@@ -39,7 +39,7 @@ builds:
         - ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
         - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
         - >-
-            CC={{ .Env.ZIG_CC_COMMAND }}
+            CC=zig cc
               -target x86_64-macos
               --sysroot={{ .Env.MACOS_SDK }}
               -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
@@ -49,7 +49,7 @@ builds:
               -Wno-macro-redefined
               -Wno-deprecated-declarations
         - >-
-            CXX={{ .Env.ZIG_CC_COMMAND }}
+            CXX=zig cc
               -target x86_64-macos
               --sysroot={{ .Env.MACOS_SDK }}
               -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
@@ -60,7 +60,7 @@ builds:
               -Wno-deprecated-declarations
     - goos: darwin
       goarch: arm64
-      ldflags: -w -v
+      ldflags: -s -w -v -linkmode internal
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
@@ -70,7 +70,7 @@ builds:
         - ZIG_GLOBAL_CACHE_DIR={{ .Env.ZIG_GLOBAL_CACHE_DIR }}
         - ZIG_LOCAL_CACHE_DIR={{ .Env.ZIG_LOCAL_CACHE_DIR }}
         - >-
-            CC={{ .Env.ZIG_CC_COMMAND }}
+            CC=zig cc
               -target aarch64-macos
               --sysroot={{ .Env.MACOS_SDK }}
               -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
@@ -80,7 +80,7 @@ builds:
               -Wno-macro-redefined
               -Wno-deprecated-declarations
         - >-
-            CXX={{ .Env.ZIG_CC_COMMAND }}
+            CXX=zig cc
               -target aarch64-macos
               --sysroot={{ .Env.MACOS_SDK }}
               -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
