@@ -6,10 +6,6 @@ builds:
 - id: forklift
   main: ./cmd/forklift
   binary: forklift
-  buildmode: c-archive
-  flags:
-    - -v
-    - -x
   ldflags:
     - >-
         -s
@@ -33,6 +29,10 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
+      buildmode: c-archive
+      flags:
+        - -v
+        - -x
       ldflags: -w -v -extldflags "--verbose"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
@@ -64,6 +64,10 @@ builds:
               -Wno-deprecated-declarations
     - goos: darwin
       goarch: arm64
+      buildmode: c-archive
+      flags:
+        - -v
+        - -x
       ldflags: -w -v -extldflags "--verbose"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
