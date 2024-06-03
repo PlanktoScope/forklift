@@ -54,6 +54,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Prepare Go package cache for cross-compilation
         run: |
           chmod +w -R ~/go/pkg
