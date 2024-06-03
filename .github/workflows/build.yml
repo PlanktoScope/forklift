@@ -96,7 +96,7 @@ jobs:
       - name: Release test
         env:
           MACOS_SDK: /tmp/MacOSX13.3.sdk
-          ZIG_CC_COMMAND: /tmp/zig-cc.sh
+          ZIG_CC_COMMAND: zig cc
           ZIG_GLOBAL_CACHE_DIR: ${{ steps.zig-build-cache.outputs.destination }}
           ZIG_LOCAL_CACHE_DIR: ${{ steps.zig-build-cache.outputs.destination }}
         run: make build

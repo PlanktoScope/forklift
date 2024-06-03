@@ -8,13 +8,13 @@ builds:
   binary: forklift
   ldflags:
     - >-
-      -s
-      -w
-      -X main.buildVersion={{.Version}}
-      -X main.buildCommit={{.Commit}}
-      -X main.buildCommitTimestamp={{.CommitTimestamp}}
-      -X main.buildSummary={{.Summary}}
-      -X main.builtBy=goreleaser
+        -s
+        -w
+        -X main.buildVersion={{.Version}}
+        -X main.buildCommit={{.Commit}}
+        -X main.buildCommitTimestamp={{.CommitTimestamp}}
+        -X main.buildSummary={{.Summary}}
+        -X main.builtBy=goreleaser
   env:
     - CGO_ENABLED=0
   targets:
@@ -28,6 +28,7 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
+      ldflags: -s -w --foobar
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
@@ -58,6 +59,7 @@ builds:
               -Wno-deprecated-declarations
     - goos: darwin
       goarch: arm64
+      ldflags: -s -w --foobar
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
