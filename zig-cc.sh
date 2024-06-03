@@ -1,6 +1,6 @@
 #!/bin/bash -eux
 
-chmod a+x $(pwd)
+chmod +w $(pwd)
 if ls -l $(pwd) | grep "fsevents"; then
   ls -l $(pwd)/.. 1>&2
   ls -l $(pwd) 1>&2
