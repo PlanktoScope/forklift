@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/bin/bash -x
 
-echo "zig-cc args: $@" 1>&2
-echo $CC
-echo $CXX
+ls -lR $WORK 1>&2
+
+zig env
 
 zig cc $@
+
+ls -lR $WORK 1>&2
