@@ -60,6 +60,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Prepare Go package cache for cross-compilation
+        run: |
+          chmod +w -R ~/go/pkg
+
       - name: Set up Zig for CGo cross-compilation
         uses: goto-bus-stop/setup-zig@v2
         with:
@@ -92,7 +96,7 @@ jobs:
       - name: Release test
         env:
           MACOS_SDK: /tmp/MacOSX13.3.sdk
-          ZIG_CC_COMMAND: /tmp/zig-cc.sh
+          ZIG_CC_COMMAND: zig cc
           ZIG_GLOBAL_CACHE_DIR: ${{ steps.zig-build-cache.outputs.destination }}
           ZIG_LOCAL_CACHE_DIR: ${{ steps.zig-build-cache.outputs.destination }}
         run: make build
