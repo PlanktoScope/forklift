@@ -314,7 +314,11 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:     "add-repo",
-			Aliases:  []string{"add-repositories", "require-repo", "require-repositories"},
+			Aliases:  []string{
+        "add-repository", "add-repositories",
+        "req-repo", "req-repository", "req-repositories",
+        "require-repo", "require-repository", "require-repositories",
+      },
 			Category: category,
 			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
 				"or branches",
@@ -330,7 +334,11 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 		},
 		{
 			Name:      "rm-repo",
-			Aliases:   []string{"remove-repositories", "drop-repo", "drop-repositories"},
+			Aliases:   []string{
+        "remove-repository", "remove-repositories",
+        "del-repo", "delete-repository", "delete-repositories",
+        "drop-repo", "drop-repository", "drop-repositories",
+      },
 			Category:  category,
 			Usage:     "Removes repo requirements from the pallet",
 			ArgsUsage: "repo_path...",
@@ -379,7 +387,10 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 		},
 		{
 			Name:      "rm-depl",
-			Aliases:   []string{"remove-deployment", "remove-deployments"},
+			Aliases:   []string{
+        "remove-deployment", "remove-deployments",
+        "del-depl", "delete-deployment", "delete-deployments",
+      },
 			Category:  category,
 			Usage:     "Removes deployment from the pallet",
 			ArgsUsage: "deployment_name...",
@@ -433,6 +444,9 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Aliases: []string{
 				"remove-deployment-feature",
 				"remove-deployment-features",
+        "del-depl-feat",
+        "delete-deployment-feature",
+        "delete-deployment-features",
 				"disable-depl-feat",
 				"disable-deployment-feature",
 				"disable-deployment-features",

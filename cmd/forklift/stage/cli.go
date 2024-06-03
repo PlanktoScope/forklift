@@ -180,7 +180,7 @@ func makeModifyBunSubcmds(versions Versions) []*cli.Command {
 		},
 		{
 			Name:      "rm-bun-name",
-			Aliases:   []string{"remove-bundle-name"},
+			Aliases:   []string{"remove-bundle-name", "del-bun-name", "delete-bundle-name"},
 			Category:  category,
 			Usage:     "Unsets a name for a staged pallet bundle",
 			ArgsUsage: "bundle_name",
@@ -188,7 +188,7 @@ func makeModifyBunSubcmds(versions Versions) []*cli.Command {
 		},
 		{
 			Name:      "rm-bun",
-			Aliases:   []string{"remove-bundle"},
+			Aliases:   []string{"remove-bundle", "del-bun", "delete-bundle"},
 			Category:  category,
 			Usage:     "Deletes the specified staged pallet bundle",
 			ArgsUsage: "bundle_index_or_name",

@@ -96,14 +96,14 @@ var Cmd = &cli.Command{
 		},
 		{
 			Name:     "rm-all",
-			Aliases:  []string{"remove-all"},
+			Aliases:  []string{"remove-all", "del-all", "delete-all"},
 			Category: "Modify the cache",
 			Usage:    "Removes all cached resources",
 			Action:   rmAllAction,
 		},
 		{
 			Name:     "rm-plt",
-			Aliases:  []string{"remove-pallets"},
+			Aliases:  []string{"remove-pallets", "del-plt", "delete-pallets"},
 			Category: "Modify the cache",
 			Usage:    "Removes locally-cached pallets",
 			// TODO: allow only removing repos matching a glob pattern
@@ -111,7 +111,7 @@ var Cmd = &cli.Command{
 		},
 		{
 			Name:     "rm-repo",
-			Aliases:  []string{"remove-repositories"},
+			Aliases:  []string{"remove-repositories", "del-repo", "delete-repositories"},
 			Category: "Modify the cache",
 			Usage:    "Removes locally-cached repos",
 			// TODO: allow only removing repos matching a glob pattern
@@ -119,7 +119,7 @@ var Cmd = &cli.Command{
 		},
 		{
 			Name:     "rm-img",
-			Aliases:  []string{"remove-images"},
+			Aliases:  []string{"remove-images", "del-img", "delete-images"},
 			Category: "Modify the cache",
 			Usage:    "Removes unused Docker container images",
 			Action:   rmImgAction,

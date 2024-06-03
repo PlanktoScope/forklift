@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- (cli) Subcommands with an `rm` verb (short for `remove`) now have `del` verb alias (short for `delete`). This enables familiarity with apk (Alpine Package Keeper) commands, and also enables `add`/`del` as a 3-character verb pair instead of `add`/`rm` as a verb pair with inconsistent verb length.
+
 ## 0.7.2 - 2024-05-31
 
 (no changes; this release just promotes v0.7.2-alpha.6 to v0.7.2)

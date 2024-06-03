@@ -25,7 +25,7 @@ var Cmd = &cli.Command{
 		},
 		{
 			Name:     "rm",
-			Aliases:  []string{"remove"},
+			Aliases:  []string{"remove", "del", "delete"},
 			Category: "Modify the Docker host",
 			Usage:    "Removes all Docker Compose applications",
 			Action:   rmAction,
