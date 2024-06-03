@@ -1,8 +1,5 @@
-#!/bin/bash -x
+#!/bin/sh
 
-sudo mkdir -p zig-build
-sudo chown $USER -R zig-build
-export ZIG_GLOBAL_CACHE_DIR="$(pwd)/zig-build"
-export ZIG_LOCAL_CACHE_DIR="$(pwd)/zig-build"
-zig env 1>&2
+sudo chown $USER -R $ZIG_GLOBAL_CACHE_DIR
+sudo chown $USER -R $ZIG_LOCAL_CACHE_DIR
 zig cc $@ 1>&2
