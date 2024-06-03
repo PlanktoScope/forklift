@@ -83,7 +83,6 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefined
               -Wno-deprecated-declarations
-              -Wl,--discard-all
         - >-
             CXX=zig cc
               -target aarch64-macos
@@ -94,7 +93,6 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefined
               -Wno-deprecated-declarations
-              -Wl,--discard-all
 
 archives:
   - id: forklift
