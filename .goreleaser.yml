@@ -6,6 +6,10 @@ builds:
 - id: forklift
   main: ./cmd/forklift
   binary: forklift
+  buildmode: c-archive
+  flags:
+    - -v
+    - -x
   ldflags:
     - >-
         -s
