@@ -49,6 +49,7 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefined
               -Wno-deprecated-declarations
+              -Wl,-x
         - >-
             CXX=zig cc
               -target x86_64-macos
@@ -59,6 +60,7 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefinedinternal
               -Wno-deprecated-declarations
+              -Wl,-x
     - goos: darwin
       goarch: arm64
       buildmode: pie
