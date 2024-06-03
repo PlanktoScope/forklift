@@ -9,5 +9,5 @@ ls -l $(pwd)/.. 1>&2
 ls -l $(pwd) 1>&2
 zig env 1>&2
 echo "zig cc $@" 1>&2
-zig cc $@ 1>&2
+strace zig cc $@ 1>&2
 exit $?
