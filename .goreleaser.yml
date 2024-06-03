@@ -40,10 +40,8 @@ builds:
             CC={{ .Env.ZIG_CC_COMMAND }}
               -target x86_64-macos
               --sysroot={{ .Env.MACOS_SDK }}
-              -I{{ .Env.MACOS_SDK }}/usr/include
-              -L{{ .Env.MACOS_SDK }}/usr/lib
-              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-              -framework CoreFoundation
+              -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks -framework CoreFoundation
               -Wno-nullability-completeness
               -Wno-expansion-to-defined
               -Wno-macro-redefined
@@ -52,10 +50,8 @@ builds:
             CXX={{ .Env.ZIG_CC_COMMAND }}
               -target x86_64-macos
               --sysroot={{ .Env.MACOS_SDK }}
-              -I{{ .Env.MACOS_SDK }}/usr/include
-              -L{{ .Env.MACOS_SDK }}/usr/lib
-              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-              -framework CoreFoundation
+              -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks -framework CoreFoundation
               -Wno-nullability-completeness
               -Wno-expansion-to-defined
               -Wno-macro-redefined
@@ -74,10 +70,8 @@ builds:
             CC={{ .Env.ZIG_CC_COMMAND }}
               -target aarch64-macos
               --sysroot={{ .Env.MACOS_SDK }}
-              -I{{ .Env.MACOS_SDK }}/usr/include
-              -L{{ .Env.MACOS_SDK }}/usr/lib
-              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-              -framework CoreFoundation
+              -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks -framework CoreFoundation
               -Wno-nullability-completeness
               -Wno-expansion-to-defined
               -Wno-macro-redefined
@@ -86,10 +80,8 @@ builds:
             CXX={{ .Env.ZIG_CC_COMMAND }}
               -target aarch64-macos
               --sysroot={{ .Env.MACOS_SDK }}
-              -I{{ .Env.MACOS_SDK }}/usr/include
-              -L{{ .Env.MACOS_SDK }}/usr/lib
-              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks
-              -framework CoreFoundation
+              -I{{ .Env.MACOS_SDK }}/usr/include -L{{ .Env.MACOS_SDK }}/usr/lib
+              -F{{ .Env.MACOS_SDK }}/System/Library/Frameworks -framework CoreFoundation
               -Wno-nullability-completeness
               -Wno-expansion-to-defined
               -Wno-macro-redefined

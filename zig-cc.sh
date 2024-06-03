@@ -1,7 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -x
 
-chmod +w $(pwd)
 zig cc $@ 1>&2
-exit_code=$?
-ls -l $(pwd)
-exit $exit_code
+exit $?
