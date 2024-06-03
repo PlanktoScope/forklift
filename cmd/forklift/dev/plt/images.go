@@ -8,6 +8,24 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
+// ls-img
+
+func lsImgAction(c *cli.Context) error {
+	pallet, cache, _, err := processFullBaseArgs(c, true, true)
+	if err != nil {
+		return err
+	}
+
+	images, err := fcli.ListRequiredImages(pallet, cache, c.Bool("include-disabled"))
+	if err != nil {
+		return err
+	}
+	for _, image := range images {
+		fmt.Println(image)
+	}
+	return nil
+}
+
 // cache-img
 
 func cacheImgAction(versions Versions) cli.ActionFunc {

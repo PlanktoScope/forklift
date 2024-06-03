@@ -74,7 +74,7 @@ func DownloadImages(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 	includeDisabled, parallel bool,
 ) error {
-	orderedImages, err := listRequiredImages(deplsLoader, pkgLoader, includeDisabled)
+	orderedImages, err := ListRequiredImages(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -95,7 +95,7 @@ func DownloadImages(
 	return downloadImagesSerial(indent, orderedImages, dc)
 }
 
-func listRequiredImages(
+func ListRequiredImages(
 	deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, includeDisabled bool,
 ) ([]string, error) {
 	depls, err := deplsLoader.LoadDepls("**/*")

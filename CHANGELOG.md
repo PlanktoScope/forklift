@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- (cli) Added a `[dev] plt ls-img` subcommand to list all images deployed by the pallet.
 - (cli) Subcommands with an `rm` verb (short for `remove`) now have `del` verb alias (short for `delete`). This enables familiarity with apk (Alpine Package Keeper) commands, and also enables `add`/`del` as a 3-character verb pair instead of `add`/`rm` as a verb pair with inconsistent verb length.
 
 ## 0.7.2 - 2024-05-31
