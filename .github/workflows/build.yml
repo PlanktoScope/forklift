@@ -84,7 +84,7 @@ jobs:
         run: |
           cp zig-cc.sh /tmp/zig-cc.sh
           chmod a+x /tmp/zig-cc.sh
-          ls -l /opt/hostedtoolcache/go/1.22.3/x64=/_/GOROOT
+          ls -l /opt/hostedtoolcache/go/
           sudo chown $USER -R /opt/hostedtoolcache/go
           tar -xJf /tmp/MacOSX13.3.sdk.tar.xz -C /tmp
 
