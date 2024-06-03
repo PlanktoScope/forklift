@@ -85,8 +85,6 @@ jobs:
           cp zig-cc.sh /tmp/zig-cc.sh
           chmod a+x /tmp/zig-cc.sh
           sudo chown $USER -R /opt/hostedtoolcache/go
-          ls -l /opt/hostedtoolcache/go/1.22.3/x64/pkg/mod/github.com/fsnotify
-          ls -l /opt/hostedtoolcache/go/1.22.3/x64/pkg/mod/github.com/fsnotify/fsevents@*
           tar -xJf /tmp/MacOSX13.3.sdk.tar.xz -C /tmp
 
       - name: Release test
