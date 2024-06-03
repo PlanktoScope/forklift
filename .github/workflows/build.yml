@@ -65,14 +65,14 @@ jobs:
 
       - name: Set up the zig build cache
         run: |
-          sudo mkdir -p zig-build
+          sudo mkdir -p ~/zig-build
           sudo chown $USER zig-build
 
       - name: Set up caching for the Zig build cache
         uses: Hanaasagi/zig-action-cache@v1.1.5
         env:
-          ZIG_GLOBAL_CACHE_DIR: /tmp/zig-build
-          ZIG_LOCAL_CACHE_DIR: /tmp/zig-build
+          ZIG_GLOBAL_CACHE_DIR: ~/zig-build
+          ZIG_LOCAL_CACHE_DIR: ~/zig-build
 
       - name: Download macOS SDK for cross-compilation
         uses: ethanjli/cached-download-action@v0.1.2
@@ -91,6 +91,6 @@ jobs:
         env:
           MACOS_SDK: /tmp/MacOSX13.3.sdk
           ZIG_CC_COMMAND: /tmp/zig-cc.sh
-          ZIG_GLOBAL_CACHE_DIR: /tmp/zig-build
-          ZIG_LOCAL_CACHE_DIR: /tmp/zig-build
+          ZIG_GLOBAL_CACHE_DIR: ~/zig-build
+          ZIG_LOCAL_CACHE_DIR: ~/zig-build
         run: make build
