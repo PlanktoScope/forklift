@@ -28,7 +28,7 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
-      ldflags: -s -w -extldflags "--help --foobar"
+      ldflags: -s -w -extldflags "-###"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
         # (though Forklift doesn't actually need it)
