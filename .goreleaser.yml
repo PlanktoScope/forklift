@@ -29,7 +29,7 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
-      buildmode: exe
+      buildmode: pie
       ldflags: -w -v -extldflags "--verbose"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
@@ -61,7 +61,7 @@ builds:
               -Wno-deprecated-declarations
     - goos: darwin
       goarch: arm64
-      buildmode: exe
+      buildmode: pie
       ldflags: -w -v -extldflags "--verbose"
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by the Docker Compose CLI
