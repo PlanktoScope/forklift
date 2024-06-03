@@ -49,7 +49,7 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefined
               -Wno-deprecated-declarations
-              -Wl,-x
+              -Wl,--discard-all
         - >-
             CXX=zig cc
               -target x86_64-macos
@@ -60,7 +60,7 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefinedinternal
               -Wno-deprecated-declarations
-              -Wl,-x
+              -Wl,--discard-all
     - goos: darwin
       goarch: arm64
       buildmode: pie
@@ -83,6 +83,7 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefined
               -Wno-deprecated-declarations
+              -Wl,--discard-all
         - >-
             CXX=zig cc
               -target aarch64-macos
@@ -93,6 +94,7 @@ builds:
               -Wno-expansion-to-defined
               -Wno-macro-redefined
               -Wno-deprecated-declarations
+              -Wl,--discard-all
 
 archives:
   - id: forklift
