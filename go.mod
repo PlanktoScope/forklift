@@ -14,7 +14,7 @@ require (
 	github.com/docker/docker v26.1.4+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.12.0
-	github.com/google/go-containerregistry v0.19.1
+	github.com/google/go-containerregistry v0.19.2
 	github.com/h2non/filetype v1.1.3
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
