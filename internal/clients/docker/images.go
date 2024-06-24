@@ -105,7 +105,7 @@ func (c *Client) InspectImage(ctx context.Context, imageHash string) (Image, err
 	return image, nil
 }
 
-func (c *Client) PruneUnusedImages(ctx context.Context) (dt.ImagesPruneReport, error) {
+func (c *Client) PruneUnusedImages(ctx context.Context) (dti.PruneReport, error) {
 	return c.Client.ImagesPrune(ctx, dtf.NewArgs(dtf.KeyValuePair{
 		// Note: it appears that the "dangling" filter sets whether to only prune dangling images;
 		// otherwise, all unused images will be pruned (which is what we want)
