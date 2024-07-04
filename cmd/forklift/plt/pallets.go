@@ -83,11 +83,22 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
 
+		// TODO: detect if there are any un-committed and un-pushed changes in the pallet as a git repo,
+		// and require special confirmation if so.
+		fmt.Printf(
+			"Warning: if a local pallet already exists, it will be deleted now to be replaced with "+
+				"%s...\n",
+			query,
+		)
+		fmt.Println()
+		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+			return errors.Wrap(err, "couldn't remove local pallet")
+		}
+
 		if err = preparePallet(
 			// Note: we don't cache staging requirements because that will be handled by the apply/stage
 			// step anyways:
-			workspace, query, true, true, false, c.Bool("parallel"),
-			c.Bool("ignore-tool-version"), versions,
+			workspace, query, true, false, c.Bool("parallel"), c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
 		}
@@ -119,20 +130,9 @@ func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 
 func preparePallet(
 	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
-	removeExistingLocalPallet, updateLocalMirror, cacheStagingReqs, parallel,
-	ignoreToolVersion bool, versions Versions,
+	updateLocalMirror, cacheStagingReqs, parallel, ignoreToolVersion bool, versions Versions,
 ) error {
 	// clone pallet
-	// TODO: detect if there are any un-committed and un-pushed changes in the pallet as a git repo,
-	// and require special confirmation if so.
-	if removeExistingLocalPallet {
-		fmt.Println("Warning: if a local pallet already exists, it will be deleted now...")
-		fmt.Println()
-		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
-			return errors.Wrap(err, "couldn't remove local pallet")
-		}
-	}
-
 	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
 		0, workspace.GetPalletCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
 		workspace.GetCurrentPalletPath(), updateLocalMirror,
@@ -257,16 +257,18 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if c.Bool("allow-downgrade") {
-			fmt.Println("Starting upgrade/downgrade...")
-		} else {
-			fmt.Println("Starting upgrade...")
+		// TODO: detect if there are any un-committed and un-pushed changes in the pallet as a git repo,
+		// and require special confirmation if so.
+		fmt.Printf("Deleting the local pallet to replace it with %s...", query)
+		fmt.Println()
+		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+			return errors.Wrap(err, "couldn't remove local pallet")
 		}
+
 		if err = preparePallet(
 			// Note: we don't cache staging requirements because that will be handled by the apply/stage
 			// step anyways:
-			workspace, query, true, false, false, c.Bool("parallel"),
-			c.Bool("ignore-tool-version"), versions,
+			workspace, query, false, false, c.Bool("parallel"), c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
 		}
@@ -452,9 +454,20 @@ func cloneAction(versions Versions) cli.ActionFunc {
 			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
 
+		if c.Bool("force") {
+			fmt.Printf(
+				"Warning: if a local pallet already exists, it will be deleted now to be replaced with "+
+					"%s...\n",
+				query,
+			)
+			fmt.Println()
+			if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
+				return errors.Wrap(err, "couldn't remove local pallet")
+			}
+		}
+
 		if err = preparePallet(
-			workspace, query,
-			c.Bool("force"), true, !c.Bool("no-cache-req"), c.Bool("parallel"),
+			workspace, query, true, !c.Bool("no-cache-req"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
@@ -504,6 +517,8 @@ func pullAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		palletPath := workspace.GetCurrentPalletPath()
+
+		// FIXME: update the local mirror
 
 		fmt.Println("Attempting to fast-forward the local pallet...")
 		updated, err := git.Pull(palletPath)

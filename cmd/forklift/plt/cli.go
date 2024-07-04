@@ -24,11 +24,17 @@ func MakeCmd(versions Versions) *cli.Command {
 		Subcommands: slices.Concat(
 			[]*cli.Command{
 				{
-					Name:      "switch",
-					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
+					Name: "switch",
+					Usage: "Initializes or replaces the local pallet with the specified pallet, and " +
+						"stages the specified pallet",
 					ArgsUsage: "[[pallet_path]@[version_query]]",
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name: "force",
+							Usage: "Even if the local pallet already exists and has uncommitted/unpushed " +
+								"changes, replace it",
+						},
 						&cli.BoolFlag{
 							Name:  "no-cache-img",
 							Usage: "Don't download container images (this flag is ignored if --apply is set)",
@@ -60,6 +66,11 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 				&cli.BoolFlag{
 					Name:  "allow-downgrade",
 					Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
+				},
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Even if the local pallet has uncommitted/unpushed changes, replace it with the " +
+						"upggraded version",
 				},
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
@@ -307,8 +318,9 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.BoolFlag{
-						Name:  "force",
-						Usage: "Deletes the local pallet if it already exists",
+						Name: "force",
+						Usage: "If a local pallet already exists, delete it to replace it with the specified" +
+							"pallet",
 					},
 					&cli.BoolFlag{
 						Name:  "no-cache-req",
@@ -336,6 +348,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 						Name:  "no-cache-req",
 						Usage: "Don't download repositories and pallets required by this pallet after pulling",
 					},
+					// TODO: add an option to fall back to a rebase if a fast-forward is not possible
 				},
 				modifyBaseFlags,
 			),
@@ -378,7 +391,7 @@ var modifyBaseFlags []cli.Flag = []cli.Flag{
 //	}
 
 func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet's requirements"
+	const category = "Modify the pallet's package repository requirements"
 	return []*cli.Command{
 		{
 			Name: "add-repo",
@@ -400,6 +413,11 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 			},
 			Action: addRepoAction(versions),
 		},
+		// TODO: add an upgrade-repo [repo_path]... command (upgrade all if no args)
+		// TODO: add a check-upgrade-repo [repo_path]... command (check all upgrades if no args)
+		// TODO: add a cache-upgrade-repo repo_path command (cache all upgrades if no args)
+		// TODO: add a show-upgrade-repo-query repo_path[@] command
+		// TODO: add a set-upgrade-repo-query repo_path@version_query command
 		{
 			Name: "rm-repo",
 			Aliases: []string{

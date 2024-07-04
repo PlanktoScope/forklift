@@ -105,7 +105,10 @@ func ResolveQueriesUsingLocalMirrors(
 	)
 	if err = updateQueriedLocalGitRepoMirrors(indent, queries, cachePath); err != nil {
 		IndentedPrintf(
-			indent, "Couldn't update local Git repo mirrors (do you have internet access?): %s\n", err,
+			indent,
+			"Warning: couldn't update local Git repo mirrors (do you have internet access? does the "+
+				"remote repo actually exist?): %s\n",
+			err,
 		)
 		return resolved, nil
 	}
