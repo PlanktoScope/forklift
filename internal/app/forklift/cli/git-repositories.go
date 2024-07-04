@@ -338,7 +338,7 @@ func downloadLockedGitRepoFromLocalMirror(
 	gitRepoCachePath := filepath.Join(
 		filepath.FromSlash(cachePath), fmt.Sprintf("%s@%s", filepath.FromSlash(gitRepoPath), version),
 	)
-	if forklift.Exists(gitRepoCachePath) {
+	if forklift.DirExists(gitRepoCachePath) {
 		// TODO: perform a disk checksum
 		return false, nil
 	}

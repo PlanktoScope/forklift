@@ -20,7 +20,7 @@ var errMissingCache = errors.New(
 
 func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
 	if ensureWorkspace {
-		if !forklift.Exists(wpath) {
+		if !forklift.DirExists(wpath) {
 			fmt.Printf("Making a new workspace at %s...", wpath)
 		}
 		if err := forklift.EnsureExists(wpath); err != nil {
@@ -40,7 +40,7 @@ func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache
 
 func getRepoCache(wpath string, ensureWorkspace bool) (*forklift.FSRepoCache, error) {
 	if ensureWorkspace {
-		if !forklift.Exists(wpath) {
+		if !forklift.DirExists(wpath) {
 			fmt.Printf("Making a new workspace at %s...", wpath)
 		}
 		if err := forklift.EnsureExists(wpath); err != nil {

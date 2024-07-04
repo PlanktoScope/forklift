@@ -92,7 +92,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 }
 
 func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
-	if !forklift.Exists(wpath) {
+	if !forklift.DirExists(wpath) {
 		fmt.Printf("Making a new workspace at %s...", wpath)
 	}
 	if err := forklift.EnsureExists(wpath); err != nil {

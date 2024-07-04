@@ -165,7 +165,7 @@ the example commands in this section.
 
 If you are running Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/) or
 your user is in
-[the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)):
+[the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user):
 
 - If you want to apply the pallet immediately, you can run `forklift pallet switch --apply` with
 your specified pallet. For example:

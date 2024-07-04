@@ -58,7 +58,7 @@ func LoadFSStageStore(fsys core.PathedFS, subdirPath string) (s *FSStageStore, e
 
 // Exists checks whether the store actually exists on the OS's filesystem.
 func (s *FSStageStore) Exists() bool {
-	return Exists(filepath.FromSlash(s.FS.Path()))
+	return DirExists(filepath.FromSlash(s.FS.Path()))
 }
 
 // Remove deletes the store from the OS's filesystem, if it exists.
@@ -126,7 +126,7 @@ func (s *FSStageStore) AllocateNew() (index int, err error) {
 	// index (i.e. Go's default-initialization for an int) can represent a missing index.
 	index = prevIndex + 1
 	newPath := filepath.FromSlash(s.GetBundlePath(index))
-	if Exists(newPath) {
+	if DirExists(newPath) {
 		return index, errors.Wrapf(err, "a stage already exists at %s", newPath)
 	}
 	if err = EnsureExists(newPath); err != nil {
@@ -234,12 +234,12 @@ func (s *FSStageStore) CommitState() error {
 	// TODO: we might want to be less sloppy about read locks vs. write locks in the future. After
 	// successfully acquiring a write lock, then we could just overwrite the swap file.
 	swapPath := path.Join(s.FS.Path(), StageStoreManifestSwapFile)
-	if Exists(filepath.FromSlash(swapPath)) {
+	if FileExists(filepath.FromSlash(swapPath)) {
 		return errors.Errorf(
 			"stage store manifest swap file %s already exists, so either another operation is "+
 				"currently running or the previous operation failed or was interrupted before it could "+
 				"finish; please ensure that no other operations are currently running and delete the swap "+
-				" file before retrying",
+				"file before retrying",
 			swapPath,
 		)
 	}

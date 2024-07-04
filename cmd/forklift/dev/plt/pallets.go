@@ -71,7 +71,7 @@ func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err er
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
 		}
-		if !forklift.Exists(replacementPath) {
+		if !forklift.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repo replacement path %s", replacementPath)
 		}
 		externalRepos, err := core.LoadFSRepos(

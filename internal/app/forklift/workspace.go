@@ -9,7 +9,15 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func Exists(dirPath string) bool {
+func FileExists(filePath string) bool {
+	results, err := os.Stat(filePath)
+	if err == nil && !results.IsDir() {
+		return true
+	}
+	return false
+}
+
+func DirExists(dirPath string) bool {
 	dir, err := os.Stat(dirPath)
 	if err == nil && dir.IsDir() {
 		return true
@@ -30,7 +38,7 @@ func EnsureExists(dirPath string) error {
 // [XDG base directory spec](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html).
 // The provided path must use the host OS's path separators.
 func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
-	if !Exists(dirPath) {
+	if !DirExists(dirPath) {
 		return nil, errors.Errorf("couldn't find workspace at %s", dirPath)
 	}
 	return &FSWorkspace{
