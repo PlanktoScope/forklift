@@ -21,6 +21,14 @@ const (
 
 const (
 	dataDirPath              = ".local/share/forklift"
-	dataCurrentPalletDirName = "pallet" // TODO: cache pallets and track the "current" one in a file?
+	dataCurrentPalletDirName = "pallet"
 	dataStageStoreDirName    = "stages"
+)
+
+// in $HOME/.config/forklift:
+
+const (
+	configDirPath                       = ".config/forklift"
+	configCurrentPalletUpgradesFile     = "pallet-upgrades.yml"
+	configCurrentPalletUpgradesSwapFile = "pallet-upgrades-swap.yml"
 )

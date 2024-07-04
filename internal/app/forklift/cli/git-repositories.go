@@ -412,15 +412,11 @@ func validateCommit(versionLock forklift.VersionLock, gitRepo *git.Repo) error {
 // Cloning to local copy
 
 func CloneQueriedGitRepoUsingLocalMirror(
-	indent int, cachePath string, query string, destination string,
+	indent int, cachePath, gitRepoPath, versionQuery, destination string,
 ) error {
-	gitRepoPath, versionQuery, ok := strings.Cut(query, "@")
-	if !ok {
-		return errors.Errorf("couldn't parse '%s' as git_repo_path@version", query)
-	}
-
-	queries := []string{query}
-	if _, err := resolveQueriesUsingLocalMirrors(indent, cachePath, queries); err != nil {
+	if _, err := resolveQueriesUsingLocalMirrors(
+		indent, cachePath, []string{gitRepoPath + "@" + versionQuery},
+	); err != nil {
 		return err
 	}
 

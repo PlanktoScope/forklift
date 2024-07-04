@@ -3,6 +3,7 @@ package plt
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -76,8 +77,14 @@ func switchAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
+
+		query, err := handlePalletQuery(workspace, c.Args().First())
+		if err != nil {
+			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
+		}
+
 		if err = preparePallet(
-			workspace, c.Args().First(), true, true, c.Bool("parallel"),
+			workspace, query, true, true, c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
@@ -109,7 +116,7 @@ func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 }
 
 func preparePallet(
-	workspace *forklift.FSWorkspace, gitRepoQuery string,
+	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
 	removeExistingLocalPallet, cacheStagingReqs, parallel,
 	ignoreToolVersion bool, versions Versions,
 ) error {
@@ -120,8 +127,10 @@ func preparePallet(
 			return errors.Wrap(err, "couldn't remove local pallet")
 		}
 	}
+
 	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
-		0, workspace.GetPalletCachePath(), gitRepoQuery, workspace.GetCurrentPalletPath(),
+		0, workspace.GetPalletCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
+		workspace.GetCurrentPalletPath(),
 	); err != nil {
 		return err
 	}
@@ -150,6 +159,76 @@ func preparePallet(
 	return nil
 }
 
+func handlePalletQuery(
+	workspace *forklift.FSWorkspace, providedQuery string,
+) (forklift.GitRepoQuery, error) {
+	query, loaded, provided, err := completePalletQuery(workspace, providedQuery)
+	if err != nil {
+		return forklift.GitRepoQuery{}, errors.Wrapf(
+			err, "couldn't complete provided version query %s", providedQuery,
+		)
+	}
+	if !query.Complete() {
+		return query, errors.Errorf(
+			"provided query %s could not be fully completed with stored query %s", provided, loaded,
+		)
+	}
+
+	printed := false
+	if !provided.Complete() {
+		fmt.Printf(
+			"Provided query %s was completed with stored query %s as %s!\n", provided, loaded, query,
+		)
+		printed = true
+	}
+	if query == loaded {
+		if printed {
+			fmt.Println()
+		}
+		return query, nil
+	}
+
+	if loaded == (forklift.GitRepoQuery{}) {
+		fmt.Printf(
+			"Initializing the tracked path & version query for the current pallet as %s...\n", query,
+		)
+	} else {
+		fmt.Printf(
+			"Updating the tracked path & version query for the current pallet from %s to %s...\n",
+			loaded, query,
+		)
+	}
+	if err := workspace.CommitCurrentPalletUpgrades(query); err != nil {
+		return query, errors.Wrapf(err, "couldn't commit pallet query %s", query)
+	}
+	fmt.Println()
+	return query, nil
+}
+
+func completePalletQuery(
+	workspace *forklift.FSWorkspace, providedQuery string,
+) (query, loaded, provided forklift.GitRepoQuery, err error) {
+	palletPath, versionQuery, ok := strings.Cut(providedQuery, "@")
+	if !ok {
+		return forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, errors.Errorf(
+			"couldn't parse '%s' as [pallet_path]@[version_query]", providedQuery,
+		)
+	}
+	provided = forklift.GitRepoQuery{
+		Path:         palletPath,
+		VersionQuery: versionQuery,
+	}
+	if loaded, err = workspace.GetCurrentPalletUpgrades(); err != nil {
+		if !provided.Complete() {
+			return forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, provided, errors.Wrap(
+				err, "couldn't load stored query for the current pallet",
+			)
+		}
+		loaded = forklift.GitRepoQuery{}
+	}
+	return loaded.Overlay(provided), loaded, provided, nil
+}
+
 // clone
 
 func cloneAction(versions Versions) cli.ActionFunc {
@@ -159,8 +238,13 @@ func cloneAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
+		query, err := handlePalletQuery(workspace, c.Args().First())
+		if err != nil {
+			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
+		}
+
 		if err = preparePallet(
-			workspace, c.Args().First(),
+			workspace, query,
 			c.Bool("force"), !c.Bool("no-cache-req"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {

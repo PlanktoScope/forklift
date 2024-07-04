@@ -26,7 +26,7 @@ func MakeCmd(versions Versions) *cli.Command {
 				{
 					Name:      "switch",
 					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
-					ArgsUsage: "[github_repository_path@release]",
+					ArgsUsage: "[github_repository_path]@[release]",
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
@@ -250,7 +250,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Name:      "clone",
 			Category:  category,
 			Usage:     "Initializes the local pallet from a remote release",
-			ArgsUsage: "[github_repository_path@release]",
+			ArgsUsage: "[github_repository_path]@[release]",
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.BoolFlag{

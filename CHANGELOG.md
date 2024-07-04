@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- (cli) Added tracking of the last pallet path@version query used with the `plt clone` and `plt switch` subcommands, so that those subcommands can be called again with a partial query (i.e. `@version_query` or `pallet_path@` or `@`) to reuse the last provided value(s) for omitted parts of the query.
+
 ### Fixed
 
 - (cli) Previously, the atomic commit mechanism for the stage store state file did not correctly error out if a swap file already existed. This check should now work.
