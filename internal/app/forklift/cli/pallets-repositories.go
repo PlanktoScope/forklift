@@ -141,7 +141,7 @@ func AddRepoRequirements(
 	if err := validateGitRepoQueries(repoQueries); err != nil {
 		return errors.Wrap(err, "one or more repo queries is invalid")
 	}
-	resolved, err := resolveQueriesUsingLocalMirrors(0, cachePath, repoQueries)
+	resolved, err := ResolveQueriesUsingLocalMirrors(0, cachePath, repoQueries, true)
 	if err != nil {
 		return err
 	}

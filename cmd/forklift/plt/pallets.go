@@ -84,7 +84,9 @@ func switchAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = preparePallet(
-			workspace, query, true, true, c.Bool("parallel"),
+			// Note: we don't cache staging requirements because that will be handled by the apply/stage
+			// step anyways:
+			workspace, query, true, true, false, c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
@@ -117,12 +119,15 @@ func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 
 func preparePallet(
 	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
-	removeExistingLocalPallet, cacheStagingReqs, parallel,
+	removeExistingLocalPallet, updateLocalMirror, cacheStagingReqs, parallel,
 	ignoreToolVersion bool, versions Versions,
 ) error {
 	// clone pallet
+	// TODO: detect if there are any un-committed and un-pushed changes in the pallet as a git repo,
+	// and require special confirmation if so.
 	if removeExistingLocalPallet {
 		fmt.Println("Warning: if a local pallet already exists, it will be deleted now...")
+		fmt.Println()
 		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
 			return errors.Wrap(err, "couldn't remove local pallet")
 		}
@@ -130,11 +135,10 @@ func preparePallet(
 
 	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
 		0, workspace.GetPalletCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
-		workspace.GetCurrentPalletPath(),
+		workspace.GetCurrentPalletPath(), updateLocalMirror,
 	); err != nil {
 		return err
 	}
-	fmt.Println()
 	// TODO: warn if the git repo doesn't appear to be an actual pallet
 
 	pallet, repoCache, dlCache, err := processFullBaseArgs(workspace.FS.Path(), false)
@@ -150,6 +154,7 @@ func preparePallet(
 
 	// cache everything required by pallet
 	if cacheStagingReqs {
+		fmt.Println()
 		if err = fcli.CacheStagingRequirements(
 			pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
 		); err != nil {
@@ -166,11 +171,6 @@ func handlePalletQuery(
 	if err != nil {
 		return forklift.GitRepoQuery{}, errors.Wrapf(
 			err, "couldn't complete provided version query %s", providedQuery,
-		)
-	}
-	if !query.Complete() {
-		return query, errors.Errorf(
-			"provided query %s could not be fully completed with stored query %s", provided, loaded,
 		)
 	}
 
@@ -208,6 +208,9 @@ func handlePalletQuery(
 func completePalletQuery(
 	workspace *forklift.FSWorkspace, providedQuery string,
 ) (query, loaded, provided forklift.GitRepoQuery, err error) {
+	if providedQuery == "" {
+		providedQuery = "@"
+	}
 	palletPath, versionQuery, ok := strings.Cut(providedQuery, "@")
 	if !ok {
 		return forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, errors.Errorf(
@@ -226,7 +229,15 @@ func completePalletQuery(
 		}
 		loaded = forklift.GitRepoQuery{}
 	}
-	return loaded.Overlay(provided), loaded, provided, nil
+	query = loaded.Overlay(provided)
+
+	if !query.Complete() {
+		return query, loaded, provided, errors.Errorf(
+			"provided query %s could not be fully completed with stored query %s", provided, loaded,
+		)
+	}
+
+	return query, loaded, provided, nil
 }
 
 // upgrade
@@ -238,18 +249,23 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		query, err := workspace.GetCurrentPalletUpgrades()
+		query, err := handlePalletQuery(workspace, c.Args().First())
 		if err != nil {
-			return errors.Wrap(err, "couldn't load stored query for upgrading the current pallet")
+			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
-		if !query.Complete() {
-			return errors.Errorf("stored query for the current pallet is incomplete: %s", query)
+		if err = checkUpgrade(0, workspace, query, c.Bool("allow-downgrade")); err != nil {
+			return err
 		}
 
-		// TODO: show what we're upgrading from, and what we're upgrading to
-
+		if c.Bool("allow-downgrade") {
+			fmt.Println("Starting upgrade/downgrade...")
+		} else {
+			fmt.Println("Starting upgrade...")
+		}
 		if err = preparePallet(
-			workspace, query, true, true, c.Bool("parallel"),
+			// Note: we don't cache staging requirements because that will be handled by the apply/stage
+			// step anyways:
+			workspace, query, true, false, false, c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
@@ -261,6 +277,133 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 		}
 		return stageAction(versions)(c)
 	}
+}
+
+func checkUpgrade(
+	indent int, workspace *forklift.FSWorkspace, upgradeQuery forklift.GitRepoQuery,
+	allowDowngrade bool,
+) error {
+	queries := []string{upgradeQuery.String()}
+
+	// Inspect the current pallet
+	pallet, err := workspace.GetCurrentPallet()
+	if err != nil {
+		return errors.Wrap(err, "couldn't load local pallet from workspace")
+	}
+	currentQuery := forklift.GitRepoQuery{}
+	ref, err := git.Head(pallet.FS.Path())
+	if err != nil {
+		// Note: the !allowDowngrade case is handled by printUpgrade. Here we print the error for the
+		// underlying reason we can't determine the current version:
+		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
+			err,
+			"we couldn't determine the current version of the local pallet, so any change could be "+
+				"either an upgrade or a downgrade",
+		))
+	} else {
+		currentQuery = forklift.GitRepoQuery{
+			Path:         pallet.Def.Pallet.Path,
+			VersionQuery: ref.Hash().String(),
+		}
+		fmt.Printf("Current pallet: %s at %s\n", pallet.Def.Pallet.Path, git.StringifyRef(ref))
+		queries = append(queries, currentQuery.String())
+	}
+	fmt.Println()
+
+	fmt.Println("Resolving version queries...")
+	resolved, err := fcli.ResolveQueriesUsingLocalMirrors(
+		// Note: we don't increase indentation level because go-git prints to stdout without indentation
+		indent, workspace.GetPalletCachePath(), queries, true,
+	)
+	if err != nil {
+		return errors.Wrap(err, "couldn't resolve version queries")
+	}
+
+	fmt.Println()
+	return printUpgrade(
+		resolved[currentQuery.String()], resolved[upgradeQuery.String()], allowDowngrade,
+	)
+	// TODO: also report whether the update is cached
+}
+
+func printUpgrade(current, upgrade forklift.GitRepoReq, allowDowngrade bool) error {
+	if current == upgrade {
+		return errors.New("no upgrade found")
+	}
+	if current == (forklift.GitRepoReq{}) {
+		if !allowDowngrade {
+			return errors.Errorf(
+				"upgrade/downgrade available to %s, but we couldn't determine whether the change is a "+
+					"downgrade because we couldn't determine the current version, and we aren't considering "+
+					"downgrades because the --allow-downgrade flag isn't set",
+				upgrade.VersionLock.Version,
+			)
+		}
+		fmt.Printf(
+			"Upgrade/downgrade available: unknown version -> %s\n", upgrade.VersionLock.Version,
+		)
+		return nil
+	}
+	operation := "Upgrade"
+	if current.RequiredPath != upgrade.RequiredPath {
+		operation = "Upgrade/downgrade"
+		if !allowDowngrade {
+			// Note: the !allowDowngrade case is handled by printUpgrade
+			return errors.Errorf(
+				"the upgrade query would change the local pallet from %s to %s, but we can't determine "+
+					"whether that might result in a downgrade, and we aren't considering downgrades because "+
+					"the --allow-downgrade flag isn't set",
+				current.RequiredPath, upgrade.RequiredPath,
+			)
+		}
+		fmt.Printf(
+			"Warning: the upgrade query would change the local pallet from %s to %s!\n",
+			current.RequiredPath, upgrade.RequiredPath,
+		)
+	} else if current.VersionLock.Version > upgrade.VersionLock.Version {
+		operation = "Downgrade"
+		if !allowDowngrade {
+			return errors.Errorf(
+				"downgrade available from %s to %s, but we aren't considering downgrades because the "+
+					"--allow-downgrade flag isn't set",
+				current.VersionLock.Version, upgrade.VersionLock.Version,
+			)
+		}
+	}
+	fmt.Printf(
+		"%s available: %s@%s -> %s@%s\n",
+		operation,
+		current.RequiredPath, current.VersionLock.Version,
+		upgrade.RequiredPath, upgrade.VersionLock.Version,
+	)
+	return nil
+}
+
+// check-upgrade
+
+func checkUpgradeAction(c *cli.Context) error {
+	workspace, err := ensureWorkspace(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+
+	providedQuery := c.Args().First()
+	query, loaded, provided, err := completePalletQuery(workspace, providedQuery)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't complete provided version query %s", providedQuery)
+	}
+	if providedQuery == "" {
+		fmt.Printf("Loaded upgrade query: %s\n", query)
+	} else if !provided.Complete() {
+		fmt.Printf(
+			"Provided query %s was completed with stored query %s as %s!\n", provided, loaded, query,
+		)
+	}
+
+	if err := checkUpgrade(0, workspace, query, c.Bool("allow-downgrade")); err != nil {
+		return err
+	}
+	return nil
 }
 
 // show-upgrade-query
@@ -311,11 +454,12 @@ func cloneAction(versions Versions) cli.ActionFunc {
 
 		if err = preparePallet(
 			workspace, query,
-			c.Bool("force"), !c.Bool("no-cache-req"), c.Bool("parallel"),
+			c.Bool("force"), true, !c.Bool("no-cache-req"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
 		}
+		fmt.Println()
 
 		switch {
 		case c.Bool("apply"):

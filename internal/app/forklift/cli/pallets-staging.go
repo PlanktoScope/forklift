@@ -22,6 +22,7 @@ func StagePallet(
 	); err != nil {
 		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")
 	}
+	fmt.Println()
 
 	index, err = stageStore.AllocateNew()
 	if err != nil {

@@ -26,7 +26,7 @@ func MakeCmd(versions Versions) *cli.Command {
 				{
 					Name:      "switch",
 					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
-					ArgsUsage: "[pallet_path]@[version_query]",
+					ArgsUsage: "[[pallet_path]@[version_query]]",
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
@@ -54,8 +54,13 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 			Name: "upgrade",
 			Usage: "Replaces the local pallet with an upgraded version, updates the cache, and " +
 				"stages the pallet",
-			Action: upgradeAction(versions),
+			ArgsUsage: "[[pallet_path]@[version_query]]",
+			Action:    upgradeAction(versions),
 			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "allow-downgrade",
+					Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
+				},
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
 					Usage: "Don't download container images (this flag is ignored if --apply is set)",
@@ -67,6 +72,21 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 			},
 		},
 		{
+			Name: "check-upgrade",
+			// TODO: also check whether the upgrade is cached
+			Usage:     "Checks whether an upgrade is available",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
+			Action:    checkUpgradeAction,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "allow-downgrade",
+					Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
+				},
+				// TODO: add a --require-cached flag
+			},
+		},
+		// TODO: add a cache-upgrade command
+		{
 			Name:   "show-upgrade-query",
 			Usage:  "Shows the query used for pallet upgrades",
 			Action: showUpgradeQueryAction,
@@ -74,7 +94,7 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 		{
 			Name:      "set-upgrade-query",
 			Usage:     "Changes the query used for pallet upgrades",
-			ArgsUsage: "[pallet_path]@[version_query]",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
 			Action:    setUpgradeQueryAction,
 		},
 	}
@@ -283,7 +303,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Name:      "clone",
 			Category:  category,
 			Usage:     "Initializes the local pallet from a remote release",
-			ArgsUsage: "[pallet_path]@[version_query]",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.BoolFlag{

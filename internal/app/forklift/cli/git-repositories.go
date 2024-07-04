@@ -24,7 +24,7 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 	if err = validateGitRepoQueries(queries); err != nil {
 		return nil, nil, errors.Wrap(err, "one or more arguments is invalid")
 	}
-	if resolved, err = resolveQueriesUsingLocalMirrors(indent, cachePath, queries); err != nil {
+	if resolved, err = ResolveQueriesUsingLocalMirrors(indent, cachePath, queries, true); err != nil {
 		return nil, nil, err
 	}
 
@@ -63,18 +63,24 @@ func validateGitRepoQueries(queries []string) error {
 	return nil
 }
 
-func resolveQueriesUsingLocalMirrors(
-	indent int, cachePath string, queries []string,
+func ResolveQueriesUsingLocalMirrors(
+	indent int, cachePath string, queries []string, updateLocalMirror bool,
 ) (resolved map[string]forklift.GitRepoReq, err error) {
 	IndentedPrintln(indent, "Resolving version queries using local mirrors of remote Git repos...")
 	resolved, err = resolveGitRepoQueriesUsingLocalMirrors(indent, queries, cachePath)
-	fmt.Println()
 	if err != nil {
+		fmt.Println()
+		if !updateLocalMirror {
+			return resolved, errors.Wrap(
+				err, "couldn't resolve one or more version queries, and we're not updating local mirrors",
+			)
+		}
 		IndentedPrintln(
 			indent,
 			"Couldn't resolve one or more version queries, so we'll update local mirrors of remote Git "+
 				"repos and try again",
 		)
+
 		IndentedPrintln(indent, "Updating local mirrors of remote Git repos...")
 		if err = updateQueriedLocalGitRepoMirrors(indent, queries, cachePath); err != nil {
 			return nil, errors.Wrap(err, "couldn't update local Git repo mirrors")
@@ -87,6 +93,10 @@ func resolveQueriesUsingLocalMirrors(
 			return nil, errors.Wrap(err, "couldn't resolve version queries for repos")
 		}
 		return resolved, err
+	}
+
+	if !updateLocalMirror {
+		return resolved, nil
 	}
 
 	IndentedPrintln(
@@ -170,7 +180,7 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 			)
 		}
 
-		IndentedPrintf(indent, "Resolved %s as %+v", query, req.VersionLock.Version)
+		IndentedPrintf(indent+1, "Resolved %s as %+v", query, req.VersionLock.Version)
 		fmt.Println()
 		resolved[query] = req
 	}
@@ -412,10 +422,10 @@ func validateCommit(versionLock forklift.VersionLock, gitRepo *git.Repo) error {
 // Cloning to local copy
 
 func CloneQueriedGitRepoUsingLocalMirror(
-	indent int, cachePath, gitRepoPath, versionQuery, destination string,
+	indent int, cachePath, gitRepoPath, versionQuery, destination string, updateLocalMirror bool,
 ) error {
-	if _, err := resolveQueriesUsingLocalMirrors(
-		indent, cachePath, []string{gitRepoPath + "@" + versionQuery},
+	if _, err := ResolveQueriesUsingLocalMirrors(
+		indent, cachePath, []string{gitRepoPath + "@" + versionQuery}, updateLocalMirror,
 	); err != nil {
 		return err
 	}
