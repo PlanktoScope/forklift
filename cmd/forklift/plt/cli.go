@@ -40,43 +40,43 @@ func MakeCmd(versions Versions) *cli.Command {
 					},
 				},
 			},
-			[]*cli.Command{
-				{
-					Name: "upgrade",
-					Usage: "Replaces the local pallet with an upgraded version, updates the cache, and " +
-						"stages the pallet",
-					Action: upgradeAction(versions),
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "no-cache-img",
-							Usage: "Don't download container images (this flag is ignored if --apply is set)",
-						},
-						&cli.BoolFlag{
-							Name:  "apply",
-							Usage: "Immediately apply the upgraded pallet after staging it",
-						},
-					},
-				},
-			},
-			[]*cli.Command{
-				{
-					Name:      "show-upgrade-query",
-					Usage:     "Shows the query used for pallet upgrades",
-					Action:    showUpgradeQueryAction,
-				},
-			},
-			[]*cli.Command{
-				{
-					Name:      "set-upgrade-query",
-					Usage:     "Changes the query used for pallet upgrades",
-					ArgsUsage: "[pallet_path]@[version_query]",
-					Action:    setUpgradeQueryAction,
-				},
-			},
+			makeUpgradeSubcmds(versions),
 			makeUseSubcmds(versions),
 			makeQuerySubcmds(),
 			makeModifySubcmds(versions),
 		),
+	}
+}
+
+func makeUpgradeSubcmds(versions Versions) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name: "upgrade",
+			Usage: "Replaces the local pallet with an upgraded version, updates the cache, and " +
+				"stages the pallet",
+			Action: upgradeAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "no-cache-img",
+					Usage: "Don't download container images (this flag is ignored if --apply is set)",
+				},
+				&cli.BoolFlag{
+					Name:  "apply",
+					Usage: "Immediately apply the upgraded pallet after staging it",
+				},
+			},
+		},
+		{
+			Name:   "show-upgrade-query",
+			Usage:  "Shows the query used for pallet upgrades",
+			Action: showUpgradeQueryAction,
+		},
+		{
+			Name:      "set-upgrade-query",
+			Usage:     "Changes the query used for pallet upgrades",
+			ArgsUsage: "[pallet_path]@[version_query]",
+			Action:    setUpgradeQueryAction,
+		},
 	}
 }
 
@@ -358,7 +358,7 @@ var modifyBaseFlags []cli.Flag = []cli.Flag{
 //	}
 
 func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet"
+	const category = "Modify the pallet's requirements"
 	return []*cli.Command{
 		{
 			Name: "add-repo",
@@ -405,7 +405,7 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's hard to split more
 	versions Versions,
 ) []*cli.Command {
-	const category = "Modify the pallet"
+	const category = "Modify the pallet's package deployments"
 	return []*cli.Command{
 		{
 			Name:      "add-depl",
