@@ -229,6 +229,72 @@ func completePalletQuery(
 	return loaded.Overlay(provided), loaded, provided, nil
 }
 
+// upgrade
+
+func upgradeAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		workspace, err := ensureWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+
+		query, err := workspace.GetCurrentPalletUpgrades()
+		if err != nil {
+			return errors.Wrap(err, "couldn't load stored query for upgrading the current pallet")
+		}
+		if !query.Complete() {
+			return errors.Errorf("stored query for the current pallet is incomplete: %s", query)
+		}
+
+		// TODO: show what we're upgrading from, and what we're upgrading to
+
+		if err = preparePallet(
+			workspace, query, true, true, c.Bool("parallel"),
+			c.Bool("ignore-tool-version"), versions,
+		); err != nil {
+			return err
+		}
+		fmt.Println()
+
+		if c.Bool("apply") {
+			return applyAction(versions)(c)
+		}
+		return stageAction(versions)(c)
+	}
+}
+
+// show-upgrade-query
+
+func showUpgradeQueryAction(c *cli.Context) error {
+	workspace, err := ensureWorkspace(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+
+	query, err := workspace.GetCurrentPalletUpgrades()
+	if err != nil {
+		return errors.Wrap(err, "couldn't load stored query for upgrading the current pallet")
+	}
+	fmt.Printf("%s\n", query)
+	return nil
+}
+
+// set-upgrade-query
+
+func setUpgradeQueryAction(c *cli.Context) error {
+	workspace, err := ensureWorkspace(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+
+	_, err = handlePalletQuery(workspace, c.Args().First())
+	if err != nil {
+		return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
+	}
+	fmt.Println("Done!")
+	return nil
+}
+
 // clone
 
 func cloneAction(versions Versions) cli.ActionFunc {

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - (cli) Added tracking of the last pallet path@version query used with the `plt clone` and `plt switch` subcommands, so that those subcommands can be called again with a partial query (i.e. `@version_query` or `pallet_path@` or `@`) to reuse the last provided value(s) for omitted parts of the query.
+- (cli) Added a `plt upgrade` subcommand as a more user-friendly equivalent to `plt switch @`.
+- (cli) Added `plt show-upgrade-query` to show the pallet path@version query which will be used for `plt upgrade` and for `plt clone/switch` subcommands with partial queries.
+- (cli) Added `plt set-upgrade-query` to modify the pallet path@version query which will be used for `plt upgrade` and for `plt clone/switch` subcommands with partial queries.
 
 ### Fixed
 

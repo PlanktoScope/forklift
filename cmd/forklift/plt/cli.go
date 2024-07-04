@@ -26,7 +26,7 @@ func MakeCmd(versions Versions) *cli.Command {
 				{
 					Name:      "switch",
 					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
-					ArgsUsage: "[github_repository_path]@[release]",
+					ArgsUsage: "[pallet_path]@[version_query]",
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
@@ -38,6 +38,39 @@ func MakeCmd(versions Versions) *cli.Command {
 							Usage: "Immediately apply the pallet after staging it",
 						},
 					},
+				},
+			},
+			[]*cli.Command{
+				{
+					Name: "upgrade",
+					Usage: "Replaces the local pallet with an upgraded version, updates the cache, and " +
+						"stages the pallet",
+					Action: upgradeAction(versions),
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:  "no-cache-img",
+							Usage: "Don't download container images (this flag is ignored if --apply is set)",
+						},
+						&cli.BoolFlag{
+							Name:  "apply",
+							Usage: "Immediately apply the upgraded pallet after staging it",
+						},
+					},
+				},
+			},
+			[]*cli.Command{
+				{
+					Name:      "show-upgrade-query",
+					Usage:     "Shows the query used for pallet upgrades",
+					Action:    showUpgradeQueryAction,
+				},
+			},
+			[]*cli.Command{
+				{
+					Name:      "set-upgrade-query",
+					Usage:     "Changes the query used for pallet upgrades",
+					ArgsUsage: "[pallet_path]@[version_query]",
+					Action:    setUpgradeQueryAction,
 				},
 			},
 			makeUseSubcmds(versions),
@@ -250,7 +283,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Name:      "clone",
 			Category:  category,
 			Usage:     "Initializes the local pallet from a remote release",
-			ArgsUsage: "[github_repository_path]@[release]",
+			ArgsUsage: "[pallet_path]@[version_query]",
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.BoolFlag{
@@ -266,7 +299,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			),
 			Action: cloneAction(versions),
 		},
-		// TODO: add a "checkout" action
+		// TODO: add a "checkout @version_query" action
 		{
 			Name:     "fetch",
 			Category: category,
