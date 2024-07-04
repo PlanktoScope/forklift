@@ -320,7 +320,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `env check` and `dev env check` now checks resource constraints againt all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
+- `env check` and `dev env check` now checks resource constraints against all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
 - `dev env` now allows specifying one or more directories containing Pallet repositories to replace any corresponding cached repositories, using the `--repo` flag (which can be specified repeatedly).
 - `env plan` and `dev env plan` now show the changes which will be made by `env apply` and `dev env apply`, respectively.
 - The (draft) implementation of the (draft) specification for the Pallets package management system is now available in the `/pkg/pallets` directory of this repository. Note that the specification and implementation will be changed to simplify terminology, so the API will definitely change.
@@ -349,7 +349,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change: cli) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used HashiCorp Terraform.
+- (Breaking change: cli) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used Terraform.
 - (Breaking change: cli) Renamed the `env cache` and `dev env cache` commands to `env cache-repo` and `dev env cache-repo`, respectively. This disambiguates the commands for caching Pallets-related data and for caching Docker container images, while allowing them to be run separately (useful on Docker environments where root permissions are required to talk to the Docker daemon).
 
 ### Fixed
