@@ -1,9 +1,13 @@
 package cli
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
+	"strings"
 
 	ggit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -162,13 +166,38 @@ func printRemotesInfo(indent int, palletPath string) error {
 	fmt.Println()
 	indent++
 
+	SortRemotes(remotes)
+	printCacheMirrorRemote := false
 	for _, remote := range remotes {
-		printRemoteInfo(indent, remote)
+		if remote.Config().Name == ForkliftCacheMirrorRemoteName && !printCacheMirrorRemote {
+			IndentedPrintf(
+				indent, "%s: (skipped because origin was successfully queried)\n", remote.Config().Name,
+			)
+			continue
+		}
+
+		if err := printRemoteInfo(
+			indent, remote,
+		); err != nil && remote.Config().Name == OriginRemoteName {
+			printCacheMirrorRemote = true
+		}
 	}
 	return nil
 }
 
-func printRemoteInfo(indent int, remote *ggit.Remote) {
+func SortRemotes(remotes []*ggit.Remote) {
+	slices.SortFunc(remotes, func(a, b *ggit.Remote) int {
+		if a.Config().Name == OriginRemoteName {
+			return -1
+		}
+		if b.Config().Name == OriginRemoteName {
+			return 1
+		}
+		return cmp.Compare(a.Config().Name, b.Config().Name)
+	})
+}
+
+func printRemoteInfo(indent int, remote *ggit.Remote) error {
 	config := remote.Config()
 	IndentedPrintf(indent, "%s:\n", config.Name)
 	indent++
@@ -190,16 +219,24 @@ func printRemoteInfo(indent int, remote *ggit.Remote) {
 	refs, err := remote.List(git.EmptyListOptions())
 	if err != nil {
 		fmt.Printf(" (couldn't retrieve references: %s)\n", err)
-		return
+		return err
 	}
 
 	if len(refs) == 0 {
 		fmt.Print(" (none)")
 	}
 	fmt.Println()
+	slices.SortFunc(refs, func(a, b *plumbing.Reference) int {
+		return cmp.Compare(git.StringifyRef(a), git.StringifyRef(b))
+	})
 	for _, ref := range refs {
+		if strings.HasPrefix(git.StringifyRef(ref), "pull/") {
+			continue
+		}
 		BulletedPrintf(indent+1, "%s\n", git.StringifyRef(ref))
 	}
+
+	return nil
 }
 
 // Download

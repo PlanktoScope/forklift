@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
@@ -83,14 +84,13 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
 
-		// TODO: detect if there are any un-committed and un-pushed changes in the pallet as a git repo,
-		// and require special confirmation if so.
-		fmt.Printf(
-			"Warning: if a local pallet already exists, it will be deleted now to be replaced with "+
-				"%s...\n",
-			query,
-		)
-		fmt.Println()
+		if err = checkPalletDirtiness(workspace, c.Bool("force")); err != nil {
+			return err
+		}
+		if forklift.DirExists(workspace.GetCurrentPalletPath()) {
+			fmt.Printf("Deleting the local pallet to replace it with %s...", query)
+			fmt.Println()
+		}
 		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
 			return errors.Wrap(err, "couldn't remove local pallet")
 		}
@@ -126,42 +126,6 @@ func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
 	}
 	return workspace, nil
-}
-
-func preparePallet(
-	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
-	updateLocalMirror, cacheStagingReqs, parallel, ignoreToolVersion bool, versions Versions,
-) error {
-	// clone pallet
-	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
-		0, workspace.GetPalletCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
-		workspace.GetCurrentPalletPath(), updateLocalMirror,
-	); err != nil {
-		return err
-	}
-	// TODO: warn if the git repo doesn't appear to be an actual pallet
-
-	pallet, repoCache, dlCache, err := processFullBaseArgs(workspace.FS.Path(), false)
-	if err != nil {
-		return err
-	}
-	if err = fcli.CheckShallowCompatibility(
-		pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-		ignoreToolVersion,
-	); err != nil {
-		return err
-	}
-
-	// cache everything required by pallet
-	if cacheStagingReqs {
-		fmt.Println()
-		if err = fcli.CacheStagingRequirements(
-			pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
-		); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func handlePalletQuery(
@@ -240,6 +204,166 @@ func completePalletQuery(
 	return query, loaded, provided, nil
 }
 
+func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
+	palletPath := workspace.GetCurrentPalletPath()
+	if !forklift.DirExists(palletPath) {
+		return nil
+	}
+
+	gitRepo, err := git.Open(palletPath)
+	if err != nil {
+		if !force {
+			return errors.Errorf(
+				"the local pallet already exists and is not a valid Git repo, but we can only delete and " +
+					"replace such pallets if the --force flag is enabled",
+			)
+		}
+		fmt.Println(
+			"Warning: we will delete and replace the local pallet even though it's not a Git repo!",
+		)
+	}
+
+	status, err := gitRepo.Status()
+	if err != nil {
+		return errors.Wrapf(err, "couldn't check status of %s as a Git repo", palletPath)
+	}
+	if len(status) > 0 {
+		if !force {
+			return errors.Errorf(
+				"the local pallet already exists and has changes which have not yet been saved in a Git " +
+					"commit (i.e. which have not yet been backed up), but we can only delete and replace " +
+					"such pallets if the --force flag is enabled",
+			)
+		}
+		fmt.Println(
+			"Warning: we will delete and replace the local pallet even though it has changes which " +
+				"have not yet been saved in a Git commit (i.e. which have not yet been backed up)!",
+		)
+	}
+
+	fmt.Printf(
+		"Checking whether the current commit of %s exists on a remote Git repo...\n", palletPath,
+	)
+	remotesHaveHead, err := isHeadInRemotes(1, gitRepo)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't check whether current commit of %s exists on a remote Git repo", palletPath,
+		)
+	}
+	if !remotesHaveHead {
+		if !force {
+			return errors.Errorf(
+				"the local pallet already exists and is on a commit which might not exist on a remote " +
+					"Git repo (i.e. which has not yet been backed up), but we can only delete and replace " +
+					"such pallets if the --force flag is enabled",
+			)
+		}
+		fmt.Println(
+			"Warning: we will delete and replace the local pallet even though it is on a commit which " +
+				"might not exist on a remote Git repo (i.e. which has not yet been backed up)!",
+		)
+	}
+
+	return nil
+}
+
+func isHeadInRemotes(indent int, gitRepo *git.Repo) (bool, error) {
+	remotes, err := gitRepo.Remotes()
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't check Git remotes")
+	}
+	fcli.SortRemotes(remotes)
+
+	refs := make([]*plumbing.Reference, 0)
+	queryCacheMirrorRemote := false
+	for _, remote := range remotes {
+		if remote.Config().Name == fcli.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
+			fcli.IndentedPrintf(
+				indent, "Skipped remote %s, because remote origin's references were successfully "+
+					"retrieved!\n",
+				remote.Config().Name,
+			)
+			continue
+		}
+
+		remoteRefs, err := remote.List(git.EmptyListOptions())
+		if err != nil {
+			fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrapf(
+				err, "couldn't retrieve references for remote %s", remote.Config().Name,
+			))
+			if remote.Config().Name == fcli.OriginRemoteName {
+				queryCacheMirrorRemote = true
+			}
+			continue
+		}
+		fcli.IndentedPrintf(indent, "Retrieved references for remote %s!\n", remote.Config().Name)
+		for _, ref := range remoteRefs {
+			if strings.HasPrefix(string(ref.Name()), "refs/pull/") {
+				continue
+			}
+			refs = append(refs, ref)
+		}
+	}
+
+	head, err := gitRepo.GetHead()
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't determine the current Git commit")
+	}
+	const shortHashLength = 7
+	fcli.IndentedPrintf(
+		indent, "Searching ancestors of retrieved remote references for current commit %s...\n",
+		head[:shortHashLength],
+	)
+	remotesHaveHead, err := gitRepo.RefsHaveAncestor(refs, head)
+	if err != nil {
+		fcli.IndentedPrintln(
+			indent, errors.Wrapf(err, "Warning: couldn't check whether remotes have commit %s", head),
+		)
+	}
+	if remotesHaveHead {
+		fcli.IndentedPrintf(
+			indent, "Found current commit %s in one of the remotes!\n", head[:shortHashLength],
+		)
+	}
+	return remotesHaveHead, nil
+}
+
+func preparePallet(
+	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
+	updateLocalMirror, cacheStagingReqs, parallel, ignoreToolVersion bool, versions Versions,
+) error {
+	// clone pallet
+	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
+		0, workspace.GetPalletCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
+		workspace.GetCurrentPalletPath(), updateLocalMirror,
+	); err != nil {
+		return err
+	}
+	// TODO: warn if the git repo doesn't appear to be an actual pallet
+
+	pallet, repoCache, dlCache, err := processFullBaseArgs(workspace.FS.Path(), false)
+	if err != nil {
+		return err
+	}
+	if err = fcli.CheckShallowCompatibility(
+		pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+		ignoreToolVersion,
+	); err != nil {
+		return err
+	}
+
+	// cache everything required by pallet
+	if cacheStagingReqs {
+		fmt.Println()
+		if err = fcli.CacheStagingRequirements(
+			pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // upgrade
 
 func upgradeAction(versions Versions) cli.ActionFunc {
@@ -257,8 +381,9 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		// TODO: detect if there are any un-committed and un-pushed changes in the pallet as a git repo,
-		// and require special confirmation if so.
+		if err = checkPalletDirtiness(workspace, c.Bool("force")); err != nil {
+			return err
+		}
 		fmt.Printf("Deleting the local pallet to replace it with %s...", query)
 		fmt.Println()
 		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
@@ -285,50 +410,93 @@ func checkUpgrade(
 	indent int, workspace *forklift.FSWorkspace, upgradeQuery forklift.GitRepoQuery,
 	allowDowngrade bool,
 ) error {
-	queries := []string{upgradeQuery.String()}
-
-	// Inspect the current pallet
-	pallet, err := workspace.GetCurrentPallet()
-	if err != nil {
-		return errors.Wrap(err, "couldn't load local pallet from workspace")
-	}
-	currentQuery := forklift.GitRepoQuery{}
-	ref, err := git.Head(pallet.FS.Path())
-	if err != nil {
-		// Note: the !allowDowngrade case is handled by printUpgrade. Here we print the error for the
-		// underlying reason we can't determine the current version:
-		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
-			err,
-			"we couldn't determine the current version of the local pallet, so any change could be "+
-				"either an upgrade or a downgrade",
-		))
-	} else {
-		currentQuery = forklift.GitRepoQuery{
-			Path:         pallet.Def.Pallet.Path,
-			VersionQuery: ref.Hash().String(),
-		}
-		fmt.Printf("Current pallet: %s at %s\n", pallet.Def.Pallet.Path, git.StringifyRef(ref))
-		queries = append(queries, currentQuery.String())
-	}
-	fmt.Println()
-
-	fmt.Println("Resolving version queries...")
-	resolved, err := fcli.ResolveQueriesUsingLocalMirrors(
+	fcli.IndentedPrintln(indent, "Resolving upgrade version query...")
+	upgradeResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
 		// Note: we don't increase indentation level because go-git prints to stdout without indentation
-		indent, workspace.GetPalletCachePath(), queries, true,
+		indent, workspace.GetPalletCachePath(), []string{upgradeQuery.String()}, true,
 	)
 	if err != nil {
-		return errors.Wrap(err, "couldn't resolve version queries")
+		return errors.Wrap(err, "couldn't resolve upgrade version query")
+	}
+
+	fmt.Println()
+	currentResolved, err := resolveCurrentPalletVersion(indent, workspace)
+	if err != nil {
+		currentResolved = forklift.GitRepoReq{}
+		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
+			err,
+			"we couldn't determine & resolve the current version of the local pallet, so any change "+
+				"could be either an upgrade or a downgrade",
+		))
 	}
 
 	fmt.Println()
 	return printUpgrade(
-		resolved[currentQuery.String()], resolved[upgradeQuery.String()], allowDowngrade,
+		indent, currentResolved, upgradeResolved[upgradeQuery.String()], allowDowngrade,
 	)
 	// TODO: also report whether the update is cached
 }
 
-func printUpgrade(current, upgrade forklift.GitRepoReq, allowDowngrade bool) error {
+func resolveCurrentPalletVersion(
+	indent int, workspace *forklift.FSWorkspace,
+) (resolved forklift.GitRepoReq, err error) {
+	// Inspect the current pallet
+	pallet, err := workspace.GetCurrentPallet()
+	if err != nil {
+		return forklift.GitRepoReq{}, errors.Wrap(err, "couldn't load local pallet from workspace")
+	}
+	ref, err := git.Head(pallet.FS.Path())
+	if err != nil {
+		return forklift.GitRepoReq{}, errors.Wrap(
+			err, "couldn't determine current commit of local pallet",
+		)
+	}
+	currentQuery := forklift.GitRepoQuery{
+		Path:         pallet.Def.Pallet.Path,
+		VersionQuery: ref.Hash().String(),
+	}
+	fcli.IndentedPrintf(
+		indent, "Current pallet: %s at %s\n", pallet.Def.Pallet.Path, git.StringifyRef(ref),
+	)
+	fmt.Println()
+
+	fcli.IndentedPrintln(indent, "Resolving current version query...")
+	currentResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
+		// Note: we don't increase indentation level because go-git prints to stdout without indentation
+		// Note: we don't update the local mirror because we already updated it to resolve the current
+		// version query
+		indent, workspace.GetPalletCachePath(), []string{currentQuery.String()}, false,
+	)
+	if err != nil {
+		fcli.IndentedPrintf(indent+1, "Warning: %s\n", errors.Wrap(
+			err,
+			"couldn't resolve current version query from the Forklift pallet cache's local mirror of "+
+				"the remote repo (is the local pallet currently on a commit not in the remote origin?)",
+		))
+		fcli.IndentedPrintln(indent, "Resolving current version query using local pallet instead...")
+		resolvedVersionLock, err := fcli.ResolveVersionQueryUsingRepo(
+			pallet.FS.Path(), currentQuery.VersionQuery,
+		)
+		if err != nil {
+			return forklift.GitRepoReq{}, errors.Wrap(
+				err, "couldn't resolve current version query from the local pallet",
+			)
+		}
+
+		fcli.IndentedPrintf(
+			indent+1, "Resolved %s as %s@%s",
+			currentQuery.String(), pallet.Def.Pallet.Path, resolvedVersionLock.Version,
+		)
+		return forklift.GitRepoReq{
+			RequiredPath: pallet.Def.Pallet.Path,
+			VersionLock:  resolvedVersionLock,
+		}, nil
+	}
+
+	return currentResolved[currentQuery.String()], nil
+}
+
+func printUpgrade(indent int, current, upgrade forklift.GitRepoReq, allowDowngrade bool) error {
 	if current == upgrade {
 		return errors.New("no upgrade found")
 	}
@@ -341,8 +509,8 @@ func printUpgrade(current, upgrade forklift.GitRepoReq, allowDowngrade bool) err
 				upgrade.VersionLock.Version,
 			)
 		}
-		fmt.Printf(
-			"Upgrade/downgrade available: unknown version -> %s\n", upgrade.VersionLock.Version,
+		fcli.IndentedPrintf(
+			indent, "Upgrade/downgrade available: unknown version -> %s\n", upgrade.VersionLock.Version,
 		)
 		return nil
 	}
@@ -358,8 +526,8 @@ func printUpgrade(current, upgrade forklift.GitRepoReq, allowDowngrade bool) err
 				current.RequiredPath, upgrade.RequiredPath,
 			)
 		}
-		fmt.Printf(
-			"Warning: the upgrade query would change the local pallet from %s to %s!\n",
+		fcli.IndentedPrintf(
+			indent, "Warning: the upgrade query would change the local pallet from %s to %s!\n",
 			current.RequiredPath, upgrade.RequiredPath,
 		)
 	} else if current.VersionLock.Version > upgrade.VersionLock.Version {
@@ -372,8 +540,8 @@ func printUpgrade(current, upgrade forklift.GitRepoReq, allowDowngrade bool) err
 			)
 		}
 	}
-	fmt.Printf(
-		"%s available: %s@%s -> %s@%s\n",
+	fcli.IndentedPrintf(
+		indent, "%s available: %s@%s -> %s@%s\n",
 		operation,
 		current.RequiredPath, current.VersionLock.Version,
 		upgrade.RequiredPath, upgrade.VersionLock.Version,

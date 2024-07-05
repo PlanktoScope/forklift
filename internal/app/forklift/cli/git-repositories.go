@@ -69,7 +69,6 @@ func ResolveQueriesUsingLocalMirrors(
 	IndentedPrintln(indent, "Resolving version queries using local mirrors of remote Git repos...")
 	resolved, err = resolveGitRepoQueriesUsingLocalMirrors(indent, queries, cachePath)
 	if err != nil {
-		fmt.Println()
 		if !updateLocalMirror {
 			return resolved, errors.Wrap(
 				err, "couldn't resolve one or more version queries, and we're not updating local mirrors",
@@ -175,8 +174,8 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 		req := forklift.GitRepoReq{
 			RequiredPath: gitRepoPath,
 		}
-		if req.VersionLock, err = resolveVersionQueryUsingLocalMirror(
-			cachePath, gitRepoPath, versionQuery,
+		if req.VersionLock, err = ResolveVersionQueryUsingRepo(
+			filepath.FromSlash(path.Join(cachePath, gitRepoPath)), versionQuery,
 		); err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't resolve version query %s for git repo %s", versionQuery, gitRepoPath,
@@ -190,18 +189,16 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 	return resolved, nil
 }
 
-func resolveVersionQueryUsingLocalMirror(
-	cachePath, gitRepoPath, versionQuery string,
+func ResolveVersionQueryUsingRepo(
+	localPath, versionQuery string,
 ) (lock forklift.VersionLock, err error) {
 	if versionQuery == "" {
 		return forklift.VersionLock{}, errors.New("empty version queries are not yet supported")
 	}
-	localPath := filepath.FromSlash(path.Join(cachePath, gitRepoPath))
+
 	gitRepo, err := git.Open(localPath)
 	if err != nil {
-		return forklift.VersionLock{}, errors.Wrapf(
-			err, "couldn't open local mirror of %s", gitRepoPath,
-		)
+		return forklift.VersionLock{}, errors.Wrapf(err, "couldn't open %s as a git repo", localPath)
 	}
 	commit, err := queryRefs(gitRepo, versionQuery)
 	if err != nil {
@@ -424,6 +421,11 @@ func validateCommit(versionLock forklift.VersionLock, gitRepo *git.Repo) error {
 
 // Cloning to local copy
 
+const (
+	OriginRemoteName              = "origin"
+	ForkliftCacheMirrorRemoteName = "forklift-cache-mirror"
+)
+
 func CloneQueriedGitRepoUsingLocalMirror(
 	indent int, cachePath, gitRepoPath, versionQuery, destination string, updateLocalMirror bool,
 ) error {
@@ -446,16 +448,21 @@ func CloneQueriedGitRepoUsingLocalMirror(
 			err, "couldn't clone git repo %s from %s to %s", gitRepoPath, mirrorCachePath, destination,
 		)
 	}
-	if err = gitRepo.MakeTrackingBranches("origin"); err != nil {
+	if err = gitRepo.MakeTrackingBranches(OriginRemoteName); err != nil {
 		return errors.Wrapf(err, "couldn't set up local branches to track the remote")
 	}
 	if err = gitRepo.FetchAll(); err != nil {
 		return errors.Wrapf(err, "couldn't fetch new local branches tracking the remote")
 	}
 	if err = gitRepo.SetRemoteURLs(
-		"origin", []string{fmt.Sprintf("https://%s", gitRepoPath)},
+		OriginRemoteName, []string{fmt.Sprintf("https://%s", gitRepoPath)},
 	); err != nil {
 		return errors.Wrapf(err, "couldn't set the correct URL of the origin remote")
+	}
+	if err = gitRepo.CreateRemote(
+		ForkliftCacheMirrorRemoteName, []string{mirrorCachePath},
+	); err != nil {
+		return errors.Wrapf(err, "couldn't add a remote for the local mirror")
 	}
 
 	fmt.Println()

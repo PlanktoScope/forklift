@@ -70,7 +70,7 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 				&cli.BoolFlag{
 					Name: "force",
 					Usage: "Even if the local pallet has uncommitted/unpushed changes, replace it with the " +
-						"upggraded version",
+						"upgraded version",
 				},
 				&cli.BoolFlag{
 					Name:  "no-cache-img",
@@ -331,7 +331,8 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			),
 			Action: cloneAction(versions),
 		},
-		// TODO: add a "checkout @version_query" action
+		// TODO: add a "checkout @version_query" action; it needs a --force flag to overwrite a dirty
+		// working directory
 		{
 			Name:     "fetch",
 			Category: category,
