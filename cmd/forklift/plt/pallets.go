@@ -53,14 +53,14 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
 		if err = fcli.CacheAllRequirements(
-			pallet, repoCache.Path(), repoCache, dlCache,
+			0, pallet, repoCache.Path(), repoCache, dlCache,
 			c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
@@ -345,8 +345,9 @@ func preparePallet(
 	if err != nil {
 		return err
 	}
+
 	if err = fcli.CheckShallowCompatibility(
-		pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+		pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 		ignoreToolVersion,
 	); err != nil {
 		return err
@@ -356,7 +357,7 @@ func preparePallet(
 	if cacheStagingReqs {
 		fmt.Println()
 		if err = fcli.CacheStagingRequirements(
-			pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
+			0, pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
 		); err != nil {
 			return err
 		}
@@ -705,7 +706,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -713,7 +714,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 
 		if !c.Bool("no-cache-req") {
 			if err = fcli.CacheStagingRequirements(
-				pallet, repoCache.Path(), repoCache, dlCache, false, c.Bool("parallel"),
+				0, pallet, repoCache.Path(), repoCache, dlCache, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -810,8 +811,10 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+		// Note: we cannot guarantee that all requirements are cached, so we don't check their versions
+		// here; fcli.StagePallet will do those checks for us.
+		if err = fcli.CheckShallowCompatibility(
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -829,8 +832,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		if _, err = fcli.StagePallet(
 			pallet, stageStore, repoCache, dlCache, c.String("exports"),
-			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
-			c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			versions.Versions, c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -847,8 +849,10 @@ func applyAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+		// Note: we cannot guarantee that all requirements are cached, so we don't check their versions
+		// here; fcli.StagePallet will do those checks for us.
+		if err = fcli.CheckShallowCompatibility(
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -866,8 +870,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 		}
 		index, err := fcli.StagePallet(
 			pallet, stageStore, repoCache, dlCache, c.String("exports"),
-			versions.Tool, versions.MinSupportedBundle, versions.NewBundle,
-			false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			versions.Versions, false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		)
 		if err != nil {
 			return errors.Wrap(err, "couldn't stage pallet to be applied immediately")

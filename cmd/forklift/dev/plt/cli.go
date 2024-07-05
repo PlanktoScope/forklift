@@ -5,15 +5,13 @@ import (
 	"slices"
 
 	"github.com/urfave/cli/v2"
+
+	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
 type Versions struct {
-	Tool               string
-	MinSupportedRepo   string
-	MinSupportedPallet string
-	MinSupportedBundle string
-	NewBundle          string
-	NewStageStore      string
+	fcli.Versions
+	NewStageStore string
 }
 
 func MakeCmd(versions Versions) *cli.Command {

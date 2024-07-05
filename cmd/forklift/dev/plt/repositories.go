@@ -17,7 +17,7 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, cache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -70,7 +70,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -84,7 +84,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 
 		if !c.Bool("no-cache-req") {
 			if err = fcli.CacheStagingRequirements(
-				pallet, repoCache.Path(), repoCache, dlCache, false, c.Bool("parallel"),
+				0, pallet, repoCache.Path(), repoCache, dlCache, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -98,12 +98,12 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 
 func rmRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, false, false)
+		pallet, _, _, err := processFullBaseArgs(c, false, false)
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckShallowCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
+			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err

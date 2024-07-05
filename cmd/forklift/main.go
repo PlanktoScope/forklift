@@ -13,6 +13,7 @@ import (
 	"github.com/PlanktoScope/forklift/cmd/forklift/host"
 	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
 	"github.com/PlanktoScope/forklift/cmd/forklift/stage"
+	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
 func main() {
@@ -23,18 +24,22 @@ func main() {
 
 var defaultWorkspaceBase, _ = os.UserHomeDir()
 
+var fcliVersions fcli.Versions = fcli.Versions{
+	Tool:               toolVersion,
+	MinSupportedRepo:   repoMinVersion,
+	MinSupportedPallet: palletMinVersion,
+	MinSupportedBundle: bundleMinVersion,
+	NewBundle:          newBundleVersion,
+}
+
 var app = &cli.App{
 	Name:    "forklift",
 	Version: toolVersion,
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
 		plt.MakeCmd(plt.Versions{
-			Tool:               toolVersion,
-			MinSupportedRepo:   repoMinVersion,
-			MinSupportedPallet: palletMinVersion,
-			MinSupportedBundle: bundleMinVersion,
-			NewBundle:          newBundleVersion,
-			NewStageStore:      newStageStoreVersion,
+			Versions:      fcliVersions,
+			NewStageStore: newStageStoreVersion,
 		}),
 		stage.MakeCmd(stage.Versions{
 			Tool:               toolVersion,
@@ -44,12 +49,8 @@ var app = &cli.App{
 		cache.Cmd,
 		host.Cmd,
 		dev.MakeCmd(dev.Versions{
-			Tool:               toolVersion,
-			MinSupportedRepo:   repoMinVersion,
-			MinSupportedPallet: palletMinVersion,
-			MinSupportedBundle: bundleMinVersion,
-			NewBundle:          newBundleVersion,
-			NewStageStore:      newStageStoreVersion,
+			Versions:      fcliVersions,
+			NewStageStore: newStageStoreVersion,
 		}),
 	},
 	Flags: []cli.Flag{

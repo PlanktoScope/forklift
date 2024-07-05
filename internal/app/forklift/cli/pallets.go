@@ -266,17 +266,17 @@ func DownloadRequiredPallets(
 // Cache
 
 func CacheAllRequirements(
-	pallet *forklift.FSPallet, repoCachePath string,
+	indent int, pallet *forklift.FSPallet, repoCachePath string,
 	pkgLoader forklift.FSPkgLoader, dlCache *forklift.FSDownloadCache,
 	includeDisabled, parallel bool,
 ) error {
 	if err := CacheStagingRequirements(
-		pallet, repoCachePath, pkgLoader, dlCache, includeDisabled, parallel,
+		indent, pallet, repoCachePath, pkgLoader, dlCache, includeDisabled, parallel,
 	); err != nil {
 		return err
 	}
 
-	fmt.Println("Downloading Docker container images to be deployed by the local pallet...")
+	IndentedPrintln(indent, "Downloading Docker container images to be deployed by the local pallet...")
 	if err := DownloadImages(1, pallet, pkgLoader, includeDisabled, parallel); err != nil {
 		return err
 	}
@@ -284,19 +284,22 @@ func CacheAllRequirements(
 }
 
 func CacheStagingRequirements(
-	pallet *forklift.FSPallet, repoCachePath string,
+	indent int, pallet *forklift.FSPallet, repoCachePath string,
 	pkgLoader forklift.FSPkgLoader, dlCache *forklift.FSDownloadCache,
 	includeDisabled, parallel bool,
 ) error {
+	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
+	indent++
+
 	// TODO: download required pallets, once we allow layering pallets; then merge the pallets into
 	// a composite before downloading required repos
 
-	fmt.Println("Downloading repos required by the local pallet...")
+	IndentedPrintln(indent, "Downloading repos required by the local pallet...")
 	if _, err := DownloadRequiredRepos(0, pallet, repoCachePath); err != nil {
 		return err
 	}
 
-	fmt.Println("Downloading files for export by the local pallet...")
+	IndentedPrintln(indent, "Downloading files for export by the local pallet...")
 	if err := DownloadExportFiles(
 		1, pallet, pkgLoader, dlCache, includeDisabled, parallel,
 	); err != nil {

@@ -63,8 +63,7 @@ func CheckCompatibility(
 // palletMinVersion). Note that minimum versions are still enforced even if the ignoreTool flag is
 // set.
 func CheckShallowCompatibility(
-	pallet *forklift.FSPallet, repoLoader forklift.FSRepoLoader,
-	toolVersion, repoMinVersion, palletMinVersion string, ignoreTool bool,
+	pallet *forklift.FSPallet, toolVersion, repoMinVersion, palletMinVersion string, ignoreTool bool,
 ) error {
 	if ignoreTool {
 		fmt.Printf(
