@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.8.0-alpha.1 - 2024-07-05
 
 ### Added
 
@@ -16,11 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `plt show-upgrade-query` subcommand to show the pallet path@version query which will be used for `plt upgrade` and for `plt clone/switch` subcommands with partial queries.
 - (cli) Added a `plt set-upgrade-query` subcommand to modify the pallet path@version query which will be used for `plt upgrade` and for `plt clone/switch` subcommands with partial queries.
 - (cli) Now `plt clone` and `plt switch` add a `forklift-cache-mirror` remote to the list of remotes of the local pallet, which points to the Forklift pallet cache's mirror of the `origin` remote of the local pallet.
-- (cli) Now `plt show` will print refs from the Forklift pallet cache's mirror of the `origin` remote of the local pallet, if the `origin` remote cannot be queried (e.g. due to lack of internet connection).
+- (cli) Now `plt show` will print git refs from the Forklift pallet cache's mirror of the `origin` remote of the local pallet, if the `origin` remote cannot be queried (e.g. due to lack of internet connection).
 
 ### Changed
 
-- (cli) Now `plt switch` will quit early with an error message if you use it to try to replace a local pallet which 1) is not a Git repo, 2) has uncommitted changes, or 3) is on a commit which does not exist in the remote, unless you enable the `--force` flag. This is intended to prevent unintentional deletion of user customizations.
+- (Breaking change; cli) Now `plt switch` will quit early with an error message if you use it to try to replace a local pallet which 1) is not a Git repo, 2) has uncommitted changes, or 3) is on a commit which does not exist in the remote, unless you enable the `--force` flag. This is intended to prevent unintentional deletion of user customizations.
 
 ### Fixed
 
