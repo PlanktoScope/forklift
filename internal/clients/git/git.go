@@ -2,6 +2,7 @@
 package git
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -13,6 +14,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
+
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 func AbbreviateHash(h plumbing.Hash) string {
@@ -199,16 +202,13 @@ func (r *Repo) GetAncestralTags(commit string) ([]AncestralTag, error) {
 	}
 
 	// Walk ancestor commits with a breadth-first search, accumulating tagged commits
-	visitQueue := []ancestralCommit{{
-		commit: commitObject,
-		depth:  0,
-	}}
-	visited := make(map[plumbing.Hash]struct{})
+	visitQueue := []ancestralCommit{{commit: commitObject}}
+	visited := make(structures.Set[plumbing.Hash])
 	ancestralTags := make([]AncestralTag, 0)
 	for len(visitQueue) > 0 && len(ancestralTags) < len(tags) {
 		next := visitQueue[0]
 		visitQueue = visitQueue[1:]
-		if _, ok := visited[next.commit.Hash]; ok { // we already visited this, so don't revisit it
+		if visited.Has(next.commit.Hash) {
 			continue
 		}
 
@@ -220,9 +220,9 @@ func (r *Repo) GetAncestralTags(commit string) ([]AncestralTag, error) {
 				})
 			}
 		}
-		visited[next.commit.Hash] = struct{}{}
+		visited.Add(next.commit.Hash)
 		for _, hash := range next.commit.ParentHashes {
-			if _, ok := visited[hash]; ok { // we already visited this, so don't enqueue it
+			if visited.Has(hash) {
 				continue
 			}
 
@@ -241,7 +241,7 @@ func (r *Repo) GetAncestralTags(commit string) ([]AncestralTag, error) {
 
 func (r *Repo) MakeTrackingBranches(remoteName string) error {
 	// Determine local branches (so we can skip them)
-	branches := make(map[string]struct{})
+	branches := make(structures.Set[string])
 	branchesIter, err := r.repository.References()
 	if err != nil {
 		return errors.Wrapf(err, "couldn't list refs")
@@ -254,13 +254,13 @@ func (r *Repo) MakeTrackingBranches(remoteName string) error {
 			return nil
 		}
 		branchName := strings.TrimPrefix(refName, refPrefix)
-		branches[branchName] = struct{}{}
+		branches.Add(branchName)
 		return nil
 	}); err != nil {
 		return err
 	}
 	// we don't want to make a branch named "HEAD", either:
-	branches[string(plumbing.HEAD)] = struct{}{}
+	branches.Add(string(plumbing.HEAD))
 
 	// Determine remote branches
 	remote, err := r.repository.Remote(remoteName)
@@ -279,7 +279,7 @@ func (r *Repo) MakeTrackingBranches(remoteName string) error {
 			continue
 		}
 		branchName := strings.TrimPrefix(refName, refPrefix)
-		if _, ok := branches[branchName]; ok {
+		if branches.Has(branchName) {
 			continue
 		}
 		if err = r.repository.CreateBranch(&config.Branch{
@@ -309,6 +309,25 @@ func (r *Repo) FetchAll() error {
 	return nil
 }
 
+func (r *Repo) Status() (status git.Status, err error) {
+	worktree, err := r.repository.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	return worktree.Status()
+}
+
+func (r *Repo) CreateRemote(remoteName string, urls []string) error {
+	_, err := r.repository.CreateRemote(&config.RemoteConfig{
+		Name: remoteName,
+		URLs: urls,
+		Fetch: []config.RefSpec{
+			config.RefSpec(fmt.Sprintf("+refs/heads/*:refs/remotes/%s/*", remoteName)),
+		},
+	})
+	return err
+}
+
 func (r *Repo) SetRemoteURLs(remoteName string, urls []string) error {
 	remote, err := r.repository.Remote(remoteName)
 	if err != nil {
@@ -325,12 +344,65 @@ func (r *Repo) SetRemoteURLs(remoteName string, urls []string) error {
 	return nil
 }
 
-func (r *Repo) Status() (status git.Status, err error) {
-	worktree, err := r.repository.Worktree()
+func (r *Repo) Remotes() (remotes []*git.Remote, err error) {
+	return r.repository.Remotes()
+}
+
+func (r *Repo) RefsHaveAncestor(refs []*plumbing.Reference, commit string) (bool, error) {
+	hash, err := r.resolveCommit(commit)
 	if err != nil {
-		return nil, err
+		return false, errors.Wrapf(err, "couldn't resolve commit %s", commit)
 	}
-	return worktree.Status()
+	queryCommit, err := r.repository.CommitObject(*hash)
+	if err != nil {
+		return false, errors.Wrapf(err, "couldn't load commit %s", hash)
+	}
+
+	// Walk ancestor commits of all refs with a breadth-first search until we find the desired commit:
+	visitQueue := make([]ancestralCommit, 0)
+	for _, ref := range refs {
+		if ref.Type() != plumbing.HashReference {
+			continue
+		}
+		commitObject, err := r.repository.CommitObject(ref.Hash())
+		if err != nil {
+			fmt.Printf("Warning: %s\n", errors.Wrapf(
+				err, "couldn't load commit %s (from %s)", ref.Hash(), ref.Name(),
+			))
+			continue
+		}
+		visitQueue = append(visitQueue, ancestralCommit{commit: commitObject})
+	}
+
+	visited := make(structures.Set[plumbing.Hash])
+	for len(visitQueue) > 0 {
+		next := visitQueue[0]
+		visitQueue = visitQueue[1:]
+		if visited.Has(next.commit.Hash) {
+			continue
+		}
+
+		if next.commit.Hash == queryCommit.Hash {
+			return true, nil
+		}
+
+		visited.Add(next.commit.Hash)
+		for _, hash := range next.commit.ParentHashes {
+			if visited.Has(next.commit.Hash) {
+				continue
+			}
+
+			commitObject, cerr := r.repository.CommitObject(hash)
+			if cerr != nil {
+				return false, errors.Wrapf(err, "couldn't load commit %s", hash)
+			}
+			visitQueue = append(visitQueue, ancestralCommit{
+				commit: commitObject,
+				depth:  next.depth + 1,
+			})
+		}
+	}
+	return false, nil
 }
 
 var ErrRepositoryAlreadyExists = git.ErrRepositoryAlreadyExists

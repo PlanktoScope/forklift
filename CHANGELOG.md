@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.8.0-alpha.1 - 2024-07-05
+
+### Added
+
+- (cli) Added tracking of the last pallet path@version query used with the `plt clone` and `plt switch` subcommands, so that those subcommands can be called again with a partial query (i.e. `@version_query` or `pallet_path@` or `@`) to reuse the last provided value(s) for omitted parts of the query.
+- (cli) Added a `--force` flag to the `plt switch` subcommand.
+- (cli) Added a `plt upgrade` subcommand as a upgrade-specific version of `plt switch` (with additional checks and log messages).
+- (cli) Added a `plt check-upgrade` subcommand to show whether an upgrade is available and, if so, what change to the local pallet would be made by `plt upgrade`.
+- (cli) Added a `plt show-upgrade-query` subcommand to show the pallet path@version query which will be used for `plt upgrade` and for `plt clone/switch` subcommands with partial queries.
+- (cli) Added a `plt set-upgrade-query` subcommand to modify the pallet path@version query which will be used for `plt upgrade` and for `plt clone/switch` subcommands with partial queries.
+- (cli) Now `plt clone` and `plt switch` add a `forklift-cache-mirror` remote to the list of remotes of the local pallet, which points to the Forklift pallet cache's mirror of the `origin` remote of the local pallet.
+- (cli) Now `plt show` will print git refs from the Forklift pallet cache's mirror of the `origin` remote of the local pallet, if the `origin` remote cannot be queried (e.g. due to lack of internet connection).
+
+### Changed
+
+- (Breaking change; cli) Now `plt switch` will quit early with an error message if you use it to try to replace a local pallet which 1) is not a Git repo, 2) has uncommitted changes, or 3) is on a commit which does not exist in the remote, unless you enable the `--force` flag. This is intended to prevent unintentional deletion of user customizations.
+
+### Fixed
+
+- (cli) Previously, the atomic commit mechanism for the stage store state file did not correctly error out if a swap file already existed. This check should now work.
+
 ## 0.7.3 - 2024-06-03
 
 ### Added
@@ -314,7 +335,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `env check` and `dev env check` now checks resource constraints againt all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
+- `env check` and `dev env check` now checks resource constraints against all provided resources and resource requirements among all package deployments in the environment, and reports any identified resource constraint violations.
 - `dev env` now allows specifying one or more directories containing Pallet repositories to replace any corresponding cached repositories, using the `--repo` flag (which can be specified repeatedly).
 - `env plan` and `dev env plan` now show the changes which will be made by `env apply` and `dev env apply`, respectively.
 - The (draft) implementation of the (draft) specification for the Pallets package management system is now available in the `/pkg/pallets` directory of this repository. Note that the specification and implementation will be changed to simplify terminology, so the API will definitely change.
@@ -343,7 +364,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change: cli) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used HashiCorp Terraform.
+- (Breaking change: cli) Renamed the `env deploy` and `dev env deploy` commands to `env apply` and `dev env apply`, respectively. This is meant to make the mental model for forklift slightly more familiar to people who have used Terraform.
 - (Breaking change: cli) Renamed the `env cache` and `dev env cache` commands to `env cache-repo` and `dev env cache-repo`, respectively. This disambiguates the commands for caching Pallets-related data and for caching Docker container images, while allowing them to be run separately (useful on Docker environments where root permissions are required to talk to the Docker daemon).
 
 ### Fixed

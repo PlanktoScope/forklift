@@ -18,7 +18,7 @@ import (
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSRepoCache) Exists() bool {
-	return Exists(filepath.FromSlash(c.FS.Path()))
+	return DirExists(filepath.FromSlash(c.FS.Path()))
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.

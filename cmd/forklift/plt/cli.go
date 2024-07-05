@@ -5,15 +5,13 @@ import (
 	"slices"
 
 	"github.com/urfave/cli/v2"
+
+	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
 type Versions struct {
-	Tool               string
-	MinSupportedRepo   string
-	MinSupportedPallet string
-	MinSupportedBundle string
-	NewBundle          string
-	NewStageStore      string
+	fcli.Versions
+	NewStageStore string
 }
 
 func MakeCmd(versions Versions) *cli.Command {
@@ -24,11 +22,17 @@ func MakeCmd(versions Versions) *cli.Command {
 		Subcommands: slices.Concat(
 			[]*cli.Command{
 				{
-					Name:      "switch",
-					Usage:     "(Re)initializes the local pallet, updates the cache, and stages the pallet",
-					ArgsUsage: "[github_repository_path@release]",
+					Name: "switch",
+					Usage: "Initializes or replaces the local pallet with the specified pallet, and " +
+						"stages the specified pallet",
+					ArgsUsage: "[[pallet_path]@[version_query]]",
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name: "force",
+							Usage: "Even if the local pallet already exists and has uncommitted/unpushed " +
+								"changes, replace it",
+						},
 						&cli.BoolFlag{
 							Name:  "no-cache-img",
 							Usage: "Don't download container images (this flag is ignored if --apply is set)",
@@ -40,10 +44,68 @@ func MakeCmd(versions Versions) *cli.Command {
 					},
 				},
 			},
+			makeUpgradeSubcmds(versions),
 			makeUseSubcmds(versions),
 			makeQuerySubcmds(),
 			makeModifySubcmds(versions),
 		),
+	}
+}
+
+func makeUpgradeSubcmds(versions Versions) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name: "upgrade",
+			Usage: "Replaces the local pallet with an upgraded version, updates the cache, and " +
+				"stages the pallet",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
+			Action:    upgradeAction(versions),
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "allow-downgrade",
+					Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
+				},
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Even if the local pallet has uncommitted/unpushed changes, replace it with the " +
+						"upgraded version",
+				},
+				&cli.BoolFlag{
+					Name:  "no-cache-img",
+					Usage: "Don't download container images (this flag is ignored if --apply is set)",
+				},
+				&cli.BoolFlag{
+					Name:  "apply",
+					Usage: "Immediately apply the upgraded pallet after staging it",
+				},
+			},
+		},
+		{
+			Name: "check-upgrade",
+			// TODO: also check whether the upgrade is cached
+			Usage:     "Checks whether an upgrade is available",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
+			Action:    checkUpgradeAction,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "allow-downgrade",
+					Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
+				},
+				// TODO: add a --require-cached flag
+			},
+		},
+		// TODO: add a cache-upgrade command
+		{
+			Name:   "show-upgrade-query",
+			Usage:  "Shows the query used for pallet upgrades",
+			Action: showUpgradeQueryAction,
+		},
+		{
+			Name:      "set-upgrade-query",
+			Usage:     "Changes the query used for pallet upgrades",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
+			Action:    setUpgradeQueryAction,
+		},
 	}
 }
 
@@ -250,12 +312,13 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Name:      "clone",
 			Category:  category,
 			Usage:     "Initializes the local pallet from a remote release",
-			ArgsUsage: "[github_repository_path@release]",
+			ArgsUsage: "[[pallet_path]@[version_query]]",
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.BoolFlag{
-						Name:  "force",
-						Usage: "Deletes the local pallet if it already exists",
+						Name: "force",
+						Usage: "If a local pallet already exists, delete it to replace it with the specified" +
+							"pallet",
 					},
 					&cli.BoolFlag{
 						Name:  "no-cache-req",
@@ -266,7 +329,8 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			),
 			Action: cloneAction(versions),
 		},
-		// TODO: add a "checkout" action
+		// TODO: add a "checkout @version_query" action; it needs a --force flag to overwrite a dirty
+		// working directory
 		{
 			Name:     "fetch",
 			Category: category,
@@ -283,6 +347,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 						Name:  "no-cache-req",
 						Usage: "Don't download repositories and pallets required by this pallet after pulling",
 					},
+					// TODO: add an option to fall back to a rebase if a fast-forward is not possible
 				},
 				modifyBaseFlags,
 			),
@@ -325,7 +390,7 @@ var modifyBaseFlags []cli.Flag = []cli.Flag{
 //	}
 
 func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet"
+	const category = "Modify the pallet's package repository requirements"
 	return []*cli.Command{
 		{
 			Name: "add-repo",
@@ -347,6 +412,11 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 			},
 			Action: addRepoAction(versions),
 		},
+		// TODO: add an upgrade-repo [repo_path]... command (upgrade all if no args)
+		// TODO: add a check-upgrade-repo [repo_path]... command (check all upgrades if no args)
+		// TODO: add a cache-upgrade-repo repo_path command (cache all upgrades if no args)
+		// TODO: add a show-upgrade-repo-query repo_path[@] command
+		// TODO: add a set-upgrade-repo-query repo_path@version_query command
 		{
 			Name: "rm-repo",
 			Aliases: []string{
@@ -372,7 +442,7 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's hard to split more
 	versions Versions,
 ) []*cli.Command {
-	const category = "Modify the pallet"
+	const category = "Modify the pallet's package deployments"
 	return []*cli.Command{
 		{
 			Name:      "add-depl",

@@ -3,13 +3,22 @@ package forklift
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func Exists(dirPath string) bool {
+func FileExists(filePath string) bool {
+	results, err := os.Stat(filePath)
+	if err == nil && !results.IsDir() {
+		return true
+	}
+	return false
+}
+
+func DirExists(dirPath string) bool {
 	dir, err := os.Stat(dirPath)
 	if err == nil && dir.IsDir() {
 		return true
@@ -30,7 +39,7 @@ func EnsureExists(dirPath string) error {
 // [XDG base directory spec](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html).
 // The provided path must use the host OS's path separators.
 func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
-	if !Exists(dirPath) {
+	if !DirExists(dirPath) {
 		return nil, errors.Errorf("couldn't find workspace at %s", dirPath)
 	}
 	return &FSWorkspace{
@@ -167,4 +176,59 @@ func (w *FSWorkspace) GetDownloadCache() (*FSDownloadCache, error) {
 	return &FSDownloadCache{
 		FS: pathedFS,
 	}, nil
+}
+
+// Config
+
+func (w *FSWorkspace) getConfigPath() string {
+	return path.Join(w.FS.Path(), configDirPath)
+}
+
+func (w *FSWorkspace) getConfigFS() (core.PathedFS, error) {
+	if err := EnsureExists(w.getConfigPath()); err != nil {
+		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getConfigPath())
+	}
+
+	fsys, err := w.FS.Sub(configDirPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get config directory from workspace")
+	}
+	return fsys, nil
+}
+
+func (w *FSWorkspace) GetCurrentPalletUpgrades() (GitRepoQuery, error) {
+	fsys, err := w.getConfigFS()
+	if err != nil {
+		return GitRepoQuery{}, err
+	}
+	return loadGitRepoQuery(fsys, configCurrentPalletUpgradesFile)
+}
+
+// CommitCurrentPalletUpgrades atomoically updates the current pallet upgrades file.
+// Warning: on non-Unix platforms, the update is not entirely atomic!
+func (w *FSWorkspace) CommitCurrentPalletUpgrades(query GitRepoQuery) error {
+	// TODO: we might want to be less sloppy about read locks vs. write locks in the future. After
+	// successfully acquiring a write lock, then we could just overwrite the swap file.
+	swapPath := path.Join(w.getConfigPath(), configCurrentPalletUpgradesSwapFile)
+	if FileExists(filepath.FromSlash(swapPath)) {
+		return errors.Errorf(
+			"current pallet upgrades swap file %s already exists, so either another operation is "+
+				"currently running or the previous operation failed or was interrupted before it could "+
+				"finish; please ensure that no other operations are currently running and delete the swap "+
+				"file before retrying",
+			swapPath,
+		)
+	}
+	if err := query.Write(swapPath); err != nil {
+		return errors.Wrapf(err, "couldn't save current pallet upgrades to swap file %s", swapPath)
+	}
+	outputPath := path.Join(w.getConfigPath(), configCurrentPalletUpgradesFile)
+	// Warning: on non-Unix platforms, os.Rename is not an atomic operation! So if the program dies
+	// during the os.Rename call, we could end up breaking the state of the stage store.
+	if err := os.Rename(filepath.FromSlash(swapPath), filepath.FromSlash(outputPath)); err != nil {
+		return errors.Wrapf(
+			err, "couldn't commit current pallet upgrades update from %s to %s", swapPath, outputPath,
+		)
+	}
+	return nil
 }
