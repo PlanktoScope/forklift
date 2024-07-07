@@ -15,30 +15,6 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func GetPalletCache(
-	wpath string, pallet *forklift.FSPallet, ensureCache bool,
-) (*forklift.FSPalletCache, error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return nil, err
-	}
-	cache, err := workspace.GetPalletCache()
-	if err != nil {
-		return nil, err
-	}
-
-	if ensureCache && !cache.Exists() && pallet != nil {
-		palletReqs, err := pallet.LoadFSPalletReqs("**")
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't check whether the pallet requires any pallets")
-		}
-		if len(palletReqs) > 0 {
-			return nil, errors.New("you first need to cache the pallets specified by your pallet")
-		}
-	}
-	return cache, nil
-}
-
 // Print
 
 func PrintCachedPallet(indent int, cache core.Pather, pallet *forklift.FSPallet) error {
@@ -239,39 +215,15 @@ func printRemoteInfo(indent int, remote *ggit.Remote) error {
 	return nil
 }
 
-// Download
-
-func DownloadRequiredPallets(
-	indent int, pallet *forklift.FSPallet, cachePath string,
-) (changed bool, err error) {
-	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
-	if err != nil {
-		return false, errors.Wrapf(err, "couldn't identify pallets")
-	}
-	changed = false
-	for _, req := range loadedPalletReqs {
-		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cachePath, req.Path(), req.VersionLock,
-		)
-		changed = changed || downloaded
-		if err != nil {
-			return false, errors.Wrapf(
-				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
-			)
-		}
-	}
-	return changed, nil
-}
-
 // Cache
 
-func CacheAllRequirements(
-	indent int, pallet *forklift.FSPallet, repoCachePath string,
+func CacheAllReqs(
+	indent int, pallet *forklift.FSPallet, repoCachePath, palletCachePath string,
 	pkgLoader forklift.FSPkgLoader, dlCache *forklift.FSDownloadCache,
 	includeDisabled, parallel bool,
 ) error {
-	if err := CacheStagingRequirements(
-		indent, pallet, repoCachePath, pkgLoader, dlCache, includeDisabled, parallel,
+	if err := CacheStagingReqs(
+		indent, pallet, repoCachePath, palletCachePath, pkgLoader, dlCache, includeDisabled, parallel,
 	); err != nil {
 		return err
 	}
@@ -283,16 +235,20 @@ func CacheAllRequirements(
 	return nil
 }
 
-func CacheStagingRequirements(
-	indent int, pallet *forklift.FSPallet, repoCachePath string,
+func CacheStagingReqs(
+	indent int, pallet *forklift.FSPallet, repoCachePath, palletCachePath string,
 	pkgLoader forklift.FSPkgLoader, dlCache *forklift.FSDownloadCache,
 	includeDisabled, parallel bool,
 ) error {
 	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
 	indent++
 
-	// TODO: download required pallets, once we allow layering pallets; then merge the pallets into
-	// a composite before downloading required repos
+	IndentedPrintln(indent, "Downloading pallets required by the local pallet...")
+	if _, err := DownloadRequiredPallets(0, pallet, palletCachePath); err != nil {
+		return err
+	}
+
+	// FIXME: merge the pallets into before downloading required repos
 
 	IndentedPrintln(indent, "Downloading repos required by the local pallet...")
 	if _, err := DownloadRequiredRepos(0, pallet, repoCachePath); err != nil {

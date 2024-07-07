@@ -32,7 +32,7 @@ func DownloadImagesForStoreApply(
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", current)
 		}
-		if err = CheckBundleShallowCompatibility(
+		if err = CheckBundleShallowCompat(
 			bundle, toolVersion, bundleMinVersion, ignoreToolVersion,
 		); err != nil {
 			return err
@@ -53,7 +53,7 @@ func DownloadImagesForStoreApply(
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load staged pallet bundle %d", next)
 		}
-		if err = CheckBundleShallowCompatibility(
+		if err = CheckBundleShallowCompat(
 			bundle, toolVersion, bundleMinVersion, ignoreToolVersion,
 		); err != nil {
 			return err

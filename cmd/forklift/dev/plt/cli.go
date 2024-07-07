@@ -10,8 +10,12 @@ import (
 )
 
 type Versions struct {
-	fcli.Versions
+	Staging       fcli.StagingVersions
 	NewStageStore string
+}
+
+func (v Versions) Core() fcli.Versions {
+	return v.Staging.Core
 }
 
 func MakeCmd(versions Versions) *cli.Command {
@@ -90,10 +94,17 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			},
 		},
 		{
+			Name:     "cache-plt",
+			Aliases:  []string{"cache-pallets"},
+			Category: category,
+			Usage:    "Updates the cache with the pallets required by the development pallet",
+			Action:   cachePltAction(versions),
+		},
+		{
 			Name:     "cache-repo",
 			Aliases:  []string{"cache-repositories"},
 			Category: category,
-			Usage:    "Updates the cache with the repos available in the development pallet",
+			Usage:    "Updates the cache with the repos required by the development pallet",
 			Action:   cacheRepoAction(versions),
 		},
 		{
@@ -129,21 +140,9 @@ func makeQuerySubcmds() []*cli.Command {
 				Usage:    "Describes the development pallet",
 				Action:   showAction,
 			},
-			{
-				Name:     "ls-repo",
-				Aliases:  []string{"list-repositories"},
-				Category: category,
-				Usage:    "Lists repos specified by the pallet",
-				Action:   lsRepoAction,
-			},
-			{
-				Name:      "show-repo",
-				Aliases:   []string{"show-repository"},
-				Category:  category,
-				Usage:     "Describes a repo available in the development pallet",
-				ArgsUsage: "repo_path",
-				Action:    showRepoAction,
-			},
+		},
+		makeQueryReqSubcmds(category),
+		[]*cli.Command{
 			{
 				Name:     "ls-pkg",
 				Aliases:  []string{"list-packages"},
@@ -177,6 +176,41 @@ func makeQuerySubcmds() []*cli.Command {
 			},
 		},
 	)
+}
+
+func makeQueryReqSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-plt",
+			Aliases:  []string{"list-pallets"},
+			Category: category,
+			Usage:    "Lists pallets which the development pallet may import files from",
+			Action:   lsPltAction,
+		},
+		{
+			Name:      "show-plt",
+			Aliases:   []string{"show-pallet"},
+			Category:  category,
+			Usage:     "Describes a pallet which the development pallet may import files from",
+			ArgsUsage: "plt_path",
+			Action:    showPltAction,
+		},
+		{
+			Name:     "ls-repo",
+			Aliases:  []string{"list-repositories"},
+			Category: category,
+			Usage:    "Lists repos specified by the development pallet",
+			Action:   lsRepoAction,
+		},
+		{
+			Name:      "show-repo",
+			Aliases:   []string{"show-repository"},
+			Category:  category,
+			Usage:     "Describes a repo available in the development pallet",
+			ArgsUsage: "repo_path",
+			Action:    showRepoAction,
+		},
+	}
 }
 
 func makeQueryDeplSubcmds(category string) []*cli.Command {
@@ -215,13 +249,64 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	return slices.Concat(
+		makeModifyPltSubcmds(versions),
 		makeModifyRepoSubcmds(versions),
 		makeModifyDeplSubcmds(versions),
 	)
 }
 
+func makeModifyPltSubcmds(versions Versions) []*cli.Command {
+	const category = "Modify the pallet's pallet requirements"
+	return []*cli.Command{
+		{
+			Name: "add-plt",
+			Aliases: []string{
+				"add-pallet", "add-pallets",
+				"req-plt", "req-pallet", "req-pallets",
+				"require-plt", "require-pallet", "require-pallets",
+			},
+			Category: category,
+			Usage: "Adds (or re-adds) pallet requirements to the pallet, tracking specified versions " +
+				"or branches",
+			ArgsUsage: "[plt_path@version_query]...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "no-cache-req",
+					Usage: "Don't download repositories and pallets required by this pallet after adding " +
+						"the pallet",
+				},
+			},
+			Action: addPltAction(versions),
+		},
+		// TODO: add an upgrade-plt [plt_path]... command (upgrade all if no args)
+		// TODO: add a check-upgrade-plt [plt_path]... command (check all upgrades if no args)
+		// TODO: add a cache-upgrade-plt plt_path command (cache all upgrades if no args)
+		// TODO: add a show-upgrade-plt-query plt_path[@] command
+		// TODO: add a set-upgrade-plt-query plt_path@version_query command
+		{
+			Name: "rm-plt",
+			Aliases: []string{
+				"remove-pallet", "remove-pallets",
+				"del-plt", "delete-pallet", "delete-pallets",
+				"drop-plt", "drop-pallet", "drop-pallets",
+			},
+			Category:  category,
+			Usage:     "Removes pallet requirements from the pallet",
+			ArgsUsage: "plt_path...",
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name: "force",
+					Usage: "Remove specified pallet requirements even if some declared file imports " +
+						"depend on them",
+				},
+			},
+			Action: rmPltAction(versions),
+		},
+	}
+}
+
 func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet"
+	const category = "Modify the pallet's package repository requirements"
 	return []*cli.Command{
 		{
 			Name: "add-repo",
@@ -242,6 +327,11 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 				},
 			},
 			Action: addRepoAction(versions),
+			// TODO: add an upgrade-repo [repo_path]... command (upgrade all if no args)
+			// TODO: add a check-upgrade-repo [repo_path]... command (check all upgrades if no args)
+			// TODO: add a cache-upgrade-repo repo_path command (cache all upgrades if no args)
+			// TODO: add a show-upgrade-repo-query repo_path[@] command
+			// TODO: add a set-upgrade-repo-query repo_path@version_query command
 		},
 		{
 			Name: "rm-repo",
@@ -268,7 +358,7 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's hard to split more
 	versions Versions,
 ) []*cli.Command {
-	const category = "Modify the pallet"
+	const category = "Modify the pallet's package deployments"
 	baseFlags := []cli.Flag{
 		&cli.BoolFlag{
 			Name: "stage",

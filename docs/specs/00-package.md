@@ -1357,8 +1357,7 @@ url: ghcr.io/planktoscope/machine-name:0.1.3
 - Example:
   
   ```yaml
-  paths:
-    - overlays/etc/dnsmasq.d/dhcp-and-dns.conf
+  target: overlays/etc/dnsmasq.d/dhcp-and-dns.conf
   ```
 
 `tags` is an array of strings which describe the file export. These tags are ignored in determining whether file exports conflict with each other, since they are not part of the file export's location(s).

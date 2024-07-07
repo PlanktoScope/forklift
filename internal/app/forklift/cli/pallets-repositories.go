@@ -66,7 +66,7 @@ func makeRepoOverrideCacheFromPallet(
 
 // Print
 
-func PrintPalletRepos(indent int, pallet *forklift.FSPallet) error {
+func PrintRequiredRepos(indent int, pallet *forklift.FSPallet) error {
 	loadedRepos, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify repos")
@@ -82,27 +82,28 @@ func PrintPalletRepos(indent int, pallet *forklift.FSPallet) error {
 	return nil
 }
 
-func PrintRepoInfo(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, repoPath string,
+func PrintRequiredRepoInfo(
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, requiredRepoPath string,
 ) error {
-	req, err := pallet.LoadFSRepoReq(repoPath)
+	req, err := pallet.LoadFSRepoReq(requiredRepoPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't load repo version lock definition %s from pallet %s",
-			repoPath, pallet.FS.Path(),
+			requiredRepoPath, pallet.FS.Path(),
 		)
 	}
 	printRepoReq(indent, req.RepoReq)
 	indent++
 
 	version := req.VersionLock.Version
-	cachedRepo, err := cache.LoadFSRepo(repoPath, version)
+	cachedRepo, err := cache.LoadFSRepo(requiredRepoPath, version)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find repo %s@%s in cache, please update the local cache of repos",
-			repoPath, version,
+			requiredRepoPath, version,
 		)
 	}
+	// TODO: replace this with a call to PrintCachedRepo
 	IndentedPrintf(indent, "Forklift version: %s\n", cachedRepo.Def.ForkliftVersion)
 	fmt.Println()
 
@@ -118,7 +119,7 @@ func PrintRepoInfo(
 	readme, err := cachedRepo.LoadReadme()
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't load readme file for repo %s@%s from cache", repoPath, version,
+			err, "couldn't load readme file for repo %s@%s from cache", requiredRepoPath, version,
 		)
 	}
 	IndentedPrintln(indent, "Readme:")
@@ -135,7 +136,7 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 
 // Add
 
-func AddRepoRequirements(
+func AddRepoReqs(
 	indent int, pallet *forklift.FSPallet, cachePath string, repoQueries []string,
 ) error {
 	if err := validateGitRepoQueries(repoQueries); err != nil {
@@ -157,28 +158,32 @@ func AddRepoRequirements(
 			return err
 		}
 		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
-		marshaled, err := yaml.Marshal(req.VersionLock.Def)
-		if err != nil {
-			return errors.Wrapf(err, "couldn't marshal repo requirement for %s", repoReqPath)
+		if err = writeVersionLock(req.VersionLock, repoReqPath); err != nil {
+			return errors.Wrapf(err, "couldn't write version lock for repo requirement")
 		}
-		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
-			return errors.Wrapf(
-				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
-			)
-		}
-		const perm = 0o644 // owner rw, group r, public r
-		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
-			return errors.Wrapf(
-				err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
-			)
-		}
+	}
+	return nil
+}
+
+func writeVersionLock(lock forklift.VersionLock, writePath string) error {
+	marshaled, err := yaml.Marshal(lock.Def)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal version lock")
+	}
+	parentDir := filepath.FromSlash(path.Dir(writePath))
+	if err := forklift.EnsureExists(parentDir); err != nil {
+		return errors.Wrapf(err, "couldn't make directory %s", parentDir)
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(filepath.FromSlash(writePath), marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save version lock to %s", filepath.FromSlash(writePath))
 	}
 	return nil
 }
 
 // Remove
 
-func RemoveRepoRequirements(
+func RemoveRepoReqs(
 	indent int, pallet *forklift.FSPallet, repoPaths []string, force bool,
 ) error {
 	usedRepoReqs, err := determineUsedRepoReqs(indent, pallet, force)
@@ -186,8 +191,8 @@ func RemoveRepoRequirements(
 		return errors.Wrap(
 			err,
 			"couldn't determine repos used by declared package deployments, to check which repositories "+
-				"to remove are still required by declared deployments; to skip this check, "+
-				"enable the --force flag",
+				"to remove are still required by declared deployments; to skip this check, enable the "+
+				"--force flag",
 		)
 	}
 

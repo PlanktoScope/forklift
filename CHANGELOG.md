@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- (cli) Added a `[dev] plt add-plt` command to add a pallet requirement to the local/development pallet.
+- (cli) Added a `[dev] plt rm-plt` command to remove a pallet requirement from the local/development pallet.
+- (cli) Added a `[dev] plt ls-plt` command to list all pallets required by the local/development pallet.
+- (cli) Added a `[dev] plt show-plt` command to show the specified pallet required by the local/development pallet.
+- (cli) Added a `[dev] plt cache-plt` command to cache all pallets required by the local/development pallet.
+- (cli) Now the `[dev] plt cache-all` command, and all commands which can cache staging requirements, will cache pallets required by the local/development pallet.
+
+### Fixed
+
+- (spec) Fixed an incorrect example for the `target` field of the file exports object in the packaging spec.
+
 ## 0.8.0-alpha.0 - 2024-07-05
 
 ### Added

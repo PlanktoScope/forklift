@@ -12,19 +12,16 @@ import (
 
 func cacheRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, cache, _, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
-			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
-		); err != nil {
+		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
 		fmt.Println("Downloading repos specified by the local pallet...")
-		changed, err := fcli.DownloadRequiredRepos(0, pallet, cache.Path())
+		changed, err := fcli.DownloadRequiredRepos(0, plt, caches.r.Path())
 		if err != nil {
 			return err
 		}
@@ -43,47 +40,44 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	pallet, err := getPallet(c.String("workspace"))
+	plt, err := getPallet(c.String("workspace"))
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletRepos(0, pallet)
+	return fcli.PrintRequiredRepos(0, plt)
 }
 
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintRepoInfo(0, pallet, cache, c.Args().First())
+	return fcli.PrintRequiredRepoInfo(0, plt, caches.r, c.Args().First())
 }
 
 // add-repo
 
+//nolint:dupl // this is already tiny, it would be silly to try to unify it with addPltAction
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, dlCache, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
-			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
-		); err != nil {
+		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
-		if err = fcli.AddRepoRequirements(0, pallet, repoCache.Path(), c.Args().Slice()); err != nil {
+		if err = fcli.AddRepoReqs(0, plt, caches.r.Path(), c.Args().Slice()); err != nil {
 			return err
 		}
-
 		if !c.Bool("no-cache-req") {
-			if err = fcli.CacheStagingRequirements(
-				0, pallet, repoCache.Path(), repoCache, dlCache, false, c.Bool("parallel"),
+			if err = fcli.CacheStagingReqs(
+				0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -97,21 +91,17 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 
 func rmRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, _, _, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, _, err := processFullBaseArgs(c.String("workspace"), false)
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckShallowCompatibility(
-			pallet, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
-		); err != nil {
+		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
-		if err = fcli.RemoveRepoRequirements(0, pallet, c.Args().Slice(), c.Bool("force")); err != nil {
+		if err = fcli.RemoveRepoReqs(0, plt, c.Args().Slice(), c.Bool("force")); err != nil {
 			return err
 		}
-
 		fmt.Println("Done!")
 		return nil
 	}

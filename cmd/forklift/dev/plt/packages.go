@@ -9,22 +9,22 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, true, true)
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletPkgs(0, pallet, cache)
+	return fcli.PrintPalletPkgs(0, plt, caches.r)
 }
 
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, true, true)
 	if err != nil {
 		return err
 	}
 
 	pkgPath := c.Args().First()
-	return fcli.PrintPkgInfo(0, pallet, cache, pkgPath)
+	return fcli.PrintPkgInfo(0, plt, caches.r, pkgPath)
 }

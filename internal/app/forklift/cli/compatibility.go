@@ -11,24 +11,31 @@ import (
 
 // Pallets
 
-// CheckCompatibility returns an error upon any version compatibility errors between a pallet, its
+type Versions struct {
+	Tool               string
+	MinSupportedRepo   string
+	MinSupportedPallet string
+}
+
+// CheckDeepCompat returns an error upon any version compatibility errors between a pallet, its
 // required pallets & repos (as loaded by repoLoader), and - unless the ignoreTool flag is set - the
-// Forklift tool (whose version is specified as toolVersion, and whose minimum compatible Forklift
-// versions are specified as repoMinVersion and palletMinVersion). Note that minimum versions are
-// still enforced even if the ignoreTool flag is set.
-func CheckCompatibility(
+// Forklift tool (as specified by toolVersions). Note that minimum versions are still enforced even
+// if the ignoreTool flag is set.
+func CheckDeepCompat(
 	pallet *forklift.FSPallet, repoLoader forklift.FSRepoLoader,
-	toolVersion, repoMinVersion, palletMinVersion string, ignoreTool bool,
+	toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
 		fmt.Printf(
 			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
-			toolVersion,
+			toolVersions.Tool,
 		)
 	}
+	// FIXME: merge the pallet with file imports from its required pallets
 
-	if err := CheckArtifactCompatibility(
-		pallet.Def.ForkliftVersion, toolVersion, palletMinVersion, pallet.Path(), ignoreTool,
+	if err := CheckArtifactCompat(
+		pallet.Def.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
+		ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
 			err, "forklift tool has a version incompatibility with pallet %s", pallet.Path(),
@@ -46,8 +53,9 @@ func CheckCompatibility(
 		)
 	}
 	for _, v := range versions {
-		if err := CheckArtifactCompatibility(
-			v.forkliftVersion, toolVersion, repoMinVersion, v.reqPath+"@"+v.reqVersion, ignoreTool,
+		if err := CheckArtifactCompat(
+			v.forkliftVersion, toolVersions.Tool, toolVersions.MinSupportedRepo,
+			v.reqPath+"@"+v.reqVersion, ignoreTool,
 		); err != nil {
 			return errors.Wrapf(
 				err, "forklift tool has a version incompatibility with required repo %s", v.reqPath,
@@ -57,23 +65,22 @@ func CheckCompatibility(
 	return nil
 }
 
-// CheckShallowCompatibility returns an error upon any version compatibility errors between a pallet
-// and - unless the ignoreTool flag is set - the Forklift tool (whose version is specified as
-// toolVersion, and whose minimum compatible Forklift versions are specified as repoMinVersion and
-// palletMinVersion). Note that minimum versions are still enforced even if the ignoreTool flag is
-// set.
-func CheckShallowCompatibility(
-	pallet *forklift.FSPallet, toolVersion, repoMinVersion, palletMinVersion string, ignoreTool bool,
+// CheckPltCompat returns an error upon any version compatibility errors between a pallet
+// and - unless the ignoreTool flag is set - the Forklift tool (as specified by toolVersions). Note
+// that minimum versions are still enforced even if the ignoreTool flag is set.
+func CheckPltCompat(
+	pallet *forklift.FSPallet, toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
 		fmt.Printf(
 			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
-			toolVersion,
+			toolVersions.Tool,
 		)
 	}
 
-	if err := CheckArtifactCompatibility(
-		pallet.Def.ForkliftVersion, toolVersion, palletMinVersion, pallet.Path(), ignoreTool,
+	if err := CheckArtifactCompat(
+		pallet.Def.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
+		ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
 			err, "forklift tool has a version incompatibility with pallet %s", pallet.Path(),
@@ -82,12 +89,12 @@ func CheckShallowCompatibility(
 	return nil
 }
 
-// CheckArtifactCompatibility determines whether the version of Forklift required by an artifact (a
+// CheckArtifactCompat determines whether the version of Forklift required by an artifact (a
 // repo or pallet), as declared by that artifact's Forklift version, is compatible with the actual
 // version of the Forklift tool, and whether the artifact's Forklift version is compatible with the
 // tool's minimum supported Forklift version for artifacts.  compatErr is non-nil when the versions
 // fail the compatibility check, while checkErr is non-nil when any specified version is invalid.
-func CheckArtifactCompatibility(
+func CheckArtifactCompat(
 	artifactVersion, toolVersion, minArtifactVersion, artifactPath string, ignoreTool bool,
 ) error {
 	if artifactVersion == "" { // special case for pre-v0.4.0 pallets/repos
@@ -157,7 +164,7 @@ func checkVersionConsistency(
 
 // Bundles
 
-func CheckBundleShallowCompatibility(
+func CheckBundleShallowCompat(
 	bundle *forklift.FSBundle, toolVersion, bundleMinVersion string, ignoreTool bool,
 ) error {
 	if ignoreTool {
@@ -167,7 +174,7 @@ func CheckBundleShallowCompatibility(
 		)
 	}
 
-	if err := CheckArtifactCompatibility(
+	if err := CheckArtifactCompat(
 		bundle.Manifest.ForkliftVersion, toolVersion, bundleMinVersion, bundle.Path(),
 		ignoreTool,
 	); err != nil {

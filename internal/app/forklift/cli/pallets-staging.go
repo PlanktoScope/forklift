@@ -11,31 +11,32 @@ import (
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 )
 
-type Versions struct {
-	Tool               string
-	MinSupportedRepo   string
-	MinSupportedPallet string
+type StagingVersions struct {
+	Core               Versions
 	MinSupportedBundle string
 	NewBundle          string
 }
 
+type StagingCaches struct {
+	Repos     forklift.PathedRepoCache
+	Pallets   forklift.PathedPalletCache
+	Downloads *forklift.FSDownloadCache
+}
+
 func StagePallet(
-	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore,
-	repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
-	exportPath string, versions Versions,
+	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
+	exportPath string, versions StagingVersions,
 	skipImageCaching, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
-	if err = CacheStagingRequirements(
-		0, pallet, repoCache.Path(), repoCache, dlCache, false, parallel,
+	if err = CacheStagingReqs(
+		0, pallet, caches.Repos.Path(), caches.Pallets.Path(), caches.Repos, caches.Downloads,
+		false, parallel,
 	); err != nil {
 		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")
 	}
 	// Note: we must have all requirements in the cache before we can check their compatibility with
 	// the Forklift tool version
-	if err = CheckCompatibility(
-		pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-		ignoreToolVersion,
-	); err != nil {
+	if err = CheckDeepCompat(pallet, caches.Repos, versions.Core, ignoreToolVersion); err != nil {
 		return 0, err
 	}
 	fmt.Println()
@@ -46,13 +47,13 @@ func StagePallet(
 	}
 	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
 	if err = buildBundle(
-		pallet, repoCache, dlCache,
+		pallet, caches.Repos, caches.Downloads,
 		versions.NewBundle, path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
 	if err = SetNextStagedBundle(
-		stageStore, index, exportPath, versions.Tool, versions.MinSupportedBundle,
+		stageStore, index, exportPath, versions.Core.Tool, versions.MinSupportedBundle,
 		skipImageCaching, parallel, ignoreToolVersion,
 	); err != nil {
 		return index, errors.Wrapf(
