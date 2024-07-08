@@ -34,7 +34,7 @@ func processFullBaseArgs(
 	if plt, err = getPallet(wpath); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.d, err = fcli.GetDlCache(wpath, ensureCache); err != nil {
+	if caches.d, err = fcli.GetDownloadCache(wpath, ensureCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	if caches.p, err = fcli.GetPalletCache(wpath, plt, ensureCache); err != nil {

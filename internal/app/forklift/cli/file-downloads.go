@@ -18,7 +18,7 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
-func GetDlCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache, error) {
+func GetDownloadCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err

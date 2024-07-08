@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -36,17 +36,15 @@ func GetPalletCache(
 	return cache, nil
 }
 
-// Print
+// Printing
 
 func PrintRequiredPallets(indent int, pallet *forklift.FSPallet) error {
 	loadedPallets, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify pallets")
 	}
-	sort.Slice(loadedPallets, func(i, j int) bool {
-		return forklift.CompareGitRepoReqs(
-			loadedPallets[i].PalletReq.GitRepoReq, loadedPallets[j].PalletReq.GitRepoReq,
-		) < 0
+	slices.SortFunc(loadedPallets, func(a, b *forklift.FSPalletReq) int {
+		return forklift.CompareGitRepoReqs(a.PalletReq.GitRepoReq, b.PalletReq.GitRepoReq)
 	})
 	for _, pallet := range loadedPallets {
 		IndentedPrintf(indent, "%s\n", pallet.Path())

@@ -8,8 +8,6 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-// Print
-
 func PrintCachedRepo(indent int, cache core.Pather, repo *core.FSRepo, printHeader bool) error {
 	if printHeader {
 		IndentedPrintf(indent, "Cached repo: %s\n", repo.Path())

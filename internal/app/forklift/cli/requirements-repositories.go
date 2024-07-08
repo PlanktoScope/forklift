@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -64,17 +64,15 @@ func makeRepoOverrideCacheFromPallet(
 	)
 }
 
-// Print
+// Printing
 
 func PrintRequiredRepos(indent int, pallet *forklift.FSPallet) error {
 	loadedRepos, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify repos")
 	}
-	sort.Slice(loadedRepos, func(i, j int) bool {
-		return forklift.CompareGitRepoReqs(
-			loadedRepos[i].RepoReq.GitRepoReq, loadedRepos[j].RepoReq.GitRepoReq,
-		) < 0
+	slices.SortFunc(loadedRepos, func(a, b *forklift.FSRepoReq) int {
+		return forklift.CompareGitRepoReqs(a.RepoReq.GitRepoReq, b.RepoReq.GitRepoReq)
 	})
 	for _, repo := range loadedRepos {
 		IndentedPrintf(indent, "%s\n", repo.Path())
