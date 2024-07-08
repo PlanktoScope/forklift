@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt cache-plt` command to cache all pallets required by the local/development pallet.
 - (cli) Now the `[dev] plt cache-all` command, and all commands which can cache staging requirements, will cache pallets required by the local/development pallet.
 
+### Changed
+
+- (cli) Now the commands for viewing a pallet/repo (e.g. `[dev] plt show`) truncate the pallet/repo's readme file to the first ten lines, to prevent long readme files from clogging up stdout.
+
 ### Fixed
 
 - (spec) Fixed an incorrect example for the `target` field of the file exports object in the packaging spec.

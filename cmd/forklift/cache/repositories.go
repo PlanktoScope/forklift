@@ -35,5 +35,5 @@ func showRepoAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	return showGitRepo(cache, c.Args().First(), cache.LoadFSRepo, fcli.PrintCachedRepo)
+	return showGitRepo(cache, c.Args().First(), cache.LoadFSRepo, fcli.PrintCachedRepo, true)
 }

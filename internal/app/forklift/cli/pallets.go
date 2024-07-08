@@ -17,26 +17,32 @@ import (
 
 // Print
 
-func PrintCachedPallet(indent int, cache core.Pather, pallet *forklift.FSPallet) error {
-	IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
-	indent++
+func PrintCachedPallet(
+	indent int, cache core.Pather, pallet *forklift.FSPallet, printHeader bool,
+) error {
+	if printHeader {
+		IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
+		indent++
+	}
 
 	IndentedPrintf(indent, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
 	fmt.Println()
 
 	IndentedPrintf(indent, "Version: %s\n", pallet.Version)
-	IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	if core.CoversPath(cache, pallet.FS.Path()) {
+		IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	} else {
+		// Note: this is used when the repo is replaced by an overlay from outside the cache
+		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", pallet.FS.Path())
+	}
 	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
 
-	readme, err := pallet.LoadReadme()
-	if err != nil {
+	if err := printReadme(indent, pallet); err != nil {
 		return errors.Wrapf(
-			err, "couldn't load readme file for pallet %s@%s from cache", pallet.Path(), pallet.Version,
+			err, "couldn't preview readme file for pallet %s@%s from cache",
+			pallet.Path(), pallet.Version,
 		)
 	}
-	IndentedPrintln(indent, "Readme:")
-	const widthLimit = 100
-	PrintReadme(indent+1, readme, widthLimit)
 	return nil
 }
 
@@ -53,14 +59,8 @@ func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
 	if pallet.Def.Pallet.ReadmeFile == "" {
 		fmt.Println()
-	} else {
-		readme, err := pallet.LoadReadme()
-		if err != nil {
-			return errors.Wrapf(err, "couldn't load readme file for pallet %s", pallet.FS.Path())
-		}
-		IndentedPrintln(indent, "Readme:")
-		const widthLimit = 100
-		PrintReadme(indent+1, readme, widthLimit)
+	} else if err := printReadme(indent, pallet); err != nil {
+		return errors.Wrapf(err, "couldn't preview readme file for pallet %s", pallet.FS.Path())
 	}
 
 	return printGitRepoInfo(indent, pallet.FS.Path())

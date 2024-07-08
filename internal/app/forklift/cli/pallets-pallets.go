@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 func GetPalletCache(
@@ -77,29 +76,7 @@ func PrintRequiredPalletInfo(
 			requiredPalletPath, version,
 		)
 	}
-	// TODO: replace this with a call to PrintCachedPallet
-	IndentedPrintf(indent, "Forklift version: %s\n", cachedPallet.Def.ForkliftVersion)
-	fmt.Println()
-
-	if core.CoversPath(cache, cachedPallet.FS.Path()) {
-		IndentedPrintf(
-			indent, "Path in cache: %s\n", core.GetSubdirPath(cache, cachedPallet.FS.Path()),
-		)
-	} else {
-		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", cachedPallet.FS.Path())
-	}
-	IndentedPrintf(indent, "Description: %s\n", cachedPallet.Def.Pallet.Description)
-
-	readme, err := cachedPallet.LoadReadme()
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load readme file for pallet %s@%s from cache", requiredPalletPath, version,
-		)
-	}
-	IndentedPrintln(indent, "Readme:")
-	const widthLimit = 100
-	PrintReadme(indent+1, readme, widthLimit)
-	return nil
+	return PrintCachedPallet(indent, cache, cachedPallet, false)
 }
 
 func printPalletReq(indent int, req forklift.PalletReq) {

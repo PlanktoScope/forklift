@@ -35,5 +35,5 @@ func showPltAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	return showGitRepo(cache, c.Args().First(), cache.LoadFSPallet, fcli.PrintCachedPallet)
+	return showGitRepo(cache, c.Args().First(), cache.LoadFSPallet, fcli.PrintCachedPallet, true)
 }

@@ -41,7 +41,8 @@ func lsGitRepo[GitRepo versionQuerier](
 func showGitRepo[GitRepo any](
 	cache core.Pather, versionQuery string,
 	loader func(path, version string) (GitRepo, error),
-	printer func(indent int, cache core.Pather, gitRepo GitRepo) error,
+	printer func(indent int, cache core.Pather, gitRepo GitRepo, printHeader bool) error,
+	printHeader bool,
 ) error {
 	gitRepoPath, version, ok := strings.Cut(versionQuery, "@")
 	if !ok {
@@ -53,7 +54,7 @@ func showGitRepo[GitRepo any](
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find %s@%s", gitRepoPath, version)
 	}
-	return printer(0, cache, gitRepo)
+	return printer(0, cache, gitRepo, printHeader)
 }
 
 // add-*

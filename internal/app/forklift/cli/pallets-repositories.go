@@ -103,29 +103,7 @@ func PrintRequiredRepoInfo(
 			requiredRepoPath, version,
 		)
 	}
-	// TODO: replace this with a call to PrintCachedRepo
-	IndentedPrintf(indent, "Forklift version: %s\n", cachedRepo.Def.ForkliftVersion)
-	fmt.Println()
-
-	if core.CoversPath(cache, cachedRepo.FS.Path()) {
-		IndentedPrintf(
-			indent, "Path in cache: %s\n", core.GetSubdirPath(cache, cachedRepo.FS.Path()),
-		)
-	} else {
-		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", cachedRepo.FS.Path())
-	}
-	IndentedPrintf(indent, "Description: %s\n", cachedRepo.Def.Repo.Description)
-
-	readme, err := cachedRepo.LoadReadme()
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load readme file for repo %s@%s from cache", requiredRepoPath, version,
-		)
-	}
-	IndentedPrintln(indent, "Readme:")
-	const widthLimit = 100
-	PrintReadme(indent+1, readme, widthLimit)
-	return nil
+	return PrintCachedRepo(indent, cache, cachedRepo, false)
 }
 
 func printRepoReq(indent int, req forklift.RepoReq) {
