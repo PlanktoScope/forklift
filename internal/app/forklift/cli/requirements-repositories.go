@@ -219,14 +219,18 @@ func determineUsedRepoReqs(
 		IndentedPrintf(indent, "Warning: %s\n", err.Error())
 	}
 	usedRepoReqs := make(map[string][]string)
+	if len(depls) == 0 {
+		return usedRepoReqs, nil
+	}
+
+	repoReqsFS, err := pallet.GetRepoReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
+	}
 	for _, depl := range depls {
 		pkgPath := depl.Def.Package
 		if path.IsAbs(pkgPath) { // special case: package is provided by the pallet itself
 			continue
-		}
-		repoReqsFS, err := pallet.GetRepoReqsFS()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 		}
 		fsRepoReq, err := forklift.LoadFSRepoReqContaining(repoReqsFS, pkgPath)
 		if err != nil {

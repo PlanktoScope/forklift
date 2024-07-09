@@ -167,14 +167,38 @@ func RemovePalletReqs(
 func determineUsedPalletReqs(
 	indent int, pallet *forklift.FSPallet, force bool,
 ) (map[string][]string, error) {
-	// FIXME: implement this by checking which pallet requirements directories have non-disabled
-	// import files in them
-	IndentedPrintf(
-		indent,
-		"Warning: we have not yet implemented a check for whether a pallet requirement has "+
-			"any attached file imports! %s, %+v\n", pallet.Path(), force,
-	)
-	return nil, nil
+	imports, err := pallet.LoadImports("**/*")
+	if err != nil {
+		err = errors.Wrap(err, "couldn't load import groups")
+		if !force {
+			return nil, err
+		}
+		IndentedPrintf(indent, "Warning: %s\n", err.Error())
+	}
+	usedPalletReqs := make(map[string][]string)
+	if len(imports) == 0 {
+		return usedPalletReqs, nil
+	}
+	palletReqsFS, err := pallet.GetPalletReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
+	}
+
+	for _, imp := range imports {
+		fsPalletReq, err := forklift.LoadFSPalletReqContaining(palletReqsFS, imp.Name)
+		if err != nil {
+			err = errors.Wrapf(
+				err, "couldn't find pallet requirement needed for import group %s of package %s",
+				imp.Name, imp.Name,
+			)
+			if !force {
+				return nil, err
+			}
+			IndentedPrintf(indent, "Warning: %s\n", err.Error())
+		}
+		usedPalletReqs[fsPalletReq.Path()] = append(usedPalletReqs[fsPalletReq.Path()], imp.Name)
+	}
+	return usedPalletReqs, nil
 }
 
 // Download
