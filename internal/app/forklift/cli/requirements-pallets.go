@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -150,7 +151,9 @@ func RemovePalletReqs(
 				palletPath, usedPalletReqs[palletPath],
 			)
 		}
-		if err = os.RemoveAll(palletReqPath); err != nil {
+		if err = os.RemoveAll(filepath.FromSlash(path.Join(
+			palletReqPath, forklift.VersionLockDefFile,
+		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for pallet %s, at %s", palletPath, palletReqPath,
 			)
@@ -164,11 +167,12 @@ func RemovePalletReqs(
 func determineUsedPalletReqs(
 	indent int, pallet *forklift.FSPallet, force bool,
 ) (map[string][]string, error) {
-	// FIXME: implement this by checking which pallet requirements have import files in them
-	IndentedPrintln(
+	// FIXME: implement this by checking which pallet requirements directories have non-disabled
+	// import files in them
+	IndentedPrintf(
 		indent,
 		"Warning: we have not yet implemented a check for whether a pallet requirement has "+
-			"any attached file imports!", pallet.Path(), force,
+			"any attached file imports! %s, %+v\n", pallet.Path(), force,
 	)
 	return nil, nil
 }

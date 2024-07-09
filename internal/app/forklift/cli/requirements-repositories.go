@@ -194,7 +194,9 @@ func RemoveRepoReqs(
 				repoPath, usedRepoReqs[repoPath],
 			)
 		}
-		if err = os.RemoveAll(repoReqPath); err != nil {
+		if err = os.RemoveAll(filepath.FromSlash(path.Join(
+			repoReqPath, forklift.VersionLockDefFile,
+		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for repo %s, at %s", repoPath, repoReqPath,
 			)

@@ -134,7 +134,7 @@ func (p Pkg) ResAttachmentSource(parentSource []string) []string {
 func (p Pkg) ProvidedListeners(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ListenerRes]) {
-	return providedResources[ListenerRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ListenerRes] {
 			return res.AttachedListeners
 		},
@@ -171,7 +171,7 @@ func providedResources[Resource any](
 func (p Pkg) RequiredNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[NetworkRes]) {
-	return requiredResources[NetworkRes](
+	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[NetworkRes] {
 			return res.AttachedNetworks
 		},
@@ -202,7 +202,7 @@ func requiredResources[Resource any](
 func (p Pkg) ProvidedNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[NetworkRes]) {
-	return providedResources[NetworkRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[NetworkRes] {
 			return res.AttachedNetworks
 		},
@@ -214,7 +214,7 @@ func (p Pkg) ProvidedNetworks(
 func (p Pkg) RequiredServices(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[ServiceRes]) {
-	return requiredResources[ServiceRes](
+	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[ServiceRes] {
 			return res.AttachedServices
 		},
@@ -226,7 +226,7 @@ func (p Pkg) RequiredServices(
 func (p Pkg) ProvidedServices(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ServiceRes]) {
-	return providedResources[ServiceRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ServiceRes] {
 			return res.AttachedServices
 		},
@@ -238,7 +238,7 @@ func (p Pkg) ProvidedServices(
 func (p Pkg) RequiredFilesets(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[FilesetRes]) {
-	return requiredResources[FilesetRes](
+	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[FilesetRes] {
 			return res.AttachedFilesets
 		},
@@ -250,7 +250,7 @@ func (p Pkg) RequiredFilesets(
 func (p Pkg) ProvidedFilesets(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[FilesetRes]) {
-	return providedResources[FilesetRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FilesetRes] {
 			return res.AttachedFilesets
 		},
@@ -262,7 +262,7 @@ func (p Pkg) ProvidedFilesets(
 func (p Pkg) ProvidedFileExports(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[FileExportRes]) {
-	return providedResources[FileExportRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FileExportRes] {
 			return res.AttachedFileExports
 		},

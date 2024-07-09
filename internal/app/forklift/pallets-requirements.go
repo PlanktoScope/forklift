@@ -57,7 +57,7 @@ func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err
 	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load version lock config of requirement for pallet %s", palletPath,
+			err, "couldn't load version lock declaration of requirement for pallet %s", palletPath,
 		)
 	}
 	return r, nil
@@ -67,9 +67,6 @@ func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err
 // search pattern, assuming the directory paths in the base filesystem are also the paths of the
 // required pallets. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // pallet paths to search for.
-// With a nil processor function, in the embedded [Pallet] of each loaded FSPallet, the VCS
-// repository path and pallet subdirectory are initialized from the pallet path declared in the
-// pallet's configuration file, while the pallet's version is not initialized.
 func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
 	searchPattern = path.Join(searchPattern, VersionLockDefFile)
 	palletReqFiles, err := doublestar.Glob(fsys, searchPattern)
@@ -95,6 +92,47 @@ func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq,
 		reqs = append(reqs, req)
 	}
 	return reqs, nil
+}
+
+// LoadFSPalletReqContaining loads the FSPalletReq containing the specified sub-directory path in
+// the provided base filesystem.
+// The sub-directory path does not have to actually exist; however, it would usually be provided
+// as a package path.
+func LoadFSPalletReqContaining(fsys core.PathedFS, subdirPath string) (*FSPalletReq, error) {
+	repoCandidatePath := subdirPath
+	for {
+		if repo, err := loadFSPalletReq(fsys, repoCandidatePath); err == nil {
+			return repo, nil
+		}
+		repoCandidatePath = path.Dir(repoCandidatePath)
+		if repoCandidatePath == "/" || repoCandidatePath == "." {
+			// we can't go up anymore!
+			return nil, errors.Errorf(
+				"no pallet requirement declaration found in any parent directory of %s", subdirPath,
+			)
+		}
+	}
+}
+
+// LoadRequiredFSPallet loads the specified pallet from the cache according to the specifications in
+// the pallet requirements provided by the pallet requirement loader for the provided pallet
+// path.
+func LoadRequiredFSPallet(
+	palletReqLoader PalletReqLoader, palletLoader FSPalletLoader, palletPath string,
+) (*FSPallet, PalletReq, error) {
+	req, err := palletReqLoader.LoadPalletReq(palletPath)
+	if err != nil {
+		return nil, PalletReq{}, errors.Wrapf(
+			err, "couldn't determine pallet requirement for pallet %s", palletPath,
+		)
+	}
+	fsPallet, err := palletLoader.LoadFSPallet(req.Path(), req.VersionLock.Version)
+	if err != nil {
+		return nil, PalletReq{}, errors.Wrapf(
+			err, "couldn't load required pallet %s", req.GetQueryPath(),
+		)
+	}
+	return fsPallet, req, nil
 }
 
 // GetCachePath returns the path of the pallet in caches, which is of form
@@ -124,7 +162,7 @@ func loadFSRepoReq(fsys core.PathedFS, repoPath string) (r *FSRepoReq, err error
 	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't load version lock config of requirement for repo %s", repoPath,
+			err, "couldn't load version lock declaration of requirement for repo %s", repoPath,
 		)
 	}
 	return r, nil
@@ -144,7 +182,7 @@ func LoadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq,
 		if repoCandidatePath == "/" || repoCandidatePath == "." {
 			// we can't go up anymore!
 			return nil, errors.Errorf(
-				"no repo requirement config file found in any parent directory of %s", subdirPath,
+				"no repo requirement declaration found in any parent directory of %s", subdirPath,
 			)
 		}
 	}
@@ -154,9 +192,6 @@ func LoadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq,
 // search pattern, assuming the directory paths in the base filesystem are also the paths of the
 // required repos. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // repo paths to search for.
-// With a nil processor function, in the embedded [Repo] of each loaded FSRepo, the VCS
-// repository path and repo subdirectory are initialized from the repo path declared in the
-// repo's configuration file, while the repo's version is not initialized.
 func loadFSRepoReqs(fsys core.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
 	searchPattern = path.Join(searchPattern, VersionLockDefFile)
 	repoReqFiles, err := doublestar.Glob(fsys, searchPattern)

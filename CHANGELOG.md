@@ -14,11 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt ls-plt` command to list all pallets required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt` command to show the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt cache-plt` command to cache all pallets required by the local/development pallet.
+- (cli) Added a `[dev] plt ls-imp` command to list all file import groups declared by the local/development pallet.
+- (cli) Added a `[dev] plt show-imp` command to show the specified file import group declared by the local/development pallet.
 - (cli) Now the `[dev] plt cache-all` command, and all commands which can cache staging requirements, will cache pallets required by the local/development pallet.
 
 ### Changed
 
 - (cli) Now the commands for viewing a pallet/repo (e.g. `[dev] plt show`) truncate the pallet/repo's readme file to the first ten lines, to prevent long readme files from clogging up stdout.
+- (cli) Now the `[dev] plt rm-repo` command only deletes the version lock file for the specified repository, instead of deleting the entire subdirectory for the repository.
 
 ### Fixed
 

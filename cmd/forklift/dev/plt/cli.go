@@ -142,6 +142,7 @@ func makeQuerySubcmds() []*cli.Command {
 			},
 		},
 		makeQueryReqSubcmds(category),
+		makeQueryImportSubcmds(category),
 		[]*cli.Command{
 			{
 				Name:     "ls-pkg",
@@ -209,6 +210,26 @@ func makeQueryReqSubcmds(category string) []*cli.Command {
 			Usage:     "Describes a repo available in the development pallet",
 			ArgsUsage: "repo_path",
 			Action:    showRepoAction,
+		},
+	}
+}
+
+func makeQueryImportSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-imp",
+			Aliases:  []string{"list-imports"},
+			Category: category,
+			Usage:    "Lists import groups specified by the development pallet",
+			Action:   lsImpAction,
+		},
+		{
+			Name:      "show-imp",
+			Aliases:   []string{"show-import"},
+			Category:  category,
+			Usage:     "Describes an import group specified by the development pallet",
+			ArgsUsage: "import_name",
+			Action:    showImpAction,
 		},
 	}
 }

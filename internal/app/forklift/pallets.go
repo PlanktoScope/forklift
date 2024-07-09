@@ -154,11 +154,20 @@ func (p *FSPallet) LoadFSPalletReq(palletPath string) (r *FSPalletReq, err error
 // The search pattern should be a [doublestar] pattern, such as `**`, matching the pallet paths to
 // search for.
 func (p *FSPallet) LoadFSPalletReqs(searchPattern string) ([]*FSPalletReq, error) {
-	palletsFS, err := p.GetPalletReqsFS()
+	palletReqsFS, err := p.GetPalletReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallets in pallet")
 	}
-	return loadFSPalletReqs(palletsFS, searchPattern)
+	return loadFSPalletReqs(palletReqsFS, searchPattern)
+}
+
+// LoadPalletReq loads the PalletReq from the pallet with the specified pallet path.
+func (p *FSPallet) LoadPalletReq(palletPath string) (r PalletReq, err error) {
+	fsPalletReq, err := p.LoadFSPalletReq(palletPath)
+	if err != nil {
+		return PalletReq{}, errors.Wrapf(err, "couldn't find pallet %s", palletPath)
+	}
+	return fsPalletReq.PalletReq, nil
 }
 
 // FSPallet: Repo Requirements
@@ -191,11 +200,11 @@ func (p *FSPallet) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
 // The search pattern should be a [doublestar] pattern, such as `**`, matching the repo paths to
 // search for.
 func (p *FSPallet) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
-	reposFS, err := p.GetRepoReqsFS()
+	repoReqsFS, err := p.GetRepoReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for repos in pallet")
 	}
-	return loadFSRepoReqs(reposFS, searchPattern)
+	return loadFSRepoReqs(repoReqsFS, searchPattern)
 }
 
 // FSPallet: Package Requirements
@@ -226,8 +235,7 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 
 // FSPallet: Deployments
 
-// GetDeplsFS returns the [fs.FS] in the pallet which contains package deployment
-// configurations.
+// GetDeplsFS returns the [fs.FS] in the pallet which contains package deployment declarations.
 func (p *FSPallet) GetDeplsFS() (core.PathedFS, error) {
 	return p.FS.Sub(DeplsDirName)
 }
@@ -237,7 +245,7 @@ func (p *FSPallet) LoadDepl(name string) (depl Depl, err error) {
 	deplsFS, err := p.GetDeplsFS()
 	if err != nil {
 		return Depl{}, errors.Wrap(
-			err, "couldn't open directory for package deployment configurations from pallet",
+			err, "couldn't open directory for package deployment declarations from pallet",
 		)
 	}
 	if depl, err = loadDepl(deplsFS, name); err != nil {
@@ -246,17 +254,42 @@ func (p *FSPallet) LoadDepl(name string) (depl Depl, err error) {
 	return depl, nil
 }
 
-// LoadDepls loads all package deployment configurations matching the specified search pattern.
+// LoadDepls loads all package deployment declarations matching the specified search pattern.
 // The search pattern should not include the file extension for deployment specification files - the
 // file extension will be appended to the search pattern by LoadDepls.
 func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 	fsys, err := p.GetDeplsFS()
 	if err != nil {
 		return nil, errors.Wrap(
-			err, "couldn't open directory for package deployment configurations from pallet",
+			err, "couldn't open directory for package deployment declarations from pallet",
 		)
 	}
 	return loadDepls(fsys, searchPattern)
+}
+
+// FSPallet: Imports
+
+// LoadImport loads the Import with the specified name from the pallet.
+func (p *FSPallet) LoadImport(name string) (imp Import, err error) {
+	impsFS, err := p.GetPalletReqsFS()
+	if err != nil {
+		return Import{}, errors.Wrap(err, "couldn't open directory for import groups from pallet")
+	}
+	if imp, err = loadImport(impsFS, name); err != nil {
+		return Import{}, errors.Wrapf(err, "couldn't load import group for %s", name)
+	}
+	return imp, nil
+}
+
+// LoadImports loads all package deployment declarations matching the specified search pattern.
+// The search pattern should not include the file extension for import group files - the
+// file extension will be appended to the search pattern by LoadImports.
+func (p *FSPallet) LoadImports(searchPattern string) ([]Import, error) {
+	fsys, err := p.GetPalletReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for import groups from pallet")
+	}
+	return loadImports(fsys, searchPattern)
 }
 
 // Pallet
