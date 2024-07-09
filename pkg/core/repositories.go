@@ -23,7 +23,7 @@ func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
 		)
 	}
 	if r.Repo.Def, err = LoadRepoDef(r.FS, RepoDefFile); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load repo config")
+		return nil, errors.Wrapf(err, "couldn't load repo declaration")
 	}
 	return r, nil
 }
@@ -42,7 +42,7 @@ func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
 		if repoCandidatePath == "/" || repoCandidatePath == "." {
 			// we can't go up anymore!
 			return nil, errors.Errorf(
-				"no repo config file was found in any parent directory of %s", subdirPath,
+				"no repo declaration file was found in any parent directory of %s", subdirPath,
 			)
 		}
 	}
@@ -57,7 +57,7 @@ func LoadFSRepos(fsys PathedFS, searchPattern string) ([]*FSRepo, error) {
 	repoDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't search for repo config files matching %s/%s", fsys.Path(), searchPattern,
+			err, "couldn't search for repo declaration files matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
@@ -130,7 +130,7 @@ func (r Repo) VersionQuery() string {
 
 // Check looks for errors in the construction of the repo.
 func (r Repo) Check() (errs []error) {
-	errs = append(errs, ErrsWrap(r.Def.Check(), "invalid repo config")...)
+	errs = append(errs, ErrsWrap(r.Def.Check(), "invalid repo declaration")...)
 	return errs
 }
 
@@ -175,17 +175,17 @@ func LoadRepoDef(fsys PathedFS, filePath string) (RepoDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return RepoDef{}, errors.Wrapf(
-			err, "couldn't read repo config file %s/%s", fsys.Path(), filePath,
+			err, "couldn't read repo declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := RepoDef{}
-	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return RepoDef{}, errors.Wrap(err, "couldn't parse repo config")
+	declaration := RepoDef{}
+	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
+		return RepoDef{}, errors.Wrap(err, "couldn't parse repo declaration")
 	}
-	return config, nil
+	return declaration, nil
 }
 
-// Check looks for errors in the construction of the repo configuration.
+// Check looks for errors in the construction of the repo declaration.
 func (d RepoDef) Check() (errs []error) {
 	return ErrsWrap(d.Repo.Check(), "invalid repo spec")
 }

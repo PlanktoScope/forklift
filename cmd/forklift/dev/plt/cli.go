@@ -271,6 +271,8 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 func makeModifySubcmds(versions Versions) []*cli.Command {
 	return slices.Concat(
 		makeModifyPltSubcmds(versions),
+		// TODO: add `add-imp`, `rm-imp`, `set-imp-disabled`, `unset-imp-disabled`,
+		// `add-imp-mod`, and `rm-imp-mod` subcommands
 		makeModifyRepoSubcmds(versions),
 		makeModifyDeplSubcmds(versions),
 	)

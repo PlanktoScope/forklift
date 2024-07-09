@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // FSRepoCache
@@ -54,7 +55,7 @@ func (c *FSRepoCache) LoadFSRepo(repoPath string, version string) (*core.FSRepo,
 // The loaded FSRepo instances are fully initialized.
 func (c *FSRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	repos, err := core.LoadFSRepos(c.FS, searchPattern)
@@ -122,7 +123,7 @@ func (c *FSRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, er
 // The loaded FSPkg instances are fully initialized.
 func (c *FSRepoCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	pkgs, err := core.LoadFSPkgs(c.FS, searchPattern)
@@ -208,7 +209,7 @@ func (c *LayeredRepoCache) LoadFSRepo(
 // to have.
 func (c *LayeredRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	loadedRepos, err := c.Overlay.LoadFSRepos(searchPattern)
@@ -260,7 +261,7 @@ func (c *LayeredRepoCache) LoadFSPkg(pkgPath string, version string) (*core.FSPk
 // to have.
 func (c *LayeredRepoCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	pkgs, err := c.Overlay.LoadFSPkgs(searchPattern)
@@ -297,7 +298,7 @@ func NewRepoOverrideCache(
 		repos:           make(map[string]*core.FSRepo),
 		repoPaths:       make([]string, 0, len(overrideRepos)),
 		repoVersions:    make(map[string][]string),
-		repoVersionSets: make(map[string]map[string]struct{}),
+		repoVersionSets: make(map[string]structures.Set[string]),
 	}
 	for _, repo := range overrideRepos {
 		repoPath := repo.Path()
@@ -313,10 +314,10 @@ func NewRepoOverrideCache(
 		c.repoVersions[repoPath] = append(c.repoVersions[repoPath], repoVersions[repoPath]...)
 		sort.Strings(c.repoVersions[repoPath])
 		if _, ok := c.repoVersionSets[repoPath]; !ok {
-			c.repoVersionSets[repoPath] = make(map[string]struct{})
+			c.repoVersionSets[repoPath] = make(structures.Set[string])
 		}
 		for _, version := range repoVersions[repoPath] {
-			c.repoVersionSets[repoPath][version] = struct{}{}
+			c.repoVersionSets[repoPath].Add(version)
 		}
 	}
 	sort.Strings(c.repoPaths)
@@ -324,14 +325,14 @@ func NewRepoOverrideCache(
 }
 
 // SetVersions configures the cache to cover the specified versions of the specified repo.
-func (c *RepoOverrideCache) SetVersions(repoPath string, versions map[string]struct{}) {
+func (c *RepoOverrideCache) SetVersions(repoPath string, versions structures.Set[string]) {
 	if _, ok := c.repoVersionSets[repoPath]; !ok {
-		c.repoVersionSets[repoPath] = make(map[string]struct{})
+		c.repoVersionSets[repoPath] = make(structures.Set[string])
 	}
 	sortedVersions := make([]string, 0, len(versions))
 	for version := range versions {
 		sortedVersions = append(sortedVersions, version)
-		c.repoVersionSets[repoPath][version] = struct{}{}
+		c.repoVersionSets[repoPath].Add(version)
 	}
 	sort.Strings(sortedVersions)
 	c.repoVersions[repoPath] = sortedVersions
@@ -348,8 +349,7 @@ func (c *RepoOverrideCache) IncludesFSRepo(repoPath string, version string) bool
 	if _, ok := c.repos[repoPath]; !ok {
 		return false
 	}
-	_, ok := c.repoVersionSets[repoPath][version]
-	return ok
+	return c.repoVersionSets[repoPath].Has(version)
 }
 
 // LoadFSRepo loads the FSRepo with the specified path, if the version matches any of versions
@@ -364,7 +364,7 @@ func (c *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.F
 	if !ok {
 		return nil, errors.Errorf("couldn't find a repo with path %s", repoPath)
 	}
-	if _, ok = c.repoVersionSets[repoPath][version]; !ok {
+	if !c.repoVersionSets[repoPath].Has(version) {
 		return nil, errors.Errorf("found repo %s, but not with version %s", repoPath, version)
 	}
 	return repo, nil
@@ -376,7 +376,7 @@ func (c *RepoOverrideCache) LoadFSRepo(repoPath string, version string) (*core.F
 // The loaded FSRepo instances are fully initialized.
 func (c *RepoOverrideCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	loadedRepos := make(map[string]*core.FSRepo) // indexed by repo cache path
@@ -422,8 +422,7 @@ func (c *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
 		if !core.CoversPath(repo, pkgPath) {
 			continue
 		}
-		_, ok := c.repoVersionSets[repo.Path()][version]
-		return ok
+		return c.repoVersionSets[repo.Path()].Has(version)
 	}
 	return false
 }
@@ -442,7 +441,7 @@ func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSP
 		if !core.CoversPath(repo, pkgPath) {
 			continue
 		}
-		if _, ok := c.repoVersionSets[repo.Path()][version]; !ok {
+		if !c.repoVersionSets[repo.Path()].Has(version) {
 			return nil, errors.Errorf(
 				"found repo %s providing package %s, but not at version %s", repo.Path(), pkgPath, version,
 			)
@@ -458,7 +457,7 @@ func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSP
 // The loaded FSPkg instances are fully initialized.
 func (c *RepoOverrideCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	pkgs := make(map[string]*core.FSPkg) // indexed by package cache path

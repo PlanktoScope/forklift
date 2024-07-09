@@ -2,6 +2,7 @@ package forklift
 
 import (
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // Pallet
@@ -66,7 +67,7 @@ type PalletOverrideCache struct {
 	palletVersions map[string][]string
 	// palletVersionSets is like palletVersions, but every value is a set of versions rather than a
 	// list of versions.
-	palletVersionSets map[string]map[string]struct{}
+	palletVersionSets map[string]structures.Set[string]
 }
 
 // Repo
@@ -144,7 +145,7 @@ type RepoOverrideCache struct {
 	repoVersions map[string][]string
 	// repoVersionSets is like repoVersions, but every value is a set of versions rather than a
 	// list of versions.
-	repoVersionSets map[string]map[string]struct{}
+	repoVersionSets map[string]structures.Set[string]
 }
 
 // Download

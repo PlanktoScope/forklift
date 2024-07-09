@@ -2,7 +2,6 @@ package forklift
 
 import (
 	"archive/tar"
-	"cmp"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -233,7 +232,7 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 				)
 			}
 			switch export.SourceType {
-			case core.FileExportSourceTypeLocal, "":
+			case core.FileExportSourceTypeLocal:
 				if err := exportLocalFile(resolved, export, exportPath); err != nil {
 					return err
 				}
@@ -254,7 +253,7 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 }
 
 func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
-	sourcePath := path.Join(resolved.Pkg.FS.Path(), cmp.Or(export.Source, export.Target))
+	sourcePath := path.Join(resolved.Pkg.FS.Path(), export.Source)
 	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
 	// https://github.com/golang/go/issues/62484)
 	if err := cp.Copy(filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath)); err != nil {

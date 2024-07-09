@@ -58,25 +58,26 @@ func printImport(indent int, imp *forklift.ResolvedImport) error {
 
 	IndentedPrintf(indent, "Import source: %s\n", imp.Pallet.Path())
 
-	IndentedPrint(indent, "Group modifiers:")
-	if len(imp.Def.Modifiers) == 0 {
-		fmt.Print(" (none)")
-	}
-	fmt.Println()
-	printModifiers(indent+1, imp.Def.Modifiers)
+	printModifiers(indent, imp.Def.Modifiers)
 
 	return nil
 }
 
 func printModifiers(indent int, modifiers []forklift.ImportModifier) {
+	IndentedPrint(indent, "Group modifiers:")
+	if len(modifiers) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
 	for i, modifier := range modifiers {
 		switch modifier.Type {
-		case "add", "":
+		case "add":
 			printAddModifier(indent, i, modifier)
 		case "remove":
 			printRemoveModifier(indent, i, modifier)
 		default:
-			BulletedPrintf(indent, "[%d] Unknown modifier type: %+v\n", i, modifier)
+			BulletedPrintf(indent, "[%d] Unknown modifier type %s: %+v\n", i, modifier.Type, modifier)
 		}
 	}
 }

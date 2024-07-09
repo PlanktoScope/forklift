@@ -84,15 +84,95 @@ func PrintDeplSpec(indent int, spec core.PkgDeplSpec) {
 	IndentedPrintf(indent, "Deployment:\n")
 	indent++
 
-	IndentedPrintf(indent, "Compose files: ")
+	IndentedPrintf(indent, "Compose files:")
 	if len(spec.ComposeFiles) == 0 {
-		fmt.Printf("(none)")
-		return
+		fmt.Printf(" (none)")
 	}
 	fmt.Println()
 	for _, file := range spec.ComposeFiles {
 		BulletedPrintln(indent+1, file)
 	}
+
+	printFileExports(indent, spec.Provides.FileExports)
+}
+
+func printFileExports(indent int, fileExports []core.FileExportRes) {
+	IndentedPrint(indent, "File exports:")
+	if len(fileExports) == 0 {
+		fmt.Print(" (none)")
+	}
+	fmt.Println()
+	indent++
+	for _, fileExport := range fileExports {
+		switch fileExport.SourceType {
+		case core.FileExportSourceTypeLocal:
+			printFileExportLocal(indent, fileExport)
+		case core.FileExportSourceTypeHTTP:
+			printFileExportHTTP(indent, fileExport)
+		case core.FileExportSourceTypeHTTPArchive:
+			printFileExportHTTPArchive(indent, fileExport)
+		case core.FileExportSourceTypeOCIImage:
+			printFileExportOCIImage(indent, fileExport)
+		default:
+			BulletedPrintf(indent, "Unknown source type %s: %+v\n", fileExport.SourceType, fileExport)
+		}
+	}
+}
+
+func printFileExportLocal(indent int, fileExport core.FileExportRes) {
+	BulletedPrintf(indent, "Export from the package's local directory")
+	indent++
+	if fileExport.Description == "" {
+		fmt.Println()
+	} else {
+		fmt.Println(":")
+		IndentedPrintln(indent+1, fileExport.Description)
+	}
+	if fileExport.Source == fileExport.Target {
+		IndentedPrintf(indent, "Export: %s\n", fileExport.Target)
+		return
+	}
+	IndentedPrintf(indent, "From file: %s\n", fileExport.Source)
+	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+}
+
+func printFileExportHTTP(indent int, fileExport core.FileExportRes) {
+	BulletedPrintf(indent, "Export from an HTTP download")
+	indent++
+	if fileExport.Description == "" {
+		fmt.Println()
+	} else {
+		fmt.Println(":")
+		IndentedPrintln(indent+1, fileExport.Description)
+	}
+	IndentedPrintf(indent, "From file: %s\n", fileExport.URL)
+	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+}
+
+func printFileExportHTTPArchive(indent int, fileExport core.FileExportRes) {
+	BulletedPrintf(indent, "Export from an HTTP archive download")
+	indent++
+	if fileExport.Description == "" {
+		fmt.Println()
+	} else {
+		fmt.Println(":")
+		IndentedPrintln(indent+1, fileExport.Description)
+	}
+	IndentedPrintf(indent, "From file: [%s]/%s\n", fileExport.URL, fileExport.Source)
+	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+}
+
+func printFileExportOCIImage(indent int, fileExport core.FileExportRes) {
+	BulletedPrintf(indent, "Export from a Docker/OCI image")
+	indent++
+	if fileExport.Description == "" {
+		fmt.Println()
+	} else {
+		fmt.Println(":")
+		IndentedPrintln(indent+1, fileExport.Description)
+	}
+	IndentedPrintf(indent, "From file: [%s]/%s\n", fileExport.URL, fileExport.Source)
+	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
 }
 
 func PrintFeatureSpecs(indent int, features map[string]core.PkgFeatureSpec) {
@@ -119,15 +199,16 @@ func PrintFeatureSpec(indent int, name string, spec core.PkgFeatureSpec) {
 
 	IndentedPrintf(indent, "Description: %s\n", spec.Description)
 
-	IndentedPrintf(indent, "Compose files: ")
+	IndentedPrintf(indent, "Compose files:")
 	if len(spec.ComposeFiles) == 0 {
-		fmt.Println("(none)")
-		return
+		fmt.Print(" (none)")
 	}
 	fmt.Println()
 	for _, file := range spec.ComposeFiles {
 		BulletedPrintln(indent+1, file)
 	}
+
+	printFileExports(indent, spec.Provides.FileExports)
 }
 
 // Pallet packages

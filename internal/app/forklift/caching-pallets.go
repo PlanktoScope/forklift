@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // FSPalletCache
@@ -53,7 +54,7 @@ func (c *FSPalletCache) LoadFSPallet(repoPath string, version string) (*FSPallet
 // The loaded FSPallet instances are fully initialized.
 func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	repos, err := LoadFSPallets(c.FS, searchPattern)
@@ -115,7 +116,7 @@ func (c *LayeredPalletCache) LoadFSPallet(repoPath string, version string) (*FSP
 // to have.
 func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	loadedPallets, err := c.Overlay.LoadFSPallets(searchPattern)
@@ -152,7 +153,7 @@ func NewPalletOverrideCache(
 		pallets:           make(map[string]*FSPallet),
 		palletPaths:       make([]string, 0, len(overridePallets)),
 		palletVersions:    make(map[string][]string),
-		palletVersionSets: make(map[string]map[string]struct{}),
+		palletVersionSets: make(map[string]structures.Set[string]),
 	}
 	for _, pallet := range overridePallets {
 		palletPath := pallet.Path()
@@ -170,10 +171,10 @@ func NewPalletOverrideCache(
 		)
 		sort.Strings(c.palletVersions[palletPath])
 		if _, ok := c.palletVersionSets[palletPath]; !ok {
-			c.palletVersionSets[palletPath] = make(map[string]struct{})
+			c.palletVersionSets[palletPath] = make(structures.Set[string])
 		}
 		for _, version := range palletVersions[palletPath] {
-			c.palletVersionSets[palletPath][version] = struct{}{}
+			c.palletVersionSets[palletPath].Add(version)
 		}
 	}
 	sort.Strings(c.palletPaths)
@@ -181,14 +182,14 @@ func NewPalletOverrideCache(
 }
 
 // SetVersions configures the cache to cover the specified versions of the specified pallet.
-func (c *PalletOverrideCache) SetVersions(palletPath string, versions map[string]struct{}) {
+func (c *PalletOverrideCache) SetVersions(palletPath string, versions structures.Set[string]) {
 	if _, ok := c.palletVersionSets[palletPath]; !ok {
-		c.palletVersionSets[palletPath] = make(map[string]struct{})
+		c.palletVersionSets[palletPath] = make(structures.Set[string])
 	}
 	sortedVersions := make([]string, 0, len(versions))
 	for version := range versions {
 		sortedVersions = append(sortedVersions, version)
-		c.palletVersionSets[palletPath][version] = struct{}{}
+		c.palletVersionSets[palletPath].Add(version)
 	}
 	sort.Strings(sortedVersions)
 	c.palletVersions[palletPath] = sortedVersions
@@ -205,8 +206,7 @@ func (c *PalletOverrideCache) IncludesFSPallet(palletPath string, version string
 	if _, ok := c.pallets[palletPath]; !ok {
 		return false
 	}
-	_, ok := c.palletVersionSets[palletPath][version]
-	return ok
+	return c.palletVersionSets[palletPath].Has(version)
 }
 
 // LoadFSPallet loads the FSPallet with the specified path, if the version matches any of versions
@@ -221,7 +221,7 @@ func (c *PalletOverrideCache) LoadFSPallet(palletPath string, version string) (*
 	if !ok {
 		return nil, errors.Errorf("couldn't find a pallet with path %s", palletPath)
 	}
-	if _, ok = c.palletVersionSets[palletPath][version]; !ok {
+	if !c.palletVersionSets[palletPath].Has(version) {
 		return nil, errors.Errorf("found pallet %s, but not with version %s", palletPath, version)
 	}
 	return pallet, nil
@@ -233,7 +233,7 @@ func (c *PalletOverrideCache) LoadFSPallet(palletPath string, version string) (*
 // The loaded FSPallet instances are fully initialized.
 func (c *PalletOverrideCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	if c == nil {
-		return nil, errors.New("cache is nil")
+		return nil, nil
 	}
 
 	loadedPallets := make(map[string]*FSPallet) // indexed by pallet cache path

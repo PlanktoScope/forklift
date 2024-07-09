@@ -127,8 +127,12 @@ func loadImportDef(fsys core.PathedFS, filePath string) (ImportDef, error) {
 		return ImportDef{}, errors.Wrap(err, "couldn't parse import group")
 	}
 
-	// Normalize empty values with defaults:
-	for i, modifier := range declaration.Modifiers {
+	return declaration.AddDefaults(), nil
+}
+
+func (d ImportDef) AddDefaults() ImportDef {
+	updatedModifiers := make([]ImportModifier, 0, len(d.Modifiers))
+	for _, modifier := range d.Modifiers {
 		if modifier.Target == "" {
 			modifier.Target = "/"
 		}
@@ -138,10 +142,29 @@ func loadImportDef(fsys core.PathedFS, filePath string) (ImportDef, error) {
 		if len(modifier.OnlyMatchingAny) == 0 {
 			modifier.OnlyMatchingAny = []string{""}
 		}
-		declaration.Modifiers[i] = modifier
+		updatedModifiers = append(updatedModifiers, modifier)
 	}
+	d.Modifiers = updatedModifiers
+	return d
+}
 
-	return declaration, nil
+func (d ImportDef) RemoveDefaults() ImportDef {
+	// TODO: use this method when saving import definitions!
+	updatedModifiers := make([]ImportModifier, 0, len(d.Modifiers))
+	for _, modifier := range d.Modifiers {
+		if modifier.Target == "/" {
+			modifier.Target = ""
+		}
+		if modifier.Source == modifier.Target {
+			modifier.Source = ""
+		}
+		if len(modifier.OnlyMatchingAny) == 1 && modifier.OnlyMatchingAny[0] == "" {
+			modifier.OnlyMatchingAny = nil
+		}
+		updatedModifiers = append(updatedModifiers, modifier)
+	}
+	d.Modifiers = updatedModifiers
+	return d
 }
 
 // TODO: add a method to validate the import definition
