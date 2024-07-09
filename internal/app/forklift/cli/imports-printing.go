@@ -69,20 +69,20 @@ func printImport(indent int, imp *forklift.ResolvedImport) error {
 }
 
 func printModifiers(indent int, modifiers []forklift.ImportModifier) {
-	for _, modifier := range modifiers {
+	for i, modifier := range modifiers {
 		switch modifier.Type {
 		case "add", "":
-			printAddModifier(indent, modifier)
+			printAddModifier(indent, i, modifier)
 		case "remove":
-			printRemoveModifier(indent, modifier)
+			printRemoveModifier(indent, i, modifier)
 		default:
-			BulletedPrintf(indent, "Unknown modifier type: %+v\n", modifier)
+			BulletedPrintf(indent, "[%d] Unknown modifier type: %+v\n", i, modifier)
 		}
 	}
 }
 
-func printAddModifier(indent int, modifier forklift.ImportModifier) {
-	BulletedPrint(indent, "Add files to group")
+func printAddModifier(indent, index int, modifier forklift.ImportModifier) {
+	BulletedPrintf(indent, "[%d] Add files to group", index)
 	if modifier.Description == "" {
 		fmt.Println()
 	} else {
@@ -100,8 +100,8 @@ func printAddModifier(indent int, modifier forklift.ImportModifier) {
 	}
 }
 
-func printRemoveModifier(indent int, modifier forklift.ImportModifier) {
-	BulletedPrint(indent, "Remove files from group")
+func printRemoveModifier(indent, index int, modifier forklift.ImportModifier) {
+	BulletedPrintf(indent, "[%d] Remove files from group", index)
 	if modifier.Description == "" {
 		fmt.Println()
 	} else {
