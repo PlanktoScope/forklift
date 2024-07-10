@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt show-imp` command to show the specified file import group declared by the local/development pallet.
 - (cli) Now the `[dev] plt cache-all` command, and all commands which can cache staging requirements, will cache pallets required by the local/development pallet.
 - (cli) Now the `[dev] plt show-pkg` and `cache show-pkg` commands also print information about file exports.
+- (cli) Added an optional `--plts` flag to `dev plt` for overriding version-locked required pallets with pallets from other directories, like the existing `--repos` flag.
 
 ### Changed
 

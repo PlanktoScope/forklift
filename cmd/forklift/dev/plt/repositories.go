@@ -40,7 +40,7 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	plt, err := getPallet(c.String("cwd"))
+	plt, err := getShallowPallet(c.String("cwd"))
 	if err != nil {
 		return err
 	}

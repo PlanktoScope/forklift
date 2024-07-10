@@ -31,7 +31,8 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 func processFullBaseArgs(
 	wpath string, ensureCache bool,
 ) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
-	if plt, err = getPallet(wpath); err != nil {
+	// FIXME: return both the shallow pallet and the merged pallet? the `stage` command needs both
+	if plt, err = getShallowPallet(wpath); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	if caches.d, err = fcli.GetDownloadCache(wpath, ensureCache); err != nil {
@@ -43,10 +44,15 @@ func processFullBaseArgs(
 	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, ensureCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
+	if plt, err = forklift.MergeFSPallet(plt, caches.p); err != nil {
+		return nil, workspaceCaches{}, errors.Wrap(
+			err, "couldn't merge local pallet with file imports from any pallets required by it",
+		)
+	}
 	return plt, caches, nil
 }
 
-func getPallet(wpath string) (plt *forklift.FSPallet, err error) {
+func getShallowPallet(wpath string) (plt *forklift.FSPallet, err error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
@@ -757,7 +763,7 @@ func rmAction(c *cli.Context) error {
 // show
 
 func showAction(c *cli.Context) error {
-	plt, err := getPallet(c.String("workspace"))
+	plt, err := getShallowPallet(c.String("workspace"))
 	if err != nil {
 		return err
 	}
@@ -919,7 +925,7 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 // ls-plt
 
 func lsPltAction(c *cli.Context) error {
-	plt, err := getPallet(c.String("workspace"))
+	plt, err := getShallowPallet(c.String("workspace"))
 	if err != nil {
 		return err
 	}

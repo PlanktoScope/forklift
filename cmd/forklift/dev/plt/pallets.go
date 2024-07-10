@@ -11,10 +11,11 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 type workspaceCaches struct {
-	p *forklift.FSPalletCache
+	p *forklift.LayeredPalletCache
 	r *forklift.LayeredRepoCache
 	d *forklift.FSDownloadCache
 }
@@ -30,35 +31,127 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 func processFullBaseArgs(
 	c *cli.Context, ensureCache, enableOverrides bool,
 ) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
-	if plt, err = getPallet(c.String("cwd")); err != nil {
+	// FIXME: return both the shallow pallet and the merged pallet? the `stage` command needs both
+	if plt, err = getShallowPallet(c.String("cwd")); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.d, err = fcli.GetDownloadCache(c.String("workspace"), ensureCache); err != nil {
+	wpath := c.String("workspace")
+	workspacePalletCache, err := fcli.GetPalletCache(wpath, plt, ensureCache)
+	if err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.p, err = fcli.GetPalletCache(c.String("workspace"), plt, ensureCache); err != nil {
+	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, ensureCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.r, _, err = fcli.GetRepoCache(c.String("workspace"), plt, ensureCache); err != nil {
+	if caches.d, err = fcli.GetDownloadCache(wpath, ensureCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if !enableOverrides {
-		return plt, caches, nil
+	if enableOverrides {
+		if caches.p, err = overlayPalletCacheOverrides(
+			workspacePalletCache, c.StringSlice("plts"), plt,
+		); err != nil {
+			return nil, workspaceCaches{}, err
+		}
+	} else {
+		caches.p = &forklift.LayeredPalletCache{
+			Underlay: workspacePalletCache,
+		}
 	}
-	// FIXME: add overlayPalletCacheOverrides
-	if caches.r, err = overlayRepoCacheOverrides(caches.r, c.StringSlice("repos"), plt); err != nil {
-		return nil, workspaceCaches{}, err
+	// FIXME: to enable recursive layering, we should pass in the merged pallet cache rather than the
+	// shallow pallet cache. Ideally we could lazily compute merged pallet caches from the shallow
+	// pallet cache for cache misses in the merged pallet cache; and the merged pallet cache can just
+	// copy the shallow pallet cache entry for pallets without import groups.
+	if plt, err = forklift.MergeFSPallet(plt, caches.p); err != nil {
+		return nil, workspaceCaches{}, errors.Wrap(
+			err, "couldn't merge development pallet with file imports from any pallets required by it",
+		)
+	}
+	if enableOverrides {
+		if caches.r, err = overlayRepoCacheOverrides(
+			caches.r, c.StringSlice("repos"), plt,
+		); err != nil {
+			return nil, workspaceCaches{}, err
+		}
 	}
 	return plt, caches, nil
 }
 
-func getPallet(cwdPath string) (plt *forklift.FSPallet, err error) {
+func getShallowPallet(cwdPath string) (plt *forklift.FSPallet, err error) {
 	if plt, err = forklift.LoadFSPalletContaining(cwdPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "The current working directory %s is not part of a Forklift pallet", cwdPath,
 		)
 	}
 	return plt, nil
+}
+
+func overlayPalletCacheOverrides(
+	underlay forklift.PathedPalletCache, pallets []string, plt *forklift.FSPallet,
+) (palletCache *forklift.LayeredPalletCache, err error) {
+	palletCache = &forklift.LayeredPalletCache{
+		Underlay: underlay,
+	}
+	replacementPallets, err := loadReplacementPallets(pallets)
+	if err != nil {
+		return nil, err
+	}
+	override, err := forklift.NewPalletOverrideCache(replacementPallets, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = setPalletOverrideCacheVersions(plt, override); err != nil {
+		return nil, err
+	}
+	palletCache.Overlay = override
+	return palletCache, nil
+}
+
+func loadReplacementPallets(fsPaths []string) (replacements []*forklift.FSPallet, err error) {
+	for _, path := range fsPaths {
+		replacementPath, err := filepath.Abs(path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
+		}
+		if !forklift.DirExists(replacementPath) {
+			return nil, errors.Errorf("couldn't find pallet replacement path %s", replacementPath)
+		}
+		externalPallets, err := forklift.LoadFSPallets(
+			core.AttachPath(os.DirFS(replacementPath), replacementPath), "**",
+		)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't list replacement pallets in path %s", replacementPath)
+		}
+		if len(externalPallets) == 0 {
+			return nil, errors.Errorf("no replacement pallets found in path %s", replacementPath)
+		}
+		replacements = append(replacements, externalPallets...)
+	}
+	return replacements, nil
+}
+
+func setPalletOverrideCacheVersions(
+	plt *forklift.FSPallet, overrideCache *forklift.PalletOverrideCache,
+) error {
+	reqs, err := plt.LoadFSPalletReqs("**")
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't identify pallet requirements specified by pallet %s", plt.FS.Path(),
+		)
+	}
+	palletVersions := make(map[string]structures.Set[string])
+	for _, req := range reqs {
+		palletPath := req.Path()
+		version := req.VersionLock.Version
+		if _, ok := palletVersions[palletPath]; !ok {
+			palletVersions[palletPath] = make(structures.Set[string])
+		}
+		palletVersions[palletPath].Add(version)
+	}
+
+	for palletPath, versions := range palletVersions {
+		overrideCache.SetVersions(palletPath, versions)
+	}
+	return nil
 }
 
 func overlayRepoCacheOverrides(
@@ -75,7 +168,7 @@ func overlayRepoCacheOverrides(
 	if err != nil {
 		return nil, err
 	}
-	if err = setOverrideCacheVersions(plt, override); err != nil {
+	if err = setRepoOverrideCacheVersions(plt, override); err != nil {
 		return nil, err
 	}
 	repoCache.Overlay = override
@@ -105,7 +198,7 @@ func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err er
 	return replacements, nil
 }
 
-func setOverrideCacheVersions(
+func setRepoOverrideCacheVersions(
 	plt *forklift.FSPallet, overrideCache *forklift.RepoOverrideCache,
 ) error {
 	reqs, err := plt.LoadFSRepoReqs("**")
@@ -114,14 +207,14 @@ func setOverrideCacheVersions(
 			err, "couldn't identify repo requirements specified by pallet %s", plt.FS.Path(),
 		)
 	}
-	repoVersions := make(map[string]map[string]struct{})
+	repoVersions := make(map[string]structures.Set[string])
 	for _, req := range reqs {
 		repoPath := req.Path()
 		version := req.VersionLock.Version
 		if _, ok := repoVersions[repoPath]; !ok {
-			repoVersions[repoPath] = make(map[string]struct{})
+			repoVersions[repoPath] = make(structures.Set[string])
 		}
-		repoVersions[repoPath][version] = struct{}{}
+		repoVersions[repoPath].Add(version)
 	}
 
 	for repoPath, versions := range repoVersions {
@@ -156,7 +249,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 // show
 
 func showAction(c *cli.Context) error {
-	plt, err := getPallet(c.String("cwd"))
+	plt, err := getShallowPallet(c.String("cwd"))
 	if err != nil {
 		return err
 	}
@@ -319,7 +412,7 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 // ls-plt
 
 func lsPltAction(c *cli.Context) error {
-	plt, err := getPallet(c.String("cwd"))
+	plt, err := getShallowPallet(c.String("cwd"))
 	if err != nil {
 		return err
 	}
