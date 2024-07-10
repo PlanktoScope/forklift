@@ -212,3 +212,8 @@ type ImportModifier struct {
 	// omitted, no files in the source directory will be ignored.
 	OnlyMatchingAny []string `yaml:"only-matching-any,omitempty"`
 }
+
+const (
+	ImportModifierTypeAdd    = "add"
+	ImportModifierTypeRemove = "remove"
+)

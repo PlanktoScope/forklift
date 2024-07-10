@@ -72,9 +72,9 @@ func printModifiers(indent int, modifiers []forklift.ImportModifier) {
 	indent++
 	for i, modifier := range modifiers {
 		switch modifier.Type {
-		case "add":
+		case forklift.ImportModifierTypeAdd:
 			printAddModifier(indent, i, modifier)
-		case "remove":
+		case forklift.ImportModifierTypeRemove:
 			printRemoveModifier(indent, i, modifier)
 		default:
 			BulletedPrintf(indent, "[%d] Unknown modifier type %s: %+v\n", i, modifier.Type, modifier)

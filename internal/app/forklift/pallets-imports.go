@@ -133,6 +133,9 @@ func loadImportDef(fsys core.PathedFS, filePath string) (ImportDef, error) {
 func (d ImportDef) AddDefaults() ImportDef {
 	updatedModifiers := make([]ImportModifier, 0, len(d.Modifiers))
 	for _, modifier := range d.Modifiers {
+		if modifier.Type == "" {
+			modifier.Type = ImportModifierTypeAdd
+		}
 		if modifier.Target == "" {
 			modifier.Target = "/"
 		}
@@ -152,6 +155,9 @@ func (d ImportDef) RemoveDefaults() ImportDef {
 	// TODO: use this method when saving import definitions!
 	updatedModifiers := make([]ImportModifier, 0, len(d.Modifiers))
 	for _, modifier := range d.Modifiers {
+		if modifier.Type == ImportModifierTypeAdd {
+			modifier.Type = ""
+		}
 		if modifier.Target == "/" {
 			modifier.Target = ""
 		}
