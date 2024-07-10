@@ -127,12 +127,7 @@ func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't determine enabled features of deployment %s", d.Name)
 	}
-	orderedNames := make([]string, 0, len(enabledFeatures))
-	for name := range enabledFeatures {
-		orderedNames = append(orderedNames, name)
-	}
-	slices.Sort(orderedNames)
-	for _, name := range orderedNames {
+	for _, name := range sortKeys(enabledFeatures) {
 		composeFiles = append(composeFiles, enabledFeatures[name].ComposeFiles...)
 	}
 	return composeFiles, nil
@@ -189,8 +184,8 @@ func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 			err, "couldn't determine files to download for export from deployment %s", d.Name,
 		)
 	}
-	for _, feature := range enabledFeatures {
-		for _, export := range feature.Provides.FileExports {
+	for _, name := range sortKeys(enabledFeatures) {
+		for _, export := range enabledFeatures[name].Provides.FileExports {
 			switch export.SourceType {
 			default:
 				continue
@@ -219,8 +214,8 @@ func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
 			err, "couldn't determine oci images to download for export from deployment %s", d.Name,
 		)
 	}
-	for _, feature := range enabledFeatures {
-		for _, export := range feature.Provides.FileExports {
+	for _, name := range sortKeys(enabledFeatures) {
+		for _, export := range enabledFeatures[name].Provides.FileExports {
 			if export.SourceType != core.FileExportSourceTypeOCIImage {
 				continue
 			}
@@ -246,8 +241,8 @@ func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
 			err, "couldn't determine exported file targets of deployment %s", d.Name,
 		)
 	}
-	for _, feature := range enabledFeatures {
-		for _, export := range feature.Provides.FileExports {
+	for _, name := range sortKeys(enabledFeatures) {
+		for _, export := range enabledFeatures[name].Provides.FileExports {
 			exportTargets = append(exportTargets, export.Target)
 		}
 	}
@@ -256,7 +251,10 @@ func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
 }
 
 // GetFileExports returns a list of file exports to be exported by the package deployment, with
-// file export objects sorted alphabetically by their source file paths.
+// file export objects sorted alphabetically by their target file paths, and (if multiple source
+// files are specified for a target path) preserving precedence of feature flags over the
+// deployment section, and preserving precedence among feature flags by alphabetical ordering of
+// feature flags.
 func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
 	exports := append([]core.FileExportRes{}, d.Pkg.Def.Deployment.Provides.FileExports...)
 	enabledFeatures, err := d.EnabledFeatures()
@@ -265,11 +263,11 @@ func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
 			err, "couldn't determine exported file targets of deployment %s", d.Name,
 		)
 	}
-	for _, feature := range enabledFeatures {
-		exports = append(exports, feature.Provides.FileExports...)
+	for _, name := range sortKeys(enabledFeatures) {
+		exports = append(exports, enabledFeatures[name].Provides.FileExports...)
 	}
-	slices.SortFunc(exports, func(a, b core.FileExportRes) int {
-		return cmp.Compare(a.Source, b.Source)
+	slices.SortStableFunc(exports, func(a, b core.FileExportRes) int {
+		return cmp.Compare(a.Target, b.Target)
 	})
 	return exports, nil
 }

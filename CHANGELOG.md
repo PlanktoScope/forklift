@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- (Breaking change; cli) Now enabled feature flags are ordered alphabetically when sequencing file export operations declared by feature flags.
 - (cli) Now the commands for viewing a pallet/repo (e.g. `[dev] plt show`) truncate the printout of the pallet/repo's readme file to the first ten lines of the file, to prevent long readme files from clogging up the command output.
 - (cli) Now the `[dev] plt rm-repo` command only deletes the version lock file for the specified repository, instead of deleting the entire subdirectory for the repository.
 
