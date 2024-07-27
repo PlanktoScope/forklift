@@ -41,13 +41,13 @@ func processFullBaseArgs(
 	if caches.p, err = fcli.GetPalletCache(wpath, plt, ensureCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, ensureCache); err != nil {
-		return nil, workspaceCaches{}, err
-	}
-	if plt, err = forklift.MergeFSPallet(plt, caches.p); err != nil {
+	if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
 		return nil, workspaceCaches{}, errors.Wrap(
 			err, "couldn't merge local pallet with file imports from any pallets required by it",
 		)
+	}
+	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, ensureCache); err != nil {
+		return nil, workspaceCaches{}, err
 	}
 	return plt, caches, nil
 }
@@ -79,8 +79,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d,
-			c.Bool("include-disabled"), c.Bool("parallel"),
+			0, plt, caches.p, caches.r, caches.d, c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
@@ -372,8 +371,8 @@ func preparePallet(
 	// cache everything required by pallet
 	if cacheStagingReqs {
 		fmt.Println()
-		if err = fcli.CacheStagingReqs(
-			0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, parallel,
+		if _, _, err = fcli.CacheStagingReqs(
+			0, plt, caches.p, caches.r, caches.d, false, parallel,
 		); err != nil {
 			return err
 		}
@@ -726,8 +725,8 @@ func pullAction(versions Versions) cli.ActionFunc {
 		}
 
 		if !c.Bool("no-cache-req") {
-			if err = fcli.CacheStagingReqs(
-				0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, c.Bool("parallel"),
+			if _, _, err = fcli.CacheStagingReqs(
+				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -961,8 +960,8 @@ func addPltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !c.Bool("no-cache-req") {
-			if err = fcli.CacheStagingReqs(
-				0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, c.Bool("parallel"),
+			if _, _, err = fcli.CacheStagingReqs(
+				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

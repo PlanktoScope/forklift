@@ -75,9 +75,8 @@ func StagePallet(
 	exportPath string, versions StagingVersions,
 	skipImageCaching, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
-	if err = CacheStagingReqs(
-		0, pallet, caches.Repos.Path(), caches.Pallets.Path(), caches.Repos, caches.Downloads,
-		false, parallel,
+	if pallet, _, err = CacheStagingReqs(
+		0, pallet, caches.Pallets, caches.Repos, caches.Downloads, false, parallel,
 	); err != nil {
 		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")
 	}

@@ -99,7 +99,7 @@ func (c *LayeredPalletCache) LoadFSPallet(repoPath string, version string) (*FSP
 		return nil, errors.New("cache is nil")
 	}
 
-	if c.Overlay.IncludesFSPallet(repoPath, version) {
+	if c.Overlay != nil && c.Overlay.IncludesFSPallet(repoPath, version) {
 		repo, err := c.Overlay.LoadFSPallet(repoPath, version)
 		return repo, errors.Wrap(err, "couldn't load repo from overlay")
 	}

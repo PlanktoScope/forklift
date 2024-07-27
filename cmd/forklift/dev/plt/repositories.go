@@ -12,7 +12,10 @@ import (
 
 func cacheRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, false, false)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			enableOverrides: true,
+			merge:           true,
+		})
 		if err != nil {
 			return err
 		}
@@ -40,17 +43,25 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	plt, err := getShallowPallet(c.String("cwd"))
+	plt, _, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+		merge:           true,
+	})
 	if err != nil {
 		return err
 	}
+
 	return fcli.PrintRequiredRepos(0, plt)
 }
 
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -62,7 +73,10 @@ func showRepoAction(c *cli.Context) error {
 
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, false, false)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			enableOverrides: true,
+			merge:           true,
+		})
 		if err != nil {
 			return err
 		}
@@ -74,8 +88,8 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !c.Bool("no-cache-req") {
-			if err = fcli.CacheStagingReqs(
-				0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, c.Bool("parallel"),
+			if _, _, err = fcli.CacheStagingReqs(
+				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -89,7 +103,9 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 
 func rmRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, _, err := processFullBaseArgs(c, false, false)
+		plt, _, err := processFullBaseArgs(c, processingOptions{
+			enableOverrides: true,
+		})
 		if err != nil {
 			return err
 		}

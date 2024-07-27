@@ -28,50 +28,54 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 	}
 }
 
+type processingOptions struct {
+	requirePalletCache   bool
+	requireRepoCache     bool
+	requireDownloadCache bool
+	enableOverrides      bool
+	merge                bool
+}
+
 func processFullBaseArgs(
-	c *cli.Context, ensureCache, enableOverrides bool,
+	c *cli.Context, opts processingOptions,
 ) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
 	// FIXME: return both the shallow pallet and the merged pallet? the `stage` command needs both
 	if plt, err = getShallowPallet(c.String("cwd")); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	wpath := c.String("workspace")
-	workspacePalletCache, err := fcli.GetPalletCache(wpath, plt, ensureCache)
-	if err != nil {
+	caches.p = &forklift.LayeredPalletCache{}
+	if caches.p.Underlay, err = fcli.GetPalletCache(
+		wpath, plt, opts.requirePalletCache || opts.merge,
+	); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, ensureCache); err != nil {
-		return nil, workspaceCaches{}, err
-	}
-	if caches.d, err = fcli.GetDownloadCache(wpath, ensureCache); err != nil {
-		return nil, workspaceCaches{}, err
-	}
-	if enableOverrides {
+	if opts.enableOverrides {
 		if caches.p, err = overlayPalletCacheOverrides(
-			workspacePalletCache, c.StringSlice("plts"), plt,
+			caches.p.Underlay, c.StringSlice("plts"), plt,
 		); err != nil {
 			return nil, workspaceCaches{}, err
 		}
-	} else {
-		caches.p = &forklift.LayeredPalletCache{
-			Underlay: workspacePalletCache,
+	}
+	if opts.merge {
+		if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
+			return nil, workspaceCaches{}, errors.Wrap(
+				err, "couldn't merge development pallet with file imports from any pallets required by it",
+			)
 		}
 	}
-	// FIXME: to enable recursive layering, we should pass in the merged pallet cache rather than the
-	// shallow pallet cache. Ideally we could lazily compute merged pallet caches from the shallow
-	// pallet cache for cache misses in the merged pallet cache; and the merged pallet cache can just
-	// copy the shallow pallet cache entry for pallets without import groups.
-	if plt, err = forklift.MergeFSPallet(plt, caches.p); err != nil {
-		return nil, workspaceCaches{}, errors.Wrap(
-			err, "couldn't merge development pallet with file imports from any pallets required by it",
-		)
+	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, opts.requireRepoCache); err != nil {
+		return nil, workspaceCaches{}, err
 	}
-	if enableOverrides {
+	if opts.enableOverrides {
 		if caches.r, err = overlayRepoCacheOverrides(
 			caches.r, c.StringSlice("repos"), plt,
 		); err != nil {
 			return nil, workspaceCaches{}, err
 		}
+	}
+	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
+		return nil, workspaceCaches{}, err
 	}
 	return plt, caches, nil
 }
@@ -227,7 +231,9 @@ func setRepoOverrideCacheVersions(
 
 func cacheAllAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			enableOverrides: true,
+		})
 		if err != nil {
 			return err
 		}
@@ -236,8 +242,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.r.Underlay.Path(), caches.p.Path(), caches.r, caches.d,
-			c.Bool("include-disabled"), c.Bool("parallel"),
+			0, plt, caches.p, caches.r, caches.d, c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
@@ -260,7 +265,11 @@ func showAction(c *cli.Context) error {
 
 func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requireRepoCache: true,
+			enableOverrides:  true,
+			merge:            true,
+		})
 		if err != nil {
 			return err
 		}
@@ -281,7 +290,11 @@ func checkAction(versions Versions) cli.ActionFunc {
 
 func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requireRepoCache: true,
+			enableOverrides:  true,
+			merge:            true,
+		})
 		if err != nil {
 			return err
 		}
@@ -302,7 +315,11 @@ func planAction(versions Versions) cli.ActionFunc {
 
 func stageAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requireRepoCache: true,
+			enableOverrides:  true,
+			merge:            true,
+		})
 		if err != nil {
 			return err
 		}
@@ -340,7 +357,11 @@ func stageAction(versions Versions) cli.ActionFunc {
 
 func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requireRepoCache: true,
+			enableOverrides:  true,
+			merge:            true,
+		})
 		if err != nil {
 			return err
 		}
@@ -384,16 +405,21 @@ func applyAction(versions Versions) cli.ActionFunc {
 
 func cachePltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, false, false)
+		plt, err := getShallowPallet(c.String("cwd"))
 		if err != nil {
 			return err
 		}
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
 		fmt.Printf("Downloading pallets specified by the development pallet...\n")
-		changed, err := fcli.DownloadRequiredPallets(0, plt, caches.p.Path())
+		changed, err := fcli.DownloadRequiredPallets(0, plt, workspace.GetPalletCachePath())
 		if err != nil {
 			return err
 		}
@@ -422,7 +448,10 @@ func lsPltAction(c *cli.Context) error {
 // show-plt
 
 func showPltAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requirePalletCache: true,
+		enableOverrides:    true,
+	})
 	if err != nil {
 		return err
 	}
@@ -434,20 +463,34 @@ func showPltAction(c *cli.Context) error {
 
 func addPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c, false, false)
+		plt, err := getShallowPallet(c.String("cwd"))
 		if err != nil {
 			return err
 		}
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
-		if err = fcli.AddPalletReqs(0, plt, caches.p.Path(), c.Args().Slice()); err != nil {
+		if err = fcli.AddPalletReqs(
+			0, plt, workspace.GetPalletCachePath(), c.Args().Slice(),
+		); err != nil {
 			return err
 		}
 		if !c.Bool("no-cache-req") {
-			if err = fcli.CacheStagingReqs(
-				0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, c.Bool("parallel"),
+			plt, caches, err := processFullBaseArgs(c, processingOptions{
+				enableOverrides: true,
+				merge:           true,
+			})
+			if err != nil {
+				return err
+			}
+			if _, _, err = fcli.CacheStagingReqs(
+				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -461,7 +504,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 
 func rmPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, _, err := processFullBaseArgs(c, false, false)
+		plt, err := getShallowPallet(c.String("cwd"))
 		if err != nil {
 			return err
 		}

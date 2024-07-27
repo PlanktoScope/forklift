@@ -61,7 +61,6 @@ func showRepoAction(c *cli.Context) error {
 
 // add-repo
 
-//nolint:dupl // this is already tiny, it would be silly to try to unify it with addPltAction
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
@@ -76,8 +75,8 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !c.Bool("no-cache-req") {
-			if err = fcli.CacheStagingReqs(
-				0, plt, caches.r.Path(), caches.p.Path(), caches.r, caches.d, false, c.Bool("parallel"),
+			if _, _, err = fcli.CacheStagingReqs(
+				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

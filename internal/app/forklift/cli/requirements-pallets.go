@@ -14,7 +14,7 @@ import (
 )
 
 func GetPalletCache(
-	wpath string, pallet *forklift.FSPallet, ensureCache bool,
+	wpath string, pallet *forklift.FSPallet, requireCache bool,
 ) (*forklift.FSPalletCache, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
@@ -25,7 +25,7 @@ func GetPalletCache(
 		return nil, err
 	}
 
-	if ensureCache && !cache.Exists() && pallet != nil {
+	if requireCache && !cache.Exists() && pallet != nil {
 		palletReqs, err := pallet.LoadFSPalletReqs("**")
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't check whether the pallet requires any pallets")

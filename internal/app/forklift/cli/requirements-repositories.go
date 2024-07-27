@@ -16,10 +16,10 @@ import (
 )
 
 func GetRepoCache(
-	wpath string, pallet *forklift.FSPallet, ensureCache bool,
+	wpath string, pallet *forklift.FSPallet, requireCache bool,
 ) (*forklift.LayeredRepoCache, *forklift.RepoOverrideCache, error) {
 	cache := &forklift.LayeredRepoCache{}
-	override, err := makeRepoOverrideCacheFromPallet(pallet)
+	override, err := makeRepoOverrideCacheFromPallet(pallet, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -35,7 +35,7 @@ func GetRepoCache(
 	}
 	cache.Underlay = fsCache
 
-	if ensureCache && !fsCache.Exists() {
+	if requireCache && !fsCache.Exists() {
 		repoReqs, err := pallet.LoadFSRepoReqs("**")
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "couldn't check whether the pallet requires any repos")
@@ -48,13 +48,27 @@ func GetRepoCache(
 }
 
 func makeRepoOverrideCacheFromPallet(
-	pallet *forklift.FSPallet,
+	pallet *forklift.FSPallet, generateRepoFromPallet bool,
 ) (*forklift.RepoOverrideCache, error) {
 	palletAsRepo, err := core.LoadFSRepo(pallet.FS, ".")
 	if err != nil {
-		// The common case is that the pallet is not a repo (and thus can't be loaded as one), so we
-		// mask the error:
-		return nil, nil
+		if !generateRepoFromPallet {
+			return nil, nil
+		}
+		palletAsRepo = &core.FSRepo{
+			Repo: core.Repo{
+				Version: pallet.Version,
+				Def: core.RepoDef{
+					ForkliftVersion: pallet.Def.ForkliftVersion,
+					Repo: core.RepoSpec{
+						Path:        pallet.Def.Pallet.Path,
+						Description: pallet.Def.Pallet.Description,
+						ReadmeFile:  pallet.Def.Pallet.ReadmeFile,
+					},
+				},
+			},
+			FS: pallet.FS,
+		}
 	}
 	return forklift.NewRepoOverrideCache(
 		[]*core.FSRepo{palletAsRepo}, map[string][]string{

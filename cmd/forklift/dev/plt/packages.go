@@ -9,7 +9,11 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -20,7 +24,11 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
