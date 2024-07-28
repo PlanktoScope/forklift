@@ -15,7 +15,6 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/h2non/filetype"
 	ftt "github.com/h2non/filetype/types"
-	cp "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
@@ -26,7 +25,7 @@ import (
 
 func NewFSBundle(path string) *FSBundle {
 	return &FSBundle{
-		FS: core.AttachPath(os.DirFS(path), path),
+		FS: DirFS(path),
 	}
 }
 
@@ -80,20 +79,125 @@ func (b *FSBundle) Path() string {
 // FSBundle: Pallets
 
 func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
-	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
-	// https://github.com/golang/go/issues/62484)
-	if err := cp.Copy(
-		filepath.FromSlash(pallet.FS.Path()), filepath.FromSlash(b.getBundledPalletPath()),
-	); err != nil {
+	shallow := pallet.FS
+	for {
+		merged, ok := shallow.(*MergeFS)
+		if !ok {
+			break
+		}
+		shallow = merged.Overlay
+	}
+	if shallow == nil {
+		return errors.Errorf("pallet %s was not merged before bundling!", pallet.Path())
+	}
+
+	if err := copyFS(shallow, filepath.FromSlash(b.getBundledPalletPath())); err != nil {
 		return errors.Wrapf(
-			err, "couldn't bundle files for pallet %s from %s", pallet.Path(), pallet.FS.Path(),
+			err, "couldn't bundle files for unmerged pallet %s from %s", pallet.Path(), pallet.FS.Path(),
+		)
+	}
+
+	if err := copyFS(pallet.FS, filepath.FromSlash(b.getBundledMergedPalletPath())); err != nil {
+		return errors.Wrapf(
+			err, "couldn't bundle files for merged pallet %s from %s", pallet.Path(), pallet.FS.Path(),
 		)
 	}
 	return nil
 }
 
+func copyFS(fsys core.PathedFS, dest string) error {
+	return fs.WalkDir(fsys, ".", func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			fileInfo, err := d.Info()
+			if err != nil {
+				return err
+			}
+			return os.MkdirAll(filepath.FromSlash(path.Join(dest, filePath)), fileInfo.Mode())
+		}
+		return copyFSFile(fsys, filePath, path.Join(dest, filePath))
+	})
+}
+
+func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
+	if readLinkFS, ok := fsys.(ReadLinkFS); ok {
+		sourceInfo, err := readLinkFS.StatLink(sourcePath)
+		if err != nil {
+			return errors.Wrapf(
+				err, "couldn't stat source file %s for copying", path.Join(readLinkFS.Path(), sourcePath),
+			)
+		}
+		if (sourceInfo.Mode() & fs.ModeSymlink) != 0 {
+			return copyFSSymlink(readLinkFS, sourcePath, destPath)
+		}
+	} else {
+		fmt.Printf("Warning: %s was not loaded as a ReadLinkFS!\n", fsys.Path())
+	}
+
+	sourceFile, err := fsys.Open(sourcePath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't open source file %s for copying", path.Join(fsys.Path(), sourcePath),
+		)
+	}
+	defer func() {
+		// FIXME: handle this error more rigorously
+		if err := sourceFile.Close(); err != nil {
+			fmt.Printf("Error: couldn't close source file %s\n", path.Join(fsys.Path(), sourcePath))
+		}
+	}()
+	sourceInfo, err := sourceFile.Stat()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't stat source file %s for copying", path.Join(fsys.Path(), sourcePath),
+		)
+	}
+	destFile, err := os.OpenFile( //nolint:gosec // dest path is set by config files which we trust
+		destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, sourceInfo.Mode().Perm(),
+	)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't open dest file %s for copying", destPath,
+		)
+	}
+	defer func() {
+		// FIXME: handle this error more rigorously
+		if err := destFile.Close(); err != nil {
+			fmt.Printf("Error: couldn't close dest file %s\n", destPath)
+		}
+	}()
+
+	if _, err := io.Copy(destFile, sourceFile); err != nil {
+		return errors.Wrapf(
+			err, "couldn't copy %s to %s", path.Join(fsys.Path(), sourcePath), destPath,
+		)
+	}
+
+	return nil
+}
+
+func copyFSSymlink(fsys core.PathedFS, sourcePath, destPath string) error {
+	readLinkFS, ok := fsys.(ReadLinkFS)
+	if !ok {
+		return errors.Errorf("%s is not a ReadLinkFS!", fsys.Path())
+	}
+
+	linkTarget, err := readLinkFS.ReadLink(sourcePath)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't determine symlink target of %s", sourcePath)
+	}
+	return os.Symlink(linkTarget, destPath)
+}
+
 func (b *FSBundle) getBundledPalletPath() string {
 	return path.Join(b.FS.Path(), bundledPalletDirName)
+}
+
+func (b *FSBundle) getBundledMergedPalletPath() string {
+	return path.Join(b.FS.Path(), bundledMergedPalletDirName)
 }
 
 // FSBundle: Deployments
@@ -108,9 +212,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
 	}
-	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
-	// https://github.com/golang/go/issues/62484)
-	if err = cp.Copy(filepath.FromSlash(depl.Pkg.FS.Path()), filepath.FromSlash(
+	if err = copyFS(depl.Pkg.FS, filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
 	)); err != nil {
 		return errors.Wrapf(
@@ -195,12 +297,15 @@ func (b *FSBundle) WriteRepoDefFile() error {
 	}
 	marshaled, err := yaml.Marshal(repoDef)
 	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal bundle manifest")
+		return errors.Wrapf(err, "couldn't marshal bundled repo declaration")
+	}
+	if err = EnsureExists(b.getPackagesPath()); err != nil {
+		return err
 	}
 	outputPath := filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile))
 	const perm = 0o644 // owner rw, group r, public r
 	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save bundle manifest to %s", outputPath)
+		return errors.Wrapf(err, "couldn't save bundled repo declaration to %s", outputPath)
 	}
 	return nil
 }
@@ -253,11 +358,8 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 }
 
 func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
-	sourcePath := path.Join(resolved.Pkg.FS.Path(), export.Source)
-	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
-	// https://github.com/golang/go/issues/62484)
-	if err := cp.Copy(filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath)); err != nil {
-		return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
+	if err := copyFSFile(resolved.Pkg.FS, export.Source, filepath.FromSlash(exportPath)); err != nil {
+		return errors.Wrapf(err, "couldn't export file from %s to %s", export.Source, exportPath)
 	}
 	return nil
 }
@@ -267,9 +369,9 @@ func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDow
 	if err != nil {
 		return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
 	}
-	// TODO: once we upgrade to go1.23, use os.CopyFS instead (see
-	// https://github.com/golang/go/issues/62484)
-	if err := cp.Copy(filepath.FromSlash(sourcePath), filepath.FromSlash(exportPath)); err != nil {
+	if err := copyFSFile(
+		dlCache.FS, strings.TrimPrefix(sourcePath, dlCache.FS.Path()), filepath.FromSlash(exportPath),
+	); err != nil {
 		return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
 	}
 	return nil
@@ -440,7 +542,7 @@ func extractRegularFile(
 	}
 	defer func(file fs.File, filePath string) {
 		if err := file.Close(); err != nil {
-			// FIXME: handle this error better
+			// FIXME: handle this error more rigorously
 			fmt.Printf("Error: couldn't close export file %s\n", filePath)
 		}
 	}(targetFile, targetPath)

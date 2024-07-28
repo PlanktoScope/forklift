@@ -9,6 +9,9 @@ import (
 const (
 	// bundledPalletDirName is the name of the directory containing the bundled pallet.
 	bundledPalletDirName = "pallet"
+	// bundledMergedPalletDirName is the name of the directory containing the bundled pallet, merged
+	// with file imports from its required pallets.
+	bundledMergedPalletDirName = "merged-pallet"
 	// packagesDirName is the name of the directory containing bundled files for each package.
 	packagesDirName = "packages"
 	// exportsDirName is the name of the directory containing exported files for all package

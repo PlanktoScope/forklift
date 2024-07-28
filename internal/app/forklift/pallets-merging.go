@@ -159,7 +159,7 @@ type fileRef struct {
 }
 
 // mergePalletImports builds a mapping from all target file paths to their respective source files
-// suitable for instantiating a mergeFS.
+// suitable for instantiating a MergeFS.
 func mergePalletImports(
 	palletFileMappings map[string]map[string]string, pallets map[string]*FSPallet,
 ) (map[string]fileRef, error) {
@@ -194,18 +194,18 @@ func mergePalletImports(
 	return merged, nil
 }
 
-// mergeFS
+// MergeFS
 
-// An mergeFS is an FS constructed by combining a [core.PathedFS] as an overlay over an underlay
+// A MergeFS is an FS constructed by combining a [core.PathedFS] as an overlay over an underlay
 // constructed as a collection of references to files in other [core.PathedFS] instances.
 // The path of the FS is the path of the overlay.
-type mergeFS struct {
-	overlay      core.PathedFS
+type MergeFS struct {
+	Overlay      core.PathedFS
 	underlayRefs map[string]fileRef     // target -> source
 	impliedDirs  structures.Set[string] // target
 }
 
-func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *mergeFS {
+func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *MergeFS {
 	impliedDirs := make(structures.Set[string])
 	for target := range underlayRefs {
 		for {
@@ -220,26 +220,26 @@ func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *mergeFS
 		}
 	}
 	// fmt.Printf("newMergeFS(%s, %d, %d)\n", overlay.Path(), len(underlayRefs), len(impliedDirs))
-	return &mergeFS{
-		overlay:      overlay,
+	return &MergeFS{
+		Overlay:      overlay,
 		underlayRefs: underlayRefs,
 		impliedDirs:  impliedDirs,
 	}
 }
 
-// mergeFS: core.PathedFS
+// MergeFS: core.PathedFS
 
 // Path returns the path of the overlay.
-func (f *mergeFS) Path() string {
-	return f.overlay.Path()
+func (f *MergeFS) Path() string {
+	return f.Overlay.Path()
 }
 
 // Open opens the named file from the overlay (if it exists in the overlay), or else from an
 // underlay filesystem depending on which one is recorded to have that file.
-func (f *mergeFS) Open(name string) (fs.File, error) {
+func (f *MergeFS) Open(name string) (fs.File, error) {
 	name = path.Clean(name)
 	// fmt.Printf("Open(%s|%s)\n", f.Path(), name)
-	file, err := f.overlay.Open(name)
+	file, err := f.Overlay.Open(name)
 	switch {
 	default:
 		return nil, &fs.PathError{
@@ -276,14 +276,14 @@ func (f *mergeFS) Open(name string) (fs.File, error) {
 	}
 }
 
-// Sub returns a mergeFS corresponding to the subtree rooted at dir.
-func (f *mergeFS) Sub(dir string) (core.PathedFS, error) {
+// Sub returns a MergeFS corresponding to the subtree rooted at dir.
+func (f *MergeFS) Sub(dir string) (core.PathedFS, error) {
 	dir = path.Clean(dir)
 	// fmt.Printf("Sub(%s|%s)\n", f.Path(), dir)
 	if dir == "." {
 		return f, nil
 	}
-	overlaySub, err := f.overlay.Sub(dir)
+	overlaySub, err := f.Overlay.Sub(dir)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't make subtree for overlay")
 	}
@@ -300,14 +300,14 @@ func (f *mergeFS) Sub(dir string) (core.PathedFS, error) {
 	return newMergeFS(overlaySub, underlayRefsSub), nil
 }
 
-// mergeFS: fs.ReadDirFS
+// MergeFS: fs.ReadDirFS
 
 // ReadDir reads the named directory and returns a list of directory entries sorted by filename.
-func (f *mergeFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (f *MergeFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	name = path.Clean(name)
 	// fmt.Printf("ReadDir(%s|%s)\n", f.Path(), name)
 	entryNames := make(structures.Set[string])
-	entries, _ := fs.ReadDir(f.overlay, name)
+	entries, _ := fs.ReadDir(f.Overlay, name)
 	for _, entry := range entries {
 		entryNames.Add(entry.Name())
 	}
@@ -359,15 +359,15 @@ func (f *mergeFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return entries, nil
 }
 
-// mergeFS: fs.ReadFileFS
+// MergeFS: fs.ReadFileFS
 
 // ReadFile returns the contents from reading the named file from the overlay (if it exists in the
 // overlay), or else from an underlay filesystem depending on which one is recorded to have that
 // file.
-func (f *mergeFS) ReadFile(name string) ([]byte, error) {
+func (f *MergeFS) ReadFile(name string) ([]byte, error) {
 	name = path.Clean(name)
 	// fmt.Printf("ReadFile(%s|%s)\n", f.Path(), name)
-	contents, err := fs.ReadFile(f.overlay, name)
+	contents, err := fs.ReadFile(f.Overlay, name)
 	switch {
 	default:
 		return nil, errors.Wrapf(err, "couldn't read file %s in overlay", name)
@@ -387,14 +387,14 @@ func (f *mergeFS) ReadFile(name string) ([]byte, error) {
 	}
 }
 
-// mergeFS: fs.StatFS
+// MergeFS: fs.StatFS
 
 // Stat returns a [fs.FileInfo] describing the file from the overlay (if it exists in the overlay),
 // or else from an underlay filesystem depending on which one is recorded to have that file.
-func (f *mergeFS) Stat(name string) (fs.FileInfo, error) {
+func (f *MergeFS) Stat(name string) (fs.FileInfo, error) {
 	name = path.Clean(name)
 	// fmt.Printf("Stat(%s|%s)\n", f.Path(), name)
-	info, err := fs.Stat(f.overlay, name)
+	info, err := fs.Stat(f.Overlay, name)
 	switch {
 	default:
 		return nil, &fs.PathError{
@@ -434,13 +434,100 @@ func (f *mergeFS) Stat(name string) (fs.FileInfo, error) {
 	}
 }
 
+// MergeFS: fs.ReadLinkFS
+
+func (f *MergeFS) ReadLink(name string) (string, error) {
+	name = path.Clean(name)
+	// fmt.Printf("ReadLink(%s|%s)\n", f.Path(), name)
+	target, err := ReadLink(f.Overlay, name)
+	switch {
+	default:
+		return "", &fs.PathError{
+			Op:   "lstat",
+			Path: name,
+			Err: errors.Wrapf(
+				err, "couldn't stat (without following symlinks) file %s in overlay", name,
+			),
+		}
+	case errors.Is(err, fs.ErrNotExist):
+		ref, ok := f.underlayRefs[name]
+		if !ok {
+			return "", &fs.PathError{
+				Op:   "lstat",
+				Path: name,
+				Err:  errors.Errorf("file %s not a symlink in overlay or underlay", name),
+			}
+		}
+		target, err := ReadLink(ref.fs, ref.path)
+		if err != nil {
+			return "", &fs.PathError{
+				Op:   "lstat",
+				Path: name,
+				Err: errors.Wrapf(
+					err, "couldn't stat file (without following symlinks) %s in underlay as %s",
+					name, path.Join(ref.fs.Path(), ref.path),
+				),
+			}
+		}
+		return target, nil
+	case err == nil:
+		return target, nil
+	}
+}
+
+func (f *MergeFS) StatLink(name string) (fs.FileInfo, error) {
+	name = path.Clean(name)
+	// fmt.Printf("StatLink(%s|%s)\n", f.Path(), name)
+	info, err := StatLink(f.Overlay, name)
+	switch {
+	default:
+		return nil, &fs.PathError{
+			Op:   "lstat",
+			Path: name,
+			Err: errors.Wrapf(
+				err, "couldn't stat (without following symlinks) file %s in overlay", name,
+			),
+		}
+	case errors.Is(err, fs.ErrNotExist):
+		if name == "." {
+			return &impliedDirFileInfo{name: path.Base(f.Path())}, nil
+		}
+		ref, ok := f.underlayRefs[name]
+		if !ok {
+			if !f.impliedDirs.Has(name) {
+				return nil, &fs.PathError{
+					Op:   "lstat",
+					Path: name,
+					Err:  errors.Errorf("file %s not found in either overlay or underlay", name),
+				}
+			}
+			// fmt.Printf("  %s is an implied dir!\n", name)
+			return &impliedDirFileInfo{name: path.Base(name)}, nil
+		}
+		info, err := StatLink(ref.fs, ref.path)
+		if err != nil {
+			return nil, &fs.PathError{
+				Op:   "lstat",
+				Path: name,
+				Err: errors.Wrapf(
+					err, "couldn't stat file (without following symlinks) %s in underlay as %s",
+					name, path.Join(ref.fs.Path(), ref.path),
+				),
+			}
+		}
+		return info, nil
+	case err == nil:
+		return info, nil
+	}
+}
+
 // importedDirEntry
 
 // An importedDirEntry is a [fs.DirEntry] for a file which is imported from an underlay of a
-// [mergeFS].
+// [MergeFS].
 type importedDirEntry struct {
 	// name is the name of the imported file described by the entry; it's only the final element
-	// of the target path (the base name) in the [mergeFS], not the entire target path.
+	// of the target path (the base name) in the [MergeFS], not the entire target path.
 	name string
 	// ref holds information for looking up the source file to be imported.
 	ref fileRef
@@ -469,7 +556,7 @@ func (de *importedDirEntry) Info() (fs.FileInfo, error) {
 // impliedDirEntry
 
 // An impliedDirEntry is a [fs.DirEntry] for a directory whose existence is implied by one or
-// more underlays of a [mergeFS], but which does not necessarily exist in an underlay and does not
+// more underlays of a [MergeFS], but which does not necessarily exist in an underlay and does not
 // not necessarily have a unique source among the underlays.
 type impliedDirEntry struct {
 	// Name is the name of the implied directory described by the entry; it's only the final element
@@ -498,7 +585,7 @@ func (de *impliedDirEntry) Info() (fs.FileInfo, error) {
 // impliedDirFileInfo
 
 // An impliedDirFileInfo is a [fs.FileInfo] for a directory whose existence is implied by one or
-// more underlays of a [mergeFS], but which does not necessarily exist in an underlay and does not
+// more underlays of a [MergeFS], but which does not necessarily exist in an underlay and does not
 // not necessarily have a unique source among the underlays.
 type impliedDirFileInfo struct {
 	// Name is the name of the implied directory described by the entry; it's only the final element

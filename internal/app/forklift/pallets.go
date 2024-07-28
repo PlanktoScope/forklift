@@ -42,9 +42,7 @@ func LoadFSPalletContaining(path string) (*FSPallet, error) {
 		return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
 	}
 	for {
-		if fsPallet, err := LoadFSPallet(
-			core.AttachPath(os.DirFS(palletCandidatePath), palletCandidatePath), ".",
-		); err == nil {
+		if fsPallet, err := LoadFSPallet(DirFS(palletCandidatePath), "."); err == nil {
 			return fsPallet, nil
 		}
 

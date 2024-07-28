@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
-	"github.com/PlanktoScope/forklift/pkg/core"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
@@ -25,7 +23,7 @@ func GetStageStore(
 		return workspace.GetStageStore(newStageStoreVersion)
 	}
 
-	fsys := core.AttachPath(os.DirFS(stageStorePath), stageStorePath)
+	fsys := forklift.DirFS(stageStorePath)
 	if err := forklift.EnsureFSStageStore(fsys, ".", newStageStoreVersion); err != nil {
 		return nil, err
 	}
@@ -75,14 +73,21 @@ func StagePallet(
 	exportPath string, versions StagingVersions,
 	skipImageCaching, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
-	if pallet, _, err = CacheStagingReqs(
+	if _, isMerged := pallet.FS.(*forklift.MergeFS); isMerged {
+		return 0, errors.Errorf("the pallet provided for staging should not be a merged pallet!")
+	}
+
+	pallet, repoCacheWithMerged, err := CacheStagingReqs(
 		0, pallet, caches.Pallets, caches.Repos, caches.Downloads, false, parallel,
-	); err != nil {
+	)
+	if err != nil {
 		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")
 	}
 	// Note: we must have all requirements in the cache before we can check their compatibility with
 	// the Forklift tool version
-	if err = CheckDeepCompat(pallet, caches.Repos, versions.Core, ignoreToolVersion); err != nil {
+	if err = CheckDeepCompat(
+		pallet, repoCacheWithMerged, versions.Core, ignoreToolVersion,
+	); err != nil {
 		return 0, err
 	}
 	fmt.Println()
@@ -93,7 +98,7 @@ func StagePallet(
 	}
 	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
 	if err = buildBundle(
-		pallet, caches.Repos, caches.Downloads,
+		pallet, repoCacheWithMerged, caches.Downloads,
 		versions.NewBundle, path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
@@ -110,7 +115,8 @@ func StagePallet(
 }
 
 func buildBundle(
-	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
+	pallet *forklift.FSPallet,
+	repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
 	forkliftVersion, outputPath string,
 ) (err error) {
 	outputBundle := forklift.NewFSBundle(outputPath)
@@ -127,20 +133,23 @@ func buildBundle(
 	}
 	for _, depl := range depls {
 		if err := outputBundle.AddResolvedDepl(depl); err != nil {
-			return err
+			return errors.Wrapf(err, "couldn't add deployment %s to bundle", depl.Name)
 		}
 	}
 
 	if err := outputBundle.SetBundledPallet(pallet); err != nil {
-		return err
+		return errors.Wrapf(err, "couldn't write pallet %s into bundle", pallet.Def.Pallet.Path)
 	}
 	if err = outputBundle.WriteRepoDefFile(); err != nil {
-		return err
+		return errors.Wrap(err, "couldn't write repo declaration into bundle")
 	}
 	if err = outputBundle.WriteFileExports(dlCache); err != nil {
-		return err
+		return errors.Wrap(err, "couldn't write file exports into bundle")
 	}
-	return outputBundle.WriteManifestFile()
+	if err = outputBundle.WriteManifestFile(); err != nil {
+		return errors.Wrap(err, "couldn't write bundle manifest file into bundle")
+	}
+	return nil
 }
 
 func newBundleManifest(

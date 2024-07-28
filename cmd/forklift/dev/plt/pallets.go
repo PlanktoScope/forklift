@@ -2,7 +2,6 @@ package plt
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -119,9 +118,7 @@ func loadReplacementPallets(fsPaths []string) (replacements []*forklift.FSPallet
 		if !forklift.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find pallet replacement path %s", replacementPath)
 		}
-		externalPallets, err := forklift.LoadFSPallets(
-			core.AttachPath(os.DirFS(replacementPath), replacementPath), "**",
-		)
+		externalPallets, err := forklift.LoadFSPallets(forklift.DirFS(replacementPath), "**")
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement pallets in path %s", replacementPath)
 		}
@@ -188,9 +185,7 @@ func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err er
 		if !forklift.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repo replacement path %s", replacementPath)
 		}
-		externalRepos, err := core.LoadFSRepos(
-			core.AttachPath(os.DirFS(replacementPath), replacementPath), "**",
-		)
+		externalRepos, err := core.LoadFSRepos(forklift.DirFS(replacementPath), "**")
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)
 		}
@@ -318,7 +313,6 @@ func stageAction(versions Versions) cli.ActionFunc {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requireRepoCache: true,
 			enableOverrides:  true,
-			merge:            true,
 		})
 		if err != nil {
 			return err
@@ -360,7 +354,6 @@ func applyAction(versions Versions) cli.ActionFunc {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requireRepoCache: true,
 			enableOverrides:  true,
-			merge:            true,
 		})
 		if err != nil {
 			return err

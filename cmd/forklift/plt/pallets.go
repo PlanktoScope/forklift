@@ -945,7 +945,6 @@ func showPltAction(c *cli.Context) error {
 
 // add-plt
 
-//nolint:dupl // this is already tiny, it would be silly to try to unify it with addRepoAction
 func addPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
