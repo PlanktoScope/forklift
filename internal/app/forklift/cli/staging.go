@@ -86,7 +86,7 @@ func StagePallet(
 	// Note: we must have all requirements in the cache before we can check their compatibility with
 	// the Forklift tool version
 	if err = CheckDeepCompat(
-		pallet, repoCacheWithMerged, versions.Core, ignoreToolVersion,
+		pallet, caches.Pallets, repoCacheWithMerged, versions.Core, ignoreToolVersion,
 	); err != nil {
 		return 0, err
 	}

@@ -17,7 +17,7 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
