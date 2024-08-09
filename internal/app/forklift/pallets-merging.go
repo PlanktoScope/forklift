@@ -22,7 +22,10 @@ import (
 func MergeFSPallet(
 	shallow *FSPallet, palletLoader FSPalletLoader, prohibitedPallets structures.Set[string],
 ) (merged *FSPallet, err error) {
-	merged = &FSPallet{Pallet: shallow.Pallet}
+	merged = &FSPallet{
+		Pallet: shallow.Pallet,
+		Repo:   &core.FSRepo{Repo: shallow.Repo.Repo},
+	}
 	imports, err := shallow.LoadImports("**/*")
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't check for import groups")
@@ -64,6 +67,7 @@ func MergeFSPallet(
 	// }
 	// fmt.Println()
 	merged.FS = newMergeFS(shallow.FS, underlayRefs)
+	merged.Repo.FS = merged.FS
 	return merged, nil
 }
 

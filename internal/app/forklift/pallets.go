@@ -29,6 +29,24 @@ func LoadFSPallet(fsys core.PathedFS, subdirPath string) (p *FSPallet, err error
 	if p.Pallet.Def, err = loadPalletDef(p.FS, PalletDefFile); err != nil {
 		return nil, errors.Errorf("couldn't load pallet config")
 	}
+	if p.Repo, err = core.LoadFSRepo(fsys, subdirPath); err != nil {
+		// If we couldn't explicitly load the pallet as a repo, we infer an implicit repo from the
+		// pallet:
+		p.Repo = &core.FSRepo{
+			Repo: core.Repo{
+				Def: core.RepoDef{
+					ForkliftVersion: p.Pallet.Def.ForkliftVersion,
+					Repo: core.RepoSpec{
+						Path:        p.Pallet.Def.Pallet.Path,
+						Description: p.Pallet.Def.Pallet.Description,
+						ReadmeFile:  p.Pallet.Def.Pallet.ReadmeFile,
+					},
+				},
+				Version: p.Pallet.Version,
+			},
+			FS: p.FS,
+		}
+	}
 	return p, nil
 }
 
@@ -263,6 +281,35 @@ func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 		)
 	}
 	return loadDepls(fsys, searchPattern)
+}
+
+// FSPallet: Packages
+
+// LoadFSPkg loads a package at the specified filesystem path from the FSPallet instance
+// The loaded package is fully initialized.
+func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *core.FSPkg, err error) {
+	if pkg, err = core.LoadFSPkg(p.FS, pkgSubdir); err != nil {
+		return nil, errors.Wrapf(err, "couldn't load package %s from repo %s", pkgSubdir, p.Path())
+	}
+	if err = pkg.AttachFSRepo(p.Repo); err != nil {
+		return nil, errors.Wrap(err, "couldn't attach repo to package")
+	}
+	return pkg, nil
+}
+
+// LoadFSPkgs loads all packages in the FSPallet instance.
+// The loaded packages are fully initialized.
+func (p *FSPallet) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+	pkgs, err := core.LoadFSPkgs(p.FS, searchPattern)
+	if err != nil {
+		return nil, err
+	}
+	for _, pkg := range pkgs {
+		if err = pkg.AttachFSRepo(p.Repo); err != nil {
+			return nil, errors.Wrap(err, "couldn't attach repo to package")
+		}
+	}
+	return pkgs, nil
 }
 
 // FSPallet: Imports

@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 	"path"
-	"sort"
+	"slices"
 
 	"github.com/pkg/errors"
 
@@ -181,7 +181,7 @@ func PrintFeatureSpecs(indent int, features map[string]core.PkgFeatureSpec) {
 	for name := range features {
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	if len(names) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -218,6 +218,8 @@ func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPk
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify repos in pallet %s", pallet.FS.Path())
 	}
+
+	// List packages provided by required repos
 	pkgs := make([]*core.FSPkg, 0)
 	for _, req := range reqs {
 		repoCachePath := req.GetCachePath()
@@ -227,8 +229,20 @@ func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPk
 		}
 		pkgs = append(pkgs, loaded...)
 	}
-	sort.Slice(pkgs, func(i, j int) bool {
-		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
+
+	// List local packages provided by the pallet itself
+	loaded, err := pallet.LoadFSPkgs("**")
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load local packages pallet at %s", pallet.Path())
+	}
+	for _, pkg := range loaded {
+		pkg.Repo.Def.Repo.Path = "/"
+		pkg.RepoPath = "/"
+	}
+	pkgs = append(pkgs, loaded...)
+
+	slices.SortFunc(pkgs, func(a, b *core.FSPkg) int {
+		return core.ComparePkgs(a.Pkg, b.Pkg)
 	})
 	for _, pkg := range pkgs {
 		IndentedPrintf(indent, "%s\n", pkg.Path())

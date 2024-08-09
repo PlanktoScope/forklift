@@ -9,6 +9,9 @@ import (
 type FSPallet struct {
 	// Pallet is the pallet at the root of the filesystem.
 	Pallet
+	// Repo is the package repository at the root of the filesystem. It may be defined either
+	// explicitly or implicitly.
+	Repo *core.FSRepo
 	// FS is a filesystem which contains the pallet's contents.
 	FS core.PathedFS
 }

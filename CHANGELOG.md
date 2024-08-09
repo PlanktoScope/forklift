@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (spec) Fixed an incorrect example for the `target` field of the file export object in the packaging spec.
 - (spec) Fixed a formatting error in the description of the `url` field of the file export object
 - (cli) Fixed a regression where the `[dev] plt ls-pkg` command failed with a `cache is nil` error on pallets which are not also package repositories.
+- (cli) Fixed the behavior of `[dev] plt ls-pkg` to include local packages (i.e. those declared in the pallet) in the displayed list of packages.
 
 ## 0.8.0-alpha.0 - 2024-07-05
 
