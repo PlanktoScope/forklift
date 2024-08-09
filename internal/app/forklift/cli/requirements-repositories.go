@@ -94,6 +94,29 @@ func PrintRequiredRepos(indent int, pallet *forklift.FSPallet) error {
 	return nil
 }
 
+func PrintRequiredRepoLocation(
+	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, requiredRepoPath string,
+) error {
+	req, err := pallet.LoadFSRepoReq(requiredRepoPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load repo version lock definition %s from pallet %s",
+			requiredRepoPath, pallet.FS.Path(),
+		)
+	}
+
+	version := req.VersionLock.Version
+	cachedRepo, err := cache.LoadFSRepo(requiredRepoPath, version)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find repo %s@%s in cache, please update the local cache of repos",
+			requiredRepoPath, version,
+		)
+	}
+	fmt.Println(cachedRepo.FS.Path())
+	return nil
+}
+
 func PrintRequiredRepoInfo(
 	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, requiredRepoPath string,
 ) error {

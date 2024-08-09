@@ -238,7 +238,7 @@ func printDockerAppVolumes(indent int, volumes dct.Volumes) {
 	}
 }
 
-func PrintDeplPkgPath(
+func PrintDeplPkgLocation(
 	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
 	allowDisabled bool,
 ) error {

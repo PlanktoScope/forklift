@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Now all `[dev] plt` commands are evaluated on the merged pallet (i.e. with file imports) if the pallet imports files from other pallets.
 - (cli) Now the `[dev] plt show-pkg` and `cache show-pkg` commands also print information about file exports.
 - (cli) Added an optional `--plts` flag to `dev plt` for overriding version-locked required pallets with pallets from other directories, like the existing `--repos` flag.
+- (cli) Added a `[dev] plt locate-repo` command to print the actual filesystem path of the specified required package repository. The path may be a subdirectory in the repositories cache or an override repository (in the case of `dev plt` with the `--repos` flag).
 
 ### Changed
 

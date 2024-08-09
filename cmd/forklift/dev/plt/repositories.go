@@ -54,6 +54,21 @@ func lsRepoAction(c *cli.Context) error {
 	return fcli.PrintRequiredRepos(0, plt)
 }
 
+// locate-repo
+
+func locateRepoAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return fcli.PrintRequiredRepoLocation(plt, caches.r, c.Args().First())
+}
+
 // show-repo
 
 func showRepoAction(c *cli.Context) error {

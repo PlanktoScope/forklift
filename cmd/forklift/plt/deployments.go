@@ -27,8 +27,7 @@ func showDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	deplName := c.Args().First()
-	return fcli.PrintDeplInfo(0, plt, caches.r, deplName)
+	return fcli.PrintDeplInfo(0, plt, caches.r, c.Args().First())
 }
 
 // locate-depl-pkg
@@ -39,8 +38,7 @@ func locateDeplPkgAction(c *cli.Context) error {
 		return err
 	}
 
-	deplName := c.Args().First()
-	return fcli.PrintDeplPkgPath(0, plt, caches.r, deplName, c.Bool("allow-disabled"))
+	return fcli.PrintDeplPkgLocation(0, plt, caches.r, c.Args().First(), c.Bool("allow-disabled"))
 }
 
 // add-depl

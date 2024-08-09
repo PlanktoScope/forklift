@@ -278,6 +278,14 @@ func makeQueryReqSubcmds(category string) []*cli.Command {
 			Action:   lsRepoAction,
 		},
 		{
+			Name:      "locate-repo",
+			Aliases:   []string{"locate-repository"},
+			Category:  category,
+			Usage:     "Prints the absolute filesystem path of a repo available in the local pallet",
+			ArgsUsage: "repo_path",
+			Action:    locateRepoAction,
+		},
+		{
 			Name:      "show-repo",
 			Aliases:   []string{"show-repository"},
 			Category:  category,
