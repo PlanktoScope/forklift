@@ -250,6 +250,29 @@ func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPk
 	return nil
 }
 
+func PrintPkgLocation(
+	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+) error {
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
+		)
+	}
+	fsys, ok := pkg.FS.(*forklift.MergeFS)
+	if !ok {
+		fmt.Println(pkg.FS.Path())
+		return nil
+	}
+
+	resolved, err := fsys.Resolve("forklift-package.yml")
+	if err != nil {
+		return errors.Wrapf(err, "couldn't resolve the location of package %s", pkgPath)
+	}
+	fmt.Println(path.Dir(resolved))
+	return nil
+}
+
 func PrintPkgInfo(
 	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
 ) error {

@@ -159,6 +159,15 @@ func makeQuerySubcmds() []*cli.Command {
 				Action:   lsPkgAction,
 			},
 			{
+				Name:     "locate-pkg",
+				Aliases:  []string{"locate-package"},
+				Category: category,
+				Usage: "Prints the absolute filesystem path of a package available in the " +
+					"development pallet",
+				ArgsUsage: "package_path",
+				Action:    locatePkgAction,
+			},
+			{
 				Name:      "show-pkg",
 				Aliases:   []string{"show-package"},
 				Category:  category,

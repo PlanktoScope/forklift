@@ -17,6 +17,18 @@ func lsPkgAction(c *cli.Context) error {
 	return fcli.PrintPalletPkgs(0, plt, caches.r)
 }
 
+// locate-pkg
+
+func locatePkgAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	if err != nil {
+		return err
+	}
+
+	pkgPath := c.Args().First()
+	return fcli.PrintPkgLocation(plt, caches.r, pkgPath)
+}
+
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {

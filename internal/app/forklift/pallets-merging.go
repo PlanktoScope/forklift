@@ -231,6 +231,51 @@ func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *MergeFS
 	}
 }
 
+// Resolve returns the path of the named file from the overlay (if it exists in the overlay), or
+// else from an underlay filesystem depending on which one is recorded to have that file.
+func (f *MergeFS) Resolve(name string) (string, error) {
+	name = path.Clean(name)
+	// fmt.Printf("Resolve(%s|%s)\n", f.Path(), name)
+	_, err := fs.Stat(f.Overlay, name)
+	switch {
+	default:
+		return "", &fs.PathError{
+			Op:   "stat",
+			Path: name,
+			Err:  errors.Wrapf(err, "couldn't stat file %s in overlay", name),
+		}
+	case errors.Is(err, fs.ErrNotExist):
+		if name == "." {
+			// FIXME: this is incorrect
+			return f.Path(), nil
+		}
+		ref, ok := f.underlayRefs[name]
+		if !ok {
+			if !f.impliedDirs.Has(name) {
+				return "", &fs.PathError{
+					Op:   "stat",
+					Path: name,
+					Err:  errors.Errorf("file %s not found in either overlay or underlay", name),
+				}
+			}
+			// fmt.Printf("  %s is an implied dir!\n", name)
+			return path.Join(f.Overlay.Path(), name), nil
+		}
+		if _, err := fs.Stat(ref.fs, ref.path); err != nil {
+			return "", &fs.PathError{
+				Op:   "stat",
+				Path: name,
+				Err: errors.Wrapf(
+					err, "couldn't stat file %s in underlay as %s", name, path.Join(ref.fs.Path(), ref.path),
+				),
+			}
+		}
+		return path.Join(ref.fs.Path(), ref.path), nil
+	case err == nil:
+		return path.Join(f.Overlay.Path(), name), nil
+	}
+}
+
 // MergeFS: core.PathedFS
 
 // Path returns the path of the overlay.
