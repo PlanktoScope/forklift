@@ -8,6 +8,30 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
+// ls-dl
+
+func lsDlAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
+	if err != nil {
+		return err
+	}
+
+	http, oci, err := fcli.ListRequiredDownloads(plt, caches.r, c.Bool("include-disabled"))
+	if err != nil {
+		return err
+	}
+	for _, download := range http {
+		fmt.Println(download)
+	}
+	for _, download := range oci {
+		fmt.Println(download)
+	}
+	return nil
+}
+
 // cache-dl
 
 func cacheDlAction(versions Versions) cli.ActionFunc {

@@ -155,6 +155,19 @@ func makeQuerySubcmds() []*cli.Command {
 		makeQueryDeplSubcmds(category),
 		[]*cli.Command{
 			{
+				Name:     "ls-dl",
+				Aliases:  []string{"list-downloads"},
+				Category: category,
+				Usage:    "Lists the files to be downloaded for export by the development pallet",
+				Action:   lsDlAction,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "include-disabled",
+						Usage: "Also list images for disabled package deployments",
+					},
+				},
+			},
+			{
 				Name:     "ls-img",
 				Aliases:  []string{"list-images"},
 				Category: category,
@@ -163,7 +176,7 @@ func makeQuerySubcmds() []*cli.Command {
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:  "include-disabled",
-						Usage: "Also download images for disabled package deployments",
+						Usage: "Also list images for disabled package deployments",
 					},
 				},
 			},
@@ -239,7 +252,7 @@ func makeQueryFileSubcmds(category string) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:      "ls-file",
-			Aliases:   []string{"list-file", "ls-files", "list-files"},
+			Aliases:   []string{"list-files"},
 			Category:  category,
 			Usage:     "Lists non-directory files in the development pallet",
 			ArgsUsage: "[path_glob]",

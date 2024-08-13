@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt ls-file` command to list all files in the local/development pallet, including files imported by the pallet from required pallets.
 - (cli) Added a `[dev] plt locate-file` command to print the actual filesystem path of the specified file in the pallet. The actual filesystem path may be for a file in the pallets cache, or a file in an override pallet (in the case of `dev plt` with the `--plts` flag), or a file in the local/development pallet (in the case of a local file defined by the pallet), or a file in a required pallet (in the case of a file imported from another pallet).
 - (cli) Added a `[dev] plt show-file` command to print the contents of the specified file in the local/development pallet.
+- (cli) Added a `[dev] plt ls-dl` command to list all HTTP files and OCI images downloaded by the local/development pallet.
 - (cli) Added an optional `--plts` flag to `dev plt` for overriding version-locked required pallets with pallets from other directories, like the existing `--repos` flag.
 
 ### Changed

@@ -42,7 +42,7 @@ func DownloadExportFiles(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
 	dlCache *forklift.FSDownloadCache, includeDisabled, parallel bool,
 ) error {
-	httpDownloads, ociDownloads, err := listRequiredDownloads(deplsLoader, pkgLoader, includeDisabled)
+	httpDownloads, ociDownloads, err := ListRequiredDownloads(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -86,7 +86,7 @@ func DownloadExportFiles(
 	return downloadSerial(indent, newHTTP, newOCI, dlCache, http.DefaultClient)
 }
 
-func listRequiredDownloads(
+func ListRequiredDownloads(
 	deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, includeDisabled bool,
 ) (http, oci []string, err error) {
 	depls, err := deplsLoader.LoadDepls("**/*")
