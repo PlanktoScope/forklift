@@ -25,16 +25,18 @@ func PrintPalletFiles(
 		)
 	}
 
-	if pattern != "**" {
-		pattern = path.Join(pattern, "**")
+	if len(paths) == 0 {
+		if pattern != "**" {
+			pattern = path.Join(pattern, "**")
+		}
+		subPaths, err := doublestar.Glob(pallet.FS, pattern, doublestar.WithFilesOnly())
+		if err != nil {
+			return errors.Wrapf(
+				err, "couldn't list files matching pattern %s in %s", pattern, pallet.FS.Path(),
+			)
+		}
+		paths = append(paths, subPaths...)
 	}
-	subPaths, err := doublestar.Glob(pallet.FS, pattern, doublestar.WithFilesOnly())
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't list files matching pattern %s in %s", pattern, pallet.FS.Path(),
-		)
-	}
-	paths = append(paths, subPaths...)
 
 	for _, p := range paths {
 		IndentedPrintln(indent, p)
