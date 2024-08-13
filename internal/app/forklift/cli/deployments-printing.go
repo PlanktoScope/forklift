@@ -12,7 +12,7 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func PrintPalletDepls(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+func PrintPalletDepls(indent int, pallet *forklift.FSPallet) error {
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
 		return err

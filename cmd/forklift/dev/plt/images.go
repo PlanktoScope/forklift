@@ -35,9 +35,10 @@ func lsImgAction(c *cli.Context) error {
 func cacheImgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err

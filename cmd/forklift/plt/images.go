@@ -11,7 +11,10 @@ import (
 // ls-img
 
 func lsImgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -30,7 +33,11 @@ func lsImgAction(c *cli.Context) error {
 
 func cacheImgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}

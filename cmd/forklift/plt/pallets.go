@@ -28,25 +28,35 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 	}
 }
 
+type processingOptions struct {
+	requirePalletCache   bool
+	requireRepoCache     bool
+	requireDownloadCache bool
+	merge                bool
+}
+
 func processFullBaseArgs(
-	wpath string, ensureCache bool,
+	wpath string, opts processingOptions,
 ) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
-	// FIXME: return both the shallow pallet and the merged pallet? the `stage` command needs both
 	if plt, err = getShallowPallet(wpath); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.d, err = fcli.GetDownloadCache(wpath, ensureCache); err != nil {
+	if caches.p, err = fcli.GetPalletCache(
+		wpath, plt, opts.requirePalletCache || opts.merge,
+	); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.p, err = fcli.GetPalletCache(wpath, plt, ensureCache); err != nil {
+	if opts.merge {
+		if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
+			return nil, workspaceCaches{}, errors.Wrap(
+				err, "couldn't merge local pallet with file imports from any pallets required by it",
+			)
+		}
+	}
+	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, opts.requireRepoCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
-		return nil, workspaceCaches{}, errors.Wrap(
-			err, "couldn't merge local pallet with file imports from any pallets required by it",
-		)
-	}
-	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, ensureCache); err != nil {
+	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	return plt, caches, nil
@@ -70,7 +80,7 @@ func getShallowPallet(wpath string) (plt *forklift.FSPallet, err error) {
 
 func cacheAllAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 		if err != nil {
 			return err
 		}
@@ -359,7 +369,7 @@ func preparePallet(
 	}
 	// TODO: warn if the git repo doesn't appear to be an actual pallet
 
-	plt, caches, err := processFullBaseArgs(workspace.FS.Path(), false)
+	plt, caches, err := processFullBaseArgs(workspace.FS.Path(), processingOptions{})
 	if err != nil {
 		return err
 	}
@@ -716,7 +726,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 
 		fmt.Println()
 
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 		if err != nil {
 			return err
 		}
@@ -773,7 +783,11 @@ func showAction(c *cli.Context) error {
 
 func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -794,7 +808,11 @@ func checkAction(versions Versions) cli.ActionFunc {
 
 func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -817,7 +835,7 @@ func planAction(versions Versions) cli.ActionFunc {
 
 func stageAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 		if err != nil {
 			return err
 		}
@@ -852,7 +870,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 
 func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 		if err != nil {
 			return err
 		}
@@ -896,16 +914,21 @@ func applyAction(versions Versions) cli.ActionFunc {
 
 func cachePltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, err := getShallowPallet(c.String("workspace"))
 		if err != nil {
 			return err
 		}
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
 		fmt.Println("Downloading pallets specified by the local pallet...")
-		changed, err := fcli.DownloadRequiredPallets(0, plt, caches.p.Path())
+		changed, err := fcli.DownloadRequiredPallets(0, plt, workspace.GetPalletCachePath())
 		if err != nil {
 			return err
 		}
@@ -935,7 +958,9 @@ func lsPltAction(c *cli.Context) error {
 // show-plt
 
 func showPltAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requirePalletCache: true,
+	})
 	if err != nil {
 		return err
 	}
@@ -947,23 +972,35 @@ func showPltAction(c *cli.Context) error {
 
 func addPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, err := getShallowPallet(c.String("workspace"))
 		if err != nil {
 			return err
 		}
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
+
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
-		if err = fcli.AddPalletReqs(0, plt, caches.p.Path(), c.Args().Slice()); err != nil {
+		if err = fcli.AddPalletReqs(
+			0, plt, workspace.GetPalletCachePath(), c.Args().Slice(),
+		); err != nil {
 			return err
 		}
 		if !c.Bool("no-cache-req") {
+			plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
+			if err != nil {
+				return err
+			}
 			if _, _, err = fcli.CacheStagingReqs(
 				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
+			// TODO: check version compatibility between the pallet and the added pallet!
 		}
 		fmt.Println("Done!")
 		return nil
@@ -974,17 +1011,16 @@ func addPltAction(versions Versions) cli.ActionFunc {
 
 func rmPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, _, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, err := getShallowPallet(c.String("workspace"))
 		if err != nil {
 			return err
 		}
+
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
 
-		if err = fcli.RemovePalletReqs(
-			0, plt, c.Args().Slice(), c.Bool("force"),
-		); err != nil {
+		if err = fcli.RemovePalletReqs(0, plt, c.Args().Slice(), c.Bool("force")); err != nil {
 			return err
 		}
 		fmt.Println("Done!")

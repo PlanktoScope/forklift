@@ -206,6 +206,7 @@ func determineUsedPalletReqs(
 func DownloadRequiredPallets(
 	indent int, pallet *forklift.FSPallet, cachePath string,
 ) (changed bool, err error) {
+	// FIXME: recursively download pallets required by required pallets
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify pallets")

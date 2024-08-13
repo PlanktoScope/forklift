@@ -9,7 +9,10 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -20,7 +23,10 @@ func lsPkgAction(c *cli.Context) error {
 // locate-pkg
 
 func locatePkgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -31,7 +37,10 @@ func locatePkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}

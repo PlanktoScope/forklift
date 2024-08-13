@@ -11,18 +11,23 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
+	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletDepls(0, plt, caches.r)
+	return fcli.PrintPalletDepls(0, plt)
 }
 
 // show-depl
 
 func showDeplAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -33,7 +38,10 @@ func showDeplAction(c *cli.Context) error {
 // locate-depl-pkg
 
 func locateDeplPkgAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -45,7 +53,11 @@ func locateDeplPkgAction(c *cli.Context) error {
 
 func addDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -80,7 +92,11 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 
 func rmDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -110,7 +126,11 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 
 func setDeplPkgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -122,9 +142,7 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 
 		deplName := c.Args().Slice()[0]
 		pkgPath := c.Args().Slice()[1]
-		if err = fcli.SetDeplPkg(
-			0, plt, caches.r, deplName, pkgPath, c.Bool("force"),
-		); err != nil {
+		if err = fcli.SetDeplPkg(0, plt, caches.r, deplName, pkgPath, c.Bool("force")); err != nil {
 			return err
 		}
 
@@ -144,7 +162,11 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 
 func addDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -178,7 +200,11 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 
 func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
@@ -210,7 +236,11 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 
 func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}

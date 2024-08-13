@@ -12,7 +12,9 @@ import (
 
 func cacheRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			merge: true,
+		})
 		if err != nil {
 			return err
 		}
@@ -40,7 +42,9 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 // ls-repo
 
 func lsRepoAction(c *cli.Context) error {
-	plt, err := getShallowPallet(c.String("workspace"))
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
+	})
 	if err != nil {
 		return err
 	}
@@ -51,7 +55,10 @@ func lsRepoAction(c *cli.Context) error {
 // locate-repo
 
 func locateRepoAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -62,7 +69,10 @@ func locateRepoAction(c *cli.Context) error {
 // show-repo
 
 func showRepoAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -74,7 +84,9 @@ func showRepoAction(c *cli.Context) error {
 
 func addRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, caches, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+			merge: true,
+		})
 		if err != nil {
 			return err
 		}
@@ -91,6 +103,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			); err != nil {
 				return err
 			}
+			// TODO: check version compatibility between the pallet and the added repo!
 		}
 		fmt.Println("Done!")
 		return nil
@@ -101,7 +114,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 
 func rmRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		plt, _, err := processFullBaseArgs(c.String("workspace"), false)
+		plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 		if err != nil {
 			return err
 		}

@@ -38,7 +38,6 @@ type processingOptions struct {
 func processFullBaseArgs(
 	c *cli.Context, opts processingOptions,
 ) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
-	// FIXME: return both the shallow pallet and the merged pallet? the `stage` command needs both
 	if plt, err = getShallowPallet(c.String("cwd")); err != nil {
 		return nil, workspaceCaches{}, err
 	}
@@ -261,9 +260,10 @@ func showAction(c *cli.Context) error {
 func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -286,9 +286,10 @@ func checkAction(versions Versions) cli.ActionFunc {
 func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -311,8 +312,7 @@ func planAction(versions Versions) cli.ActionFunc {
 func stageAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
+			enableOverrides: true,
 		})
 		if err != nil {
 			return err
@@ -352,8 +352,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 func applyAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
+			enableOverrides: true,
 		})
 		if err != nil {
 			return err
@@ -477,7 +476,6 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		if !c.Bool("no-cache-req") {
 			plt, caches, err := processFullBaseArgs(c, processingOptions{
 				enableOverrides: true,
-				merge:           true,
 			})
 			if err != nil {
 				return err
@@ -487,6 +485,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 			); err != nil {
 				return err
 			}
+			// TODO: check version compatibility between the pallet and the added pallet!
 		}
 		fmt.Println("Done!")
 		return nil
@@ -501,6 +500,7 @@ func rmPltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
+
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}

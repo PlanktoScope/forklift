@@ -9,7 +9,7 @@ import (
 // ls-imp
 
 func lsImpAction(c *cli.Context) error {
-	plt, _, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, err := getShallowPallet(c.String("workspace"))
 	if err != nil {
 		return err
 	}
@@ -20,7 +20,9 @@ func lsImpAction(c *cli.Context) error {
 // show-imp
 
 func showImpAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requirePalletCache: true,
+	})
 	if err != nil {
 		return err
 	}

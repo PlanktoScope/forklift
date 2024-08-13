@@ -11,7 +11,7 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c, processingOptions{
+	plt, _, err := processFullBaseArgs(c, processingOptions{
 		enableOverrides: true,
 		merge:           true,
 	})
@@ -19,7 +19,7 @@ func lsDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPalletDepls(0, plt, caches.r)
+	return fcli.PrintPalletDepls(0, plt)
 }
 
 // show-depl
@@ -57,9 +57,10 @@ func locateDeplPkgAction(c *cli.Context) error {
 func addDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -96,9 +97,10 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 func rmDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -130,9 +132,10 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 func setDeplPkgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -166,9 +169,10 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 func addDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -204,9 +208,10 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err
@@ -240,9 +245,10 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
-			requireRepoCache: true,
-			enableOverrides:  true,
-			merge:            true,
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
 		})
 		if err != nil {
 			return err

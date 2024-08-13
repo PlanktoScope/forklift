@@ -108,6 +108,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			); err != nil {
 				return err
 			}
+			// TODO: check version compatibility between the pallet and the added repo!
 		}
 		fmt.Println("Done!")
 		return nil

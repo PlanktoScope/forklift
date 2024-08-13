@@ -18,8 +18,6 @@ func (v Versions) Core() fcli.Versions {
 	return v.Staging.Core
 }
 
-// FIXME: implement layered pallet merging in all these commands!
-
 func MakeCmd(versions Versions) *cli.Command {
 	return &cli.Command{
 		Name:    "plt",

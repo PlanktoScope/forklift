@@ -9,18 +9,23 @@ import (
 // ls-file
 
 func lsFileAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
+	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletFiles(0, plt, caches.r, c.Args().First())
+	return fcli.PrintPalletFiles(0, plt, c.Args().First())
 }
 
 // locate-file
 
 func locateFileAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
@@ -31,7 +36,10 @@ func locateFileAction(c *cli.Context) error {
 // show-file
 
 func showFileAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}

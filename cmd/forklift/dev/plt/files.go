@@ -9,16 +9,15 @@ import (
 // ls-files
 
 func lsFileAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c, processingOptions{
-		requireRepoCache: true,
-		enableOverrides:  true,
-		merge:            true,
+	plt, _, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+		merge:           true,
 	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletFiles(0, plt, caches.r, c.Args().First())
+	return fcli.PrintPalletFiles(0, plt, c.Args().First())
 }
 
 // locate-file
