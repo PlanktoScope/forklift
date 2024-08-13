@@ -11,9 +11,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 )
 
-func PrintPalletFiles(
-	indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader, pattern string,
-) error {
+func PrintPalletFiles(indent int, pallet *forklift.FSPallet, pattern string) error {
 	if pattern == "" {
 		pattern = "**"
 	}
