@@ -138,23 +138,28 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 	}
 
 	sourceFile, err := fsys.Open(sourcePath)
+	fullSourcePath := path.Join(fsys.Path(), sourcePath)
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't open source file %s for copying", path.Join(fsys.Path(), sourcePath),
-		)
+		return errors.Wrapf(err, "couldn't open source file %s for copying", fullSourcePath)
 	}
 	defer func() {
 		// FIXME: handle this error more rigorously
 		if err := sourceFile.Close(); err != nil {
-			fmt.Printf("Error: couldn't close source file %s\n", path.Join(fsys.Path(), sourcePath))
+			fmt.Printf("Error: couldn't close source file %s\n", fullSourcePath)
 		}
 	}()
 	sourceInfo, err := sourceFile.Stat()
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't stat source file %s for copying", path.Join(fsys.Path(), sourcePath),
-		)
+		return errors.Wrapf(err, "couldn't stat source file %s for copying", fullSourcePath)
 	}
+	if sourceInfo.IsDir() {
+		fsys, err := fsys.Sub(sourcePath)
+		if err != nil {
+			return err
+		}
+		return copyFS(fsys, destPath)
+	}
+
 	destFile, err := os.OpenFile( //nolint:gosec // dest path is set by config files which we trust
 		destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, sourceInfo.Mode().Perm(),
 	)
@@ -171,9 +176,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 	}()
 
 	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return errors.Wrapf(
-			err, "couldn't copy %s to %s", path.Join(fsys.Path(), sourcePath), destPath,
-		)
+		return errors.Wrapf(err, "couldn't copy %s to %s", fullSourcePath, destPath)
 	}
 
 	return nil
@@ -358,7 +361,9 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 }
 
 func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
-	if err := copyFSFile(resolved.Pkg.FS, export.Source, filepath.FromSlash(exportPath)); err != nil {
+	if err := copyFSFile(
+		resolved.Pkg.FS, strings.TrimPrefix(export.Source, "/"), filepath.FromSlash(exportPath),
+	); err != nil {
 		return errors.Wrapf(err, "couldn't export file from %s to %s", export.Source, exportPath)
 	}
 	return nil
@@ -370,7 +375,8 @@ func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDow
 		return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
 	}
 	if err := copyFSFile(
-		dlCache.FS, strings.TrimPrefix(sourcePath, dlCache.FS.Path()), filepath.FromSlash(exportPath),
+		dlCache.FS, strings.TrimPrefix(strings.TrimPrefix(sourcePath, dlCache.FS.Path()), "/"),
+		filepath.FromSlash(exportPath),
 	); err != nil {
 		return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
 	}
