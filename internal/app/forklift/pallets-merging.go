@@ -240,30 +240,33 @@ func (f *MergeFS) Resolve(name string) (string, error) {
 	switch {
 	default:
 		return "", &fs.PathError{
-			Op:   "stat",
+			Op:   "resolve",
 			Path: name,
 			Err:  errors.Wrapf(err, "couldn't stat file %s in overlay", name),
 		}
 	case errors.Is(err, fs.ErrNotExist):
 		if name == "." {
-			// FIXME: this is incorrect
 			return f.Path(), nil
 		}
 		ref, ok := f.underlayRefs[name]
 		if !ok {
 			if !f.impliedDirs.Has(name) {
 				return "", &fs.PathError{
-					Op:   "stat",
+					Op:   "resolve",
 					Path: name,
 					Err:  errors.Errorf("file %s not found in either overlay or underlay", name),
 				}
 			}
 			// fmt.Printf("  %s is an implied dir!\n", name)
-			return path.Join(f.Overlay.Path(), name), nil
+			return "", &fs.PathError{
+				Op:   "resolve",
+				Path: name,
+				Err:  errors.Errorf("file %s is a directory implied by the underlay", name),
+			}
 		}
 		if _, err := fs.Stat(ref.fs, ref.path); err != nil {
 			return "", &fs.PathError{
-				Op:   "stat",
+				Op:   "resolve",
 				Path: name,
 				Err: errors.Wrapf(
 					err, "couldn't stat file %s in underlay as %s", name, path.Join(ref.fs.Path(), ref.path),
@@ -352,43 +355,49 @@ func (f *MergeFS) Sub(dir string) (core.PathedFS, error) {
 // MergeFS: fs.ReadDirFS
 
 // ReadDir reads the named directory and returns a list of directory entries sorted by filename.
-func (f *MergeFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (f *MergeFS) ReadDir(name string) (entries []fs.DirEntry, err error) {
 	name = path.Clean(name)
 	// fmt.Printf("ReadDir(%s|%s)\n", f.Path(), name)
 	entryNames := make(structures.Set[string])
-	entries, _ := fs.ReadDir(f.Overlay, name)
-	for _, entry := range entries {
-		entryNames.Add(entry.Name())
+
+	info, err := fs.Stat(f.Overlay, name)
+	if err == nil {
+		if !info.IsDir() {
+			return nil, &fs.PathError{
+				Op:   "read",
+				Path: name,
+				Err:  errors.Wrapf(err, "%s is a non-directory file in overlay", name),
+			}
+		}
+		if entries, err = fs.ReadDir(f.Overlay, name); err != nil {
+			return nil, &fs.PathError{
+				Op:   "read",
+				Path: name,
+				Err:  errors.Wrapf(err, "couldn't read directory %s in overlay", name),
+			}
+		}
+		for _, entry := range entries {
+			entryNames.Add(entry.Name())
+		}
 	}
 
-	prefixPattern := path.Join(name, "*")
-	if name == "." {
-		prefixPattern = "*"
-	}
 	for target, ref := range f.underlayRefs {
-		match, err := doublestar.Match(prefixPattern, target)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't enumerate files in underlays")
-		}
-		if !match {
-			continue
-		}
 		entryName := path.Base(target)
 		if entryNames.Has(entryName) { // e.g. entry was already added by the overlay
 			continue
 		}
-		entry := &importedDirEntry{
-			name: entryName,
-			ref:  ref,
+		entry, err := matchUnderlayRef(name, target, ref)
+		if err != nil {
+			return nil, err
 		}
-		if entry.fileInfo, err = fs.Stat(ref.fs, ref.path); err != nil {
-			return entries, errors.Wrapf(
-				err, "couldn't load file info for %s in %s", entry.ref.path, entry.ref.fs.Path(),
-			)
+		if entry == nil {
+			continue
 		}
+
 		entries = append(entries, entry)
 		entryNames.Add(entryName)
 	}
+
 	for dir := range f.impliedDirs {
 		if path.Dir(dir) != name {
 			continue
@@ -401,11 +410,44 @@ func (f *MergeFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		entryNames.Add(entryName)
 	}
 
-	// If the dir is not implied by any underlay entries, return an error.
 	slices.SortFunc(entries, func(a, b fs.DirEntry) int {
 		return cmp.Compare(a.Name(), b.Name())
 	})
 	return entries, nil
+}
+
+func matchUnderlayRef(
+	fileName, underlayTarget string, underlayRef fileRef,
+) (entry *importedDirEntry, err error) {
+	prefixPattern := path.Join(fileName, "*")
+	if fileName == "." {
+		prefixPattern = "*"
+	}
+
+	match, err := doublestar.Match(prefixPattern, underlayTarget)
+	if err != nil {
+		return nil, &fs.PathError{
+			Op:   "read",
+			Path: fileName,
+			Err:  errors.Wrap(err, "couldn't enumerate files in underlays"),
+		}
+	}
+	if !match {
+		return nil, nil
+	}
+
+	entry = &importedDirEntry{
+		name: path.Base(underlayTarget),
+		ref:  underlayRef,
+	}
+	if entry.fileInfo, err = fs.Stat(underlayRef.fs, underlayRef.path); err != nil {
+		return nil, &fs.PathError{
+			Op:   "read",
+			Path: fileName,
+			Err:  errors.Wrapf(err, "couldn't stat file %s in %s", entry.ref.path, entry.ref.fs.Path()),
+		}
+	}
+	return entry, nil
 }
 
 // MergeFS: fs.ReadFileFS
@@ -423,6 +465,13 @@ func (f *MergeFS) ReadFile(name string) ([]byte, error) {
 	case errors.Is(err, fs.ErrNotExist):
 		ref, ok := f.underlayRefs[name]
 		if !ok {
+			if f.impliedDirs.Has(name) {
+				return nil, &fs.PathError{
+					Op:   "read",
+					Path: name,
+					Err:  errors.Errorf("file %s is a directory implied by the underlay", name),
+				}
+			}
 			return nil, errors.Errorf(
 				"file %s not found in either overlay or underlay of %s", name, f.Path(),
 			)
