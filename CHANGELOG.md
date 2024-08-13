@@ -16,16 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt cache-plt` command to cache all pallets required by the local/development pallet.
 - (cli) Added a `[dev] plt ls-imp` command to list all file import groups declared by the local/development pallet.
 - (cli) Added a `[dev] plt show-imp` command to show the specified file import group declared by the local/development pallet.
-- (cli) Now the `[dev] plt cache-all` command, and all commands which can cache staging requirements, will cache pallets required by the local/development pallet.
-- (cli) Now all `[dev] plt` commands are evaluated on the merged pallet (i.e. with file imports) if the pallet imports files from other pallets.
-- (cli) Now the `[dev] plt show-pkg` and `cache show-pkg` commands also print information about file exports.
+- (cli) Added a `[dev] plt locate-repo` command to print the actual filesystem path of the specified available package repository. The actual filesystem path may be for a subdirectory in the repositories cache, or a subdirectory in an override repository (in the case of `dev plt` with the `--repos` flag).
+- (cli) Added a `[dev] plt locate-pkg` command to print the actual filesystem path of the specified available package. The actual filesystem path may be for a subdirectory in the repositories cache, or a subdirectory in an override repository (in the case of `dev plt` with the `--repos` flag), or a subdirectory in the local/development pallet (in the case of a local package defined by the pallet), or a subdirectory in a required pallet (in the case of a local package imported from another pallet).
+- (cli) Added a `[dev] plt ls-file` command to list all files in the local/development pallet, including files imported by the pallet from required pallets.
+- (cli) Added a `[dev] plt locate-file` command to print the actual filesystem path of the specified file in the pallet. The actual filesystem path may be for a file in the pallets cache, or a file in an override pallet (in the case of `dev plt` with the `--plts` flag), or a file in the local/development pallet (in the case of a local file defined by the pallet), or a file in a required pallet (in the case of a file imported from another pallet).
+- (cli) Added a `[dev] plt show-file` command to print the contents of the specified file in the local/development pallet.
 - (cli) Added an optional `--plts` flag to `dev plt` for overriding version-locked required pallets with pallets from other directories, like the existing `--repos` flag.
-- (cli) Added a `[dev] plt locate-repo` command to print the actual filesystem path of the specified available package repository. The path may be a subdirectory in the repositories cache or an override repository (in the case of `dev plt` with the `--repos` flag).
-- (cli) Added a `[dev] plt locate-pkg` command to print the actual filesystem path of the specified available package. The path may be a subdirectory in the repositories cache or an override repository (in the case of `dev plt` with the `--repos` flag) or a subdirectory in the pallet (in the case of a local package defined by the pallet) or a subdirectory in a required pallet (in the case of a local package imported from another pallet).
 
 ### Changed
 
-- (Breaking change; cli) Now enabled feature flags are ordered alphabetically when sequencing file export operations declared by feature flags.
+- (Breaking change; cli) Now enabled feature flags in each package deployment are considered in alphabetically-sorted order (rather than the exact order used for listing feature flags in the package deployment declaration file) when sequencing file export operations implied by the enabled feature flags.
+- (cli) Now the `[dev] plt cache-all` command, and all commands which can cache staging requirements, will cache pallets required by the local/development pallet.
+- (cli) Now all `[dev] plt` commands are evaluated on the merged pallet (i.e. with file imports) if the pallet imports files from other pallets.
+- (cli) Now the `[dev] plt show-pkg` and `cache show-pkg` commands also print information about file exports.
 - (cli) Now the commands for viewing a pallet/repo (e.g. `[dev] plt show`) truncate the printout of the pallet/repo's readme file to the first ten lines of the file, to prevent long readme files from clogging up the command output.
 - (cli) Now the `[dev] plt rm-repo` command only deletes the version lock file for the specified repository, instead of deleting the entire subdirectory for the repository.
 - (cli) Now a pallet can include deployments for local packages even if it's missing a `forklift-repository.yml` file in the pallet root - in such cases, the repository declaration is automatically inferred from the `forklift-pallet.yml` file for the purposes of using the pallet. However, a `forklift-repository.yml` file is still needed to make the pallet usable as a Forklift package repository by other pallets.

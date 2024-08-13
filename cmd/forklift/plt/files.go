@@ -6,35 +6,35 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
-// ls-pkg
+// ls-file
 
-func lsPkgAction(c *cli.Context) error {
+func lsFileAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletPkgs(0, plt, caches.r)
+	return fcli.PrintPalletFiles(0, plt, caches.r, c.Args().First())
 }
 
-// locate-pkg
+// locate-file
 
-func locatePkgAction(c *cli.Context) error {
+func locateFileAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPkgLocation(plt, caches.r, c.Args().First())
+	return fcli.PrintFileLocation(plt, caches.r, c.Args().First())
 }
 
-// show-pkg
+// show-file
 
-func showPkgAction(c *cli.Context) error {
+func showFileAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c.String("workspace"), true)
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPkgInfo(0, plt, caches.r, c.Args().First())
+	return fcli.PrintFile(plt, caches.r, c.Args().First())
 }

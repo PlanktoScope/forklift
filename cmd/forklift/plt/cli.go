@@ -18,6 +18,8 @@ func (v Versions) Core() fcli.Versions {
 	return v.Staging.Core
 }
 
+// FIXME: implement layered pallet merging in all these commands!
+
 func MakeCmd(versions Versions) *cli.Command {
 	return &cli.Command{
 		Name:    "plt",
@@ -217,31 +219,8 @@ func makeQuerySubcmds() []*cli.Command {
 		},
 		makeQueryReqSubcmds(category),
 		makeQueryImportSubcmds(category),
-		[]*cli.Command{
-			{
-				Name:     "ls-pkg",
-				Aliases:  []string{"list-packages"},
-				Category: category,
-				Usage:    "Lists packages available in the local pallet",
-				Action:   lsPkgAction,
-			},
-			{
-				Name:      "locate-pkg",
-				Aliases:   []string{"locate-package"},
-				Category:  category,
-				Usage:     "Prints the absolute filesystem path of a package available in the local pallet",
-				ArgsUsage: "package_path",
-				Action:    locatePkgAction,
-			},
-			{
-				Name:      "show-pkg",
-				Aliases:   []string{"show-package"},
-				Category:  category,
-				Usage:     "Describes a package available in the local pallet",
-				ArgsUsage: "package_path",
-				Action:    showPkgAction,
-			},
-		},
+		makeQueryFileSubcmds(category),
+		makeQueryPkgSubcmds(category),
 		makeQueryDeplSubcmds(category),
 		[]*cli.Command{
 			{
@@ -320,6 +299,61 @@ func makeQueryImportSubcmds(category string) []*cli.Command {
 			Usage:     "Describes an import group specified by the local pallet",
 			ArgsUsage: "import_name",
 			Action:    showImpAction,
+		},
+	}
+}
+
+func makeQueryFileSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:      "ls-file",
+			Aliases:   []string{"list-file", "ls-files", "list-files"},
+			Category:  category,
+			Usage:     "Lists non-directory files in the local pallet",
+			ArgsUsage: "[path_glob]",
+			Action:    lsFileAction,
+		},
+		{
+			Name:      "locate-file",
+			Category:  category,
+			Usage:     "Prints the absolute filesystem path of the specified file in the local pallet",
+			ArgsUsage: "file_path",
+			Action:    locateFileAction,
+		},
+		{
+			Name:      "show-file",
+			Category:  category,
+			Usage:     "Prints the specified file in the local pallet",
+			ArgsUsage: "file_path",
+			Action:    showFileAction,
+		},
+	}
+}
+
+func makeQueryPkgSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-pkg",
+			Aliases:  []string{"list-packages"},
+			Category: category,
+			Usage:    "Lists packages available in the local pallet",
+			Action:   lsPkgAction,
+		},
+		{
+			Name:      "locate-pkg",
+			Aliases:   []string{"locate-package"},
+			Category:  category,
+			Usage:     "Prints the absolute filesystem path of a package available in the local pallet",
+			ArgsUsage: "package_path",
+			Action:    locatePkgAction,
+		},
+		{
+			Name:      "show-pkg",
+			Aliases:   []string{"show-package"},
+			Category:  category,
+			Usage:     "Describes a package available in the local pallet",
+			ArgsUsage: "package_path",
+			Action:    showPkgAction,
 		},
 	}
 }
