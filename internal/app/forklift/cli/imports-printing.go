@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"path"
+	"slices"
 
 	"github.com/pkg/errors"
 
@@ -39,16 +40,7 @@ func PrintImportInfo(
 	return nil
 }
 
-func PrintResolvedImport(
-	indent int, resolved *forklift.ResolvedImport,
-) error {
-	if err := printImport(indent, resolved); err != nil {
-		return err
-	}
-	return nil
-}
-
-func printImport(indent int, imp *forklift.ResolvedImport) error {
+func PrintResolvedImport(indent int, imp *forklift.ResolvedImport) error {
 	IndentedPrint(indent, "Import group")
 	if imp.Import.Def.Disabled {
 		fmt.Print(" (disabled!)")
@@ -59,6 +51,11 @@ func printImport(indent int, imp *forklift.ResolvedImport) error {
 	IndentedPrintf(indent, "Import source: %s\n", imp.Pallet.Path())
 
 	printModifiers(indent, imp.Def.Modifiers)
+
+	fmt.Println()
+	if err := printEvaluation(indent, imp); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -113,4 +110,25 @@ func printRemoveModifier(indent, index int, modifier forklift.ImportModifier) {
 	for _, filter := range modifier.OnlyMatchingAny {
 		BulletedPrintf(indent, "Remove: %s\n", path.Join(modifier.Target, filter))
 	}
+}
+
+func printEvaluation(indent int, imp *forklift.ResolvedImport) error {
+	IndentedPrintln(indent, "Imported files:")
+	importMappings, err := imp.Evaluate()
+	if err != nil {
+		return errors.Wrapf(err, "couldn't evaluate import group")
+	}
+	indent++
+
+	targets := make([]string, 0, len(importMappings))
+	for target := range importMappings {
+		targets = append(targets, target)
+	}
+	slices.Sort(targets)
+	for _, target := range targets {
+		BulletedPrintf(indent, "As:          %s\n", target)
+		IndentedPrintf(indent+1, "From source: %s\n", importMappings[target])
+	}
+
+	return nil
 }
