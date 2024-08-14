@@ -16,6 +16,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-containerregistry v0.20.2
 	github.com/h2non/filetype v1.1.3
+	github.com/muesli/reflow v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.27.4
 	golang.org/x/mod v0.20.0
