@@ -164,9 +164,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 		destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, sourceInfo.Mode().Perm(),
 	)
 	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't open dest file %s for copying", destPath,
-		)
+		return errors.Wrapf(err, "couldn't open dest file %s for copying", destPath)
 	}
 	defer func() {
 		// FIXME: handle this error more rigorously

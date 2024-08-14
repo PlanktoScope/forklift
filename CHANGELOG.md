@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt ls-file` command to list all files in the local/development pallet, including files imported by the pallet from required pallets.
 - (cli) Added a `[dev] plt locate-file` command to print the actual filesystem path of the specified file in the pallet. The actual filesystem path may be for a file in the pallets cache, or a file in an override pallet (in the case of `dev plt` with the `--plts` flag), or a file in the local/development pallet (in the case of a local file defined by the pallet), or a file in a required pallet (in the case of a file imported from another pallet).
 - (cli) Added a `[dev] plt show-file` command to print the contents of the specified file in the local/development pallet.
+- (cli) Added a `[dev] plt edit-file` command to edit the specified file in the local/development pallet, using the editor set by the `$EDITOR` environment variable. If the file was previously only in an underlay, a temporary copy is provided to the editor; if changes are saved when the editor quits, the changed file will be saved as an override file into the local/development pallet.
+- (cli) Added a `[dev] plt rm-file` command to delete the specified file/directory in the local/development pallet. If a file/directory still exists after the deletion because of files imported from other pallets, they are listed in a warning message.
 - (cli) Added a `[dev] plt ls-dl` command to list all HTTP files and OCI images downloaded by the local/development pallet.
 - (cli) Added an optional `--plts` flag to `dev plt` for overriding version-locked required pallets with pallets from other directories, like the existing `--repos` flag.
 

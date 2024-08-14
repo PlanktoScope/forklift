@@ -1,6 +1,8 @@
 package plt
 
 import (
+	"fmt"
+
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
@@ -16,33 +18,69 @@ func lsFileAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPalletFiles(0, plt, c.Args().First())
+	paths, err := fcli.ListPalletFiles(plt, c.Args().First())
+	if err != nil {
+		return err
+	}
+	for _, p := range paths {
+		fmt.Println(p)
+	}
+	return nil
 }
 
 // locate-file
 
 func locateFileAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
-		requireRepoCache: true,
-		merge:            true,
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
 	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintFileLocation(plt, caches.r, c.Args().First())
+	location, err := fcli.GetFileLocation(plt, c.Args().First())
+	if err != nil {
+		return err
+	}
+	fmt.Println(location)
+	return nil
 }
 
 // show-file
 
 func showFileAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
-		requireRepoCache: true,
-		merge:            true,
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
 	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintFile(plt, caches.r, c.Args().First())
+	return fcli.PrintFile(plt, c.Args().First())
+}
+
+// edit-file
+
+func editFileAction(c *cli.Context) error {
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return fcli.EditFileWithCOW(plt, c.Args().First(), c.String("editor"))
+}
+
+// rm-file
+
+func rmFileAction(c *cli.Context) error {
+	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		merge: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return fcli.RemoveFile(0, plt, c.Args().First())
 }

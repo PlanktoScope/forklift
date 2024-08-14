@@ -273,6 +273,27 @@ func makeQueryFileSubcmds(category string) []*cli.Command {
 			ArgsUsage: "file_path",
 			Action:    showFileAction,
 		},
+		{
+			Name:      "edit-file",
+			Category:  category,
+			Usage:     "Edits the specified file in the development pallet",
+			ArgsUsage: "file_path",
+			Action:    editFileAction,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "editor",
+					Usage:   "Path of text editor",
+					EnvVars: []string{"EDITOR"},
+				},
+			},
+		},
+		{
+			Name:      "rm-file",
+			Category:  category,
+			Usage:     "Removes the specified file in the development pallet",
+			ArgsUsage: "file_path",
+			Action:    rmFileAction,
+		},
 	}
 }
 
