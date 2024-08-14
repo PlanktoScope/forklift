@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Now the commands for viewing a pallet/repo (e.g. `[dev] plt show`) truncate the printout of the pallet/repo's readme file to the first ten lines of the file, to prevent long readme files from clogging up the command output.
 - (cli) Now the `[dev] plt rm-repo` command only deletes the version lock file for the specified repository, instead of deleting the entire subdirectory for the repository.
 - (cli) Now a pallet can include deployments for local packages even if it's missing a `forklift-repository.yml` file in the pallet root - in such cases, the repository declaration is automatically inferred from the `forklift-pallet.yml` file for the purposes of using the pallet. However, a `forklift-repository.yml` file is still needed to make the pallet usable as a Forklift package repository by other pallets.
+- (cli) Now git clone/fetch-related messages are properly indented in command output to stdout.
 
 ### Fixed
 

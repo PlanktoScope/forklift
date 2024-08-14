@@ -438,14 +438,12 @@ func checkUpgrade(
 ) error {
 	fcli.IndentedPrintln(indent, "Resolving upgrade version query...")
 	upgradeResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
-		// Note: we don't increase indentation level because go-git prints to stdout without indentation
-		indent, workspace.GetPalletCachePath(), []string{upgradeQuery.String()}, true,
+		indent+1, workspace.GetPalletCachePath(), []string{upgradeQuery.String()}, true,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't resolve upgrade version query")
 	}
 
-	fmt.Println()
 	currentResolved, err := resolveCurrentPalletVersion(indent, workspace)
 	if err != nil {
 		currentResolved = forklift.GitRepoReq{}
@@ -482,19 +480,17 @@ func resolveCurrentPalletVersion(
 		VersionQuery: ref.Hash().String(),
 	}
 	fcli.IndentedPrintf(
-		indent, "Current pallet: %s at %s\n", plt.Def.Pallet.Path, git.StringifyRef(ref),
+		indent, "Local pallet currently is %s at %s\n", plt.Def.Pallet.Path, git.StringifyRef(ref),
 	)
-	fmt.Println()
-
+	indent++
 	fcli.IndentedPrintln(indent, "Resolving current version query...")
 	currentResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
-		// Note: we don't increase indentation level because go-git prints to stdout without indentation
 		// Note: we don't update the local mirror because we already updated it to resolve the current
 		// version query
 		indent, workspace.GetPalletCachePath(), []string{currentQuery.String()}, false,
 	)
 	if err != nil {
-		fcli.IndentedPrintf(indent+1, "Warning: %s\n", errors.Wrap(
+		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
 			err,
 			"couldn't resolve current version query from the Forklift pallet cache's local mirror of "+
 				"the remote repo (is the local pallet currently on a commit not in the remote origin?)",
@@ -510,7 +506,7 @@ func resolveCurrentPalletVersion(
 		}
 
 		fcli.IndentedPrintf(
-			indent+1, "Resolved %s as %s@%s",
+			indent, "Resolved %s as %s@%s",
 			currentQuery.String(), plt.Def.Pallet.Path, resolvedVersionLock.Version,
 		)
 		return forklift.GitRepoReq{
@@ -690,7 +686,7 @@ func fetchAction(c *cli.Context) error {
 	pltPath := workspace.GetCurrentPalletPath()
 
 	fmt.Println("Fetching updates...")
-	updated, err := git.Fetch(pltPath)
+	updated, err := git.Fetch(0, pltPath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't fetch changes from the remote release")
 	}
@@ -715,7 +711,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 		// FIXME: update the local mirror
 
 		fmt.Println("Attempting to fast-forward the local pallet...")
-		updated, err := git.Pull(pltPath)
+		updated, err := git.Pull(1, pltPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't fast-forward the local pallet")
 		}
