@@ -15,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
 
+	"github.com/PlanktoScope/forklift/internal/clients/cli"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
@@ -295,7 +296,7 @@ func (r *Repo) MakeTrackingBranches(remoteName string) error {
 
 func (r *Repo) FetchAll(indent int) error {
 	if err := r.repository.Fetch(&git.FetchOptions{
-		Progress: newIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, os.Stdout),
 		Tags:     git.AllTags,
 		RefSpecs: []config.RefSpec{
 			"+refs/heads/*:refs/heads/*",
@@ -447,7 +448,7 @@ func Clone(indent int, remote, local string) (*Repo, error) {
 	remote = u.String()
 	repo, err := git.PlainClone(local, false, &git.CloneOptions{
 		URL:      remote,
-		Progress: newIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, os.Stdout),
 	})
 	return &Repo{
 		repository: repo,
@@ -465,7 +466,7 @@ func CloneMirrored(indent int, remote, local string) (*Repo, error) {
 	remote = u.String()
 	repo, err := git.PlainClone(local, false, &git.CloneOptions{
 		URL:      remote,
-		Progress: newIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, os.Stdout),
 		Mirror:   true,
 	})
 	return &Repo{
@@ -505,7 +506,7 @@ func Fetch(indent int, local string) (updated bool, err error) {
 		return false, errors.Wrapf(err, "couldn't open %s as git repo", local)
 	}
 	if err = repo.Fetch(&git.FetchOptions{
-		Progress: newIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, os.Stdout),
 		Tags:     git.AllTags,
 		RefSpecs: []config.RefSpec{
 			"+refs/heads/*:refs/remotes/origin/*",
@@ -529,7 +530,7 @@ func Pull(indent int, local string) (updated bool, err error) {
 		return false, err
 	}
 	if err = worktree.Pull(&git.PullOptions{
-		Progress: newIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, os.Stdout),
 	}); err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			return false, nil

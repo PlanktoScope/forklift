@@ -1,4 +1,5 @@
-package git
+// Package cli provides utilities for nicer CLI output
+package cli
 
 import (
 	"io"
@@ -7,15 +8,15 @@ import (
 	"github.com/muesli/reflow/ansi"
 )
 
-type indentedWriter struct {
+type IndentedWriter struct {
 	indent     int
 	ansiWriter *ansi.Writer
 	skipIndent bool
 	ansi       bool
 }
 
-func newIndentedWriter(indent int, forward io.Writer) *indentedWriter {
-	return &indentedWriter{
+func NewIndentedWriter(indent int, forward io.Writer) *IndentedWriter {
+	return &IndentedWriter{
 		indent: indent,
 		ansiWriter: &ansi.Writer{
 			Forward: forward,
@@ -25,7 +26,7 @@ func newIndentedWriter(indent int, forward io.Writer) *indentedWriter {
 
 // indentedWriter: io.Writer
 
-func (w *indentedWriter) Write(b []byte) (n int, err error) {
+func (w *IndentedWriter) Write(b []byte) (n int, err error) {
 	// This method was adapted from the Writer.Write method in the indent package of the MIT-licensed
 	// github.com/muesli/reflow project maintained by Christian Muehlhaeuser
 	// (see https://github.com/muesli/reflow/blob/83f6379/indent/indent.go#L60). The method was

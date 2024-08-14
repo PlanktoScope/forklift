@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/internal/clients/cli"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
@@ -17,15 +18,12 @@ import (
 // Download
 
 func DownloadImagesForStoreApply(
-	store *forklift.FSStageStore, toolVersion, bundleMinVersion string,
+	indent int, store *forklift.FSStageStore, toolVersion, bundleMinVersion string,
 	parallel, ignoreToolVersion bool,
 ) error {
 	next, hasNext := store.GetNext()
 	current, hasCurrent := store.GetCurrent()
-	indent := 0
-	if parallel {
-		indent++ // parallel downloads enable indented printing
-	}
+	indent++
 
 	if hasCurrent && current != next {
 		bundle, err := store.LoadFSBundle(current)
@@ -43,9 +41,6 @@ func DownloadImagesForStoreApply(
 		)
 		if err := DownloadImages(indent, bundle, bundle, false, parallel); err != nil {
 			return err
-		}
-		if !parallel {
-			fmt.Println() // serial downloads don't support indented printing, so we separate with a line
 		}
 	}
 	if hasNext {
@@ -161,11 +156,13 @@ func downloadImagesParallel(indent int, images []string, dc *docker.Client) erro
 func downloadImagesSerial(indent int, images []string, dc *docker.Client) error {
 	for _, image := range images {
 		IndentedPrintf(indent, "Downloading %s...\n", image)
-		pulled, err := dc.PullImage(context.Background(), image, docker.NewOutStream(os.Stdout))
+		pulled, err := dc.PullImage(
+			context.Background(), image, docker.NewOutStream(cli.NewIndentedWriter(indent+1, os.Stdout)),
+		)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't download %s", image)
 		}
-		IndentedPrintf(indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
+		IndentedPrintf(indent+1, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
 	}
 	return nil
 }

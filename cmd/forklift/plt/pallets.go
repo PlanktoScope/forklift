@@ -852,7 +852,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if _, err = fcli.StagePallet(
-			plt, stageStore, caches.staging(), c.String("exports"),
+			0, plt, stageStore, caches.staging(), c.String("exports"),
 			versions.Staging, c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -887,7 +887,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		index, err := fcli.StagePallet(
-			plt, stageStore, caches.staging(), c.String("exports"),
+			0, plt, stageStore, caches.staging(), c.String("exports"),
 			versions.Staging, false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		)
 		if err != nil {

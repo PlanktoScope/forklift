@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/internal/clients/cli"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
 	"github.com/PlanktoScope/forklift/pkg/structures"
@@ -31,8 +33,8 @@ func GetStageStore(
 }
 
 func SetNextStagedBundle(
-	store *forklift.FSStageStore, index int, exportPath, toolVersion, bundleMinVersion string,
-	skipImageCaching, parallel, ignoreToolVersion bool,
+	indent int, store *forklift.FSStageStore, index int, exportPath,
+	toolVersion, bundleMinVersion string, skipImageCaching, parallel, ignoreToolVersion bool,
 ) error {
 	store.SetNext(index)
 	fmt.Printf(
@@ -47,7 +49,7 @@ func SetNextStagedBundle(
 	}
 
 	if err := DownloadImagesForStoreApply(
-		store, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
+		indent, store, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
 	); err != nil {
 		return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
 	}
@@ -69,7 +71,7 @@ type StagingCaches struct {
 }
 
 func StagePallet(
-	pallet *forklift.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
+	indent int, pallet *forklift.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
 	exportPath string, versions StagingVersions,
 	skipImageCaching, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
@@ -104,7 +106,7 @@ func StagePallet(
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
 	}
 	if err = SetNextStagedBundle(
-		stageStore, index, exportPath, versions.Core.Tool, versions.MinSupportedBundle,
+		indent, stageStore, index, exportPath, versions.Core.Tool, versions.MinSupportedBundle,
 		skipImageCaching, parallel, ignoreToolVersion,
 	); err != nil {
 		return index, errors.Wrapf(
@@ -300,16 +302,21 @@ func applyBundle(indent int, bundle *forklift.FSBundle, parallel bool) error {
 }
 
 func applyChangesSerially(indent int, plan []*ReconciliationChange) error {
-	dc, err := docker.NewClient()
+	const dockerIndent = 2 // docker's indentation is flaky, so we indent extra
+	dc, err := docker.NewClient(
+		docker.WithOutputStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stdout)),
+		docker.WithErrorStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
+	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
 
 	fmt.Println()
 	fmt.Println("Applying changes serially...")
+	indent++
 	for _, change := range plan {
 		fmt.Println()
-		if err := applyReconciliationChange(context.Background(), indent+1, change, dc); err != nil {
+		if err := applyReconciliationChange(context.Background(), indent, change, dc); err != nil {
 			return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
 		}
 	}
@@ -397,7 +404,9 @@ func applyChangesConcurrently(indent int, plan structures.Digraph[*Reconciliatio
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
 	fmt.Println()
-	fmt.Println("Applying changes concurrently...")
+	IndentedPrintln(indent, "Applying changes concurrently...")
+	indent++
+
 	changeDone := make(map[*ReconciliationChange]chan struct{})
 	for change := range plan {
 		changeDone[change] = make(chan struct{})
