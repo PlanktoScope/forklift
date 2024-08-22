@@ -1,6 +1,6 @@
 module github.com/PlanktoScope/forklift/tools
 
-go 1.22
+go 1.23
 
 require (
 	github.com/client9/misspell v0.3.4
