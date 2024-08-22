@@ -539,7 +539,7 @@ func extractRegularFile(
 ) error {
 	targetFile, err := os.OpenFile(
 		filepath.FromSlash(targetPath), os.O_RDWR|os.O_CREATE|os.O_TRUNC,
-		fs.FileMode(header.Mode&int64(fs.ModePerm)),
+		fs.FileMode(header.Mode)&fs.ModePerm, //nolint:gosec // tar's Mode won't(?) overflow fs.FileMode
 	)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't create export file at %s", targetPath)

@@ -227,7 +227,7 @@ func checkConflictingPathsWithPrefixes(provided, candidate []string) (errs []err
 				continue
 			}
 			pathConflicts.Add(errorMessage)
-			errs = append(errs, fmt.Errorf(errorMessage))
+			errs = append(errs, errors.New(errorMessage))
 			continue
 		}
 
@@ -384,7 +384,7 @@ func checkConflictingPathsWithParents(provided, candidate []string) (errs []erro
 				continue
 			}
 			pathConflicts.Add(errorMessage)
-			errs = append(errs, fmt.Errorf(errorMessage))
+			errs = append(errs, errors.New(errorMessage))
 			continue
 		}
 
