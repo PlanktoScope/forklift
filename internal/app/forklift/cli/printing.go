@@ -93,9 +93,12 @@ func BulletedPrintYaml(indent int, a any) error {
 
 // Markdown files
 
-func PrintReadme(indent int, readme []byte, widthLimit int) {
-	lines := strings.Split(string(readme), "\n")
-	for _, line := range lines {
+func PrintMarkdown(indent int, text []byte, widthLimit, lengthLimit int) {
+	lines := strings.Split(string(text), "\n")
+	for i, line := range lines {
+		if lengthLimit > 0 && i >= lengthLimit {
+			break
+		}
 		line = strings.TrimRight(line, "\r")
 		if line == "" {
 			IndentedPrintln(indent)
@@ -108,5 +111,8 @@ func PrintReadme(indent int, readme []byte, widthLimit int) {
 			IndentedPrintln(indent, line[:widthLimit])
 			line = line[widthLimit:]
 		}
+	}
+	if lengthLimit > 0 && len(lines) > lengthLimit {
+		IndentedPrintln(indent, "[remainder of file truncated]")
 	}
 }

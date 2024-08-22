@@ -24,10 +24,12 @@ func main() {
 
 var defaultWorkspaceBase, _ = os.UserHomeDir()
 
-var fcliVersions fcli.Versions = fcli.Versions{
-	Tool:               toolVersion,
-	MinSupportedRepo:   repoMinVersion,
-	MinSupportedPallet: palletMinVersion,
+var fcliVersions fcli.StagingVersions = fcli.StagingVersions{
+	Core: fcli.Versions{
+		Tool:               toolVersion,
+		MinSupportedRepo:   repoMinVersion,
+		MinSupportedPallet: palletMinVersion,
+	},
 	MinSupportedBundle: bundleMinVersion,
 	NewBundle:          newBundleVersion,
 }
@@ -38,7 +40,7 @@ var app = &cli.App{
 	Usage:   "Manages pallets and package deployments",
 	Commands: []*cli.Command{
 		plt.MakeCmd(plt.Versions{
-			Versions:      fcliVersions,
+			Staging:       fcliVersions,
 			NewStageStore: newStageStoreVersion,
 		}),
 		stage.MakeCmd(stage.Versions{
@@ -49,7 +51,7 @@ var app = &cli.App{
 		cache.Cmd,
 		host.Cmd,
 		dev.MakeCmd(dev.Versions{
-			Versions:      fcliVersions,
+			Staging:       fcliVersions,
 			NewStageStore: newStageStoreVersion,
 		}),
 	},
@@ -105,7 +107,7 @@ const (
 	newStageStoreVersion = "v0.7.0"
 	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
 	// version is unknown.
-	fallbackVersion = "v0.7.2-dev"
+	fallbackVersion = "v0.8.0-dev"
 )
 
 var (

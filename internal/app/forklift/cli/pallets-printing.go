@@ -15,52 +15,32 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func GetPalletCache(
-	wpath string, pallet *forklift.FSPallet, ensureCache bool,
-) (*forklift.FSPalletCache, error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return nil, err
+func PrintCachedPallet(
+	indent int, cache core.Pather, pallet *forklift.FSPallet, printHeader bool,
+) error {
+	if printHeader {
+		IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
+		indent++
 	}
-	cache, err := workspace.GetPalletCache()
-	if err != nil {
-		return nil, err
-	}
-
-	if ensureCache && !cache.Exists() && pallet != nil {
-		palletReqs, err := pallet.LoadFSPalletReqs("**")
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't check whether the pallet requires any pallets")
-		}
-		if len(palletReqs) > 0 {
-			return nil, errors.New("you first need to cache the pallets specified by your pallet")
-		}
-	}
-	return cache, nil
-}
-
-// Print
-
-func PrintCachedPallet(indent int, cache core.Pather, pallet *forklift.FSPallet) error {
-	IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
-	indent++
 
 	IndentedPrintf(indent, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
 	fmt.Println()
 
 	IndentedPrintf(indent, "Version: %s\n", pallet.Version)
-	IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	if core.CoversPath(cache, pallet.FS.Path()) {
+		IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	} else {
+		// Note: this is used when the repo is replaced by an overlay from outside the cache
+		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", pallet.FS.Path())
+	}
 	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
 
-	readme, err := pallet.LoadReadme()
-	if err != nil {
+	if err := printReadme(indent, pallet); err != nil {
 		return errors.Wrapf(
-			err, "couldn't load readme file for pallet %s@%s from cache", pallet.Path(), pallet.Version,
+			err, "couldn't preview readme file for pallet %s@%s from cache",
+			pallet.Path(), pallet.Version,
 		)
 	}
-	IndentedPrintln(indent, "Readme:")
-	const widthLimit = 100
-	PrintReadme(indent+1, readme, widthLimit)
 	return nil
 }
 
@@ -77,14 +57,8 @@ func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
 	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
 	if pallet.Def.Pallet.ReadmeFile == "" {
 		fmt.Println()
-	} else {
-		readme, err := pallet.LoadReadme()
-		if err != nil {
-			return errors.Wrapf(err, "couldn't load readme file for pallet %s", pallet.FS.Path())
-		}
-		IndentedPrintln(indent, "Readme:")
-		const widthLimit = 100
-		PrintReadme(indent+1, readme, widthLimit)
+	} else if err := printReadme(indent, pallet); err != nil {
+		return errors.Wrapf(err, "couldn't preview readme file for pallet %s", pallet.FS.Path())
 	}
 
 	return printGitRepoInfo(indent, pallet.FS.Path())
@@ -235,79 +209,6 @@ func printRemoteInfo(indent int, remote *ggit.Remote) error {
 		}
 		BulletedPrintf(indent+1, "%s\n", git.StringifyRef(ref))
 	}
-
-	return nil
-}
-
-// Download
-
-func DownloadRequiredPallets(
-	indent int, pallet *forklift.FSPallet, cachePath string,
-) (changed bool, err error) {
-	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
-	if err != nil {
-		return false, errors.Wrapf(err, "couldn't identify pallets")
-	}
-	changed = false
-	for _, req := range loadedPalletReqs {
-		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cachePath, req.Path(), req.VersionLock,
-		)
-		changed = changed || downloaded
-		if err != nil {
-			return false, errors.Wrapf(
-				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
-			)
-		}
-	}
-	return changed, nil
-}
-
-// Cache
-
-func CacheAllRequirements(
-	indent int, pallet *forklift.FSPallet, repoCachePath string,
-	pkgLoader forklift.FSPkgLoader, dlCache *forklift.FSDownloadCache,
-	includeDisabled, parallel bool,
-) error {
-	if err := CacheStagingRequirements(
-		indent, pallet, repoCachePath, pkgLoader, dlCache, includeDisabled, parallel,
-	); err != nil {
-		return err
-	}
-
-	IndentedPrintln(indent, "Downloading Docker container images to be deployed by the local pallet...")
-	if err := DownloadImages(1, pallet, pkgLoader, includeDisabled, parallel); err != nil {
-		return err
-	}
-	return nil
-}
-
-func CacheStagingRequirements(
-	indent int, pallet *forklift.FSPallet, repoCachePath string,
-	pkgLoader forklift.FSPkgLoader, dlCache *forklift.FSDownloadCache,
-	includeDisabled, parallel bool,
-) error {
-	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
-	indent++
-
-	// TODO: download required pallets, once we allow layering pallets; then merge the pallets into
-	// a composite before downloading required repos
-
-	IndentedPrintln(indent, "Downloading repos required by the local pallet...")
-	if _, err := DownloadRequiredRepos(0, pallet, repoCachePath); err != nil {
-		return err
-	}
-
-	IndentedPrintln(indent, "Downloading files for export by the local pallet...")
-	if err := DownloadExportFiles(
-		1, pallet, pkgLoader, dlCache, includeDisabled, parallel,
-	); err != nil {
-		return err
-	}
-
-	// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
-	// forklift version is incompatible or ahead of the pallet version
 
 	return nil
 }

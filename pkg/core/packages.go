@@ -25,7 +25,7 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 		)
 	}
 	if p.Pkg.Def, err = LoadPkgDef(p.FS, PkgDefFile); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package config")
+		return nil, errors.Wrapf(err, "couldn't load package declaration")
 	}
 	return p, nil
 }
@@ -40,7 +40,7 @@ func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
 	pkgDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "couldn't search for package configs matching %s/%s", fsys.Path(), searchPattern,
+			err, "couldn't search for package declarations matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
@@ -113,7 +113,7 @@ func (p Pkg) Path() string {
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
 	// TODO: implement a check method on PkgDef
-	// errs = append(errs, ErrsWrap(p.Def.Check(), "invalid package config")...)
+	// errs = append(errs, ErrsWrap(p.Def.Check(), "invalid package declaration")...)
 	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
 		errs = append(errs, errors.Errorf(
 			"repo path %s of package is inconsistent with path %s of attached repo",
@@ -134,7 +134,7 @@ func (p Pkg) ResAttachmentSource(parentSource []string) []string {
 func (p Pkg) ProvidedListeners(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ListenerRes]) {
-	return providedResources[ListenerRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ListenerRes] {
 			return res.AttachedListeners
 		},
@@ -171,7 +171,7 @@ func providedResources[Resource any](
 func (p Pkg) RequiredNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[NetworkRes]) {
-	return requiredResources[NetworkRes](
+	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[NetworkRes] {
 			return res.AttachedNetworks
 		},
@@ -202,7 +202,7 @@ func requiredResources[Resource any](
 func (p Pkg) ProvidedNetworks(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[NetworkRes]) {
-	return providedResources[NetworkRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[NetworkRes] {
 			return res.AttachedNetworks
 		},
@@ -214,7 +214,7 @@ func (p Pkg) ProvidedNetworks(
 func (p Pkg) RequiredServices(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[ServiceRes]) {
-	return requiredResources[ServiceRes](
+	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[ServiceRes] {
 			return res.AttachedServices
 		},
@@ -226,7 +226,7 @@ func (p Pkg) RequiredServices(
 func (p Pkg) ProvidedServices(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[ServiceRes]) {
-	return providedResources[ServiceRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ServiceRes] {
 			return res.AttachedServices
 		},
@@ -238,7 +238,7 @@ func (p Pkg) ProvidedServices(
 func (p Pkg) RequiredFilesets(
 	parentSource []string, enabledFeatures []string,
 ) (required []AttachedRes[FilesetRes]) {
-	return requiredResources[FilesetRes](
+	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[FilesetRes] {
 			return res.AttachedFilesets
 		},
@@ -250,7 +250,7 @@ func (p Pkg) RequiredFilesets(
 func (p Pkg) ProvidedFilesets(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[FilesetRes]) {
-	return providedResources[FilesetRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FilesetRes] {
 			return res.AttachedFilesets
 		},
@@ -262,7 +262,7 @@ func (p Pkg) ProvidedFilesets(
 func (p Pkg) ProvidedFileExports(
 	parentSource []string, enabledFeatures []string,
 ) (provided []AttachedRes[FileExportRes]) {
-	return providedResources[FileExportRes](
+	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FileExportRes] {
 			return res.AttachedFileExports
 		},
@@ -276,14 +276,27 @@ func LoadPkgDef(fsys PathedFS, filePath string) (PkgDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return PkgDef{}, errors.Wrapf(
-			err, "couldn't read package config file %s/%s", fsys.Path(), filePath,
+			err, "couldn't read package declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := PkgDef{}
-	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return PkgDef{}, errors.Wrap(err, "couldn't parse package config")
+	declaration := PkgDef{}
+	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
+		return PkgDef{}, errors.Wrap(err, "couldn't parse package declaration")
 	}
-	return config, nil
+
+	return declaration.AddDefaults(), nil
+}
+
+// AddDefaults makes a copy with empty values replaced by default values.
+func (d PkgDef) AddDefaults() PkgDef {
+	d.Host = d.Host.AddDefaults()
+	d.Deployment = d.Deployment.AddDefaults()
+	updatedFeatures := make(map[string]PkgFeatureSpec)
+	for name, feature := range d.Features {
+		updatedFeatures[name] = feature.AddDefaults()
+	}
+	d.Features = updatedFeatures
+	return d
 }
 
 // PkgHostSpec
@@ -296,6 +309,12 @@ func (s PkgHostSpec) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "host specification")
 }
 
+// AddDefaults makes a copy with empty values replaced by default values.
+func (s PkgHostSpec) AddDefaults() PkgHostSpec {
+	s.Provides = s.Provides.AddDefaults()
+	return s
+}
+
 // PkgDeplSpec
 
 // ResAttachmentSource returns the source path for resources under the PkgDeplSpec instance,
@@ -306,6 +325,12 @@ func (s PkgDeplSpec) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "deployment specification")
 }
 
+// AddDefaults makes a copy with empty values replaced by default values.
+func (s PkgDeplSpec) AddDefaults() PkgDeplSpec {
+	s.Provides = s.Provides.AddDefaults()
+	return s
+}
+
 // PkgFeatureSpec
 
 // ResAttachmentSource returns the source path for resources under the PkgFeatureSpec instance,
@@ -314,4 +339,10 @@ func (s PkgDeplSpec) ResAttachmentSource(parentSource []string) []string {
 // The resulting slice is useful for constructing [AttachedRes] instances.
 func (s PkgFeatureSpec) ResAttachmentSource(parentSource []string, featureName string) []string {
 	return append(parentSource, fmt.Sprintf("feature %s", featureName))
+}
+
+// AddDefaults makes a copy with empty values replaced by default values.
+func (s PkgFeatureSpec) AddDefaults() PkgFeatureSpec {
+	s.Provides = s.Provides.AddDefaults()
+	return s
 }

@@ -33,7 +33,7 @@ linters:
     - bodyclose
     # - depguard
     - dupl
-    - exportloopref
+    - copyloopvar
     - forcetypeassert
     - funlen
     - gci

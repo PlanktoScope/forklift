@@ -51,6 +51,16 @@ func (r ProvidedRes) AttachedFileExports(source []string) []AttachedRes[FileExpo
 	return attachRes(r.FileExports, append(source, providesSourcePart))
 }
 
+// AddDefaults makes a copy with empty values replaced by default values.
+func (r ProvidedRes) AddDefaults() ProvidedRes {
+	updatedFileExports := make([]FileExportRes, 0, len(r.FileExports))
+	for _, fileExport := range r.FileExports {
+		updatedFileExports = append(updatedFileExports, fileExport.AddDefaults())
+	}
+	r.FileExports = updatedFileExports
+	return r
+}
+
 // RequiredRes
 
 // AttachedNetworks returns a list of [AttachedRes] instances for each respective Docker
@@ -217,7 +227,7 @@ func checkConflictingPathsWithPrefixes(provided, candidate []string) (errs []err
 				continue
 			}
 			pathConflicts.Add(errorMessage)
-			errs = append(errs, fmt.Errorf(errorMessage))
+			errs = append(errs, errors.New(errorMessage))
 			continue
 		}
 
@@ -374,7 +384,7 @@ func checkConflictingPathsWithParents(provided, candidate []string) (errs []erro
 				continue
 			}
 			pathConflicts.Add(errorMessage)
-			errs = append(errs, fmt.Errorf(errorMessage))
+			errs = append(errs, errors.New(errorMessage))
 			continue
 		}
 
@@ -416,4 +426,29 @@ func pathMatchesParent(
 		}
 	}
 	return false, ""
+}
+
+// FileExportRes
+
+// AddDefaults makes a copy with empty values replaced by default values according to the file
+// export source type.
+func (r FileExportRes) AddDefaults() FileExportRes {
+	if r.SourceType == "" {
+		r.SourceType = FileExportSourceTypeLocal
+	}
+	switch r.SourceType {
+	case FileExportSourceTypeLocal:
+		if r.Source == "" {
+			r.Source = r.Target
+		}
+	case FileExportSourceTypeHTTPArchive:
+		if r.Source == "" {
+			r.Source = r.Target
+		}
+	case FileExportSourceTypeOCIImage:
+		if r.Source == "" {
+			r.Source = r.Target
+		}
+	}
+	return r
 }

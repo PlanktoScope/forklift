@@ -9,22 +9,41 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletPkgs(0, pallet, cache)
+	return fcli.PrintPalletPkgs(0, plt, caches.r)
+}
+
+// locate-pkg
+
+func locatePkgAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return fcli.PrintPkgLocation(plt, caches.r, c.Args().First())
 }
 
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c.String("workspace"), true)
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
+		requireRepoCache: true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
 
-	pkgPath := c.Args().First()
-	return fcli.PrintPkgInfo(0, pallet, cache, pkgPath)
+	return fcli.PrintPkgInfo(0, plt, caches.r, c.Args().First())
 }

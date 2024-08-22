@@ -9,6 +9,9 @@ import (
 type FSPallet struct {
 	// Pallet is the pallet at the root of the filesystem.
 	Pallet
+	// Repo is the package repository at the root of the filesystem. It may be defined either
+	// explicitly or implicitly.
+	Repo *core.FSRepo
 	// FS is a filesystem which contains the pallet's contents.
 	FS core.PathedFS
 }
@@ -49,48 +52,9 @@ type PalletSpec struct {
 	ReadmeFile string `yaml:"readme-file"`
 }
 
-// Deployment Configurations
-
-const (
-	// DeplsDirName is the directory in a pallet which contains deployment
-	// configurations.
-	DeplsDirName = "deployments"
-	// DeplsFileExt is the file extension for deployment configuration files.
-	DeplDefFileExt = ".deploy.yml"
-)
-
-// A ResolvedDepl is a deployment with a loaded package.
-type ResolvedDepl struct {
-	// Depl is the configured deployment of the package represented by Pkg.
-	Depl
-	// PkgReq is the package requirement for the deployment.
-	PkgReq PkgReq
-	// Pkg is the package to be deployed.
-	Pkg *core.FSPkg
-}
-
-// A Depl is a package deployment, a complete configuration of how a package is to be deployed on a
-// Docker host.
-type Depl struct {
-	// Name is the name of the package depoyment.
-	Name string
-	// Def is the Forklift package deployment definition for the deployment.
-	Def DeplDef
-}
-
-// A DeplDef defines a package deployment.
-type DeplDef struct {
-	// Package is the package path of the package to deploy.
-	Package string `yaml:"package"`
-	// Features is a list of features from the package which should be enabled in the deployment.
-	Features []string `yaml:"features,omitempty"`
-	// Disabled represents whether the deployment should be ignored.
-	Disabled bool `yaml:"disabled,omitempty"`
-}
-
 // Requirements
 
-// ReqsDirName is the directory in a Forklift pallet which contains requirement configurations.
+// ReqsDirName is the directory in a Forklift pallet which contains requirement declarations.
 const ReqsDirName = "requirements"
 
 // A GitRepoReq is a requirement for a specific Git repository (e.g. a pallet or Forklift repo) at
@@ -104,7 +68,7 @@ type GitRepoReq struct {
 
 const (
 	// ReqsPalletsDirName is the subdirectory in the requirements directory of a Forklift pallet which
-	// contains pallet requirement configurations.
+	// contains pallet requirement declarations.
 	ReqsPalletsDirName = "pallets"
 )
 
@@ -121,9 +85,14 @@ type PalletReq struct {
 	GitRepoReq `yaml:",inline"`
 }
 
+// PalletReqLoader is a source of pallet requirements.
+type PalletReqLoader interface {
+	LoadPalletReq(palletPath string) (PalletReq, error)
+}
+
 const (
 	// ReqsReposDirName is the subdirectory in the requirements directory of a Forklift pallet which
-	// contains repo requirement configurations.
+	// contains repo requirement declarations.
 	ReqsReposDirName = "repositories"
 )
 
@@ -152,3 +121,102 @@ type PkgReq struct {
 type PkgReqLoader interface {
 	LoadPkgReq(pkgPath string) (PkgReq, error)
 }
+
+// Deployments
+
+const (
+	// DeplsDirName is the directory in a pallet which contains deployment declarations.
+	DeplsDirName = "deployments"
+	// DeplsFileExt is the file extension for deployment declaration files.
+	DeplDefFileExt = ".deploy.yml"
+)
+
+// A ResolvedDepl is a deployment with a loaded package.
+type ResolvedDepl struct {
+	// Depl is the declared deployment of the package represented by Pkg.
+	Depl
+	// PkgReq is the package requirement for the deployment.
+	PkgReq PkgReq
+	// Pkg is the package to be deployed.
+	Pkg *core.FSPkg
+}
+
+// A Depl is a package deployment, a complete declaration of how a package is to be deployed on a
+// Docker host.
+type Depl struct {
+	// Name is the name of the package depoyment.
+	Name string
+	// Def is the Forklift package deployment definition for the deployment.
+	Def DeplDef
+}
+
+// A DeplDef defines a package deployment.
+type DeplDef struct {
+	// Package is the package path of the package to deploy.
+	Package string `yaml:"package"`
+	// Features is a list of features from the package which should be enabled in the deployment.
+	Features []string `yaml:"features,omitempty"`
+	// Disabled represents whether the deployment should be ignored.
+	Disabled bool `yaml:"disabled,omitempty"`
+}
+
+// Imports
+
+const (
+	// ImportDefFileExt is the file extension for import group files.
+	ImportDefFileExt = ".imports.yml"
+)
+
+// A ResolvedImport is a deployment with a loaded pallet.
+type ResolvedImport struct {
+	// Import is the declared file import group.
+	Import
+	// Pallet is the pallet which files will be imported from
+	Pallet *FSPallet
+}
+
+// An Import is an import group, a declaration of a group of files to import from a required pallet.
+type Import struct {
+	// Name is the name of the package file import.
+	Name string
+	// Def is the file import definition for the file import.
+	Def ImportDef
+}
+
+// A ImportDef defines a file import group.
+type ImportDef struct {
+	// Description is a short description of the import group to be shown to users.
+	Description string `yaml:"description,omitempty"`
+	// Modifiers is a list of modifiers evaluated in the provided order to build up a set of files to
+	// import.
+	Modifiers []ImportModifier `yaml:"modifiers"`
+	// Disabled represents whether the import should be ignored.
+	Disabled bool `yaml:"disabled,omitempty"`
+}
+
+// An ImportModifier defines an operation for transforming a set of files for importing into a
+// different set of files for importing.
+type ImportModifier struct {
+	// Description is a short description of the import modifier to be shown to users.
+	Description string `yaml:"description,omitempty"`
+	// Type is either `add` (for adding one or more files to the set of files to import) or `remove`
+	// (for removing one or more files from the set of files to import)
+	Type string `yaml:"type,omitempty"`
+	// Source is the path in the required pallet of the file/directory to be imported, for an `add`
+	// modifier. If omitted, the source path will be inferred from the Target path.
+	Source string `yaml:"source,omitempty"`
+	// Target is the path which the file/directory will be imported as, for an `add` modifier; or the
+	// path of the file/directory which will be removed from the set of files to import, for a
+	// `remove` modifier.
+	Target string `yaml:"target,omitempty"`
+	// OnlyMatchingAny is, if the source is a directory, a list of glob patterns (relative to the
+	// source path) of files which will be added/removed (depending on modifier type). Any file which
+	// matches none of patterns provided in this field will be ignored for the add/remove modifier. If
+	// omitted, no files in the source directory will be ignored.
+	OnlyMatchingAny []string `yaml:"only-matching-any,omitempty"`
+}
+
+const (
+	ImportModifierTypeAdd    = "add"
+	ImportModifierTypeRemove = "remove"
+)

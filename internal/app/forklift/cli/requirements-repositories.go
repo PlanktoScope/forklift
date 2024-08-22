@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -16,10 +16,10 @@ import (
 )
 
 func GetRepoCache(
-	wpath string, pallet *forklift.FSPallet, ensureCache bool,
+	wpath string, pallet *forklift.FSPallet, requireCache bool,
 ) (*forklift.LayeredRepoCache, *forklift.RepoOverrideCache, error) {
 	cache := &forklift.LayeredRepoCache{}
-	override, err := makeRepoOverrideCacheFromPallet(pallet)
+	override, err := makeRepoOverrideCacheFromPallet(pallet, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -35,7 +35,7 @@ func GetRepoCache(
 	}
 	cache.Underlay = fsCache
 
-	if ensureCache && !fsCache.Exists() {
+	if requireCache && !fsCache.Exists() {
 		repoReqs, err := pallet.LoadFSRepoReqs("**")
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "couldn't check whether the pallet requires any repos")
@@ -48,13 +48,27 @@ func GetRepoCache(
 }
 
 func makeRepoOverrideCacheFromPallet(
-	pallet *forklift.FSPallet,
+	pallet *forklift.FSPallet, generateRepoFromPallet bool,
 ) (*forklift.RepoOverrideCache, error) {
 	palletAsRepo, err := core.LoadFSRepo(pallet.FS, ".")
 	if err != nil {
-		// The common case is that the pallet is not a repo (and thus can't be loaded as one), so we
-		// mask the error:
-		return nil, nil
+		if !generateRepoFromPallet {
+			return nil, nil
+		}
+		palletAsRepo = &core.FSRepo{
+			Repo: core.Repo{
+				Version: pallet.Version,
+				Def: core.RepoDef{
+					ForkliftVersion: pallet.Def.ForkliftVersion,
+					Repo: core.RepoSpec{
+						Path:        pallet.Def.Pallet.Path,
+						Description: pallet.Def.Pallet.Description,
+						ReadmeFile:  pallet.Def.Pallet.ReadmeFile,
+					},
+				},
+			},
+			FS: pallet.FS,
+		}
 	}
 	return forklift.NewRepoOverrideCache(
 		[]*core.FSRepo{palletAsRepo}, map[string][]string{
@@ -64,17 +78,15 @@ func makeRepoOverrideCacheFromPallet(
 	)
 }
 
-// Print
+// Printing
 
-func PrintPalletRepos(indent int, pallet *forklift.FSPallet) error {
+func PrintRequiredRepos(indent int, pallet *forklift.FSPallet) error {
 	loadedRepos, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify repos")
 	}
-	sort.Slice(loadedRepos, func(i, j int) bool {
-		return forklift.CompareGitRepoReqs(
-			loadedRepos[i].RepoReq.GitRepoReq, loadedRepos[j].RepoReq.GitRepoReq,
-		) < 0
+	slices.SortFunc(loadedRepos, func(a, b *forklift.FSRepoReq) int {
+		return forklift.CompareGitRepoReqs(a.RepoReq.GitRepoReq, b.RepoReq.GitRepoReq)
 	})
 	for _, repo := range loadedRepos {
 		IndentedPrintf(indent, "%s\n", repo.Path())
@@ -82,49 +94,51 @@ func PrintPalletRepos(indent int, pallet *forklift.FSPallet) error {
 	return nil
 }
 
-func PrintRepoInfo(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, repoPath string,
+func PrintRequiredRepoLocation(
+	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, requiredRepoPath string,
 ) error {
-	req, err := pallet.LoadFSRepoReq(repoPath)
+	req, err := pallet.LoadFSRepoReq(requiredRepoPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't load repo version lock definition %s from pallet %s",
-			repoPath, pallet.FS.Path(),
+			requiredRepoPath, pallet.FS.Path(),
+		)
+	}
+
+	version := req.VersionLock.Version
+	cachedRepo, err := cache.LoadFSRepo(requiredRepoPath, version)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't find repo %s@%s in cache, please update the local cache of repos",
+			requiredRepoPath, version,
+		)
+	}
+	fmt.Println(cachedRepo.FS.Path())
+	return nil
+}
+
+func PrintRequiredRepoInfo(
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, requiredRepoPath string,
+) error {
+	req, err := pallet.LoadFSRepoReq(requiredRepoPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load repo version lock definition %s from pallet %s",
+			requiredRepoPath, pallet.FS.Path(),
 		)
 	}
 	printRepoReq(indent, req.RepoReq)
 	indent++
 
 	version := req.VersionLock.Version
-	cachedRepo, err := cache.LoadFSRepo(repoPath, version)
+	cachedRepo, err := cache.LoadFSRepo(requiredRepoPath, version)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find repo %s@%s in cache, please update the local cache of repos",
-			repoPath, version,
+			requiredRepoPath, version,
 		)
 	}
-	IndentedPrintf(indent, "Forklift version: %s\n", cachedRepo.Def.ForkliftVersion)
-	fmt.Println()
-
-	if core.CoversPath(cache, cachedRepo.FS.Path()) {
-		IndentedPrintf(
-			indent, "Path in cache: %s\n", core.GetSubdirPath(cache, cachedRepo.FS.Path()),
-		)
-	} else {
-		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", cachedRepo.FS.Path())
-	}
-	IndentedPrintf(indent, "Description: %s\n", cachedRepo.Def.Repo.Description)
-
-	readme, err := cachedRepo.LoadReadme()
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't load readme file for repo %s@%s from cache", repoPath, version,
-		)
-	}
-	IndentedPrintln(indent, "Readme:")
-	const widthLimit = 100
-	PrintReadme(indent+1, readme, widthLimit)
-	return nil
+	return PrintCachedRepo(indent, cache, cachedRepo, false)
 }
 
 func printRepoReq(indent int, req forklift.RepoReq) {
@@ -135,7 +149,7 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 
 // Add
 
-func AddRepoRequirements(
+func AddRepoReqs(
 	indent int, pallet *forklift.FSPallet, cachePath string, repoQueries []string,
 ) error {
 	if err := validateGitRepoQueries(repoQueries); err != nil {
@@ -157,28 +171,32 @@ func AddRepoRequirements(
 			return err
 		}
 		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
-		marshaled, err := yaml.Marshal(req.VersionLock.Def)
-		if err != nil {
-			return errors.Wrapf(err, "couldn't marshal repo requirement for %s", repoReqPath)
+		if err = writeVersionLock(req.VersionLock, repoReqPath); err != nil {
+			return errors.Wrapf(err, "couldn't write version lock for repo requirement")
 		}
-		if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(repoReqPath))); err != nil {
-			return errors.Wrapf(
-				err, "couldn't make directory %s", filepath.FromSlash(path.Dir(repoReqPath)),
-			)
-		}
-		const perm = 0o644 // owner rw, group r, public r
-		if err := os.WriteFile(filepath.FromSlash(repoReqPath), marshaled, perm); err != nil {
-			return errors.Wrapf(
-				err, "couldn't save repo requirement to %s", filepath.FromSlash(repoReqPath),
-			)
-		}
+	}
+	return nil
+}
+
+func writeVersionLock(lock forklift.VersionLock, writePath string) error {
+	marshaled, err := yaml.Marshal(lock.Def)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal version lock")
+	}
+	parentDir := filepath.FromSlash(path.Dir(writePath))
+	if err := forklift.EnsureExists(parentDir); err != nil {
+		return errors.Wrapf(err, "couldn't make directory %s", parentDir)
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(filepath.FromSlash(writePath), marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save version lock to %s", filepath.FromSlash(writePath))
 	}
 	return nil
 }
 
 // Remove
 
-func RemoveRepoRequirements(
+func RemoveRepoReqs(
 	indent int, pallet *forklift.FSPallet, repoPaths []string, force bool,
 ) error {
 	usedRepoReqs, err := determineUsedRepoReqs(indent, pallet, force)
@@ -186,8 +204,8 @@ func RemoveRepoRequirements(
 		return errors.Wrap(
 			err,
 			"couldn't determine repos used by declared package deployments, to check which repositories "+
-				"to remove are still required by declared deployments; to skip this check, "+
-				"enable the --force flag",
+				"to remove are still required by declared deployments; to skip this check, enable the "+
+				"--force flag",
 		)
 	}
 
@@ -213,7 +231,9 @@ func RemoveRepoRequirements(
 				repoPath, usedRepoReqs[repoPath],
 			)
 		}
-		if err = os.RemoveAll(repoReqPath); err != nil {
+		if err = os.RemoveAll(filepath.FromSlash(path.Join(
+			repoReqPath, forklift.VersionLockDefFile,
+		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for repo %s, at %s", repoPath, repoReqPath,
 			)
@@ -236,14 +256,18 @@ func determineUsedRepoReqs(
 		IndentedPrintf(indent, "Warning: %s\n", err.Error())
 	}
 	usedRepoReqs := make(map[string][]string)
+	if len(depls) == 0 {
+		return usedRepoReqs, nil
+	}
+
+	repoReqsFS, err := pallet.GetRepoReqsFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
+	}
 	for _, depl := range depls {
 		pkgPath := depl.Def.Package
 		if path.IsAbs(pkgPath) { // special case: package is provided by the pallet itself
 			continue
-		}
-		repoReqsFS, err := pallet.GetRepoReqsFS()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 		}
 		fsRepoReq, err := forklift.LoadFSRepoReqContaining(repoReqsFS, pkgPath)
 		if err != nil {

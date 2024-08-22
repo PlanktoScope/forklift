@@ -43,7 +43,7 @@ func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
 		return nil, errors.Errorf("couldn't find workspace at %s", dirPath)
 	}
 	return &FSWorkspace{
-		FS: core.AttachPath(os.DirFS(dirPath), dirPath),
+		FS: DirFS(dirPath),
 	}, nil
 }
 

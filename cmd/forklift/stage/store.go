@@ -273,7 +273,7 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.SetNextStagedBundle(
-			store, newNext, c.String("exports"), versions.Tool, versions.MinSupportedBundle,
+			0, store, newNext, c.String("exports"), versions.Tool, versions.MinSupportedBundle,
 			c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -377,7 +377,7 @@ func checkAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckBundleShallowCompatibility(
+		if err = fcli.CheckBundleShallowCompat(
 			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -397,7 +397,7 @@ func planAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckBundleShallowCompatibility(
+		if err = fcli.CheckBundleShallowCompat(
 			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -417,7 +417,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckBundleShallowCompatibility(
+		if err = fcli.CheckBundleShallowCompat(
 			bundle, versions.Tool, versions.MinSupportedBundle, c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err

@@ -1324,17 +1324,17 @@ A file export object consists of the following fields:
   source: dhcp-and-dns.conf
   ```
 
-`url` is the URL of the file to be downloaded for export; the meaning of this field varies depending on the value of `source-type`.
+- `url` is the URL of the file to be downloaded for export; the meaning of this field varies depending on the value of `source-type`.
 
-This field is required for the `http` and `http-archive` source types and ignored for the `local` source type.
+- This field is required for the `http` and `http-archive` source types and ignored for the `local` source type.
 
-For the `http` source type, the URL should be of the file which is downloaded and directly exported as a file.
+- For the `http` source type, the URL should be of the file which is downloaded and directly exported as a file.
 
-For the `http-archive` source type, the URL should be of the `.tar.gz` or `.tar` archive which is downloaded so that a file within it can be exported.
+- For the `http-archive` source type, the URL should be of the `.tar.gz` or `.tar` archive which is downloaded so that a file within it can be exported.
 
-For the `oci-image` source type, the URL should be the name and tag (or manifest digest) of the container image which is downloaded so that a file within it can be exported.
+- For the `oci-image` source type, the URL should be the name and tag (or manifest digest) of the container image which is downloaded so that a file within it can be exported.
 
-Examples:
+- Examples:
 
 ```yaml
 url: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
@@ -1357,8 +1357,7 @@ url: ghcr.io/planktoscope/machine-name:0.1.3
 - Example:
   
   ```yaml
-  paths:
-    - overlays/etc/dnsmasq.d/dhcp-and-dns.conf
+  target: overlays/etc/dnsmasq.d/dhcp-and-dns.conf
   ```
 
 `tags` is an array of strings which describe the file export. These tags are ignored in determining whether file exports conflict with each other, since they are not part of the file export's location(s).

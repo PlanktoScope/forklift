@@ -11,49 +11,62 @@ import (
 // ls-depl
 
 func lsDeplAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, true, true)
+	plt, _, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+		merge:           true,
+	})
 	if err != nil {
 		return err
 	}
 
-	return fcli.PrintPalletDepls(0, pallet, cache)
+	return fcli.PrintPalletDepls(0, plt)
 }
 
 // show-depl
 
 func showDeplAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
 
-	deplName := c.Args().First()
-	return fcli.PrintDeplInfo(0, pallet, cache, deplName)
+	return fcli.PrintDeplInfo(0, plt, caches.r, c.Args().First())
 }
 
 // locate-depl-pkg
 
 func locateDeplPkgAction(c *cli.Context) error {
-	pallet, cache, _, err := processFullBaseArgs(c, true, true)
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
 	if err != nil {
 		return err
 	}
 
-	deplName := c.Args().First()
-	return fcli.PrintDeplPkgPath(0, pallet, cache, deplName, c.Bool("allow-disabled"))
+	return fcli.PrintDeplPkgLocation(0, plt, caches.r, c.Args().First(), c.Bool("allow-disabled"))
 }
 
 // add-depl
 
 func addDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
+		if err = fcli.CheckDeepCompat(
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -61,7 +74,7 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 		deplName := c.Args().Slice()[0]
 		pkgPath := c.Args().Slice()[1]
 		if err = fcli.AddDepl(
-			0, pallet, repoCache, deplName, pkgPath, c.StringSlice("feature"), c.Bool("disabled"),
+			0, plt, caches.r, deplName, pkgPath, c.StringSlice("feature"), c.Bool("disabled"),
 			c.Bool("force"),
 		); err != nil {
 			return err
@@ -83,18 +96,22 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 
 func rmDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, false, false)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
+		if err = fcli.CheckDeepCompat(
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if err = fcli.RemoveDepls(0, pallet, c.Args().Slice()); err != nil {
+		if err = fcli.RemoveDepls(0, plt, c.Args().Slice()); err != nil {
 			return err
 		}
 
@@ -114,20 +131,24 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 
 func setDeplPkgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
+		if err = fcli.CheckDeepCompat(
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
 		deplName := c.Args().Slice()[0]
 		pkgPath := c.Args().Slice()[1]
-		if err = fcli.SetDeplPkg(0, pallet, repoCache, deplName, pkgPath, c.Bool("force")); err != nil {
+		if err = fcli.SetDeplPkg(0, plt, caches.r, deplName, pkgPath, c.Bool("force")); err != nil {
 			return err
 		}
 
@@ -147,13 +168,17 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 
 func addDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
+		if err = fcli.CheckDeepCompat(
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -161,7 +186,7 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 		deplName := c.Args().Slice()[0]
 		features := c.Args().Slice()[1:]
 		if err = fcli.AddDeplFeat(
-			0, pallet, repoCache, deplName, features, c.Bool("force"),
+			0, plt, caches.r, deplName, features, c.Bool("force"),
 		); err != nil {
 			return err
 		}
@@ -182,20 +207,24 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 
 func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
+		if err = fcli.CheckDeepCompat(
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
 		deplName := c.Args().Slice()[0]
 		features := c.Args().Slice()[1:]
-		if err = fcli.RemoveDeplFeat(0, pallet, deplName, features); err != nil {
+		if err = fcli.RemoveDeplFeat(0, plt, deplName, features); err != nil {
 			return err
 		}
 
@@ -215,19 +244,23 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 
 func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		pallet, repoCache, _, err := processFullBaseArgs(c, true, true)
+		plt, caches, err := processFullBaseArgs(c, processingOptions{
+			requirePalletCache: true,
+			requireRepoCache:   true,
+			enableOverrides:    true,
+			merge:              true,
+		})
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckCompatibility(
-			pallet, repoCache, versions.Tool, versions.MinSupportedRepo, versions.MinSupportedPallet,
-			c.Bool("ignore-tool-version"),
+		if err = fcli.CheckDeepCompat(
+			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
 		deplName := c.Args().Slice()[0]
-		if err = fcli.SetDeplDisabled(0, pallet, deplName, setting); err != nil {
+		if err = fcli.SetDeplDisabled(0, plt, deplName, setting); err != nil {
 			return err
 		}
 

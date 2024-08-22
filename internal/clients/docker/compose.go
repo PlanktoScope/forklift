@@ -35,6 +35,20 @@ func WithConcurrencySafeOutput() ClientOption {
 	}
 }
 
+func WithErrorStream(w io.Writer) ClientOption {
+	return func(options clientOptions) clientOptions {
+		options.cli = append(options.cli, command.WithErrorStream(w))
+		return options
+	}
+}
+
+func WithOutputStream(w io.Writer) ClientOption {
+	return func(options clientOptions) clientOptions {
+		options.cli = append(options.cli, command.WithOutputStream(w))
+		return options
+	}
+}
+
 type Client struct {
 	options clientOptions
 	Client  *dc.Client
