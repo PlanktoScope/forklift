@@ -252,44 +252,81 @@ func makeQuerySubcmds() []*cli.Command {
 }
 
 func makeQueryReqSubcmds(category string) []*cli.Command {
+	return slices.Concat(
+		[]*cli.Command{
+			{
+				Name:     "ls-plt",
+				Aliases:  []string{"list-pallets"},
+				Category: category,
+				Usage:    "Lists pallets which the local pallet may import files from",
+				Action:   lsPltAction,
+			},
+			{
+				Name:      "show-plt",
+				Aliases:   []string{"show-pallet"},
+				Category:  category,
+				Usage:     "Describes a pallet which the local pallet may import files from",
+				ArgsUsage: "plt_path",
+				Action:    showPltAction,
+			},
+		},
+		makeQueryPltFileSubcmds(category),
+		[]*cli.Command{
+			{
+				Name:     "ls-repo",
+				Aliases:  []string{"list-repositories"},
+				Category: category,
+				Usage:    "Lists repos available in the local pallet",
+				Action:   lsRepoAction,
+			},
+			{
+				Name:      "locate-repo",
+				Aliases:   []string{"locate-repository"},
+				Category:  category,
+				Usage:     "Prints the absolute filesystem path of a repo available in the local pallet",
+				ArgsUsage: "repo_path",
+				Action:    locateRepoAction,
+			},
+			{
+				Name:      "show-repo",
+				Aliases:   []string{"show-repository"},
+				Category:  category,
+				Usage:     "Describes a repo available in the local pallet",
+				ArgsUsage: "repo_path",
+				Action:    showRepoAction,
+			},
+		},
+	)
+}
+
+func makeQueryPltFileSubcmds(category string) []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:     "ls-plt",
-			Aliases:  []string{"list-pallets"},
+			Name:     "ls-plt-file",
+			Aliases:  []string{"list-pallet-files"},
 			Category: category,
-			Usage:    "Lists pallets which the local pallet may import files from",
-			Action:   lsPltAction,
+			Usage: "Lists non-directory files in the specified pallet which the local pallet may " +
+				"import files from",
+			ArgsUsage: "[path_glob]",
+			Action:    lsPltFileAction,
 		},
 		{
-			Name:      "show-plt",
-			Aliases:   []string{"show-pallet"},
-			Category:  category,
-			Usage:     "Describes a pallet which the local pallet may import files from",
-			ArgsUsage: "plt_path",
-			Action:    showPltAction,
-		},
-		{
-			Name:     "ls-repo",
-			Aliases:  []string{"list-repositories"},
+			Name:     "locate-plt-file",
+			Aliases:  []string{"locate-pallet-files"},
 			Category: category,
-			Usage:    "Lists repos available in the local pallet",
-			Action:   lsRepoAction,
+			Usage: "Prints the absolute filesystem path of the specified file in the specified " +
+				"pallet which the local pallet may import files from",
+			ArgsUsage: "file_path",
+			Action:    locatePltFileAction,
 		},
 		{
-			Name:      "locate-repo",
-			Aliases:   []string{"locate-repository"},
-			Category:  category,
-			Usage:     "Prints the absolute filesystem path of a repo available in the local pallet",
-			ArgsUsage: "repo_path",
-			Action:    locateRepoAction,
-		},
-		{
-			Name:      "show-repo",
-			Aliases:   []string{"show-repository"},
-			Category:  category,
-			Usage:     "Describes a repo available in the local pallet",
-			ArgsUsage: "repo_path",
-			Action:    showRepoAction,
+			Name:     "show-plt-file",
+			Aliases:  []string{"show-pallet-files"},
+			Category: category,
+			Usage: "Prints the specified file in the specified pallet which the local pallet may " +
+				"import files from",
+			ArgsUsage: "file_path",
+			Action:    showPltFileAction,
 		},
 	}
 }
@@ -337,27 +374,6 @@ func makeQueryFileSubcmds(category string) []*cli.Command {
 			Usage:     "Prints the specified file in the local pallet",
 			ArgsUsage: "file_path",
 			Action:    showFileAction,
-		},
-		{
-			Name:      "edit-file",
-			Category:  category,
-			Usage:     "Edits the specified file in the development pallet",
-			ArgsUsage: "file_path",
-			Action:    editFileAction,
-			Flags: []cli.Flag{
-				&cli.StringFlag{
-					Name:    "editor",
-					Usage:   "Path of text editor",
-					EnvVars: []string{"EDITOR"},
-				},
-			},
-		},
-		{
-			Name:      "rm-file",
-			Category:  category,
-			Usage:     "Removes the specified file in the development pallet",
-			ArgsUsage: "file_path",
-			Action:    rmFileAction,
 		},
 	}
 }
@@ -437,6 +453,7 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 				Action:   rmAction,
 			},
 		},
+		makeModifyFileSubcmds(),
 		makeModifyPltSubcmds(versions),
 		// TODO: add `add-imp`, `rm-imp`, `set-imp-disabled`, `unset-imp-disabled`,
 		// `add-imp-mod`, and `rm-imp-mod` subcommands
@@ -528,6 +545,33 @@ var modifyBaseFlags []cli.Flag = []cli.Flag{
 //			},
 //		},
 //	}
+
+func makeModifyFileSubcmds() []*cli.Command {
+	const category = "Modify the pallet's files"
+	return []*cli.Command{
+		{
+			Name:      "edit-file",
+			Category:  category,
+			Usage:     "Edits the specified file in the development pallet",
+			ArgsUsage: "file_path",
+			Action:    editFileAction,
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    "editor",
+					Usage:   "Path of text editor",
+					EnvVars: []string{"EDITOR"},
+				},
+			},
+		},
+		{
+			Name:      "rm-file",
+			Category:  category,
+			Usage:     "Removes the specified file in the development pallet",
+			ArgsUsage: "file_path",
+			Action:    rmFileAction,
+		},
+	}
+}
 
 func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 	const category = "Modify the pallet's pallet requirements"

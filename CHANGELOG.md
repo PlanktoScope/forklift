@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- (cli) Added a `[dev] plt ls-plt-file` command to list files in the specified pallet required by the local/development pallet, including files imported by that required pallet from its own required pallets.
+- (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet. TODO: fix incorrect path resolution behavior for transitively-imported files!
+- (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
+
+### Fixed
+
+- (cli) Transitive imports of files across pallets (e.g. importing a file from a pallet which actually imports that file from another pallet) is no longer completely broken (it should work, but there may still be undiscovered bugs because the code paths have not been thoroughly tested).
+
 ## 0.8.0-alpha.1 - 2024-08-30
 
 ### Added
@@ -18,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt show-imp` command to show the specified file import group declared by the local/development pallet.
 - (cli) Added a `[dev] plt locate-repo` command to print the actual filesystem path of the specified available package repository. The actual filesystem path may be for a subdirectory in the repositories cache, or a subdirectory in an override repository (in the case of `dev plt` with the `--repos` flag).
 - (cli) Added a `[dev] plt locate-pkg` command to print the actual filesystem path of the specified available package. The actual filesystem path may be for a subdirectory in the repositories cache, or a subdirectory in an override repository (in the case of `dev plt` with the `--repos` flag), or a subdirectory in the local/development pallet (in the case of a local package defined by the pallet), or a subdirectory in a required pallet (in the case of a local package imported from another pallet).
-- (cli) Added a `[dev] plt ls-file` command to list all files in the local/development pallet, including files imported by the pallet from required pallets.
+- (cli) Added a `[dev] plt ls-file` command to list files in the local/development pallet, including files imported by the pallet from required pallets.
 - (cli) Added a `[dev] plt locate-file` command to print the actual filesystem path of the specified file in the pallet. The actual filesystem path may be for a file in the pallets cache, or a file in an override pallet (in the case of `dev plt` with the `--plts` flag), or a file in the local/development pallet (in the case of a local file defined by the pallet), or a file in a required pallet (in the case of a file imported from another pallet).
 - (cli) Added a `[dev] plt show-file` command to print the contents of the specified file in the local/development pallet.
 - (cli) Added a `[dev] plt edit-file` command to edit the specified file in the local/development pallet, using the editor set by the `$EDITOR` environment variable. If the file was previously only in an underlay, a temporary copy is provided to the editor; if changes are saved when the editor quits, the changed file will be saved as an override file into the local/development pallet.

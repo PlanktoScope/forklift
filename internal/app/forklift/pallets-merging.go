@@ -38,9 +38,11 @@ func MergeFSPallet(
 		}
 	}
 	if !hasEnabledImports { // base case for recursive merging
+		// fmt.Printf("No need to merge pallet %s!\n", shallow.Path())
 		return shallow, nil
 	}
 
+	// fmt.Printf("Merging pallet %s...\n", shallow.Path())
 	allResolved, err := ResolveImports(shallow, palletLoader, imports)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't resolve import groups")
@@ -68,6 +70,7 @@ func MergeFSPallet(
 	// fmt.Println()
 	merged.FS = newMergeFS(shallow.FS, underlayRefs)
 	merged.Repo.FS = merged.FS
+	// fmt.Printf("Merged pallet %s!\n", shallow.Path())
 	return merged, nil
 }
 
@@ -93,15 +96,6 @@ func evaluatePalletImports(
 		pallets[palletPath] = resolved.Pallet
 	}
 
-	palletFileMappings = make(map[string]map[string]string) // pallet path -> target -> source
-	for palletPath, palletResolved := range resolvedByPallet {
-		if palletFileMappings[palletPath], err = consolidatePalletImports(palletResolved); err != nil {
-			return nil, nil, errors.Wrapf(
-				err, "couldn't evaluate import groups for pallet %s", palletPath,
-			)
-		}
-	}
-
 	for palletPath, pallet := range pallets {
 		// Note: if we find that recursively merging pallets is computationally expensive, we can cache
 		// the results of merging pallets. However, correctly caching merged pallets to/from disk adds
@@ -112,6 +106,24 @@ func evaluatePalletImports(
 		); err != nil {
 			return nil, nil, errors.Wrapf(
 				err, "couldn't compute merged pallet for required pallet %s", palletPath,
+			)
+		}
+	}
+
+	palletFileMappings = make(map[string]map[string]string) // pallet path -> target -> source
+	for palletPath, palletResolved := range resolvedByPallet {
+		mergedPalletResolved := make([]*ResolvedImport, 0, len(palletResolved))
+		for _, resolved := range palletResolved {
+			mergedPalletResolved = append(mergedPalletResolved, &ResolvedImport{
+				Import: resolved.Import,
+				Pallet: pallets[palletPath],
+			})
+		}
+		if palletFileMappings[palletPath], err = consolidatePalletImports(
+			mergedPalletResolved,
+		); err != nil {
+			return nil, nil, errors.Wrapf(
+				err, "couldn't evaluate import groups for pallet %s", palletPath,
 			)
 		}
 	}

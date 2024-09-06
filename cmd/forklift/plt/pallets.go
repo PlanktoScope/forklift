@@ -1023,3 +1023,40 @@ func rmPltAction(versions Versions) cli.ActionFunc {
 		return nil
 	}
 }
+
+// ls-plt-file
+
+func lsPltFileAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	paths, err := fcli.ListPalletFiles(plt, c.Args().Get(1))
+	if err != nil {
+		return err
+	}
+	for _, p := range paths {
+		fmt.Println(p)
+	}
+	return nil
+}
+
+// show-plt-file
+
+func showPltFileAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	return fcli.PrintFile(plt, c.Args().Get(1))
+}

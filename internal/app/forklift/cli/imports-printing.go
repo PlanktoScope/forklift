@@ -34,6 +34,12 @@ func PrintImportInfo(
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve import group %s", imp.Name)
 	}
+	resolved.Pallet, err = forklift.MergeFSPallet(resolved.Pallet, cache, nil)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't print merge pallet referenced by resolved import group %s", imp.Name,
+		)
+	}
 	if err = PrintResolvedImport(indent, resolved); err != nil {
 		return errors.Wrapf(err, "couldn't print resolved import group %s", imp.Name)
 	}

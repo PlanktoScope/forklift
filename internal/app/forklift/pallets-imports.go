@@ -15,8 +15,25 @@ import (
 
 // ResolvedImport
 
-// ResolveImport loads the package from the [FSPkgLoader] instance based on the requirements in the
-// provided deployment and the package requirement loader.
+// ResolveImports loads the packages from the [FSPkgLoader] instance based on the requirements in the
+// provided deployments and the package requirement loader.
+func ResolveImports(
+	pallet *FSPallet, palletLoader FSPalletLoader, imps []Import,
+) (resolved []*ResolvedImport, err error) {
+	resolvedImports := make([]*ResolvedImport, 0, len(imps))
+	for _, imp := range imps {
+		resolved, err := ResolveImport(pallet, palletLoader, imp)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't resolve import group %s", imp.Name)
+		}
+		resolvedImports = append(resolvedImports, resolved)
+	}
+
+	return resolvedImports, nil
+}
+
+// ResolveImport loads the pallet from the [FSPalletLoader] instance based on the requirements in
+// the provided file import group and the pallet.
 func ResolveImport(
 	pallet *FSPallet, palletLoader FSPalletLoader, imp Import,
 ) (resolved *ResolvedImport, err error) {
@@ -42,23 +59,6 @@ func ResolveImport(
 		)
 	}
 	return resolved, nil
-}
-
-// ResolveImports loads the packages from the [FSPkgLoader] instance based on the requirements in the
-// provided deployments and the package requirement loader.
-func ResolveImports(
-	pallet *FSPallet, palletLoader FSPalletLoader, imps []Import,
-) (resolved []*ResolvedImport, err error) {
-	resolvedImports := make([]*ResolvedImport, 0, len(imps))
-	for _, imp := range imps {
-		resolved, err := ResolveImport(pallet, palletLoader, imp)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't resolve import group %s", imp.Name)
-		}
-		resolvedImports = append(resolvedImports, resolved)
-	}
-
-	return resolvedImports, nil
 }
 
 // Evaluate returns a list of target file paths and a mapping between target file paths and source

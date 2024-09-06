@@ -167,7 +167,7 @@ const (
 	ImportDefFileExt = ".imports.yml"
 )
 
-// A ResolvedImport is a deployment with a loaded pallet.
+// A ResolvedImport is a file import group with a loaded pallet.
 type ResolvedImport struct {
 	// Import is the declared file import group.
 	Import
