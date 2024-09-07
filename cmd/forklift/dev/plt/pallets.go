@@ -411,7 +411,11 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 		}
 
 		fmt.Printf("Downloading pallets specified by the development pallet...\n")
-		changed, err := fcli.DownloadRequiredPallets(0, plt, workspace.GetPalletCachePath())
+		cache, err := workspace.GetPalletCache()
+		if err != nil {
+			return err
+		}
+		changed, err := fcli.DownloadRequiredPallets(0, plt, cache)
 		if err != nil {
 			return err
 		}

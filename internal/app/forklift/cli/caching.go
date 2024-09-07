@@ -34,7 +34,7 @@ func CacheStagingReqs(
 	indent++
 
 	IndentedPrintln(indent, "Downloading pallets required by the local pallet...")
-	if _, err = DownloadRequiredPallets(indent+1, pallet, palletCache.Path()); err != nil {
+	if _, err = DownloadRequiredPallets(indent+1, pallet, palletCache); err != nil {
 		return nil, nil, err
 	}
 

@@ -294,7 +294,9 @@ func DownloadLockedGitRepoUsingLocalMirror(
 	indent int, cachePath string, gitRepoPath string, lock forklift.VersionLock,
 ) (downloaded bool, err error) {
 	mirrorPath := filepath.Join(filepath.FromSlash(cachePath), gitRepoPath)
-	downloaded, err = cloneLockedGitRepoFromLocalMirror(indent, cachePath, gitRepoPath, lock)
+	downloaded, err = cloneLockedGitRepoFromLocalMirror(
+		indent, cachePath, gitRepoPath, lock,
+	)
 	if err != nil {
 		indent++
 		IndentedPrintln(
@@ -327,7 +329,6 @@ func DownloadLockedGitRepoUsingLocalMirror(
 		IndentedPrintf(
 			indent, "Couldn't update local mirror (do you have internet access?): %s\n", err,
 		)
-		return downloaded, nil
 	}
 	return downloaded, nil
 }
@@ -341,9 +342,9 @@ func cloneLockedGitRepoFromLocalMirror(
 		)
 	}
 	version := lock.Version
-	gitRepoCachePath := filepath.Join(
-		filepath.FromSlash(cachePath), fmt.Sprintf("%s@%s", filepath.FromSlash(gitRepoPath), version),
-	)
+	gitRepoCachePath := filepath.FromSlash(path.Join(
+		cachePath, fmt.Sprintf("%s@%s", gitRepoPath, version),
+	))
 	if forklift.DirExists(gitRepoCachePath) {
 		// TODO: perform a disk checksum
 		return false, nil

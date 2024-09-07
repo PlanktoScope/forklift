@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - (cli) Transitive imports of files across pallets (e.g. importing a file from a pallet which actually imports that file from another pallet) is no longer completely broken (it should work, but there may still be undiscovered bugs because the code paths have not been thoroughly tested).
+- (cli) `[dev] plt cache-plt` and `[dev] plt cache-all` now recursively cache all transitively-required pallets of the local/development pallet, instead of only caching directly-required pallets.
 
 ## 0.8.0-alpha.1 - 2024-08-30
 

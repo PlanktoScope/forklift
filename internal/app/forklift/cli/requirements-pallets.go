@@ -232,9 +232,8 @@ func determineUsedPalletReqs(
 // Download
 
 func DownloadRequiredPallets(
-	indent int, pallet *forklift.FSPallet, cachePath string,
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
 ) (changed bool, err error) {
-	// FIXME: recursively download pallets required by required pallets
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify pallets")
@@ -242,13 +241,25 @@ func DownloadRequiredPallets(
 	changed = false
 	for _, req := range loadedPalletReqs {
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cachePath, req.Path(), req.VersionLock,
+			indent, cache.Path(), req.Path(), req.VersionLock,
 		)
 		changed = changed || downloaded
 		if err != nil {
-			return false, errors.Wrapf(
+			return changed, errors.Wrapf(
 				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
 			)
+		}
+		plt, err := cache.LoadFSPallet(req.Path(), req.VersionLock.Version)
+		if err != nil {
+			return changed, errors.Wrapf(
+				err, "couldn't load downloaded pallet for %s to download its own required pallets",
+				req.Path(),
+			)
+		}
+		recurseChanged, err := DownloadRequiredPallets(indent+1, plt, cache)
+		changed = changed || recurseChanged
+		if err != nil {
+			return changed, err
 		}
 	}
 	return changed, nil
