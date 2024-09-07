@@ -565,6 +565,7 @@ func makeModifyFileSubcmds() []*cli.Command {
 		},
 		{
 			Name:      "rm-file",
+			Aliases:   []string{"remove-file", "del-file", "delete-file"},
 			Category:  category,
 			Usage:     "Removes the specified file in the development pallet",
 			ArgsUsage: "file_path",
@@ -580,8 +581,7 @@ func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 			Name: "add-plt",
 			Aliases: []string{
 				"add-pallet", "add-pallets",
-				"req-plt", "req-pallet", "req-pallets",
-				"require-plt", "require-pallet", "require-pallets",
+				"req-plt", "require-pallet", "require-pallets",
 			},
 			Category: category,
 			Usage: "Adds (or re-adds) pallet requirements to the pallet, tracking specified versions " +
@@ -630,8 +630,7 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 			Name: "add-repo",
 			Aliases: []string{
 				"add-repository", "add-repositories",
-				"req-repo", "req-repository", "req-repositories",
-				"require-repo", "require-repository", "require-repositories",
+				"req-repo", "require-repository", "require-repositories",
 			},
 			Category: category,
 			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
