@@ -2,8 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"maps"
+	"os"
 	"path"
 	"path/filepath"
 	"slices"
