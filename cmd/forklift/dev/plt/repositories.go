@@ -23,7 +23,6 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Printf("Downloading repos specified by the development pallet...\n")
 		changed, err := fcli.DownloadRequiredRepos(0, plt, caches.r.Underlay.Path())
 		if err != nil {
 			return err

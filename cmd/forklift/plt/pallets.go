@@ -686,7 +686,7 @@ func fetchAction(c *cli.Context) error {
 	pltPath := workspace.GetCurrentPalletPath()
 
 	fmt.Println("Fetching updates...")
-	updated, err := git.Fetch(0, pltPath)
+	updated, err := git.Fetch(0, pltPath, os.Stdout)
 	if err != nil {
 		return errors.Wrap(err, "couldn't fetch changes from the remote release")
 	}
@@ -711,7 +711,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 		// FIXME: update the local mirror
 
 		fmt.Println("Attempting to fast-forward the local pallet...")
-		updated, err := git.Pull(1, pltPath)
+		updated, err := git.Pull(1, pltPath, os.Stdout)
 		if err != nil {
 			return errors.Wrap(err, "couldn't fast-forward the local pallet")
 		}
@@ -923,7 +923,6 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Downloading pallets specified by the local pallet...")
 		cache, err := workspace.GetPalletCache()
 		if err != nil {
 			return err

@@ -238,7 +238,12 @@ func DownloadRequiredPallets(
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify pallets")
 	}
-	changed = false
+	if len(loadedPalletReqs) == 0 {
+		return false, nil
+	}
+
+	IndentedPrintln(indent, "Downloading required pallets...")
+	indent++
 	for _, req := range loadedPalletReqs {
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
 			indent, cache.Path(), req.Path(), req.VersionLock,

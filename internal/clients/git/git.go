@@ -3,8 +3,8 @@ package git
 
 import (
 	"fmt"
+	"io"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -294,9 +294,9 @@ func (r *Repo) MakeTrackingBranches(remoteName string) error {
 	return nil
 }
 
-func (r *Repo) FetchAll(indent int) error {
+func (r *Repo) FetchAll(indent int, progress io.Writer) error {
 	if err := r.repository.Fetch(&git.FetchOptions{
-		Progress: cli.NewIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, progress),
 		Tags:     git.AllTags,
 		RefSpecs: []config.RefSpec{
 			"+refs/heads/*:refs/heads/*",
@@ -437,7 +437,7 @@ func Open(local string) (*Repo, error) {
 	}, errors.Wrapf(err, "couldn't open git repo at %s", local)
 }
 
-func Clone(indent int, remote, local string) (*Repo, error) {
+func Clone(indent int, remote, local string, progress io.Writer) (*Repo, error) {
 	u, err := url.Parse(remote)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse %s as a url", remote)
@@ -448,14 +448,14 @@ func Clone(indent int, remote, local string) (*Repo, error) {
 	remote = u.String()
 	repo, err := git.PlainClone(local, false, &git.CloneOptions{
 		URL:      remote,
-		Progress: cli.NewIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, progress),
 	})
 	return &Repo{
 		repository: repo,
 	}, errors.Wrapf(err, "couldn't clone git repo %s to %s", remote, local)
 }
 
-func CloneMirrored(indent int, remote, local string) (*Repo, error) {
+func CloneMirrored(indent int, remote, local string, progress io.Writer) (*Repo, error) {
 	u, err := url.Parse(remote)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't parse %s as a url", remote)
@@ -466,7 +466,7 @@ func CloneMirrored(indent int, remote, local string) (*Repo, error) {
 	remote = u.String()
 	repo, err := git.PlainClone(local, false, &git.CloneOptions{
 		URL:      remote,
-		Progress: cli.NewIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, progress),
 		Mirror:   true,
 	})
 	return &Repo{
@@ -500,13 +500,13 @@ func Prune(local string) (updated bool, err error) {
 	return true, nil
 }
 
-func Fetch(indent int, local string) (updated bool, err error) {
+func Fetch(indent int, local string, progress io.Writer) (updated bool, err error) {
 	repo, err := git.PlainOpen(local)
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't open %s as git repo", local)
 	}
 	if err = repo.Fetch(&git.FetchOptions{
-		Progress: cli.NewIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, progress),
 		Tags:     git.AllTags,
 		RefSpecs: []config.RefSpec{
 			"+refs/heads/*:refs/remotes/origin/*",
@@ -520,7 +520,7 @@ func Fetch(indent int, local string) (updated bool, err error) {
 	return true, nil
 }
 
-func Pull(indent int, local string) (updated bool, err error) {
+func Pull(indent int, local string, progress io.Writer) (updated bool, err error) {
 	repo, err := git.PlainOpen(local)
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't open %s as git repo", local)
@@ -530,7 +530,7 @@ func Pull(indent int, local string) (updated bool, err error) {
 		return false, err
 	}
 	if err = worktree.Pull(&git.PullOptions{
-		Progress: cli.NewIndentedWriter(indent, os.Stdout),
+		Progress: cli.NewIndentedWriter(indent, progress),
 	}); err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			return false, nil

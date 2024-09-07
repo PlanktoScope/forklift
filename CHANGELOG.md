@@ -15,12 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
+- (Breaking change; cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
+- (cli) Suppressed some noisy Git cloning output in `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands.
 
 ### Fixed
 
 - (cli) Transitive imports of files across pallets (e.g. importing a file from a pallet which actually imports that file from another pallet) is no longer completely broken (it should work, but there may still be undiscovered bugs because the code paths have not been thoroughly tested).
-- (cli) `[dev] plt cache-plt` and `[dev] plt cache-all` now recursively cache all transitively-required pallets of the local/development pallet, instead of only caching directly-required pallets.
+- (cli) `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands now recursively cache all transitively-required pallets of the local/development pallet, instead of only caching directly-required pallets.
 
 ## 0.8.0-alpha.1 - 2024-08-30
 

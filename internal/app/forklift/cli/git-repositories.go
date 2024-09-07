@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -144,14 +145,14 @@ func updateLocalGitRepoMirror(indent int, remote, cachedPath string) error {
 	cachedPath = filepath.FromSlash(cachedPath)
 	if _, err := os.Stat(cachedPath); errors.Is(err, fs.ErrNotExist) {
 		IndentedPrintf(indent, "Cloning %s to local mirror %s...\n", remote, cachedPath)
-		_, err := git.CloneMirrored(indent+1, remote, cachedPath)
+		_, err := git.CloneMirrored(indent+1, remote, cachedPath, os.Stdout)
 		return err
 	}
 	gitRepo, err := git.Open(cachedPath)
 	if err != nil {
 		return errors.Errorf("couldn't open local mirror of %s at %s", remote, cachedPath)
 	}
-	return gitRepo.FetchAll(indent + 1)
+	return gitRepo.FetchAll(indent+1, os.Stdout)
 }
 
 func resolveGitRepoQueriesUsingLocalMirrors(
@@ -351,10 +352,10 @@ func cloneLockedGitRepoFromLocalMirror(
 	}
 
 	mirrorCachePath := filepath.Join(filepath.FromSlash(cachePath), filepath.FromSlash(gitRepoPath))
-	IndentedPrintf(
-		indent, "Cloning %s@%s via local mirror...\n", gitRepoPath, version,
+	IndentedPrintf(indent, "Cloning %s@%s from local mirror...\n", gitRepoPath, version)
+	gitRepo, err := git.Clone(
+		indent+1, fmt.Sprintf("file://%s", mirrorCachePath), gitRepoCachePath, io.Discard,
 	)
-	gitRepo, err := git.Clone(indent+1, fmt.Sprintf("file://%s", mirrorCachePath), gitRepoCachePath)
 	if err != nil {
 		return false, errors.Wrapf(
 			err, "couldn't clone git repo %s from %s to %s",
@@ -438,7 +439,9 @@ func CloneQueriedGitRepoUsingLocalMirror(
 
 	mirrorCachePath := filepath.Join(filepath.FromSlash(cachePath), filepath.FromSlash(gitRepoPath))
 	IndentedPrintf(indent, "Cloning %s to %s via local mirror...\n", gitRepoPath, destination)
-	gitRepo, err := git.Clone(indent+1, fmt.Sprintf("file://%s", mirrorCachePath), destination)
+	gitRepo, err := git.Clone(
+		indent+1, fmt.Sprintf("file://%s", mirrorCachePath), destination, os.Stdout,
+	)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't clone git repo %s from %s to %s", gitRepoPath, mirrorCachePath, destination,
@@ -447,7 +450,7 @@ func CloneQueriedGitRepoUsingLocalMirror(
 	if err = gitRepo.MakeTrackingBranches(OriginRemoteName); err != nil {
 		return errors.Wrapf(err, "couldn't set up local branches to track the remote")
 	}
-	if err = gitRepo.FetchAll(indent + 1); err != nil {
+	if err = gitRepo.FetchAll(indent+1, os.Stdout); err != nil {
 		return errors.Wrapf(err, "couldn't fetch new local branches tracking the remote")
 	}
 	if err = gitRepo.SetRemoteURLs(
