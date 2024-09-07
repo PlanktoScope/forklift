@@ -33,7 +33,7 @@ func CacheStagingReqs(
 	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
 	indent++
 
-	if _, err = DownloadRequiredPallets(indent, pallet, palletCache); err != nil {
+	if _, err = DownloadRequiredPallets(indent, pallet, palletCache, nil); err != nil {
 		return nil, nil, err
 	}
 

@@ -927,11 +927,11 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		changed, err := fcli.DownloadRequiredPallets(0, plt, cache)
+		downloaded, err := fcli.DownloadRequiredPallets(0, plt, cache, nil)
 		if err != nil {
 			return err
 		}
-		if !changed {
+		if len(downloaded) == 0 {
 			fmt.Println("Done! No further actions are needed at this time.")
 			return nil
 		}
