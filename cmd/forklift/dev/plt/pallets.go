@@ -512,3 +512,66 @@ func rmPltAction(versions Versions) cli.ActionFunc {
 		return nil
 	}
 }
+
+// ls-plt-file
+
+func lsPltFileAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	paths, err := fcli.ListPalletFiles(plt, c.Args().Get(1))
+	if err != nil {
+		return err
+	}
+	for _, p := range paths {
+		fmt.Println(p)
+	}
+	return nil
+}
+
+// locate-plt-file
+
+func locatePltFileAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	location, err := fcli.GetFileLocation(plt, c.Args().Get(1))
+	if err != nil {
+		return err
+	}
+	fmt.Println(location)
+	return nil
+}
+
+// show-plt-file
+
+func showPltFileAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	return fcli.PrintFile(plt, c.Args().Get(1))
+}

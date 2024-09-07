@@ -37,6 +37,34 @@ func GetPalletCache(
 	return cache, nil
 }
 
+func GetRequiredPallet(
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
+) (*forklift.FSPallet, error) {
+	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load pallet version lock definition %s from pallet %s",
+			requiredPalletPath, pallet.Path(),
+		)
+	}
+	version := req.VersionLock.Version
+	cachedPallet, err := cache.LoadFSPallet(requiredPalletPath, version)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't find pallet %s@%s in cache, please update the local cache of pallets",
+			requiredPalletPath, version,
+		)
+	}
+	mergedPallet, err := forklift.MergeFSPallet(cachedPallet, cache, nil)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't merge pallet %s with file imports from any pallets required by it",
+			cachedPallet.Path(),
+		)
+	}
+	return mergedPallet, nil
+}
+
 // Printing
 
 func PrintRequiredPallets(indent int, pallet *forklift.FSPallet) error {

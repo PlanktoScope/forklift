@@ -38,9 +38,11 @@ func MergeFSPallet(
 		}
 	}
 	if !hasEnabledImports { // base case for recursive merging
+		// fmt.Printf("No need to merge pallet %s!\n", shallow.Path())
 		return shallow, nil
 	}
 
+	// fmt.Printf("Merging pallet %s...\n", shallow.Path())
 	allResolved, err := ResolveImports(shallow, palletLoader, imports)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't resolve import groups")
@@ -68,6 +70,7 @@ func MergeFSPallet(
 	// fmt.Println()
 	merged.FS = newMergeFS(shallow.FS, underlayRefs)
 	merged.Repo.FS = merged.FS
+	// fmt.Printf("Merged pallet %s!\n", shallow.Path())
 	return merged, nil
 }
 
@@ -93,15 +96,6 @@ func evaluatePalletImports(
 		pallets[palletPath] = resolved.Pallet
 	}
 
-	palletFileMappings = make(map[string]map[string]string) // pallet path -> target -> source
-	for palletPath, palletResolved := range resolvedByPallet {
-		if palletFileMappings[palletPath], err = consolidatePalletImports(palletResolved); err != nil {
-			return nil, nil, errors.Wrapf(
-				err, "couldn't evaluate import groups for pallet %s", palletPath,
-			)
-		}
-	}
-
 	for palletPath, pallet := range pallets {
 		// Note: if we find that recursively merging pallets is computationally expensive, we can cache
 		// the results of merging pallets. However, correctly caching merged pallets to/from disk adds
@@ -112,6 +106,24 @@ func evaluatePalletImports(
 		); err != nil {
 			return nil, nil, errors.Wrapf(
 				err, "couldn't compute merged pallet for required pallet %s", palletPath,
+			)
+		}
+	}
+
+	palletFileMappings = make(map[string]map[string]string) // pallet path -> target -> source
+	for palletPath, palletResolved := range resolvedByPallet {
+		mergedPalletResolved := make([]*ResolvedImport, 0, len(palletResolved))
+		for _, resolved := range palletResolved {
+			mergedPalletResolved = append(mergedPalletResolved, &ResolvedImport{
+				Import: resolved.Import,
+				Pallet: pallets[palletPath],
+			})
+		}
+		if palletFileMappings[palletPath], err = consolidatePalletImports(
+			mergedPalletResolved,
+		); err != nil {
+			return nil, nil, errors.Wrapf(
+				err, "couldn't evaluate import groups for pallet %s", palletPath,
 			)
 		}
 	}
@@ -166,13 +178,21 @@ type fileRef struct {
 // suitable for instantiating a MergeFS.
 func mergePalletImports(
 	palletFileMappings map[string]map[string]string, pallets map[string]*FSPallet,
-) (map[string]fileRef, error) {
-	merged := make(map[string]fileRef) // target -> source
+) (merged map[string]fileRef, err error) {
+	merged = make(map[string]fileRef) // target -> source
 	for palletPath, fileMappings := range palletFileMappings {
 		for target, source := range fileMappings {
 			ref := fileRef{
 				fs:   pallets[palletPath].FS,
 				path: strings.TrimPrefix(source, "/"),
+			}
+			if fsys, ok := pallets[palletPath].FS.(*MergeFS); ok {
+				if ref, err = fsys.getFileRef(strings.TrimPrefix(source, "/")); err != nil {
+					return nil, errors.Wrapf(
+						err, "couldn't transitively resolve file reference for importing %s from %s",
+						strings.TrimPrefix(source, "/"), pallets[palletPath].FS.Path(),
+					)
+				}
 			}
 			prevRef, ok := merged[strings.TrimPrefix(target, "/")]
 			if !ok {
@@ -181,9 +201,10 @@ func mergePalletImports(
 			}
 
 			// TODO: check for file contents+metadata conflicts among file mappings of different
-			// required pallets; when multiple pallets map the same source file to the same target file,
+			// required pallets; when multiple pallets map the same source file (without any contents or
+			// metadata conflicts between their versions of the source file) to the same target file,
 			// choose the alphabetically first pallet for resolving that target file. For now we just
-			// reject all such situations as invalid, because that's simpler.
+			// reject all such situations as invalid, because that's simpler to implement.
 			if prevRef.fs.Path() != ref.fs.Path() || prevRef.path != ref.path {
 				return nil, errors.Errorf(
 					"couldn't add a mapping from %s to target %s, when a mapping was previously added "+
@@ -234,38 +255,49 @@ func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *MergeFS
 // Resolve returns the path of the named file from the overlay (if it exists in the overlay), or
 // else from an underlay filesystem depending on which one is recorded to have that file.
 func (f *MergeFS) Resolve(name string) (string, error) {
+	ref, err := f.getFileRef(name)
+	if err != nil {
+		return "", err
+	}
+	return path.Join(ref.fs.Path(), ref.path), nil
+}
+
+func (f *MergeFS) getFileRef(name string) (fileRef, error) {
 	name = path.Clean(name)
 	// fmt.Printf("Resolve(%s|%s)\n", f.Path(), name)
 	_, err := fs.Stat(f.Overlay, name)
 	switch {
 	default:
-		return "", &fs.PathError{
+		return fileRef{}, &fs.PathError{
 			Op:   "resolve",
 			Path: name,
 			Err:  errors.Wrapf(err, "couldn't stat file %s in overlay", name),
 		}
 	case errors.Is(err, fs.ErrNotExist):
 		if name == "." {
-			return f.Path(), nil
+			return fileRef{
+				fs:   f,
+				path: ".",
+			}, nil
 		}
 		ref, ok := f.underlayRefs[name]
 		if !ok {
 			if !f.impliedDirs.Has(name) {
-				return "", &fs.PathError{
+				return fileRef{}, &fs.PathError{
 					Op:   "resolve",
 					Path: name,
 					Err:  errors.Errorf("file %s not found in either overlay or underlay", name),
 				}
 			}
 			// fmt.Printf("  %s is an implied dir!\n", name)
-			return "", &fs.PathError{
+			return fileRef{}, &fs.PathError{
 				Op:   "resolve",
 				Path: name,
 				Err:  errors.Errorf("file %s is a directory implied by the underlay", name),
 			}
 		}
 		if _, err := fs.Stat(ref.fs, ref.path); err != nil {
-			return "", &fs.PathError{
+			return fileRef{}, &fs.PathError{
 				Op:   "resolve",
 				Path: name,
 				Err: errors.Wrapf(
@@ -273,9 +305,15 @@ func (f *MergeFS) Resolve(name string) (string, error) {
 				),
 			}
 		}
-		return path.Join(ref.fs.Path(), ref.path), nil
+		return fileRef{
+			fs:   ref.fs,
+			path: ref.path,
+		}, nil
 	case err == nil:
-		return path.Join(f.Overlay.Path(), name), nil
+		return fileRef{
+			fs:   f.Overlay,
+			path: name,
+		}, nil
 	}
 }
 

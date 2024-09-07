@@ -8,7 +8,7 @@ import (
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 )
 
-// ls-files
+// ls-file
 
 func lsFileAction(c *cli.Context) error {
 	plt, _, err := processFullBaseArgs(c, processingOptions{
