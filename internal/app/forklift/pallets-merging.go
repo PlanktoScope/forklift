@@ -178,13 +178,21 @@ type fileRef struct {
 // suitable for instantiating a MergeFS.
 func mergePalletImports(
 	palletFileMappings map[string]map[string]string, pallets map[string]*FSPallet,
-) (map[string]fileRef, error) {
-	merged := make(map[string]fileRef) // target -> source
+) (merged map[string]fileRef, err error) {
+	merged = make(map[string]fileRef) // target -> source
 	for palletPath, fileMappings := range palletFileMappings {
 		for target, source := range fileMappings {
 			ref := fileRef{
 				fs:   pallets[palletPath].FS,
 				path: strings.TrimPrefix(source, "/"),
+			}
+			if fsys, ok := pallets[palletPath].FS.(*MergeFS); ok {
+				if ref, err = fsys.getFileRef(strings.TrimPrefix(source, "/")); err != nil {
+					return nil, errors.Wrapf(
+						err, "couldn't transitively resolve file reference for importing %s from %s",
+						strings.TrimPrefix(source, "/"), pallets[palletPath].FS.Path(),
+					)
+				}
 			}
 			prevRef, ok := merged[strings.TrimPrefix(target, "/")]
 			if !ok {
@@ -246,38 +254,49 @@ func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *MergeFS
 // Resolve returns the path of the named file from the overlay (if it exists in the overlay), or
 // else from an underlay filesystem depending on which one is recorded to have that file.
 func (f *MergeFS) Resolve(name string) (string, error) {
+	ref, err := f.getFileRef(name)
+	if err != nil {
+		return "", err
+	}
+	return path.Join(ref.fs.Path(), ref.path), nil
+}
+
+func (f *MergeFS) getFileRef(name string) (fileRef, error) {
 	name = path.Clean(name)
 	// fmt.Printf("Resolve(%s|%s)\n", f.Path(), name)
 	_, err := fs.Stat(f.Overlay, name)
 	switch {
 	default:
-		return "", &fs.PathError{
+		return fileRef{}, &fs.PathError{
 			Op:   "resolve",
 			Path: name,
 			Err:  errors.Wrapf(err, "couldn't stat file %s in overlay", name),
 		}
 	case errors.Is(err, fs.ErrNotExist):
 		if name == "." {
-			return f.Path(), nil
+			return fileRef{
+				fs:   f,
+				path: ".",
+			}, nil
 		}
 		ref, ok := f.underlayRefs[name]
 		if !ok {
 			if !f.impliedDirs.Has(name) {
-				return "", &fs.PathError{
+				return fileRef{}, &fs.PathError{
 					Op:   "resolve",
 					Path: name,
 					Err:  errors.Errorf("file %s not found in either overlay or underlay", name),
 				}
 			}
 			// fmt.Printf("  %s is an implied dir!\n", name)
-			return "", &fs.PathError{
+			return fileRef{}, &fs.PathError{
 				Op:   "resolve",
 				Path: name,
 				Err:  errors.Errorf("file %s is a directory implied by the underlay", name),
 			}
 		}
 		if _, err := fs.Stat(ref.fs, ref.path); err != nil {
-			return "", &fs.PathError{
+			return fileRef{}, &fs.PathError{
 				Op:   "resolve",
 				Path: name,
 				Err: errors.Wrapf(
@@ -285,9 +304,15 @@ func (f *MergeFS) Resolve(name string) (string, error) {
 				),
 			}
 		}
-		return path.Join(ref.fs.Path(), ref.path), nil
+		return fileRef{
+			fs:   ref.fs,
+			path: ref.path,
+		}, nil
 	case err == nil:
-		return path.Join(f.Overlay.Path(), name), nil
+		return fileRef{
+			fs:   f.Overlay,
+			path: name,
+		}, nil
 	}
 }
 

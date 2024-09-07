@@ -1046,6 +1046,26 @@ func lsPltFileAction(c *cli.Context) error {
 	return nil
 }
 
+// locate-plt-file
+
+func locatePltFileAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	location, err := fcli.GetFileLocation(plt, c.Args().Get(1))
+	if err != nil {
+		return err
+	}
+	fmt.Println(location)
+	return nil
+}
+
 // show-plt-file
 
 func showPltFileAction(c *cli.Context) error {
