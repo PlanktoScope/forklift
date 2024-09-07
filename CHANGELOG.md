@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt ls-plt-file` command to list files in the specified pallet required by the local/development pallet, including files imported by that required pallet from its own required pallets.
 - (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
+- (cli) Added a `cache rm-dl` command to delete the cache of downloaded files for export.
 
 ### Changed
 

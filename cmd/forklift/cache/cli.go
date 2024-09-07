@@ -118,6 +118,13 @@ var Cmd = &cli.Command{
 			Action: rmGitRepoAction("repo", getRepoCache),
 		},
 		{
+			Name:     "rm-dl",
+			Aliases:  []string{"remove-downloads", "del-dl", "delete-downloads"},
+			Category: "Modify the cache",
+			Usage:    "Removes locally-cached file downloads",
+			Action:   rmDlAction,
+		},
+		{
 			Name:     "rm-img",
 			Aliases:  []string{"remove-images", "del-img", "delete-images"},
 			Category: "Modify the cache",
