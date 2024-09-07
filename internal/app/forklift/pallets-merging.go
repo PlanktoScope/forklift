@@ -201,9 +201,10 @@ func mergePalletImports(
 			}
 
 			// TODO: check for file contents+metadata conflicts among file mappings of different
-			// required pallets; when multiple pallets map the same source file to the same target file,
+			// required pallets; when multiple pallets map the same source file (without any contents or
+			// metadata conflicts between their versions of the source file) to the same target file,
 			// choose the alphabetically first pallet for resolving that target file. For now we just
-			// reject all such situations as invalid, because that's simpler.
+			// reject all such situations as invalid, because that's simpler to implement.
 			if prevRef.fs.Path() != ref.fs.Path() || prevRef.path != ref.path {
 				return nil, errors.Errorf(
 					"couldn't add a mapping from %s to target %s, when a mapping was previously added "+
