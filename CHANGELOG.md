@@ -12,14 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt ls-plt-file` command to list files in the specified pallet required by the local/development pallet, including files imported by that required pallet from its own required pallets.
 - (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
+- (cli) Added a `cache rm-dl` command to delete the cache of downloaded files for export.
 
 ### Changed
 
-- (cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
+- (Breaking change; cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
+- (cli) Suppressed some noisy Git cloning output in `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands.
 
 ### Fixed
 
 - (cli) Transitive imports of files across pallets (e.g. importing a file from a pallet which actually imports that file from another pallet) is no longer completely broken (it should work, but there may still be undiscovered bugs because the code paths have not been thoroughly tested).
+- (cli) `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands now recursively cache all transitively-required pallets of the local/development pallet, instead of only caching directly-required pallets.
 
 ## 0.8.0-alpha.1 - 2024-08-30
 

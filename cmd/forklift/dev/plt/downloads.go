@@ -52,7 +52,6 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Downloading files for export by the development pallet...")
 		if err := fcli.DownloadExportFiles(
 			0, plt, caches.r, caches.d, false, c.Bool("parallel"),
 		); err != nil {

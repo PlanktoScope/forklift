@@ -8,6 +8,7 @@ func (s Set[Node]) Add(n Node) {
 	s[n] = struct{}{}
 }
 
+// Has checks whether the node is already in the set.
 func (s Set[Node]) Has(n Node) bool {
 	_, ok := s[n]
 	return ok

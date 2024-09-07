@@ -294,7 +294,14 @@ func DownloadRequiredRepos(
 	if err != nil {
 		return false, errors.Wrapf(err, "couldn't identify repos")
 	}
-	changed = false
+	if len(loadedRepoReqs) == 0 {
+		return false, nil
+	}
+
+	IndentedPrintln(indent, "Downloading required repos...")
+	indent++
+	// FIXME: for repositories which are also layered pallets, we must download its required pallets,
+	// so that we can layer in any imported files for packages exported by the repository.
 	for _, req := range loadedRepoReqs {
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
 			indent, cachePath, req.Path(), req.VersionLock,

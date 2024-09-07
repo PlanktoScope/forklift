@@ -42,3 +42,23 @@ func lsDlAction(c *cli.Context) error {
 	}
 	return nil
 }
+
+// rm-dl
+
+func rmDlAction(c *cli.Context) error {
+	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+	if err != nil {
+		return err
+	}
+
+	cache, err := workspace.GetDownloadCache()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Clearing downloads cache...")
+	if err = cache.Remove(); err != nil {
+		return errors.Wrap(err, "couldn't clear downloads cache")
+	}
+	return nil
+}

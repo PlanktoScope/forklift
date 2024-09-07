@@ -50,6 +50,8 @@ func DownloadExportFiles(
 		return nil
 	}
 
+	IndentedPrintln(indent, "Downloading files for export...")
+	indent++
 	newHTTP := make([]string, 0, len(httpDownloads))
 	for _, url := range httpDownloads {
 		ok, err := dlCache.HasFile(url)
@@ -59,7 +61,7 @@ func DownloadExportFiles(
 			)
 		}
 		if ok {
-			IndentedPrintf(indent, "Skipping already-cached file download: %s\n", url)
+			IndentedPrintf(indent, "Skipped already-cached file download: %s\n", url)
 			continue
 		}
 		newHTTP = append(newHTTP, url)
@@ -74,7 +76,7 @@ func DownloadExportFiles(
 			)
 		}
 		if ok {
-			IndentedPrintf(indent, "Skipping already-cached OCI image download: %s\n", url)
+			IndentedPrintf(indent, "Skipped already-cached OCI image download: %s\n", url)
 			continue
 		}
 		newOCI = append(newOCI, url)

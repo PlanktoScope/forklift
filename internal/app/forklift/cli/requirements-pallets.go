@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 func GetPalletCache(
@@ -232,24 +234,52 @@ func determineUsedPalletReqs(
 // Download
 
 func DownloadRequiredPallets(
-	indent int, pallet *forklift.FSPallet, cachePath string,
-) (changed bool, err error) {
-	// FIXME: recursively download pallets required by required pallets
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+	skipPalletPaths structures.Set[string],
+) (downloadedPallets structures.Set[string], err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
-		return false, errors.Wrapf(err, "couldn't identify pallets")
+		return nil, errors.Wrapf(err, "couldn't identify pallets")
 	}
-	changed = false
+	if len(loadedPalletReqs) == 0 {
+		return nil, nil
+	}
+
+	IndentedPrintln(indent, "Downloading required pallets...")
+	indent++
+	allSkip := make(structures.Set[string])
+	maps.Insert(allSkip, maps.All(skipPalletPaths))
 	for _, req := range loadedPalletReqs {
+		palletPath := fmt.Sprintf("%s@%s", req.Path(), req.VersionLock.Version)
+		if allSkip.Has(palletPath) {
+			IndentedPrintf(indent, "Skipped download of %s\n", palletPath)
+			continue
+		}
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cachePath, req.Path(), req.VersionLock,
+			indent, cache.Path(), req.Path(), req.VersionLock,
 		)
-		changed = changed || downloaded
+		if downloaded {
+			downloadedPallets.Add(palletPath)
+		}
 		if err != nil {
-			return false, errors.Wrapf(
+			return downloadedPallets, errors.Wrapf(
 				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
 			)
 		}
+		plt, err := cache.LoadFSPallet(req.Path(), req.VersionLock.Version)
+		if err != nil {
+			return downloadedPallets, errors.Wrapf(
+				err, "couldn't load downloaded pallet for %s to download its own required pallets",
+				req.Path(),
+			)
+		}
+		allSkip.Add(palletPath)
+		recurseDownloaded, err := DownloadRequiredPallets(indent+1, plt, cache, allSkip)
+		maps.Insert(downloadedPallets, maps.All(recurseDownloaded))
+		maps.Insert(allSkip, maps.All(recurseDownloaded))
+		if err != nil {
+			return downloadedPallets, err
+		}
 	}
-	return changed, nil
+	return downloadedPallets, nil
 }

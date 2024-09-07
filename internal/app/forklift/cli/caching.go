@@ -33,8 +33,7 @@ func CacheStagingReqs(
 	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
 	indent++
 
-	IndentedPrintln(indent, "Downloading pallets required by the local pallet...")
-	if _, err = DownloadRequiredPallets(indent+1, pallet, palletCache.Path()); err != nil {
+	if _, err = DownloadRequiredPallets(indent, pallet, palletCache, nil); err != nil {
 		return nil, nil, err
 	}
 
@@ -53,14 +52,12 @@ func CacheStagingReqs(
 		return merged, nil, err
 	}
 
-	IndentedPrintln(indent, "Downloading repos required by the local pallet...")
-	if _, err = DownloadRequiredRepos(indent+1, merged, repoCache.Path()); err != nil {
+	if _, err = DownloadRequiredRepos(indent, merged, repoCache.Path()); err != nil {
 		return merged, repoCacheWithMerged, err
 	}
 
-	IndentedPrintln(indent, "Downloading files for export by the local pallet...")
 	if err = DownloadExportFiles(
-		indent+1, merged, repoCacheWithMerged, dlCache, includeDisabled, parallel,
+		indent, merged, repoCacheWithMerged, dlCache, includeDisabled, parallel,
 	); err != nil {
 		return merged, repoCacheWithMerged, err
 	}
