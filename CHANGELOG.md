@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - (Breaking change; cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
+- (Breaking change; cli) Now, by default `[dev] plt ls-file` doesn't list files in hidden directories (i.e. directories whose names start with `.`) at the root of the pallet. To list all files including those in hidden directories, you should now run `[dev] plt ls-file '**'` instead.
 - (cli) Suppressed some noisy Git cloning output in `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands.
 
 ### Fixed

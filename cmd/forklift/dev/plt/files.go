@@ -19,7 +19,12 @@ func lsFileAction(c *cli.Context) error {
 		return err
 	}
 
-	paths, err := fcli.ListPalletFiles(plt, c.Args().First())
+	filter := c.Args().First()
+	if filter == "" {
+		// Exclude hidden directories such as `.git`
+		filter = "{*,[^.]*/**}"
+	}
+	paths, err := fcli.ListPalletFiles(plt, filter)
 	if err != nil {
 		return err
 	}
