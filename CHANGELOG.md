@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- (cli) Added support for `add-feature` and `remove-feature` types to file import group modifiers. `add-feature` will add all files determined by evaluation of a named feature flag exposed by the import group's referenced pallet, while `remove-feature` will remove those files. Pallet feature flags are constructed with the same file schema as file import groups, but are located in the pallet's `/features` directory and have a `.feature.yml` file extension instead.
+- (cli) Added a `[dev] plt ls-feat` command to list feature flags exposed by the local/development pallet.
+- (cli) Added a `[dev] plt show-feat` command to show the specified feature exposed by the local/development pallet.
+- (cli) Added a `[dev] plt ls-plt-feat` command to list feature flags exposed by the specified pallet required by the local/development pallet.
+- (cli) Added a `[dev] plt show-plt-feat` command to show the specified feature exposed by the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt ls-plt-file` command to list files in the specified pallet required by the local/development pallet, including files imported by that required pallet from its own required pallets.
 - (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
