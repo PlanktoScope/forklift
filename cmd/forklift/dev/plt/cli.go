@@ -153,6 +153,7 @@ func makeQuerySubcmds() []*cli.Command {
 		makeQueryFileSubcmds(category),
 		makeQueryPkgSubcmds(category),
 		makeQueryDeplSubcmds(category),
+		makeQueryFeatSubcmds(category),
 		[]*cli.Command{
 			{
 				Name:     "ls-dl",
@@ -204,6 +205,7 @@ func makeQueryReqSubcmds(category string) []*cli.Command {
 			},
 		},
 		makeQueryPltFileSubcmds(category),
+		makeQueryPltFeatSubcmds(category),
 		[]*cli.Command{
 			{
 				Name:     "ls-repo",
@@ -261,6 +263,29 @@ func makeQueryPltFileSubcmds(category string) []*cli.Command {
 				"import files from",
 			ArgsUsage: "pallet_path file_path",
 			Action:    showPltFileAction,
+		},
+	}
+}
+
+func makeQueryPltFeatSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-plt-feat",
+			Aliases:  []string{"list-pallet-features"},
+			Category: category,
+			Usage: "Lists feature flags exposed by the specified pallet which the development pallet " +
+				"may import files from",
+			ArgsUsage: "pallet_path",
+			Action:    lsPltFeatAction,
+		},
+		{
+			Name:     "show-plt-feat",
+			Aliases:  []string{"show-pallet-feature"},
+			Category: category,
+			Usage: "Prints the specified feature exposed by the specified pallet which the development " +
+				"pallet may import files from",
+			ArgsUsage: "pallet_path feature_name",
+			Action:    showPltFeatAction,
 		},
 	}
 }
@@ -372,6 +397,28 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 					Usage: "Locates the package even if the specified deployment is disabled",
 				},
 			},
+		},
+	}
+}
+
+func makeQueryFeatSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-feat",
+			Aliases:  []string{"list-features"},
+			Category: category,
+			Usage: "Lists the feature flags exposed by the development pallet for other pallets " +
+				"to import",
+			Action: lsFeatAction,
+		},
+		{
+			Name:     "show-feat",
+			Aliases:  []string{"show-feature"},
+			Category: category,
+			Usage: "Describes a feature exposed by the development pallet for other pallets " +
+				"to import",
+			ArgsUsage: "feature_name",
+			Action:    showFeatAction,
 		},
 	}
 }

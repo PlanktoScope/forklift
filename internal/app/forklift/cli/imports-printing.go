@@ -51,23 +51,26 @@ func PrintResolvedImport(indent int, imp *forklift.ResolvedImport) error {
 	if imp.Import.Def.Disabled {
 		fmt.Print(" (disabled!)")
 	}
-	fmt.Printf(": %s\n", imp.Name)
+	fmt.Printf(" %s:\n", imp.Name)
 	indent++
 
 	IndentedPrintf(indent, "Import source: %s\n", imp.Pallet.Path())
 
-	printModifiers(indent, imp.Def.Modifiers)
+	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet); err != nil {
+		return err
+	}
 
 	fmt.Println()
-	if err := printEvaluation(indent, imp); err != nil {
+	IndentedPrintln(indent, "Imported files:")
+	if err := printImportEvaluation(indent+1, imp); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func printModifiers(indent int, modifiers []forklift.ImportModifier) {
-	IndentedPrint(indent, "Group modifiers:")
+func printModifiers(indent int, modifiers []forklift.ImportModifier, plt *forklift.FSPallet) error {
+	IndentedPrint(indent, "Sequential definition:")
 	if len(modifiers) == 0 {
 		fmt.Print(" (none)")
 	}
@@ -79,10 +82,19 @@ func printModifiers(indent int, modifiers []forklift.ImportModifier) {
 			printAddModifier(indent, i, modifier)
 		case forklift.ImportModifierTypeRemove:
 			printRemoveModifier(indent, i, modifier)
+		case forklift.ImportModifierTypeAddFeature:
+			if err := printAddFeatureModifier(indent, i, modifier, plt); err != nil {
+				return err
+			}
+		case forklift.ImportModifierTypeRemoveFeature:
+			if err := printRemoveFeatureModifier(indent, i, modifier, plt); err != nil {
+				return err
+			}
 		default:
 			BulletedPrintf(indent, "[%d] Unknown modifier type %s: %+v\n", i, modifier.Type, modifier)
 		}
 	}
+	return nil
 }
 
 func printAddModifier(indent, index int, modifier forklift.ImportModifier) {
@@ -118,13 +130,54 @@ func printRemoveModifier(indent, index int, modifier forklift.ImportModifier) {
 	}
 }
 
-func printEvaluation(indent int, imp *forklift.ResolvedImport) error {
-	IndentedPrintln(indent, "Imported files:")
+func printAddFeatureModifier(
+	indent, index int, modifier forklift.ImportModifier, plt *forklift.FSPallet,
+) error {
+	BulletedPrintf(indent, "[%d] Add feature-flagged files to group", index)
+	if modifier.Description == "" {
+		fmt.Println()
+	} else {
+		fmt.Printf(": %s\n", modifier.Description)
+	}
+	return errors.Wrap(
+		printReferencedFeature(indent+1, modifier.Source, plt), "couldn't load feature in modifier",
+	)
+}
+
+func printReferencedFeature(indent int, name string, plt *forklift.FSPallet) error {
+	IndentedPrintf(indent, "Feature %s", name)
+	feature, err := plt.LoadFeature(name)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load feature %s", name)
+	}
+
+	if feature.Def.Description != "" {
+		fmt.Printf(": %s\n", feature.Def.Description)
+	} else {
+		fmt.Println(" (no description)")
+	}
+	return nil
+}
+
+func printRemoveFeatureModifier(
+	indent, index int, modifier forklift.ImportModifier, plt *forklift.FSPallet,
+) error {
+	BulletedPrintf(indent, "[%d] Remove feature-flagged files from group", index)
+	if modifier.Description == "" {
+		fmt.Println()
+	} else {
+		fmt.Printf(": %s\n", modifier.Description)
+	}
+	return errors.Wrap(
+		printReferencedFeature(indent+1, modifier.Source, plt), "couldn't load feature in modifier",
+	)
+}
+
+func printImportEvaluation(indent int, imp *forklift.ResolvedImport) error {
 	importMappings, err := imp.Evaluate()
 	if err != nil {
 		return errors.Wrapf(err, "couldn't evaluate import group")
 	}
-	indent++
 
 	targets := make([]string, 0, len(importMappings))
 	for target := range importMappings {

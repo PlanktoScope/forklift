@@ -2,6 +2,7 @@ package forklift
 
 import (
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -76,6 +77,14 @@ func (i *ResolvedImport) Evaluate() (map[string]string, error) {
 			}
 		case ImportModifierTypeRemove:
 			if err := applyRemoveModifier(modifier, pathMappings); err != nil {
+				return pathMappings, err
+			}
+		case ImportModifierTypeAddFeature:
+			if err := applyAddFeatureModifier(modifier, i.Pallet, pathMappings); err != nil {
+				return pathMappings, err
+			}
+		case ImportModifierTypeRemoveFeature:
+			if err := applyRemoveFeatureModifier(modifier, i.Pallet, pathMappings); err != nil {
 				return pathMappings, err
 			}
 		}
@@ -167,6 +176,51 @@ func matchWithChildren(pattern, name string) (bool, error) {
 	return childMatches, nil
 }
 
+func applyAddFeatureModifier(
+	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string,
+) error {
+	feature, err := pallet.LoadFeature(modifier.Source)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load feature %s", modifier.Source)
+	}
+	resolved := &ResolvedImport{
+		Import: feature,
+		Pallet: pallet,
+	}
+	featureMappings, err := resolved.Evaluate()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't evaluate feature %s to determine file imports to add", modifier.Source,
+		)
+	}
+	maps.Insert(pathMappings, maps.All(featureMappings))
+	return nil
+}
+
+func applyRemoveFeatureModifier(
+	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string,
+) error {
+	feature, err := pallet.LoadFeature(modifier.Source)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load feature %s", modifier.Source)
+	}
+	resolved := &ResolvedImport{
+		Import: feature,
+		Pallet: pallet,
+	}
+	featureMappings, err := resolved.Evaluate()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't evaluate feature %s to determine file imports to add", modifier.Source,
+		)
+	}
+	maps.DeleteFunc(pathMappings, func(target, source string) bool {
+		_, ok := featureMappings[target]
+		return ok
+	})
+	return nil
+}
+
 // Import
 
 // FilterImportsForEnabled filters a slice of Imports to only include those which are not disabled.
@@ -183,11 +237,12 @@ func FilterImportsForEnabled(imps []Import) []Import {
 
 // loadImport loads the Import from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the import followed by the import group file extension.
-func loadImport(fsys core.PathedFS, name string) (imp Import, err error) {
+func loadImport(fsys core.PathedFS, name, fileExt string) (imp Import, err error) {
 	imp.Name = name
-	if imp.Def, err = loadImportDef(fsys, name+ImportDefFileExt); err != nil {
+	if imp.Def, err = loadImportDef(fsys, name+fileExt); err != nil {
 		return Import{}, errors.Wrapf(err, "couldn't load import group")
 	}
+	// TODO: if the import is deprecated, print a warning with the deprecation message
 	return imp, nil
 }
 
@@ -195,8 +250,8 @@ func loadImport(fsys core.PathedFS, name string) (imp Import, err error) {
 // the specified search pattern.
 // The search pattern should not include the file extension for import group files - the
 // file extension will be appended to the search pattern by LoadImports.
-func loadImports(fsys core.PathedFS, searchPattern string) ([]Import, error) {
-	searchPattern += ImportDefFileExt
+func loadImports(fsys core.PathedFS, searchPattern, fileExt string) ([]Import, error) {
+	searchPattern += fileExt
 	impDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -206,12 +261,12 @@ func loadImports(fsys core.PathedFS, searchPattern string) ([]Import, error) {
 
 	imps := make([]Import, 0, len(impDefFiles))
 	for _, impDefFilePath := range impDefFiles {
-		if !strings.HasSuffix(impDefFilePath, ImportDefFileExt) {
+		if !strings.HasSuffix(impDefFilePath, fileExt) {
 			continue
 		}
 
-		impName := strings.TrimSuffix(impDefFilePath, ImportDefFileExt)
-		imp, err := loadImport(fsys, impName)
+		impName := strings.TrimSuffix(impDefFilePath, fileExt)
+		imp, err := loadImport(fsys, impName, fileExt)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load import group from %s", impDefFilePath)
 		}

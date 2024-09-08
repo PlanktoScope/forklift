@@ -199,11 +199,14 @@ type ImportDef struct {
 type ImportModifier struct {
 	// Description is a short description of the import modifier to be shown to users.
 	Description string `yaml:"description,omitempty"`
-	// Type is either `add` (for adding one or more files to the set of files to import) or `remove`
-	// (for removing one or more files from the set of files to import)
+	// Type is either `add` (for adding one or more files to the set of files to import), `remove`
+	// (for removing one or more files from the set of files to import), `add-feature` (for adding
+	// files specified by a feature flag to the set of files to import), or `remove-feature` (for
+	// removing one or more files specified by a feature flag from the set of files to import).
 	Type string `yaml:"type,omitempty"`
 	// Source is the path in the required pallet of the file/directory to be imported, for an `add`
-	// modifier. If omitted, the source path will be inferred from the Target path.
+	// modifier; or the name of a feature flag, for an `add-feature` or `remove-feature` modifier. If
+	// omitted, the source path will be inferred from the Target path.
 	Source string `yaml:"source,omitempty"`
 	// Target is the path which the file/directory will be imported as, for an `add` modifier; or the
 	// path of the file/directory which will be removed from the set of files to import, for a
@@ -217,6 +220,18 @@ type ImportModifier struct {
 }
 
 const (
-	ImportModifierTypeAdd    = "add"
-	ImportModifierTypeRemove = "remove"
+	ImportModifierTypeAdd           = "add"
+	ImportModifierTypeRemove        = "remove"
+	ImportModifierTypeAddFeature    = "add-feature"
+	ImportModifierTypeRemoveFeature = "remove-feature"
+)
+
+// Features
+
+const (
+	// FeaturesDirName is the directory in a pallet containing declarations of file import groups
+	// which can be referenced by name in file import groups.
+	FeaturesDirName = "features"
+	// FeatureDefFileExt is the file extension for import group files.
+	FeatureDefFileExt = ".feature.yml"
 )

@@ -583,3 +583,37 @@ func showPltFileAction(c *cli.Context) error {
 	}
 	return fcli.PrintFile(plt, c.Args().Get(1))
 }
+
+// ls-plt-feat
+
+func lsPltFeatAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	return fcli.PrintPalletFeatures(0, plt)
+}
+
+// show-plt-feat
+
+func showPltFeatAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		enableOverrides: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	return fcli.PrintFeatureInfo(0, plt, caches.p, c.Args().Get(1))
+}

@@ -320,7 +320,7 @@ func (p *FSPallet) LoadImport(name string) (imp Import, err error) {
 	if err != nil {
 		return Import{}, errors.Wrap(err, "couldn't open directory for import groups from pallet")
 	}
-	if imp, err = loadImport(impsFS, name); err != nil {
+	if imp, err = loadImport(impsFS, name, ImportDefFileExt); err != nil {
 		return Import{}, errors.Wrapf(err, "couldn't load import group for %s", name)
 	}
 	return imp, nil
@@ -334,7 +334,38 @@ func (p *FSPallet) LoadImports(searchPattern string) ([]Import, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for import groups from pallet")
 	}
-	return loadImports(fsys, searchPattern)
+	return loadImports(fsys, searchPattern, ImportDefFileExt)
+}
+
+// FSPallet: Features
+
+// GetFeaturesFS returns the [fs.FS] in the pallet which contains pallet feature flag declarations.
+func (p *FSPallet) GetFeaturesFS() (core.PathedFS, error) {
+	return p.FS.Sub(FeaturesDirName)
+}
+
+// LoadFeature loads the Import declared by the specified feature flag name.
+func (p *FSPallet) LoadFeature(name string) (imp Import, err error) {
+	featuresFS, err := p.GetFeaturesFS()
+	if err != nil {
+		return Import{}, errors.Wrap(err, "couldn't open directory for feature declarations in pallet")
+	}
+	if imp, err = loadImport(featuresFS, name, FeatureDefFileExt); err != nil {
+		return Import{}, errors.Wrapf(err, "couldn't load import group for feature %s", name)
+	}
+	return imp, nil
+}
+
+// LoadFeatures loads all FSPalletReqs from the pallet matching the specified search
+// pattern.
+// The search pattern should be a [doublestar] pattern, such as `**`, matching the pallet paths to
+// search for.
+func (p *FSPallet) LoadFeatures(searchPattern string) ([]Import, error) {
+	featuresFS, err := p.GetFeaturesFS()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't open directory for feature declarations in pallet")
+	}
+	return loadImports(featuresFS, searchPattern, FeatureDefFileExt)
 }
 
 // Pallet
