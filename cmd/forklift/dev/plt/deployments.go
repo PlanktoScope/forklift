@@ -74,7 +74,7 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 		deplName := c.Args().Slice()[0]
 		pkgPath := c.Args().Slice()[1]
 		if err = fcli.AddDepl(
-			0, plt, caches.r, deplName, pkgPath, c.StringSlice("feature"), c.Bool("disabled"),
+			0, plt, caches.r, deplName, pkgPath, c.StringSlice("feat"), c.Bool("disabled"),
 			c.Bool("force"),
 		); err != nil {
 			return err

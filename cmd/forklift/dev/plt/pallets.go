@@ -50,7 +50,7 @@ func processFullBaseArgs(
 	}
 	if opts.enableOverrides {
 		if caches.p, err = overlayPalletCacheOverrides(
-			caches.p.Underlay, c.StringSlice("plts"), plt,
+			caches.p.Underlay, c.StringSlice("plt"), plt,
 		); err != nil {
 			return nil, workspaceCaches{}, err
 		}
@@ -67,7 +67,7 @@ func processFullBaseArgs(
 	}
 	if opts.enableOverrides {
 		if caches.r, err = overlayRepoCacheOverrides(
-			caches.r, c.StringSlice("repos"), plt,
+			caches.r, c.StringSlice("repo"), plt,
 		); err != nil {
 			return nil, workspaceCaches{}, err
 		}

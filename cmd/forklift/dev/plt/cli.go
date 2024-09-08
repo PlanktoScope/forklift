@@ -26,14 +26,14 @@ func MakeCmd(versions Versions) *cli.Command {
 			"directory",
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
-				Name:    "repos",
-				Aliases: []string{"repositories"},
+				Name:    "repo",
+				Aliases: []string{"repos", "repository", "repositories"},
 				Usage: "Replaces version-locked required repos from the cache with the corresponding " +
 					"repos in the specified directory paths",
 			},
 			&cli.StringSliceFlag{
-				Name:    "plts",
-				Aliases: []string{"pallets"},
+				Name:    "plt",
+				Aliases: []string{"plts", "pallet", "pallets"},
 				Usage: "Replaces version-locked required pallets from the cache with the corresponding " +
 					"pallets in the specified directory paths",
 			},
@@ -589,8 +589,9 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.StringSliceFlag{
-						Name:  "feature",
-						Usage: "Enable the specified feature flag in the package deployment",
+						Name:    "feat",
+						Aliases: []string{"feature", "features"},
+						Usage:   "Enable the specified feature in the package deployment",
 					},
 					&cli.BoolFlag{
 						Name:  "disabled",
@@ -629,7 +630,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 					&cli.BoolFlag{
 						Name: "force",
 						Usage: "Use the specified package path even if it cannot be resolved or makes the " +
-							"enabled feature flags invalid",
+							"enabled package features invalid",
 					},
 				},
 				baseFlags,
@@ -652,7 +653,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 				[]cli.Flag{
 					&cli.BoolFlag{
 						Name: "force",
-						Usage: "Enable the specified feature flags even if they're not allowed by the  " +
+						Usage: "Enable the specified package features even if they're not allowed by the " +
 							"deployment's package",
 					},
 				},

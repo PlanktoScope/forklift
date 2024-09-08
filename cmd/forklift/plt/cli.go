@@ -731,8 +731,9 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.StringSliceFlag{
-						Name:  "feature",
-						Usage: "Enable the specified feature flag in the package deployment",
+						Name:    "feat",
+						Aliases: []string{"feature", "features"},
+						Usage:   "Enable the specified feature in the package deployment",
 					},
 					&cli.BoolFlag{
 						Name:  "disabled",
@@ -771,7 +772,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 					&cli.BoolFlag{
 						Name: "force",
 						Usage: "Use the specified package path even if it cannot be resolved or makes the " +
-							"enabled feature flags invalid",
+							"enabled package features invalid",
 					},
 				},
 				modifyDeplBaseFlags,
@@ -794,7 +795,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 				[]cli.Flag{
 					&cli.BoolFlag{
 						Name: "force",
-						Usage: "Enable the specified feature flags even if they're not allowed by the  " +
+						Usage: "Enable the specified package features even if they're not allowed by the " +
 							"deployment's package",
 					},
 				},
