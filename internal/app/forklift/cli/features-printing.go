@@ -51,6 +51,13 @@ func PrintFeatureInfo(
 func PrintFeature(indent int, imp *forklift.ResolvedImport) error {
 	IndentedPrintf(indent, "Feature %s:\n", imp.Name)
 	indent++
+	deprecations := imp.CheckDeprecations()
+	if len(deprecations) > 0 {
+		IndentedPrintln(indent, "Deprecation warnings:")
+		for _, deprecation := range deprecations {
+			BulletedPrintln(indent+1, deprecation)
+		}
+	}
 
 	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet); err != nil {
 		return err

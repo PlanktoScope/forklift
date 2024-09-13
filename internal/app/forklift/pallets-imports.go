@@ -221,6 +221,28 @@ func applyRemoveFeatureModifier(
 	return nil
 }
 
+// CheckDeprecations returns a list of [error]s for any directly-referenced or
+// transitively-referenced features which are deprecated.
+func (i *ResolvedImport) CheckDeprecations() []error {
+	if i.Def.Deprecated != "" {
+		return []error{errors.New(i.Def.Deprecated)}
+	}
+
+	errs := make([]error, 0)
+	for _, modifier := range i.Def.Modifiers {
+		switch modifier.Type {
+		default:
+			continue
+		case ImportModifierTypeAddFeature, ImportModifierTypeRemove:
+			errs = append(errs, modifier.CheckDeprecations(i.Pallet)...)
+		}
+	}
+	return errs
+}
+
+// TODO: add a method to check whether any import modifiers don't match any files, so that we can
+// issue a warning when that happens!
+
 // Import
 
 // FilterImportsForEnabled filters a slice of Imports to only include those which are not disabled.
@@ -336,4 +358,29 @@ func (d ImportDef) RemoveDefaults() ImportDef {
 	return d
 }
 
-// TODO: add a method to validate the import definition
+// ImportModifier
+
+// CheckDeprecations returns a list of [error]s for any directly-referenced or
+// transitively-referenced features in the specified pallet which are deprecated.
+func (m ImportModifier) CheckDeprecations(pallet *FSPallet) []error {
+	feature, err := pallet.LoadFeature(m.Source)
+	if err != nil {
+		return []error{errors.Wrapf(err, "couldn't load referenced feature %s", m.Source)}
+	}
+	if deprecation := feature.Def.Deprecated; deprecation != "" {
+		return []error{errors.Errorf("feature %s is deprecated: %s", feature.Name, deprecation)}
+	}
+
+	resolved := &ResolvedImport{
+		Import: feature,
+		Pallet: pallet,
+	}
+	deprecations := resolved.CheckDeprecations()
+	wrapped := make([]error, 0, len(deprecations))
+	for _, deprecation := range deprecations {
+		wrapped = append(wrapped, errors.Wrapf(
+			deprecation, "referenced by feature %s", feature.Name,
+		))
+	}
+	return wrapped
+}

@@ -192,6 +192,9 @@ type ImportDef struct {
 	Modifiers []ImportModifier `yaml:"modifiers"`
 	// Disabled represents whether the import should be ignored.
 	Disabled bool `yaml:"disabled,omitempty"`
+	// Deprecated is a deprecation notice which, if specified as a non-empty string, causes warnings
+	// to be issued whenever the file import group is used via a feature flag.
+	Deprecated string `yaml:"deprecated,omitempty"`
 }
 
 // An ImportModifier defines an operation for transforming a set of files for importing into a

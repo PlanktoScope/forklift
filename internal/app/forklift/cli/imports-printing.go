@@ -54,6 +54,14 @@ func PrintResolvedImport(indent int, imp *forklift.ResolvedImport) error {
 	fmt.Printf(" %s:\n", imp.Name)
 	indent++
 
+	deprecations := imp.CheckDeprecations()
+	if len(deprecations) > 0 {
+		IndentedPrintln(indent, "Deprecation warnings:")
+		for _, deprecation := range deprecations {
+			BulletedPrintln(indent+1, deprecation)
+		}
+	}
+
 	IndentedPrintf(indent, "Import source: %s\n", imp.Pallet.Path())
 
 	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet); err != nil {
@@ -155,6 +163,18 @@ func printReferencedFeature(indent int, name string, plt *forklift.FSPallet) err
 		fmt.Printf(": %s\n", feature.Def.Description)
 	} else {
 		fmt.Println(" (no description)")
+	}
+
+	resolved := &forklift.ResolvedImport{
+		Import: feature,
+		Pallet: plt,
+	}
+	deprecations := resolved.CheckDeprecations()
+	if len(deprecations) > 0 {
+		IndentedPrintln(indent, "Deprecation notices:")
+		for _, deprecation := range deprecations {
+			BulletedPrintln(indent+1, deprecation)
+		}
 	}
 	return nil
 }
