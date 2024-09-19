@@ -233,7 +233,7 @@ func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPk
 	// List local packages provided by the pallet itself
 	loaded, err := pallet.LoadFSPkgs("**")
 	if err != nil {
-		return errors.Wrapf(err, "couldn't load local packages pallet at %s", pallet.Path())
+		return errors.Wrapf(err, "couldn't load local packages defined by pallet at %s", pallet.Path())
 	}
 	for _, pkg := range loaded {
 		pkg.Repo.Def.Repo.Path = "/"
