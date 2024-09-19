@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- (cli) Added support for `add-feature` and `remove-feature` types to file import group modifiers. `add-feature` will add all files determined by evaluation of a named feature flag exposed by the import group's referenced pallet, while `remove-feature` will remove those files. Pallet feature flags are constructed with the same file schema as file import groups, but are located in the pallet's `/features` directory and have a `.feature.yml` file extension instead.
+- (cli) Added a `[dev] plt ls-feat` command to list feature flags exposed by the local/development pallet.
+- (cli) Added a `[dev] plt show-feat` command to show the specified feature exposed by the local/development pallet, including any deprecation notices of deprecated features referenced directly or indirectly by this feature.
+- (cli) Added a `[dev] plt ls-plt-feat` command to list feature flags exposed by the specified pallet required by the local/development pallet.
+- (cli) Added a `[dev] plt show-plt-feat` command to show the specified feature exposed by the specified pallet required by the local/development pallet, including any deprecation notices of deprecated features referenced directly or indirectly by this feature.
 - (cli) Added a `[dev] plt ls-plt-file` command to list files in the specified pallet required by the local/development pallet, including files imported by that required pallet from its own required pallets.
 - (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
@@ -17,7 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - (Breaking change; cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
+- (Breaking change; cli) Now, by default `[dev] plt ls-file` and `[dev] plt ls-plt-file` don't list files in hidden directories (i.e. directories whose names start with `.`) at the root of the pallet. To list all files including those in hidden directories, you should now specify `**` as the file path glob (e.g. by running `[dev] plt ls-file '**'` or `[dev] plt ls-plt-file required_pallet_path '**'`).
 - (cli) Suppressed some noisy Git cloning output in `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands.
+- (cli) `[dev] plt show-imp` now shows any deprecated notices of deprecated features referenced directly or indirectly by the specified import group.
 
 ### Fixed
 

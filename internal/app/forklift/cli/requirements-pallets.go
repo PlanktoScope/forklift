@@ -249,6 +249,7 @@ func DownloadRequiredPallets(
 	indent++
 	allSkip := make(structures.Set[string])
 	maps.Insert(allSkip, maps.All(skipPalletPaths))
+	downloadedPallets = make(structures.Set[string])
 	for _, req := range loadedPalletReqs {
 		palletPath := fmt.Sprintf("%s@%s", req.Path(), req.VersionLock.Version)
 		if allSkip.Has(palletPath) {

@@ -1039,7 +1039,12 @@ func lsPltFileAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	paths, err := fcli.ListPalletFiles(plt, c.Args().Get(1))
+	filter := c.Args().Get(1)
+	if filter == "" {
+		// Exclude hidden directories such as `.git`
+		filter = "{*,[^.]*/**}"
+	}
+	paths, err := fcli.ListPalletFiles(plt, filter)
 	if err != nil {
 		return err
 	}
@@ -1082,4 +1087,34 @@ func showPltFileAction(c *cli.Context) error {
 		return nil
 	}
 	return fcli.PrintFile(plt, c.Args().Get(1))
+}
+
+// ls-plt-feat
+
+func lsPltFeatAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	return fcli.PrintPalletFeatures(0, plt)
+}
+
+// show-plt-feat
+
+func showPltFeatAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
+	if err != nil {
+		return err
+	}
+
+	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	if err != nil {
+		return nil
+	}
+	return fcli.PrintFeatureInfo(0, plt, caches.p, c.Args().Get(1))
 }

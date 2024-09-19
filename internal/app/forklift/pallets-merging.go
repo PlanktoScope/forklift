@@ -120,7 +120,7 @@ func evaluatePalletImports(
 			})
 		}
 		if palletFileMappings[palletPath], err = consolidatePalletImports(
-			mergedPalletResolved,
+			mergedPalletResolved, palletLoader,
 		); err != nil {
 			return nil, nil, errors.Wrapf(
 				err, "couldn't evaluate import groups for pallet %s", palletPath,
@@ -133,11 +133,13 @@ func evaluatePalletImports(
 // consolidatePalletImports checks the import groups loaded for a single required pallet and
 // consolidates into a single mapping between target paths and source paths relative to the
 // required pallet.
-func consolidatePalletImports(imports []*ResolvedImport) (map[string]string, error) {
+func consolidatePalletImports(
+	imports []*ResolvedImport, loader FSPalletLoader,
+) (map[string]string, error) {
 	union := make(map[string]string)           // target -> source
 	mappingOrigin := make(map[string][]string) // target -> import group names
 	for _, imp := range imports {
-		importMappings, err := imp.Evaluate()
+		importMappings, err := imp.Evaluate(loader)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't evaluate import group %s", imp.Import.Name)
 		}

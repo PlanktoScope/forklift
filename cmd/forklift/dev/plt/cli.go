@@ -26,14 +26,14 @@ func MakeCmd(versions Versions) *cli.Command {
 			"directory",
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
-				Name:    "repos",
-				Aliases: []string{"repositories"},
+				Name:    "repo",
+				Aliases: []string{"repos", "repository", "repositories"},
 				Usage: "Replaces version-locked required repos from the cache with the corresponding " +
 					"repos in the specified directory paths",
 			},
 			&cli.StringSliceFlag{
-				Name:    "plts",
-				Aliases: []string{"pallets"},
+				Name:    "plt",
+				Aliases: []string{"plts", "pallet", "pallets"},
 				Usage: "Replaces version-locked required pallets from the cache with the corresponding " +
 					"pallets in the specified directory paths",
 			},
@@ -153,6 +153,7 @@ func makeQuerySubcmds() []*cli.Command {
 		makeQueryFileSubcmds(category),
 		makeQueryPkgSubcmds(category),
 		makeQueryDeplSubcmds(category),
+		makeQueryFeatSubcmds(category),
 		[]*cli.Command{
 			{
 				Name:     "ls-dl",
@@ -204,6 +205,7 @@ func makeQueryReqSubcmds(category string) []*cli.Command {
 			},
 		},
 		makeQueryPltFileSubcmds(category),
+		makeQueryPltFeatSubcmds(category),
 		[]*cli.Command{
 			{
 				Name:     "ls-repo",
@@ -261,6 +263,29 @@ func makeQueryPltFileSubcmds(category string) []*cli.Command {
 				"import files from",
 			ArgsUsage: "pallet_path file_path",
 			Action:    showPltFileAction,
+		},
+	}
+}
+
+func makeQueryPltFeatSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-plt-feat",
+			Aliases:  []string{"list-pallet-features"},
+			Category: category,
+			Usage: "Lists feature flags exposed by the specified pallet which the development pallet " +
+				"may import files from",
+			ArgsUsage: "pallet_path",
+			Action:    lsPltFeatAction,
+		},
+		{
+			Name:     "show-plt-feat",
+			Aliases:  []string{"show-pallet-feature"},
+			Category: category,
+			Usage: "Prints the specified feature exposed by the specified pallet which the development " +
+				"pallet may import files from",
+			ArgsUsage: "pallet_path feature_name",
+			Action:    showPltFeatAction,
 		},
 	}
 }
@@ -372,6 +397,28 @@ func makeQueryDeplSubcmds(category string) []*cli.Command {
 					Usage: "Locates the package even if the specified deployment is disabled",
 				},
 			},
+		},
+	}
+}
+
+func makeQueryFeatSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-feat",
+			Aliases:  []string{"list-features"},
+			Category: category,
+			Usage: "Lists the feature flags exposed by the development pallet for other pallets " +
+				"to import",
+			Action: lsFeatAction,
+		},
+		{
+			Name:     "show-feat",
+			Aliases:  []string{"show-feature"},
+			Category: category,
+			Usage: "Describes a feature exposed by the development pallet for other pallets " +
+				"to import",
+			ArgsUsage: "feature_name",
+			Action:    showFeatAction,
 		},
 	}
 }
@@ -542,8 +589,9 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.StringSliceFlag{
-						Name:  "feature",
-						Usage: "Enable the specified feature flag in the package deployment",
+						Name:    "feat",
+						Aliases: []string{"feature", "features"},
+						Usage:   "Enable the specified feature in the package deployment",
 					},
 					&cli.BoolFlag{
 						Name:  "disabled",
@@ -582,7 +630,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 					&cli.BoolFlag{
 						Name: "force",
 						Usage: "Use the specified package path even if it cannot be resolved or makes the " +
-							"enabled feature flags invalid",
+							"enabled package features invalid",
 					},
 				},
 				baseFlags,
@@ -605,7 +653,7 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 				[]cli.Flag{
 					&cli.BoolFlag{
 						Name: "force",
-						Usage: "Enable the specified feature flags even if they're not allowed by the  " +
+						Usage: "Enable the specified package features even if they're not allowed by the " +
 							"deployment's package",
 					},
 				},

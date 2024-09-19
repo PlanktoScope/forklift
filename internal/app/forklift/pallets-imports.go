@@ -2,6 +2,7 @@ package forklift
 
 import (
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -32,14 +33,21 @@ func ResolveImports(
 	return resolvedImports, nil
 }
 
-// ResolveImport loads the pallet from the [FSPalletLoader] instance based on the requirements in
-// the provided file import group and the pallet.
+// ResolveImport loads the import from a pallet loaded from the [FSPalletLoader] instance based on
+// the requirements in the provided file import group and the pallet.
 func ResolveImport(
 	pallet *FSPallet, palletLoader FSPalletLoader, imp Import,
 ) (resolved *ResolvedImport, err error) {
 	resolved = &ResolvedImport{
 		Import: imp,
 	}
+	if _, err = fs.Stat(pallet.FS, path.Join(FeaturesDirName, imp.Name+FeatureDefFileExt)); err == nil {
+		// Attach the import to the current pallet
+		resolved.Pallet = pallet
+		return resolved, nil
+	}
+
+	// Attach the import to a required pallet
 	palletReqsFS, err := pallet.GetPalletReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
@@ -64,7 +72,7 @@ func ResolveImport(
 // Evaluate returns a list of target file paths and a mapping between target file paths and source
 // file paths relative to the attached pallet's FS member. Directories are excluded from this
 // mapping.
-func (i *ResolvedImport) Evaluate() (map[string]string, error) {
+func (i *ResolvedImport) Evaluate(loader FSPalletLoader) (map[string]string, error) {
 	pathMappings := make(map[string]string) // target -> source
 	for _, modifier := range i.Def.Modifiers {
 		switch modifier.Type {
@@ -76,6 +84,14 @@ func (i *ResolvedImport) Evaluate() (map[string]string, error) {
 			}
 		case ImportModifierTypeRemove:
 			if err := applyRemoveModifier(modifier, pathMappings); err != nil {
+				return pathMappings, err
+			}
+		case ImportModifierTypeAddFeature:
+			if err := applyAddFeatureModifier(modifier, i.Pallet, pathMappings, loader); err != nil {
+				return pathMappings, err
+			}
+		case ImportModifierTypeRemoveFeature:
+			if err := applyRemoveFeatureModifier(modifier, i.Pallet, pathMappings, loader); err != nil {
 				return pathMappings, err
 			}
 		}
@@ -167,6 +183,78 @@ func matchWithChildren(pattern, name string) (bool, error) {
 	return childMatches, nil
 }
 
+func applyAddFeatureModifier(
+	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string, loader FSPalletLoader,
+) error {
+	feature, err := pallet.LoadFeature(modifier.Source, loader)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load feature %s", modifier.Source)
+	}
+	resolved := &ResolvedImport{
+		Import: feature,
+		Pallet: pallet,
+	}
+	featureMappings, err := resolved.Evaluate(loader)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't evaluate feature %s to determine file imports to add", modifier.Source,
+		)
+	}
+	maps.Insert(pathMappings, maps.All(featureMappings))
+	return nil
+}
+
+func applyRemoveFeatureModifier(
+	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string, loader FSPalletLoader,
+) error {
+	feature, err := pallet.LoadFeature(modifier.Source, loader)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load feature %s", modifier.Source)
+	}
+	resolved := &ResolvedImport{
+		Import: feature,
+		Pallet: pallet,
+	}
+	featureMappings, err := resolved.Evaluate(loader)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't evaluate feature %s to determine file imports to add", modifier.Source,
+		)
+	}
+	maps.DeleteFunc(pathMappings, func(target, source string) bool {
+		_, ok := featureMappings[target]
+		return ok
+	})
+	return nil
+}
+
+// CheckDeprecations returns a list of [error]s for any directly-referenced or
+// transitively-referenced features which are deprecated.
+func (i *ResolvedImport) CheckDeprecations(
+	loader FSPalletLoader,
+) (deprecations []error, err error) {
+	if i.Def.Deprecated != "" {
+		return []error{errors.New(i.Def.Deprecated)}, nil
+	}
+
+	for _, modifier := range i.Def.Modifiers {
+		switch modifier.Type {
+		default:
+			continue
+		case ImportModifierTypeAddFeature, ImportModifierTypeRemove:
+			checked, err := modifier.CheckDeprecations(i.Pallet, loader)
+			if err != nil {
+				return deprecations, err
+			}
+			deprecations = append(deprecations, checked...)
+		}
+	}
+	return deprecations, nil
+}
+
+// TODO: add a method to check whether any import modifiers don't match any files, so that we can
+// issue a warning when that happens!
+
 // Import
 
 // FilterImportsForEnabled filters a slice of Imports to only include those which are not disabled.
@@ -183,11 +271,12 @@ func FilterImportsForEnabled(imps []Import) []Import {
 
 // loadImport loads the Import from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the import followed by the import group file extension.
-func loadImport(fsys core.PathedFS, name string) (imp Import, err error) {
+func loadImport(fsys core.PathedFS, name, fileExt string) (imp Import, err error) {
 	imp.Name = name
-	if imp.Def, err = loadImportDef(fsys, name+ImportDefFileExt); err != nil {
+	if imp.Def, err = loadImportDef(fsys, name+fileExt); err != nil {
 		return Import{}, errors.Wrapf(err, "couldn't load import group")
 	}
+	// TODO: if the import is deprecated, print a warning with the deprecation message
 	return imp, nil
 }
 
@@ -195,8 +284,8 @@ func loadImport(fsys core.PathedFS, name string) (imp Import, err error) {
 // the specified search pattern.
 // The search pattern should not include the file extension for import group files - the
 // file extension will be appended to the search pattern by LoadImports.
-func loadImports(fsys core.PathedFS, searchPattern string) ([]Import, error) {
-	searchPattern += ImportDefFileExt
+func loadImports(fsys core.PathedFS, searchPattern, fileExt string) ([]Import, error) {
+	searchPattern += fileExt
 	impDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -206,12 +295,12 @@ func loadImports(fsys core.PathedFS, searchPattern string) ([]Import, error) {
 
 	imps := make([]Import, 0, len(impDefFiles))
 	for _, impDefFilePath := range impDefFiles {
-		if !strings.HasSuffix(impDefFilePath, ImportDefFileExt) {
+		if !strings.HasSuffix(impDefFilePath, fileExt) {
 			continue
 		}
 
-		impName := strings.TrimSuffix(impDefFilePath, ImportDefFileExt)
-		imp, err := loadImport(fsys, impName)
+		impName := strings.TrimSuffix(impDefFilePath, fileExt)
+		imp, err := loadImport(fsys, impName, fileExt)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load import group from %s", impDefFilePath)
 		}
@@ -281,4 +370,32 @@ func (d ImportDef) RemoveDefaults() ImportDef {
 	return d
 }
 
-// TODO: add a method to validate the import definition
+// ImportModifier
+
+// CheckDeprecations returns a list of [error]s for any directly-referenced or
+// transitively-referenced features in the specified pallet which are deprecated.
+func (m ImportModifier) CheckDeprecations(
+	pallet *FSPallet, loader FSPalletLoader,
+) (deprecations []error, err error) {
+	feature, err := pallet.LoadFeature(m.Source, loader)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't load referenced feature %s", m.Source)
+	}
+	if deprecation := feature.Def.Deprecated; deprecation != "" {
+		return []error{errors.Errorf("feature %s is deprecated: %s", feature.Name, deprecation)}, nil
+	}
+
+	resolved, err := ResolveImport(pallet, loader, feature)
+	if err != nil {
+		return deprecations, errors.Wrapf(err, "couldn't resolve feature %s", feature.Name)
+	}
+	deprecations, err = resolved.CheckDeprecations(loader)
+	if err != nil {
+		return deprecations, err
+	}
+	wrapped := make([]error, 0, len(deprecations))
+	for _, deprecation := range deprecations {
+		wrapped = append(wrapped, errors.Wrapf(deprecation, "referenced by feature %s", feature.Name))
+	}
+	return wrapped, nil
+}
