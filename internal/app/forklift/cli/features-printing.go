@@ -23,7 +23,7 @@ func PrintPalletFeatures(indent int, pallet *forklift.FSPallet) error {
 func PrintFeatureInfo(
 	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, featureName string,
 ) error {
-	imp, err := pallet.LoadFeature(featureName)
+	imp, err := pallet.LoadFeature(featureName, cache)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't find feature declaration %s in pallet %s", featureName, pallet.FS.Path(),
@@ -40,7 +40,7 @@ func PrintFeatureInfo(
 			featureName, imp.Name,
 		)
 	}
-	if err = PrintFeature(indent, resolved); err != nil {
+	if err = PrintFeature(indent, resolved, cache); err != nil {
 		return errors.Wrapf(
 			err, "couldn't print feature %s resolved as import group %s", featureName, imp.Name,
 		)
@@ -48,10 +48,13 @@ func PrintFeatureInfo(
 	return nil
 }
 
-func PrintFeature(indent int, imp *forklift.ResolvedImport) error {
+func PrintFeature(indent int, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader) error {
 	IndentedPrintf(indent, "Feature %s:\n", imp.Name)
 	indent++
-	deprecations := imp.CheckDeprecations()
+	deprecations, err := imp.CheckDeprecations(loader)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't check deprecations for import %s", imp.Name)
+	}
 	if len(deprecations) > 0 {
 		IndentedPrintln(indent, "Deprecation warnings:")
 		for _, deprecation := range deprecations {
@@ -59,21 +62,23 @@ func PrintFeature(indent int, imp *forklift.ResolvedImport) error {
 		}
 	}
 
-	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet); err != nil {
+	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
 		return err
 	}
 
 	fmt.Println()
 	IndentedPrintln(indent, "Files grouped for import:")
-	if err := printFeatureEvaluation(indent+1, imp); err != nil {
+	if err := printFeatureEvaluation(indent+1, imp, loader); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func printFeatureEvaluation(indent int, imp *forklift.ResolvedImport) error {
-	importMappings, err := imp.Evaluate()
+func printFeatureEvaluation(
+	indent int, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+) error {
+	importMappings, err := imp.Evaluate(loader)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't evaluate import group")
 	}

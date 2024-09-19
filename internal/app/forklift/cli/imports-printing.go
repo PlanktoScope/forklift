@@ -40,13 +40,15 @@ func PrintImportInfo(
 			err, "couldn't print merge pallet referenced by resolved import group %s", imp.Name,
 		)
 	}
-	if err = PrintResolvedImport(indent, resolved); err != nil {
+	if err = PrintResolvedImport(indent, resolved, cache); err != nil {
 		return errors.Wrapf(err, "couldn't print resolved import group %s", imp.Name)
 	}
 	return nil
 }
 
-func PrintResolvedImport(indent int, imp *forklift.ResolvedImport) error {
+func PrintResolvedImport(
+	indent int, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+) error {
 	IndentedPrint(indent, "Import group")
 	if imp.Import.Def.Disabled {
 		fmt.Print(" (disabled!)")
@@ -54,7 +56,10 @@ func PrintResolvedImport(indent int, imp *forklift.ResolvedImport) error {
 	fmt.Printf(" %s:\n", imp.Name)
 	indent++
 
-	deprecations := imp.CheckDeprecations()
+	deprecations, err := imp.CheckDeprecations(loader)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't check deprecations for import %s", imp.Name)
+	}
 	if len(deprecations) > 0 {
 		IndentedPrintln(indent, "Deprecation warnings:")
 		for _, deprecation := range deprecations {
@@ -64,20 +69,23 @@ func PrintResolvedImport(indent int, imp *forklift.ResolvedImport) error {
 
 	IndentedPrintf(indent, "Import source: %s\n", imp.Pallet.Path())
 
-	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet); err != nil {
+	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
 		return err
 	}
 
 	fmt.Println()
 	IndentedPrintln(indent, "Imported files:")
-	if err := printImportEvaluation(indent+1, imp); err != nil {
+	if err := printImportEvaluation(indent+1, imp, loader); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func printModifiers(indent int, modifiers []forklift.ImportModifier, plt *forklift.FSPallet) error {
+func printModifiers(
+	indent int, modifiers []forklift.ImportModifier, plt *forklift.FSPallet,
+	loader forklift.FSPalletLoader,
+) error {
 	IndentedPrint(indent, "Sequential definition:")
 	if len(modifiers) == 0 {
 		fmt.Print(" (none)")
@@ -91,11 +99,11 @@ func printModifiers(indent int, modifiers []forklift.ImportModifier, plt *forkli
 		case forklift.ImportModifierTypeRemove:
 			printRemoveModifier(indent, i, modifier)
 		case forklift.ImportModifierTypeAddFeature:
-			if err := printAddFeatureModifier(indent, i, modifier, plt); err != nil {
+			if err := printAddFeatureModifier(indent, i, modifier, plt, loader); err != nil {
 				return err
 			}
 		case forklift.ImportModifierTypeRemoveFeature:
-			if err := printRemoveFeatureModifier(indent, i, modifier, plt); err != nil {
+			if err := printRemoveFeatureModifier(indent, i, modifier, plt, loader); err != nil {
 				return err
 			}
 		default:
@@ -140,6 +148,7 @@ func printRemoveModifier(indent, index int, modifier forklift.ImportModifier) {
 
 func printAddFeatureModifier(
 	indent, index int, modifier forklift.ImportModifier, plt *forklift.FSPallet,
+	loader forklift.FSPalletLoader,
 ) error {
 	BulletedPrintf(indent, "[%d] Add feature-flagged files to group", index)
 	if modifier.Description == "" {
@@ -148,13 +157,16 @@ func printAddFeatureModifier(
 		fmt.Printf(": %s\n", modifier.Description)
 	}
 	return errors.Wrap(
-		printReferencedFeature(indent+1, modifier.Source, plt), "couldn't load feature in modifier",
+		printReferencedFeature(indent+1, modifier.Source, plt, loader),
+		"couldn't load feature in modifier",
 	)
 }
 
-func printReferencedFeature(indent int, name string, plt *forklift.FSPallet) error {
+func printReferencedFeature(
+	indent int, name string, plt *forklift.FSPallet, loader forklift.FSPalletLoader,
+) error {
 	IndentedPrintf(indent, "Feature %s", name)
-	feature, err := plt.LoadFeature(name)
+	feature, err := plt.LoadFeature(name, loader)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load feature %s", name)
 	}
@@ -169,7 +181,10 @@ func printReferencedFeature(indent int, name string, plt *forklift.FSPallet) err
 		Import: feature,
 		Pallet: plt,
 	}
-	deprecations := resolved.CheckDeprecations()
+	deprecations, err := resolved.CheckDeprecations(loader)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't check deprecations for import %s", resolved.Name)
+	}
 	if len(deprecations) > 0 {
 		IndentedPrintln(indent, "Deprecation notices:")
 		for _, deprecation := range deprecations {
@@ -181,6 +196,7 @@ func printReferencedFeature(indent int, name string, plt *forklift.FSPallet) err
 
 func printRemoveFeatureModifier(
 	indent, index int, modifier forklift.ImportModifier, plt *forklift.FSPallet,
+	loader forklift.FSPalletLoader,
 ) error {
 	BulletedPrintf(indent, "[%d] Remove feature-flagged files from group", index)
 	if modifier.Description == "" {
@@ -189,12 +205,15 @@ func printRemoveFeatureModifier(
 		fmt.Printf(": %s\n", modifier.Description)
 	}
 	return errors.Wrap(
-		printReferencedFeature(indent+1, modifier.Source, plt), "couldn't load feature in modifier",
+		printReferencedFeature(indent+1, modifier.Source, plt, loader),
+		"couldn't load feature in modifier",
 	)
 }
 
-func printImportEvaluation(indent int, imp *forklift.ResolvedImport) error {
-	importMappings, err := imp.Evaluate()
+func printImportEvaluation(
+	indent int, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+) error {
+	importMappings, err := imp.Evaluate(loader)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't evaluate import group")
 	}

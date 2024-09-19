@@ -177,9 +177,9 @@ type ResolvedImport struct {
 
 // An Import is an import group, a declaration of a group of files to import from a required pallet.
 type Import struct {
-	// Name is the name of the package file import.
+	// Name is the name of the file import group.
 	Name string
-	// Def is the file import definition for the file import.
+	// Def is the file import definition for the file import group.
 	Def ImportDef
 }
 

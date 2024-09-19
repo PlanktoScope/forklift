@@ -33,14 +33,21 @@ func ResolveImports(
 	return resolvedImports, nil
 }
 
-// ResolveImport loads the pallet from the [FSPalletLoader] instance based on the requirements in
-// the provided file import group and the pallet.
+// ResolveImport loads the import from a pallet loaded from the [FSPalletLoader] instance based on
+// the requirements in the provided file import group and the pallet.
 func ResolveImport(
 	pallet *FSPallet, palletLoader FSPalletLoader, imp Import,
 ) (resolved *ResolvedImport, err error) {
 	resolved = &ResolvedImport{
 		Import: imp,
 	}
+	if _, err = fs.Stat(pallet.FS, path.Join(FeaturesDirName, imp.Name+FeatureDefFileExt)); err == nil {
+		// Attach the import to the current pallet
+		resolved.Pallet = pallet
+		return resolved, nil
+	}
+
+	// Attach the import to a required pallet
 	palletReqsFS, err := pallet.GetPalletReqsFS()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
@@ -65,7 +72,7 @@ func ResolveImport(
 // Evaluate returns a list of target file paths and a mapping between target file paths and source
 // file paths relative to the attached pallet's FS member. Directories are excluded from this
 // mapping.
-func (i *ResolvedImport) Evaluate() (map[string]string, error) {
+func (i *ResolvedImport) Evaluate(loader FSPalletLoader) (map[string]string, error) {
 	pathMappings := make(map[string]string) // target -> source
 	for _, modifier := range i.Def.Modifiers {
 		switch modifier.Type {
@@ -80,11 +87,11 @@ func (i *ResolvedImport) Evaluate() (map[string]string, error) {
 				return pathMappings, err
 			}
 		case ImportModifierTypeAddFeature:
-			if err := applyAddFeatureModifier(modifier, i.Pallet, pathMappings); err != nil {
+			if err := applyAddFeatureModifier(modifier, i.Pallet, pathMappings, loader); err != nil {
 				return pathMappings, err
 			}
 		case ImportModifierTypeRemoveFeature:
-			if err := applyRemoveFeatureModifier(modifier, i.Pallet, pathMappings); err != nil {
+			if err := applyRemoveFeatureModifier(modifier, i.Pallet, pathMappings, loader); err != nil {
 				return pathMappings, err
 			}
 		}
@@ -177,9 +184,9 @@ func matchWithChildren(pattern, name string) (bool, error) {
 }
 
 func applyAddFeatureModifier(
-	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string,
+	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string, loader FSPalletLoader,
 ) error {
-	feature, err := pallet.LoadFeature(modifier.Source)
+	feature, err := pallet.LoadFeature(modifier.Source, loader)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load feature %s", modifier.Source)
 	}
@@ -187,7 +194,7 @@ func applyAddFeatureModifier(
 		Import: feature,
 		Pallet: pallet,
 	}
-	featureMappings, err := resolved.Evaluate()
+	featureMappings, err := resolved.Evaluate(loader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't evaluate feature %s to determine file imports to add", modifier.Source,
@@ -198,9 +205,9 @@ func applyAddFeatureModifier(
 }
 
 func applyRemoveFeatureModifier(
-	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string,
+	modifier ImportModifier, pallet *FSPallet, pathMappings map[string]string, loader FSPalletLoader,
 ) error {
-	feature, err := pallet.LoadFeature(modifier.Source)
+	feature, err := pallet.LoadFeature(modifier.Source, loader)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load feature %s", modifier.Source)
 	}
@@ -208,7 +215,7 @@ func applyRemoveFeatureModifier(
 		Import: feature,
 		Pallet: pallet,
 	}
-	featureMappings, err := resolved.Evaluate()
+	featureMappings, err := resolved.Evaluate(loader)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't evaluate feature %s to determine file imports to add", modifier.Source,
@@ -223,21 +230,26 @@ func applyRemoveFeatureModifier(
 
 // CheckDeprecations returns a list of [error]s for any directly-referenced or
 // transitively-referenced features which are deprecated.
-func (i *ResolvedImport) CheckDeprecations() []error {
+func (i *ResolvedImport) CheckDeprecations(
+	loader FSPalletLoader,
+) (deprecations []error, err error) {
 	if i.Def.Deprecated != "" {
-		return []error{errors.New(i.Def.Deprecated)}
+		return []error{errors.New(i.Def.Deprecated)}, nil
 	}
 
-	errs := make([]error, 0)
 	for _, modifier := range i.Def.Modifiers {
 		switch modifier.Type {
 		default:
 			continue
 		case ImportModifierTypeAddFeature, ImportModifierTypeRemove:
-			errs = append(errs, modifier.CheckDeprecations(i.Pallet)...)
+			checked, err := modifier.CheckDeprecations(i.Pallet, loader)
+			if err != nil {
+				return deprecations, err
+			}
+			deprecations = append(deprecations, checked...)
 		}
 	}
-	return errs
+	return deprecations, nil
 }
 
 // TODO: add a method to check whether any import modifiers don't match any files, so that we can
@@ -362,25 +374,28 @@ func (d ImportDef) RemoveDefaults() ImportDef {
 
 // CheckDeprecations returns a list of [error]s for any directly-referenced or
 // transitively-referenced features in the specified pallet which are deprecated.
-func (m ImportModifier) CheckDeprecations(pallet *FSPallet) []error {
-	feature, err := pallet.LoadFeature(m.Source)
+func (m ImportModifier) CheckDeprecations(
+	pallet *FSPallet, loader FSPalletLoader,
+) (deprecations []error, err error) {
+	feature, err := pallet.LoadFeature(m.Source, loader)
 	if err != nil {
-		return []error{errors.Wrapf(err, "couldn't load referenced feature %s", m.Source)}
+		return nil, errors.Wrapf(err, "couldn't load referenced feature %s", m.Source)
 	}
 	if deprecation := feature.Def.Deprecated; deprecation != "" {
-		return []error{errors.Errorf("feature %s is deprecated: %s", feature.Name, deprecation)}
+		return []error{errors.Errorf("feature %s is deprecated: %s", feature.Name, deprecation)}, nil
 	}
 
-	resolved := &ResolvedImport{
-		Import: feature,
-		Pallet: pallet,
+	resolved, err := ResolveImport(pallet, loader, feature)
+	if err != nil {
+		return deprecations, errors.Wrapf(err, "couldn't resolve feature %s", feature.Name)
 	}
-	deprecations := resolved.CheckDeprecations()
+	deprecations, err = resolved.CheckDeprecations(loader)
+	if err != nil {
+		return deprecations, err
+	}
 	wrapped := make([]error, 0, len(deprecations))
 	for _, deprecation := range deprecations {
-		wrapped = append(wrapped, errors.Wrapf(
-			deprecation, "referenced by feature %s", feature.Name,
-		))
+		wrapped = append(wrapped, errors.Wrapf(deprecation, "referenced by feature %s", feature.Name))
 	}
-	return wrapped
+	return wrapped, nil
 }
