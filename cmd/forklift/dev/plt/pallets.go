@@ -67,7 +67,7 @@ func processFullBaseArgs(
 	}
 	if opts.enableOverrides {
 		if caches.r, err = overlayRepoCacheOverrides(
-			caches.r, c.StringSlice("repo"), plt,
+			caches.r, c.StringSlice("repo"), plt, caches.p,
 		); err != nil {
 			return nil, workspaceCaches{}, err
 		}
@@ -155,12 +155,13 @@ func setPalletOverrideCacheVersions(
 }
 
 func overlayRepoCacheOverrides(
-	underlay forklift.PathedRepoCache, repos []string, plt *forklift.FSPallet,
+	underlay forklift.PathedRepoCache, repos []string,
+	plt *forklift.FSPallet, palletLoader forklift.FSPalletLoader,
 ) (repoCache *forklift.LayeredRepoCache, err error) {
 	repoCache = &forklift.LayeredRepoCache{
 		Underlay: underlay,
 	}
-	replacementRepos, err := loadReplacementRepos(repos)
+	replacementRepos, err := loadReplacementRepos(repos, palletLoader)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +176,9 @@ func overlayRepoCacheOverrides(
 	return repoCache, nil
 }
 
-func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err error) {
+func loadReplacementRepos(
+	fsPaths []string, palletLoader forklift.FSPalletLoader,
+) (replacements []*core.FSRepo, err error) {
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {
@@ -184,7 +187,7 @@ func loadReplacementRepos(fsPaths []string) (replacements []*core.FSRepo, err er
 		if !forklift.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repo replacement path %s", replacementPath)
 		}
-		externalRepos, err := core.LoadFSRepos(forklift.DirFS(replacementPath), "**")
+		externalRepos, err := forklift.LoadFSRepos(forklift.DirFS(replacementPath), "**", palletLoader)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)
 		}
