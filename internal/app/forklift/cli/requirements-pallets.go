@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/core"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
@@ -117,12 +118,12 @@ func printPalletReq(indent int, req forklift.PalletReq) {
 // Add
 
 func AddPalletReqs(
-	indent int, pallet *forklift.FSPallet, cachePath string, palletQueries []string,
+	indent int, pallet *forklift.FSPallet, mirrorsPath string, palletQueries []string,
 ) error {
 	if err := validateGitRepoQueries(palletQueries); err != nil {
 		return errors.Wrap(err, "one or more pallet queries is invalid")
 	}
-	resolved, err := ResolveQueriesUsingLocalMirrors(0, cachePath, palletQueries, true)
+	resolved, err := ResolveQueriesUsingLocalMirrors(0, mirrorsPath, palletQueries, true)
 	if err != nil {
 		return err
 	}
@@ -234,7 +235,8 @@ func determineUsedPalletReqs(
 // Download
 
 func DownloadAllRequiredPallets(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+	indent int, pallet *forklift.FSPallet,
+	mirrorsCache core.Pather, palletsCache forklift.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
@@ -246,20 +248,25 @@ func DownloadAllRequiredPallets(
 	}
 
 	IndentedPrintln(indent, "Downloading required pallets...")
-	return downloadRequiredPallets(indent+1, loadedPalletReqs, cache, skipPalletQueries)
+	return downloadRequiredPallets(
+		indent+1, loadedPalletReqs, mirrorsCache, palletsCache, skipPalletQueries,
+	)
 }
 
 func downloadRequiredPallets(
-	indent int, reqs []*forklift.FSPalletReq, cache forklift.PathedPalletCache,
+	indent int, reqs []*forklift.FSPalletReq,
+	mirrorsCache core.Pather, palletsCache forklift.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	allSkip := make(structures.Set[string])
 	maps.Insert(allSkip, maps.All(skipPalletQueries))
 	downloadedPallets = make(structures.Set[string])
 	for _, req := range reqs {
+		IndentedPrintf(indent, "Caching required pallet %s...\n", req.GetQueryPath())
+		palletIndent := indent + 1
 		if !allSkip.Has(req.GetQueryPath()) {
 			downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-				indent, cache.Path(), req.Path(), req.VersionLock,
+				palletIndent, mirrorsCache.Path(), palletsCache.Path(), req.Path(), req.VersionLock,
 			)
 			if downloaded {
 				downloadedPallets.Add(req.GetQueryPath())
@@ -270,10 +277,10 @@ func downloadRequiredPallets(
 				)
 			}
 		} else {
-			IndentedPrintf(indent, "Skipped download of %s\n", req.GetQueryPath())
+			IndentedPrintln(palletIndent, "Skipped download of pallet!")
 		}
 
-		plt, err := cache.LoadFSPallet(req.Path(), req.VersionLock.Version)
+		plt, err := palletsCache.LoadFSPallet(req.Path(), req.VersionLock.Version)
 		if err != nil {
 			return downloadedPallets, errors.Wrapf(
 				err, "couldn't load downloaded pallet for %s to download its own required pallets",
@@ -281,7 +288,9 @@ func downloadRequiredPallets(
 			)
 		}
 		allSkip.Add(req.GetQueryPath())
-		recurseDownloaded, err := DownloadAllRequiredPallets(indent+1, plt, cache, allSkip)
+		recurseDownloaded, err := DownloadAllRequiredPallets(
+			palletIndent, plt, mirrorsCache, palletsCache, allSkip,
+		)
 		maps.Insert(downloadedPallets, maps.All(recurseDownloaded))
 		maps.Insert(allSkip, maps.All(recurseDownloaded))
 		if err != nil {

@@ -15,6 +15,7 @@ import (
 	"github.com/PlanktoScope/forklift/internal/clients/cli"
 	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/internal/clients/git"
+	"github.com/PlanktoScope/forklift/pkg/core"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
@@ -65,6 +66,7 @@ type StagingVersions struct {
 }
 
 type StagingCaches struct {
+	Mirrors   core.Pather
 	Pallets   forklift.PathedPalletCache
 	Repos     forklift.PathedRepoCache
 	Downloads *forklift.FSDownloadCache
@@ -80,7 +82,7 @@ func StagePallet(
 	}
 
 	pallet, repoCacheWithMerged, err := CacheStagingReqs(
-		0, pallet, caches.Pallets, caches.Repos, caches.Downloads, false, parallel,
+		0, pallet, caches.Mirrors, caches.Pallets, caches.Repos, caches.Downloads, false, parallel,
 	)
 	if err != nil {
 		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")

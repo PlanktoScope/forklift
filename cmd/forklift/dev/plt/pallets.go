@@ -14,6 +14,7 @@ import (
 )
 
 type workspaceCaches struct {
+	m *forklift.FSMirrorCache
 	p *forklift.LayeredPalletCache
 	r *forklift.LayeredRepoCache
 	d *forklift.FSDownloadCache
@@ -21,6 +22,7 @@ type workspaceCaches struct {
 
 func (c workspaceCaches) staging() fcli.StagingCaches {
 	return fcli.StagingCaches{
+		Mirrors:   c.m,
 		Pallets:   c.p,
 		Repos:     c.r,
 		Downloads: c.d,
@@ -42,6 +44,13 @@ func processFullBaseArgs(
 		return nil, workspaceCaches{}, err
 	}
 	wpath := c.String("workspace")
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, workspaceCaches{}, err
+	}
+	if caches.m, err = workspace.GetMirrorCache(); err != nil {
+		return nil, workspaceCaches{}, err
+	}
 	caches.p = &forklift.LayeredPalletCache{}
 	if caches.p.Underlay, err = fcli.GetPalletCache(
 		wpath, plt, opts.requirePalletCache || opts.merge,
@@ -239,7 +248,8 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.p, caches.r, caches.d, c.Bool("include-disabled"), c.Bool("parallel"),
+			0, plt, caches.m, caches.p, caches.r, caches.d,
+			c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
@@ -413,11 +423,15 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		cache, err := workspace.GetPalletCache()
+		mirrorCache, err := workspace.GetMirrorCache()
 		if err != nil {
 			return err
 		}
-		downloaded, err := fcli.DownloadAllRequiredPallets(0, plt, cache, nil)
+		palletCache, err := workspace.GetPalletCache()
+		if err != nil {
+			return err
+		}
+		downloaded, err := fcli.DownloadAllRequiredPallets(0, plt, mirrorCache, palletCache, nil)
 		if err != nil {
 			return err
 		}
@@ -475,7 +489,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.AddPalletReqs(
-			0, plt, workspace.GetPalletCachePath(), c.Args().Slice(),
+			0, plt, workspace.GetMirrorCachePath(), c.Args().Slice(),
 		); err != nil {
 			return err
 		}
@@ -487,7 +501,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

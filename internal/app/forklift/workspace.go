@@ -118,6 +118,26 @@ func (w *FSWorkspace) getCacheFS() (core.PathedFS, error) {
 	return fsys, nil
 }
 
+// Cache: Mirrors
+
+func (w *FSWorkspace) GetMirrorCachePath() string {
+	return path.Join(w.getCachePath(), cacheMirrorsDirName)
+}
+
+func (w *FSWorkspace) GetMirrorCache() (*FSMirrorCache, error) {
+	fsys, err := w.getCacheFS()
+	if err != nil {
+		return nil, err
+	}
+	pathedFS, err := fsys.Sub(cacheMirrorsDirName)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get mirrors cache from workspace")
+	}
+	return &FSMirrorCache{
+		FS: pathedFS,
+	}, nil
+}
+
 // Cache: Repos
 
 func (w *FSWorkspace) GetRepoCachePath() string {

@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - (Breaking change; cli) Removed some aliases for `[dev] plt add-plt` and `[dev] plt add-repo` which should not have been added, because they were constructed as a combination of an abbrebiation and an unabbreviated word.
 - (Breaking change; cli) Now, by default `[dev] plt ls-file` and `[dev] plt ls-plt-file` don't list files in hidden directories (i.e. directories whose names start with `.`) at the root of the pallet. To list all files including those in hidden directories, you should now specify `**` as the file path glob (e.g. by running `[dev] plt ls-file '**'` or `[dev] plt ls-plt-file required_pallet_path '**'`).
+- (cli) Git repository mirrors of pallets and package repos in the cache are now stored in a single `mirrors` subdirectory of the Forklift workspace, rather than being split/duplicated across the `pallets` and `repositories` subdirectories.
 - (cli) Suppressed some noisy Git cloning output in `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands.
 - (cli) `[dev] plt show-imp` now shows any deprecated notices of deprecated features referenced directly or indirectly by the specified import group.
 

@@ -152,12 +152,12 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 // Add
 
 func AddRepoReqs(
-	indent int, pallet *forklift.FSPallet, cachePath string, repoQueries []string,
+	indent int, pallet *forklift.FSPallet, mirrorsPath string, repoQueries []string,
 ) error {
 	if err := validateGitRepoQueries(repoQueries); err != nil {
 		return errors.Wrap(err, "one or more repo queries is invalid")
 	}
-	resolved, err := ResolveQueriesUsingLocalMirrors(0, cachePath, repoQueries, true)
+	resolved, err := ResolveQueriesUsingLocalMirrors(0, mirrorsPath, repoQueries, true)
 	if err != nil {
 		return err
 	}
@@ -290,8 +290,9 @@ func determineUsedRepoReqs(
 // Download
 
 func DownloadAllRequiredRepos(
-	indent int, pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache,
-	palletCache forklift.PathedPalletCache, skipPalletQueries structures.Set[string],
+	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
+	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	skipPalletQueries structures.Set[string],
 ) (changed bool, err error) {
 	loadedRepoReqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
@@ -302,18 +303,23 @@ func DownloadAllRequiredRepos(
 	}
 
 	IndentedPrintln(indent, "Downloading required repos...")
-	return downloadRequiredRepos(indent+1, loadedRepoReqs, repoCache, palletCache, skipPalletQueries)
+	return downloadRequiredRepos(
+		indent+1, loadedRepoReqs, mirrorsCache, palletCache, repoCache, skipPalletQueries,
+	)
 }
 
 func downloadRequiredRepos(
-	indent int, reqs []*forklift.FSRepoReq, repoCache forklift.PathedRepoCache,
-	palletCache forklift.PathedPalletCache, skipPalletQueries structures.Set[string],
+	indent int, reqs []*forklift.FSRepoReq, mirrorsCache core.Pather,
+	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	skipPalletQueries structures.Set[string],
 ) (changed bool, err error) {
 	allSkip := make(structures.Set[string])
 	maps.Insert(allSkip, maps.All(skipPalletQueries))
 	for _, req := range reqs {
+		IndentedPrintf(indent, "Caching required repo %s...\n", req.GetQueryPath())
+		repoIndent := indent + 1
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, repoCache.Path(), req.Path(), req.VersionLock,
+			repoIndent, mirrorsCache.Path(), repoCache.Path(), req.Path(), req.VersionLock,
 		)
 		changed = changed || downloaded
 		if err != nil {
@@ -335,23 +341,23 @@ func downloadRequiredRepos(
 			repoCache.Path(), req.GetQueryPath(),
 		))); err != nil {
 			return changed, errors.Wrapf(
-				err, "couldn't delete download of repo %s in order to cache it as a layered pallet",
+				err, "couldn't delete download of repo %s in order to cache it as a merged pallet",
 				req.GetQueryPath(),
 			)
 		}
-		IndentedPrintln(indent+1, "Re-downloading repo as pallet...")
-		downloadedPallets, err := downloadRequiredPallets(indent+1, []*forklift.FSPalletReq{
+		IndentedPrintln(repoIndent, "Re-caching repo as a merged pallet...")
+		downloadedPallets, err := downloadRequiredPallets(repoIndent+1, []*forklift.FSPalletReq{
 			{
 				PalletReq: forklift.PalletReq{GitRepoReq: req.GitRepoReq},
 				FS:        req.FS,
 			},
-		}, palletCache, allSkip)
+		}, mirrorsCache, palletCache, allSkip)
 		maps.Insert(allSkip, maps.All(downloadedPallets))
 		if err != nil {
 			return changed, err
 		}
 		if err = cacheRepoFromCachedPallet(
-			req.Path(), req.VersionLock.Version, repoCache, palletCache,
+			repoIndent+1, req.Path(), req.VersionLock.Version, repoCache, palletCache,
 		); err != nil {
 			return changed, errors.Wrapf(
 				err, "couldn't create cached repo %s from pallet", req.GetQueryPath(),
@@ -362,19 +368,21 @@ func downloadRequiredRepos(
 }
 
 func cacheRepoFromCachedPallet(
-	repoPath, repoVersion string,
+	indent int, repoPath, repoVersion string,
 	repoCache forklift.PathedRepoCache, palletCache forklift.PathedPalletCache,
 ) error {
 	plt, err := palletCache.LoadFSPallet(repoPath, repoVersion)
 	if err != nil {
 		return err
 	}
+	IndentedPrintln(indent, "Merging pallet with any file imports from its own required pallets...")
 	merged, err := forklift.MergeFSPallet(plt, palletCache, nil)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't merge repo %s as a pallet with any pallets required by it", plt.Path(),
 		)
 	}
+	IndentedPrintln(indent, "Writing merged result as a repo...")
 	if err = forklift.CopyFS(
 		merged.FS, filepath.FromSlash(path.Join(
 			repoCache.Path(), fmt.Sprintf("%s@%s", repoPath, repoVersion),
@@ -383,6 +391,7 @@ func cacheRepoFromCachedPallet(
 		return errors.Wrapf(err, "couldn't copy merged pallet %s into repo cache", plt.Path())
 	}
 	if _, err = repoCache.LoadFSRepo(repoPath, repoVersion); err != nil {
+		IndentedPrintln(indent, "Writing repo declaration implied by pallet declaration...")
 		if err = core.WriteRepoDef(
 			core.RepoDef{
 				ForkliftVersion: merged.Def.ForkliftVersion,
