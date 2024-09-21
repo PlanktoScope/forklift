@@ -15,6 +15,7 @@ import (
 )
 
 type workspaceCaches struct {
+	m *forklift.FSMirrorCache
 	p *forklift.FSPalletCache
 	r *forklift.LayeredRepoCache
 	d *forklift.FSDownloadCache
@@ -22,6 +23,7 @@ type workspaceCaches struct {
 
 func (c workspaceCaches) staging() fcli.StagingCaches {
 	return fcli.StagingCaches{
+		Mirrors:   c.m,
 		Pallets:   c.p,
 		Repos:     c.r,
 		Downloads: c.d,
@@ -39,6 +41,13 @@ func processFullBaseArgs(
 	wpath string, opts processingOptions,
 ) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
 	if plt, err = getShallowPallet(wpath); err != nil {
+		return nil, workspaceCaches{}, err
+	}
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, workspaceCaches{}, err
+	}
+	if caches.m, err = workspace.GetMirrorCache(); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	if caches.p, err = fcli.GetPalletCache(
@@ -89,7 +98,8 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.p, caches.r, caches.d, c.Bool("include-disabled"), c.Bool("parallel"),
+			0, plt, caches.m, caches.p, caches.r, caches.d,
+			c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
@@ -362,7 +372,7 @@ func preparePallet(
 ) error {
 	// clone pallet
 	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
-		0, workspace.GetPalletCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
+		0, workspace.GetMirrorCachePath(), gitRepoQuery.Path, gitRepoQuery.VersionQuery,
 		workspace.GetCurrentPalletPath(), updateLocalMirror,
 	); err != nil {
 		return err
@@ -382,7 +392,7 @@ func preparePallet(
 	if cacheStagingReqs {
 		fmt.Println()
 		if _, _, err = fcli.CacheStagingReqs(
-			0, plt, caches.p, caches.r, caches.d, false, parallel,
+			0, plt, caches.m, caches.p, caches.r, caches.d, false, parallel,
 		); err != nil {
 			return err
 		}
@@ -438,7 +448,7 @@ func checkUpgrade(
 ) error {
 	fcli.IndentedPrintln(indent, "Resolving upgrade version query...")
 	upgradeResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
-		indent+1, workspace.GetPalletCachePath(), []string{upgradeQuery.String()}, true,
+		indent+1, workspace.GetMirrorCachePath(), []string{upgradeQuery.String()}, true,
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't resolve upgrade version query")
@@ -487,7 +497,7 @@ func resolveCurrentPalletVersion(
 	currentResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
 		// Note: we don't update the local mirror because we already updated it to resolve the current
 		// version query
-		indent, workspace.GetPalletCachePath(), []string{currentQuery.String()}, false,
+		indent, workspace.GetMirrorCachePath(), []string{currentQuery.String()}, false,
 	)
 	if err != nil {
 		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
@@ -732,7 +742,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 
 		if !c.Bool("no-cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -923,11 +933,15 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		cache, err := workspace.GetPalletCache()
+		mirrorCache, err := workspace.GetMirrorCache()
 		if err != nil {
 			return err
 		}
-		downloaded, err := fcli.DownloadAllRequiredPallets(0, plt, cache, nil)
+		palletCache, err := workspace.GetPalletCache()
+		if err != nil {
+			return err
+		}
+		downloaded, err := fcli.DownloadAllRequiredPallets(0, plt, mirrorCache, palletCache, nil)
 		if err != nil {
 			return err
 		}
@@ -985,7 +999,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.AddPalletReqs(
-			0, plt, workspace.GetPalletCachePath(), c.Args().Slice(),
+			0, plt, workspace.GetMirrorCachePath(), c.Args().Slice(),
 		); err != nil {
 			return err
 		}
@@ -995,7 +1009,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

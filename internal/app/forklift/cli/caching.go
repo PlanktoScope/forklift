@@ -4,15 +4,17 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
 func CacheAllReqs(
-	indent int, pallet *forklift.FSPallet, palletCache forklift.PathedPalletCache,
-	repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
+	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
+	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	dlCache *forklift.FSDownloadCache,
 	includeDisabled, parallel bool,
 ) error {
 	pallet, repoCacheWithMerged, err := CacheStagingReqs(
-		indent, pallet, palletCache, repoCache, dlCache, includeDisabled, parallel,
+		indent, pallet, mirrorsCache, palletCache, repoCache, dlCache, includeDisabled, parallel,
 	)
 	if err != nil {
 		return err
@@ -26,14 +28,17 @@ func CacheAllReqs(
 }
 
 func CacheStagingReqs(
-	indent int, pallet *forklift.FSPallet, palletCache forklift.PathedPalletCache,
-	repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
+	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
+	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	dlCache *forklift.FSDownloadCache,
 	includeDisabled, parallel bool,
 ) (merged *forklift.FSPallet, repoCacheWithMerged *forklift.LayeredRepoCache, err error) {
 	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
 	indent++
 
-	downloadedPallets, err := DownloadAllRequiredPallets(indent, pallet, palletCache, nil)
+	downloadedPallets, err := DownloadAllRequiredPallets(
+		indent, pallet, mirrorsCache, palletCache, nil,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,7 +59,7 @@ func CacheStagingReqs(
 	}
 
 	if _, err = DownloadAllRequiredRepos(
-		indent, merged, repoCache, palletCache, downloadedPallets,
+		indent, merged, mirrorsCache, palletCache, repoCache, downloadedPallets,
 	); err != nil {
 		return merged, repoCacheWithMerged, err
 	}

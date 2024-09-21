@@ -102,11 +102,19 @@ var Cmd = &cli.Command{
 			Action:   rmAllAction,
 		},
 		{
+			Name:     "rm-mir",
+			Aliases:  []string{"remove-mirrors", "del-mir", "delete-mirrors"},
+			Category: "Modify the cache",
+			Usage:    "Removes locally-cached pallets",
+			// TODO: allow only removing mirrors matching a glob pattern
+			Action: rmGitRepoAction("mirror", getMirrorCache),
+		},
+		{
 			Name:     "rm-plt",
 			Aliases:  []string{"remove-pallets", "del-plt", "delete-pallets"},
 			Category: "Modify the cache",
 			Usage:    "Removes locally-cached pallets",
-			// TODO: allow only removing repos matching a glob pattern
+			// TODO: allow only removing pallets matching a glob pattern
 			Action: rmGitRepoAction("pallet", getPalletCache),
 		},
 		{

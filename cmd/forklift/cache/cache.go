@@ -18,6 +18,26 @@ var errMissingCache = errors.New(
 		"`forklift plt cache-repo`",
 )
 
+func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache, error) {
+	if ensureWorkspace {
+		if !forklift.DirExists(wpath) {
+			fmt.Printf("Making a new workspace at %s...", wpath)
+		}
+		if err := forklift.EnsureExists(wpath); err != nil {
+			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
+		}
+	}
+	workspace, err := forklift.LoadWorkspace(wpath)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := workspace.GetMirrorCache()
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
 func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
 	if ensureWorkspace {
 		if !forklift.DirExists(wpath) {
@@ -61,6 +81,9 @@ func getRepoCache(wpath string, ensureWorkspace bool) (*forklift.FSRepoCache, er
 // rm-all
 
 func rmAllAction(c *cli.Context) error {
+	if err := rmGitRepoAction("mirror", getMirrorCache)(c); err != nil {
+		return errors.Wrap(err, "couldn't remove cached mirrors")
+	}
 	if err := rmGitRepoAction("pallet", getPalletCache)(c); err != nil {
 		return errors.Wrap(err, "couldn't remove cached pallets")
 	}

@@ -23,7 +23,9 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		changed, err := fcli.DownloadAllRequiredRepos(0, plt, caches.r.Underlay, caches.p, nil)
+		changed, err := fcli.DownloadAllRequiredRepos(
+			0, plt, caches.m, caches.p, caches.r.Underlay, nil,
+		)
 		if err != nil {
 			return err
 		}
@@ -98,12 +100,12 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.AddRepoReqs(0, plt, caches.r.Underlay.Path(), c.Args().Slice()); err != nil {
+		if err = fcli.AddRepoReqs(0, plt, caches.m.Path(), c.Args().Slice()); err != nil {
 			return err
 		}
 		if !c.Bool("no-cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

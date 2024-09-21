@@ -5,6 +5,15 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
+// Mirror
+
+// FSMirrorCache is a [PathedPalletCache] implementation with git repository mirrors
+// stored in a [core.PathedFS] filesystem.
+type FSMirrorCache struct {
+	// FS is the filesystem which corresponds to the cache of pallets.
+	FS core.PathedFS
+}
+
 // Pallet
 
 // FSPalletLoader is a source of [FSPallet]s indexed by path and version.

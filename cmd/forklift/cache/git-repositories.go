@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
@@ -67,10 +68,14 @@ func addGitRepoAction[Cache core.Pather](
 		if err != nil {
 			return err
 		}
+		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		if err != nil {
+			return err
+		}
 
 		queries := c.Args().Slice()
 		if _, _, err = fcli.DownloadQueriedGitReposUsingLocalMirrors(
-			0, cache.Path(), queries,
+			0, workspace.GetMirrorCachePath(), cache.Path(), queries,
 		); err != nil {
 			return err
 		}
