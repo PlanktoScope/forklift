@@ -23,7 +23,7 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		changed, err := fcli.DownloadRequiredRepos(0, plt, caches.r.Underlay.Path())
+		changed, err := fcli.DownloadAllRequiredRepos(0, plt, caches.r.Underlay, caches.p, nil)
 		if err != nil {
 			return err
 		}

@@ -927,7 +927,7 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		downloaded, err := fcli.DownloadRequiredPallets(0, plt, cache, nil)
+		downloaded, err := fcli.DownloadAllRequiredPallets(0, plt, cache, nil)
 		if err != nil {
 			return err
 		}

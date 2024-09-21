@@ -91,13 +91,13 @@ func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 		return errors.Errorf("pallet %s was not merged before bundling!", pallet.Path())
 	}
 
-	if err := copyFS(shallow, filepath.FromSlash(b.getBundledPalletPath())); err != nil {
+	if err := CopyFS(shallow, filepath.FromSlash(b.getBundledPalletPath())); err != nil {
 		return errors.Wrapf(
 			err, "couldn't bundle files for unmerged pallet %s from %s", pallet.Path(), pallet.FS.Path(),
 		)
 	}
 
-	if err := copyFS(pallet.FS, filepath.FromSlash(b.getBundledMergedPalletPath())); err != nil {
+	if err := CopyFS(pallet.FS, filepath.FromSlash(b.getBundledMergedPalletPath())); err != nil {
 		return errors.Wrapf(
 			err, "couldn't bundle files for merged pallet %s from %s", pallet.Path(), pallet.FS.Path(),
 		)
@@ -105,7 +105,7 @@ func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 	return nil
 }
 
-func copyFS(fsys core.PathedFS, dest string) error {
+func CopyFS(fsys core.PathedFS, dest string) error {
 	return fs.WalkDir(fsys, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -157,7 +157,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 		if err != nil {
 			return err
 		}
-		return copyFS(fsys, destPath)
+		return CopyFS(fsys, destPath)
 	}
 
 	destFile, err := os.OpenFile( //nolint:gosec // dest path is set by config files which we trust
@@ -213,7 +213,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
 	}
-	if err = copyFS(depl.Pkg.FS, filepath.FromSlash(
+	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
 	)); err != nil {
 		return errors.Wrapf(
@@ -293,22 +293,15 @@ func (b *FSBundle) getPackagesPath() string {
 // WriteRepoDefFile creates a repo definition file at the packages path, so that all loaded packages
 // are associated with a repo.
 func (b *FSBundle) WriteRepoDefFile() error {
-	repoDef := core.RepoDef{
-		ForkliftVersion: b.Manifest.ForkliftVersion,
-	}
-	marshaled, err := yaml.Marshal(repoDef)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal bundled repo declaration")
-	}
-	if err = EnsureExists(b.getPackagesPath()); err != nil {
+	if err := EnsureExists(b.getPackagesPath()); err != nil {
 		return err
 	}
-	outputPath := filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile))
-	const perm = 0o644 // owner rw, group r, public r
-	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save bundled repo declaration to %s", outputPath)
-	}
-	return nil
+	return core.WriteRepoDef(
+		core.RepoDef{
+			ForkliftVersion: b.Manifest.ForkliftVersion,
+		},
+		filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile)),
+	)
 }
 
 // FSBundle: Exports
