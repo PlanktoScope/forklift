@@ -256,9 +256,7 @@ func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 					"replace such pallets if the --force flag is enabled",
 			)
 		}
-		fmt.Println(
-			"Warning: we will delete and replace the local pallet even though it's not a Git repo!",
-		)
+		fmt.Println("Warning: the local pallet isn't a Git repo, but we'll delete and replace it!")
 	}
 
 	status, err := gitRepo.Status()
@@ -269,19 +267,21 @@ func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 		if !force {
 			return errors.Errorf(
 				"the local pallet already exists and has changes which have not yet been saved in a Git " +
-					"commit (i.e. which have not yet been backed up), but we can only delete and replace " +
-					"such pallets if the --force flag is enabled",
+					"commit (i.e. not yet backed up); to ignore this, enable the --force flag",
 			)
 		}
 		fmt.Println(
-			"Warning: we will delete and replace the local pallet even though it has changes which " +
+			"Warning: we'll delete and replace the local pallet even though it has changes which " +
 				"have not yet been saved in a Git commit (i.e. which have not yet been backed up)!",
 		)
 	}
 
-	fmt.Printf(
-		"Checking whether the current commit of %s exists on a remote Git repo...\n", pltPath,
-	)
+	fmt.Println("Fetching changes from the remote...")
+	if err = gitRepo.FetchAll(1, os.Stdout); err != nil {
+		return errors.Wrap(err, "couldn't fetch changes from the remote Git repo")
+	}
+
+	fmt.Printf("Checking whether the current commit of %s exists on a remote Git repo...\n", pltPath)
 	remotesHaveHead, err := isHeadInRemotes(1, gitRepo)
 	if err != nil {
 		return errors.Wrapf(
@@ -352,6 +352,8 @@ func isHeadInRemotes(indent int, gitRepo *git.Repo) (bool, error) {
 		indent, "Searching ancestors of retrieved remote references for current commit %s...\n",
 		head[:shortHashLength],
 	)
+	// Warning: the following function call assumes that head commits are available to the git repo,
+	// which requires the git repo to have fetched all updated heads from the remotes!
 	remotesHaveHead, err := gitRepo.RefsHaveAncestor(refs, head)
 	if err != nil {
 		fcli.IndentedPrintln(

@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Now repos with packages constructed through pallet layering (for repos which are also layered pallets) can actually be used by other pallets as sources of packages. This is done by merging the pallet as part of the work of downloading it into the cache as a repo.
 - (cli) Transitive imports of files across pallets (e.g. importing a file from a pallet which actually imports that file from another pallet) is no longer completely broken (it should work, but there may still be undiscovered bugs because the code paths have not been thoroughly tested).
 - (cli) `[dev] plt cache-plt`, `[dev] plt cache-all`, and other related commands now recursively cache all transitively-required pallets of the local/development pallet, instead of only caching directly-required pallets.
+- (cli) `plt switch` now fetches changes (i.e. branch/tag refs and commit objects) from all remotes before checking whether the current commit of the local pallet exists on some remote, in order to prevent that check from spuriously failing when the remotes have new commits not yet in the local pallet.
 
 ## 0.8.0-alpha.1 - 2024-08-30
 
