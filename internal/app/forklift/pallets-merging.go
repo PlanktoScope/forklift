@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"bytes"
 	"cmp"
 	"io/fs"
 	"maps"
@@ -202,23 +203,77 @@ func mergePalletImports(
 				continue
 			}
 
-			// TODO: check for file contents+metadata conflicts among file mappings of different
-			// required pallets; when multiple pallets map the same source file (without any contents or
-			// metadata conflicts between their versions of the source file) to the same target file,
-			// choose the alphabetically first pallet for resolving that target file. For now we just
-			// reject all such situations as invalid, because that's simpler to implement.
-			if prevRef.fs.Path() != ref.fs.Path() || prevRef.path != ref.path {
-				return nil, errors.Errorf(
-					"couldn't add a mapping from %s to target %s, when a mapping was previously added "+
-						"from %s to target %s (we have not yet implemented a relaxation of this check to "+
-						"allow cases where duplicate mappings refer to the exact same file)",
+			result, err := filesAreIdentical(prevRef, ref)
+			if err != nil {
+				return nil, errors.Wrapf(
+					err, "couldn't check whether source files %s and %s (both mapping to %s) are identical",
+					path.Join(ref.fs.Path(), ref.path), path.Join(prevRef.fs.Path(), prevRef.path), target,
+				)
+			}
+			if result != nil {
+				return nil, errors.Wrapf(
+					result, "couldn't add a mapping from %s to target %s, when a mapping was previously "+
+						"added from %s to target %s",
 					path.Join(ref.fs.Path(), ref.path), target,
 					path.Join(prevRef.fs.Path(), prevRef.path), target,
 				)
 			}
+
+			if ref.fs.Path() < prevRef.fs.Path() {
+				merged[strings.TrimPrefix(target, "/")] = ref
+			}
 		}
 	}
 	return merged, nil
+}
+
+// filesAreIdentical checks whether the two file references are identical or are referencing files
+// with identical file type (dir vs. non-dir), size, permissions, and contents. A non-nil result
+// is returned with a nill err if the files are not identical, explaining why the files are not
+// identical.
+func filesAreIdentical(a, b fileRef) (result error, err error) {
+	if a.fs.Path() == b.fs.Path() && a.path == b.path {
+		return nil, nil
+	}
+
+	aInfo, err := fs.Stat(a.fs, a.path)
+	if err != nil {
+		return nil, err
+	}
+	bInfo, err := fs.Stat(b.fs, b.path)
+	if err != nil {
+		return nil, err
+	}
+	if aInfo.IsDir() != bInfo.IsDir() {
+		return errors.New("source files have different types (directory vs. non-directory)"), nil
+	}
+	if aInfo.Size() != bInfo.Size() {
+		return errors.Errorf(
+			"source files have different sizes (%d vs. %d)", aInfo.Size(), bInfo.Size(),
+		), nil
+	}
+	if aInfo.Mode().Perm() != bInfo.Mode().Perm() {
+		return errors.Errorf(
+			"source files have different permissions (%s vs. %s)",
+			aInfo.Mode().Perm(), bInfo.Mode().Perm(),
+		), nil
+	}
+
+	// Note: we load both files entirely into memory because that's simpler. If memory constraints
+	// or performance requirements eventually make this a problem, we can optimize this later by
+	// comparing bytes as we read them from the files.
+	aBytes, err := fs.ReadFile(a.fs, a.path)
+	if err != nil {
+		return nil, err
+	}
+	bBytes, err := fs.ReadFile(b.fs, b.path)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(aBytes, bBytes) {
+		return errors.New("source files have different contents"), nil
+	}
+	return nil, nil
 }
 
 // MergeFS
