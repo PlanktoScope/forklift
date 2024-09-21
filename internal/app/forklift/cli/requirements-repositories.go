@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 func GetRepoCache(
@@ -287,8 +289,9 @@ func determineUsedRepoReqs(
 
 // Download
 
-func DownloadRequiredRepos(
-	indent int, pallet *forklift.FSPallet, cachePath string,
+func DownloadAllRequiredRepos(
+	indent int, pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache,
+	palletCache forklift.PathedPalletCache, skipPalletQueries structures.Set[string],
 ) (changed bool, err error) {
 	loadedRepoReqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
@@ -299,19 +302,102 @@ func DownloadRequiredRepos(
 	}
 
 	IndentedPrintln(indent, "Downloading required repos...")
-	indent++
-	// FIXME: for repositories which are also layered pallets, we must download its required pallets,
-	// so that we can layer in any imported files for packages exported by the repository.
-	for _, req := range loadedRepoReqs {
+	return downloadRequiredRepos(indent+1, loadedRepoReqs, repoCache, palletCache, skipPalletQueries)
+}
+
+func downloadRequiredRepos(
+	indent int, reqs []*forklift.FSRepoReq, repoCache forklift.PathedRepoCache,
+	palletCache forklift.PathedPalletCache, skipPalletQueries structures.Set[string],
+) (changed bool, err error) {
+	allSkip := make(structures.Set[string])
+	maps.Insert(allSkip, maps.All(skipPalletQueries))
+	for _, req := range reqs {
 		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cachePath, req.Path(), req.VersionLock,
+			indent, repoCache.Path(), req.Path(), req.VersionLock,
 		)
 		changed = changed || downloaded
 		if err != nil {
-			return false, errors.Wrapf(
+			return changed, errors.Wrapf(
 				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+			)
+		}
+		if !changed {
+			continue
+		}
+		if _, err := forklift.LoadFSPallet(
+			core.AttachPath(os.DirFS(repoCache.Path()), repoCache.Path()), req.GetQueryPath(),
+		); err != nil {
+			// the repo is not a pallet, so we can use it directly as a repo
+			continue
+		}
+
+		if err = os.RemoveAll(filepath.FromSlash(path.Join(
+			repoCache.Path(), req.GetQueryPath(),
+		))); err != nil {
+			return changed, errors.Wrapf(
+				err, "couldn't delete download of repo %s in order to cache it as a layered pallet",
+				req.GetQueryPath(),
+			)
+		}
+		IndentedPrintln(indent+1, "Re-downloading repo as pallet...")
+		downloadedPallets, err := downloadRequiredPallets(indent+1, []*forklift.FSPalletReq{
+			{
+				PalletReq: forklift.PalletReq{GitRepoReq: req.GitRepoReq},
+				FS:        req.FS,
+			},
+		}, palletCache, allSkip)
+		maps.Insert(allSkip, maps.All(downloadedPallets))
+		if err != nil {
+			return changed, err
+		}
+		if err = cacheRepoFromCachedPallet(
+			req.Path(), req.VersionLock.Version, repoCache, palletCache,
+		); err != nil {
+			return changed, errors.Wrapf(
+				err, "couldn't create cached repo %s from pallet", req.GetQueryPath(),
 			)
 		}
 	}
 	return changed, nil
+}
+
+func cacheRepoFromCachedPallet(
+	repoPath, repoVersion string,
+	repoCache forklift.PathedRepoCache, palletCache forklift.PathedPalletCache,
+) error {
+	plt, err := palletCache.LoadFSPallet(repoPath, repoVersion)
+	if err != nil {
+		return err
+	}
+	merged, err := forklift.MergeFSPallet(plt, palletCache, nil)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't merge repo %s as a pallet with any pallets required by it", plt.Path(),
+		)
+	}
+	if err = forklift.CopyFS(
+		merged.FS, filepath.FromSlash(path.Join(
+			repoCache.Path(), fmt.Sprintf("%s@%s", repoPath, repoVersion),
+		)),
+	); err != nil {
+		return errors.Wrapf(err, "couldn't copy merged pallet %s into repo cache", plt.Path())
+	}
+	if _, err = repoCache.LoadFSRepo(repoPath, repoVersion); err != nil {
+		if err = core.WriteRepoDef(
+			core.RepoDef{
+				ForkliftVersion: merged.Def.ForkliftVersion,
+				Repo: core.RepoSpec{
+					Path:        merged.Def.Pallet.Path,
+					Description: merged.Def.Pallet.Description,
+					ReadmeFile:  merged.Def.Pallet.ReadmeFile,
+				},
+			},
+			filepath.FromSlash(path.Join(
+				repoCache.Path(), fmt.Sprintf("%s@%s", repoPath, repoVersion), core.RepoDefFile,
+			)),
+		); err != nil {
+			return errors.Wrap(err, "couldn't initialize repo declaration from pallet declaration")
+		}
+	}
+	return nil
 }

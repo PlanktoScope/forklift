@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -188,6 +189,19 @@ func LoadRepoDef(fsys PathedFS, filePath string) (RepoDef, error) {
 // Check looks for errors in the construction of the repo declaration.
 func (d RepoDef) Check() (errs []error) {
 	return ErrsWrap(d.Repo.Check(), "invalid repo spec")
+}
+
+// WriteRepoDef creates a repo definition file at the specified path.
+func WriteRepoDef(repoDef RepoDef, outputPath string) error {
+	marshaled, err := yaml.Marshal(repoDef)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal bundled repo declaration")
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save repo declaration to %s", outputPath)
+	}
+	return nil
 }
 
 // RepoSpec

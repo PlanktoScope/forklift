@@ -233,9 +233,9 @@ func determineUsedPalletReqs(
 
 // Download
 
-func DownloadRequiredPallets(
+func DownloadAllRequiredPallets(
 	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
-	skipPalletPaths structures.Set[string],
+	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
@@ -246,27 +246,33 @@ func DownloadRequiredPallets(
 	}
 
 	IndentedPrintln(indent, "Downloading required pallets...")
-	indent++
+	return downloadRequiredPallets(indent+1, loadedPalletReqs, cache, skipPalletQueries)
+}
+
+func downloadRequiredPallets(
+	indent int, reqs []*forklift.FSPalletReq, cache forklift.PathedPalletCache,
+	skipPalletQueries structures.Set[string],
+) (downloadedPallets structures.Set[string], err error) {
 	allSkip := make(structures.Set[string])
-	maps.Insert(allSkip, maps.All(skipPalletPaths))
+	maps.Insert(allSkip, maps.All(skipPalletQueries))
 	downloadedPallets = make(structures.Set[string])
-	for _, req := range loadedPalletReqs {
-		palletPath := fmt.Sprintf("%s@%s", req.Path(), req.VersionLock.Version)
-		if allSkip.Has(palletPath) {
-			IndentedPrintf(indent, "Skipped download of %s\n", palletPath)
-			continue
-		}
-		downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
-			indent, cache.Path(), req.Path(), req.VersionLock,
-		)
-		if downloaded {
-			downloadedPallets.Add(palletPath)
-		}
-		if err != nil {
-			return downloadedPallets, errors.Wrapf(
-				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+	for _, req := range reqs {
+		if !allSkip.Has(req.GetQueryPath()) {
+			downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
+				indent, cache.Path(), req.Path(), req.VersionLock,
 			)
+			if downloaded {
+				downloadedPallets.Add(req.GetQueryPath())
+			}
+			if err != nil {
+				return downloadedPallets, errors.Wrapf(
+					err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+				)
+			}
+		} else {
+			IndentedPrintf(indent, "Skipped download of %s\n", req.GetQueryPath())
 		}
+
 		plt, err := cache.LoadFSPallet(req.Path(), req.VersionLock.Version)
 		if err != nil {
 			return downloadedPallets, errors.Wrapf(
@@ -274,12 +280,14 @@ func DownloadRequiredPallets(
 				req.Path(),
 			)
 		}
-		allSkip.Add(palletPath)
-		recurseDownloaded, err := DownloadRequiredPallets(indent+1, plt, cache, allSkip)
+		allSkip.Add(req.GetQueryPath())
+		recurseDownloaded, err := DownloadAllRequiredPallets(indent+1, plt, cache, allSkip)
 		maps.Insert(downloadedPallets, maps.All(recurseDownloaded))
 		maps.Insert(allSkip, maps.All(recurseDownloaded))
 		if err != nil {
-			return downloadedPallets, err
+			return downloadedPallets, errors.Wrapf(
+				err, "couldn't download pallets required by pallet %s", req.GetQueryPath(),
+			)
 		}
 	}
 	return downloadedPallets, nil

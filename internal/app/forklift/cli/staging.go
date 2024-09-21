@@ -65,8 +65,8 @@ type StagingVersions struct {
 }
 
 type StagingCaches struct {
-	Repos     forklift.PathedRepoCache
 	Pallets   forklift.PathedPalletCache
+	Repos     forklift.PathedRepoCache
 	Downloads *forklift.FSDownloadCache
 }
 
