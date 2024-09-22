@@ -2,6 +2,7 @@ package forklift
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -60,13 +61,16 @@ func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error
 }
 
 func (b *FSBundle) WriteManifestFile() error {
-	marshaled, err := yaml.Marshal(b.Manifest)
-	if err != nil {
+	buf := bytes.Buffer{}
+	encoder := yaml.NewEncoder(&buf)
+	const yamlIndent = 2
+	encoder.SetIndent(yamlIndent)
+	if err := encoder.Encode(b.Manifest); err != nil {
 		return errors.Wrapf(err, "couldn't marshal bundle manifest")
 	}
 	outputPath := filepath.FromSlash(path.Join(b.FS.Path(), BundleManifestFile))
 	const perm = 0o644 // owner rw, group r, public r
-	if err := os.WriteFile(outputPath, marshaled, perm); err != nil {
+	if err := os.WriteFile(outputPath, buf.Bytes(), perm); err != nil {
 		return errors.Wrapf(err, "couldn't save bundle manifest to %s", outputPath)
 	}
 	return nil
