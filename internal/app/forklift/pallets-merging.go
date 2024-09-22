@@ -171,31 +171,46 @@ func consolidatePalletImports(
 	return union, nil
 }
 
-// A fileRef is a reference to a file in a [core.PathedFS] by its file path.
-type fileRef struct {
-	fs   core.PathedFS
-	path string
+// A FileRef is a reference to a file in a [core.PathedFS] by its file path.
+type FileRef struct {
+	// Ordered identifiers of the sources of the file reference, e.g. the pallet at the root of the FS
+	Sources []string
+	// The FS which the file can be loaded from
+	FS core.PathedFS
+	// The path where the file exists relative to the root of the FS
+	Path string
 }
 
 // mergePalletImports builds a mapping from all target file paths to their respective source files
 // suitable for instantiating a MergeFS.
 func mergePalletImports(
 	palletFileMappings map[string]map[string]string, pallets map[string]*FSPallet,
-) (merged map[string]fileRef, err error) {
-	merged = make(map[string]fileRef) // target -> source
+) (merged map[string]FileRef, err error) {
+	merged = make(map[string]FileRef) // target -> source
 	for palletPath, fileMappings := range palletFileMappings {
 		for target, source := range fileMappings {
-			ref := fileRef{
-				fs:   pallets[palletPath].FS,
-				path: strings.TrimPrefix(source, "/"),
+			ref := FileRef{
+				Sources: []string{palletPath},
+				FS:      pallets[palletPath].FS,
+				Path:    strings.TrimPrefix(source, "/"),
+			}
+			if version := pallets[palletPath].Version; version != "" {
+				// i.e. the pallet isn't an override with dirty changes (clean overrides, i.e. those
+				// without uncommitted changes, still have a version number attached when they're loaded as
+				// overrides by the Forklift CLI)
+				ref.Sources[0] += "@" + version
 			}
 			if fsys, ok := pallets[palletPath].FS.(*MergeFS); ok {
-				if ref, err = fsys.getFileRef(strings.TrimPrefix(source, "/")); err != nil {
+				transitiveRef, err := fsys.getFileRef(strings.TrimPrefix(source, "/"))
+				if err != nil {
 					return nil, errors.Wrapf(
 						err, "couldn't transitively resolve file reference for importing %s from %s",
 						strings.TrimPrefix(source, "/"), pallets[palletPath].FS.Path(),
 					)
 				}
+				ref.Sources = slices.Concat(ref.Sources, transitiveRef.Sources)
+				ref.FS = transitiveRef.FS
+				ref.Path = transitiveRef.Path
 			}
 			prevRef, ok := merged[strings.TrimPrefix(target, "/")]
 			if !ok {
@@ -207,19 +222,18 @@ func mergePalletImports(
 			if err != nil {
 				return nil, errors.Wrapf(
 					err, "couldn't check whether source files %s and %s (both mapping to %s) are identical",
-					path.Join(ref.fs.Path(), ref.path), path.Join(prevRef.fs.Path(), prevRef.path), target,
+					path.Join(ref.FS.Path(), ref.Path), path.Join(prevRef.FS.Path(), prevRef.Path), target,
 				)
 			}
 			if result != nil {
 				return nil, errors.Wrapf(
 					result, "couldn't add a mapping from %s to target %s, when a mapping was previously "+
-						"added from %s to target %s",
-					path.Join(ref.fs.Path(), ref.path), target,
-					path.Join(prevRef.fs.Path(), prevRef.path), target,
+						"added from %s to the same target",
+					path.Join(ref.FS.Path(), ref.Path), target, path.Join(prevRef.FS.Path(), prevRef.Path),
 				)
 			}
 
-			if ref.fs.Path() < prevRef.fs.Path() {
+			if ref.FS.Path() < prevRef.FS.Path() {
 				merged[strings.TrimPrefix(target, "/")] = ref
 			}
 		}
@@ -231,16 +245,16 @@ func mergePalletImports(
 // with identical file type (dir vs. non-dir), size, permissions, and contents. A non-nil result
 // is returned with a nill err if the files are not identical, explaining why the files are not
 // identical.
-func filesAreIdentical(a, b fileRef) (result error, err error) {
-	if a.fs.Path() == b.fs.Path() && a.path == b.path {
+func filesAreIdentical(a, b FileRef) (result error, err error) {
+	if a.FS.Path() == b.FS.Path() && a.Path == b.Path {
 		return nil, nil
 	}
 
-	aInfo, err := fs.Stat(a.fs, a.path)
+	aInfo, err := fs.Stat(a.FS, a.Path)
 	if err != nil {
 		return nil, err
 	}
-	bInfo, err := fs.Stat(b.fs, b.path)
+	bInfo, err := fs.Stat(b.FS, b.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -262,11 +276,11 @@ func filesAreIdentical(a, b fileRef) (result error, err error) {
 	// Note: we load both files entirely into memory because that's simpler. If memory constraints
 	// or performance requirements eventually make this a problem, we can optimize this later by
 	// comparing bytes as we read them from the files.
-	aBytes, err := fs.ReadFile(a.fs, a.path)
+	aBytes, err := fs.ReadFile(a.FS, a.Path)
 	if err != nil {
 		return nil, err
 	}
-	bBytes, err := fs.ReadFile(b.fs, b.path)
+	bBytes, err := fs.ReadFile(b.FS, b.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -282,12 +296,13 @@ func filesAreIdentical(a, b fileRef) (result error, err error) {
 // constructed as a collection of references to files in other [core.PathedFS] instances.
 // The path of the FS is the path of the overlay.
 type MergeFS struct {
+	// Ordered identifiers of the source(s) of the MergeFS, e.g. the pallet at the root of the FS
 	Overlay      core.PathedFS
-	underlayRefs map[string]fileRef     // target -> source
+	underlayRefs map[string]FileRef     // target -> source
 	impliedDirs  structures.Set[string] // target
 }
 
-func newMergeFS(overlay core.PathedFS, underlayRefs map[string]fileRef) *MergeFS {
+func newMergeFS(overlay core.PathedFS, underlayRefs map[string]FileRef) *MergeFS {
 	impliedDirs := make(structures.Set[string])
 	for target := range underlayRefs {
 		for {
@@ -316,60 +331,83 @@ func (f *MergeFS) Resolve(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(ref.fs.Path(), ref.path), nil
+	return path.Join(ref.FS.Path(), ref.Path), nil
 }
 
-func (f *MergeFS) getFileRef(name string) (fileRef, error) {
+func (f *MergeFS) ListImports() (map[string]FileRef, error) {
+	imports := make(map[string]FileRef)
+	for target, sourceRef := range f.underlayRefs {
+		target = path.Clean(target)
+		_, err := fs.Stat(f.Overlay, target)
+		switch {
+		default:
+			return nil, errors.Errorf("couldn't check whether file %s exists in overlay", target)
+		case err == nil:
+			// file is in overlay, so it's not an import
+			continue
+		case errors.Is(err, fs.ErrNotExist):
+			if target == "." {
+				// file is a directory, which we don't want to list as an import
+				continue
+			}
+			imports[target] = sourceRef
+		}
+	}
+	return imports, nil
+}
+
+func (f *MergeFS) getFileRef(name string) (FileRef, error) {
 	name = path.Clean(name)
 	// fmt.Printf("Resolve(%s|%s)\n", f.Path(), name)
 	_, err := fs.Stat(f.Overlay, name)
 	switch {
 	default:
-		return fileRef{}, &fs.PathError{
+		return FileRef{}, &fs.PathError{
 			Op:   "resolve",
 			Path: name,
 			Err:  errors.Wrapf(err, "couldn't stat file %s in overlay", name),
 		}
 	case errors.Is(err, fs.ErrNotExist):
 		if name == "." {
-			return fileRef{
-				fs:   f,
-				path: ".",
+			return FileRef{
+				FS:   f,
+				Path: ".",
 			}, nil
 		}
 		ref, ok := f.underlayRefs[name]
 		if !ok {
 			if !f.impliedDirs.Has(name) {
-				return fileRef{}, &fs.PathError{
+				return FileRef{}, &fs.PathError{
 					Op:   "resolve",
 					Path: name,
 					Err:  errors.Errorf("file %s not found in either overlay or underlay", name),
 				}
 			}
 			// fmt.Printf("  %s is an implied dir!\n", name)
-			return fileRef{}, &fs.PathError{
+			return FileRef{}, &fs.PathError{
 				Op:   "resolve",
 				Path: name,
 				Err:  errors.Errorf("file %s is a directory implied by the underlay", name),
 			}
 		}
-		if _, err := fs.Stat(ref.fs, ref.path); err != nil {
-			return fileRef{}, &fs.PathError{
+		if _, err := fs.Stat(ref.FS, ref.Path); err != nil {
+			return FileRef{}, &fs.PathError{
 				Op:   "resolve",
 				Path: name,
 				Err: errors.Wrapf(
-					err, "couldn't stat file %s in underlay as %s", name, path.Join(ref.fs.Path(), ref.path),
+					err, "couldn't stat file %s in underlay as %s", name, path.Join(ref.FS.Path(), ref.Path),
 				),
 			}
 		}
-		return fileRef{
-			fs:   ref.fs,
-			path: ref.path,
+		return FileRef{
+			Sources: slices.Clone(ref.Sources),
+			FS:      ref.FS,
+			Path:    ref.Path,
 		}, nil
 	case err == nil:
-		return fileRef{
-			fs:   f.Overlay,
-			path: name,
+		return FileRef{
+			FS:   f.Overlay,
+			Path: name,
 		}, nil
 	}
 }
@@ -407,13 +445,13 @@ func (f *MergeFS) Open(name string) (fs.File, error) {
 			// TODO: implement this
 			return nil, errors.New("unimplemented: opening file for implied dir")
 		}
-		file, err := ref.fs.Open(ref.path)
+		file, err := ref.FS.Open(ref.Path)
 		if err != nil {
 			return nil, &fs.PathError{
 				Op:   "open",
 				Path: name,
 				Err: errors.Wrapf(
-					err, "couldn't open file %s in underlay as %s", name, path.Join(ref.fs.Path(), ref.path),
+					err, "couldn't open file %s in underlay as %s", name, path.Join(ref.FS.Path(), ref.Path),
 				),
 			}
 		}
@@ -436,7 +474,7 @@ func (f *MergeFS) Sub(dir string) (core.PathedFS, error) {
 	}
 
 	prefix := dir + "/"
-	underlayRefsSub := make(map[string]fileRef)
+	underlayRefsSub := make(map[string]FileRef)
 	for target, ref := range f.underlayRefs {
 		if !strings.HasPrefix(target, prefix) {
 			continue
@@ -512,7 +550,7 @@ func (f *MergeFS) ReadDir(name string) (entries []fs.DirEntry, err error) {
 }
 
 func matchUnderlayRef(
-	fileName, underlayTarget string, underlayRef fileRef,
+	fileName, underlayTarget string, underlayRef FileRef,
 ) (entry *importedDirEntry, err error) {
 	prefixPattern := path.Join(fileName, "*")
 	if fileName == "." {
@@ -535,11 +573,11 @@ func matchUnderlayRef(
 		name: path.Base(underlayTarget),
 		ref:  underlayRef,
 	}
-	if entry.fileInfo, err = fs.Stat(underlayRef.fs, underlayRef.path); err != nil {
+	if entry.fileInfo, err = fs.Stat(underlayRef.FS, underlayRef.Path); err != nil {
 		return nil, &fs.PathError{
 			Op:   "read",
 			Path: fileName,
-			Err:  errors.Wrapf(err, "couldn't stat file %s in %s", entry.ref.path, entry.ref.fs.Path()),
+			Err:  errors.Wrapf(err, "couldn't stat file %s in %s", entry.ref.Path, entry.ref.FS.Path()),
 		}
 	}
 	return entry, nil
@@ -571,9 +609,9 @@ func (f *MergeFS) ReadFile(name string) ([]byte, error) {
 				"file %s not found in either overlay or underlay of %s", name, f.Path(),
 			)
 		}
-		contents, err := fs.ReadFile(ref.fs, ref.path)
+		contents, err := fs.ReadFile(ref.FS, ref.Path)
 		return contents, errors.Wrapf(
-			err, "couldn't read file %s in underlay as %s", name, path.Join(ref.fs.Path(), ref.path),
+			err, "couldn't read file %s in underlay as %s", name, path.Join(ref.FS.Path(), ref.Path),
 		)
 	case err == nil:
 		return contents, nil
@@ -611,13 +649,13 @@ func (f *MergeFS) Stat(name string) (fs.FileInfo, error) {
 			// fmt.Printf("  %s is an implied dir!\n", name)
 			return &impliedDirFileInfo{name: path.Base(name)}, nil
 		}
-		info, err := fs.Stat(ref.fs, ref.path)
+		info, err := fs.Stat(ref.FS, ref.Path)
 		if err != nil {
 			return nil, &fs.PathError{
 				Op:   "stat",
 				Path: name,
 				Err: errors.Wrapf(
-					err, "couldn't stat file %s in underlay as %s", name, path.Join(ref.fs.Path(), ref.path),
+					err, "couldn't stat file %s in underlay as %s", name, path.Join(ref.FS.Path(), ref.Path),
 				),
 			}
 		}
@@ -651,14 +689,14 @@ func (f *MergeFS) ReadLink(name string) (string, error) {
 				Err:  errors.Errorf("file %s not a symlink in overlay or underlay", name),
 			}
 		}
-		target, err := ReadLink(ref.fs, ref.path)
+		target, err := ReadLink(ref.FS, ref.Path)
 		if err != nil {
 			return "", &fs.PathError{
 				Op:   "lstat",
 				Path: name,
 				Err: errors.Wrapf(
 					err, "couldn't stat file (without following symlinks) %s in underlay as %s",
-					name, path.Join(ref.fs.Path(), ref.path),
+					name, path.Join(ref.FS.Path(), ref.Path),
 				),
 			}
 		}
@@ -697,14 +735,14 @@ func (f *MergeFS) StatLink(name string) (fs.FileInfo, error) {
 			// fmt.Printf("  %s is an implied dir!\n", name)
 			return &impliedDirFileInfo{name: path.Base(name)}, nil
 		}
-		info, err := StatLink(ref.fs, ref.path)
+		info, err := StatLink(ref.FS, ref.Path)
 		if err != nil {
 			return nil, &fs.PathError{
 				Op:   "lstat",
 				Path: name,
 				Err: errors.Wrapf(
 					err, "couldn't stat file (without following symlinks) %s in underlay as %s",
-					name, path.Join(ref.fs.Path(), ref.path),
+					name, path.Join(ref.FS.Path(), ref.Path),
 				),
 			}
 		}
@@ -723,7 +761,7 @@ type importedDirEntry struct {
 	// of the target path (the base name) in the [MergeFS], not the entire target path.
 	name string
 	// ref holds information for looking up the source file to be imported.
-	ref fileRef
+	ref FileRef
 	// fileInfo holds information about the source file to be imported.
 	fileInfo fs.FileInfo
 }
