@@ -182,7 +182,7 @@ func newBundleManifest(
 	}
 	for _, req := range palletReqs {
 		if desc.Includes.Pallets[req.RequiredPath], err = newBundlePalletInclusion(
-			merged, req, palletCache,
+			merged, req, palletCache, true,
 		); err != nil {
 			return desc, errors.Wrapf(
 				err, "couldn't generate description of requirement for pallet %s", req.RequiredPath,
@@ -239,8 +239,12 @@ func CheckGitRepoVersion(palletPath string) (version string, clean bool) {
 
 func newBundlePalletInclusion(
 	pallet *forklift.FSPallet, req *forklift.FSPalletReq, palletCache forklift.PathedPalletCache,
+	describeImports bool,
 ) (inclusion forklift.BundlePalletInclusion, err error) {
-	inclusion = forklift.BundlePalletInclusion{Req: req.PalletReq}
+	inclusion = forklift.BundlePalletInclusion{
+		Req:      req.PalletReq,
+		Includes: make(map[string]forklift.BundlePalletInclusion),
+	}
 	for {
 		if palletCache == nil {
 			break
@@ -262,6 +266,30 @@ func newBundlePalletInclusion(
 			break
 		}
 		palletCache = layeredCache.Underlay
+	}
+
+	loaded, err := palletCache.LoadFSPallet(req.RequiredPath, req.VersionLock.Version)
+	if err != nil {
+		return inclusion, errors.Wrapf(err, "couldn't load pallet %s", req.RequiredPath)
+	}
+	palletReqs, err := loaded.LoadFSPalletReqs("**")
+	if err != nil {
+		return inclusion, errors.Wrapf(
+			err, "couldn't determine pallets required by pallet %s", loaded.Path(),
+		)
+	}
+	for _, req := range palletReqs {
+		if inclusion.Includes[req.RequiredPath], err = newBundlePalletInclusion(
+			loaded, req, palletCache, false,
+		); err != nil {
+			return inclusion, errors.Wrapf(
+				err, "couldn't generate description of transitive requirement for pallet %s", loaded.Path(),
+			)
+		}
+	}
+
+	if !describeImports {
+		return inclusion, nil
 	}
 	if inclusion.Imports, err = describePalletImports(pallet, req, palletCache); err != nil {
 		return inclusion, errors.Wrapf(err, "couldn't describe file imports for %s", req.RequiredPath)

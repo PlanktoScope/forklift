@@ -95,6 +95,8 @@ type BundlePalletInclusion struct {
 	// Override describes the pallet used to override the required pallet, if an override was
 	// specified for the pallet when building the bundled pallet.
 	Override BundleInclusionOverride `yaml:"override,omitempty"`
+	// Includes describes pallets used to define the pallet, omitting information about file imports.
+	Includes map[string]BundlePalletInclusion `yaml:"includes,omitempty"`
 	// Imports lists the files imported from the pallet, organized by import group. Keys are the names
 	// of the import groups, and values are the results of evaluating the respective import groups -
 	// i.e. maps whose keys are target file paths (where the files are imported to) and whose values
