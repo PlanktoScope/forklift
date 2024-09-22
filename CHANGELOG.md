@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.8.0-alpha.2 - 2024-09-22
 
 ### Added
 
@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `cache rm-dl` command to delete the cache of downloaded files for export.
+- (cli) The bundle manifest's `includes` section's description of required pallets now reports when required pallets were overridden.
+- (cli) The bundle manifest's `includes` section's description of required pallets now recursively shows information about transitively-required pallets (but does not show information about file import groups in those transitively-required pallets).
+- (cli) The bundle manifest's `includes` section's description of required pallets now shows the results (as target file path -> source file path mappings) of evaluating each file import group attached to their respective required pallets.
+- (cli) The bundle manifest now has an `imports` section which describes the provenance of each imported file, as a list of how the file has been transitively imported across pallets (with pallets farther down the list being depeer in the transitive import chain).
 
 ### Changed
 

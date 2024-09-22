@@ -133,6 +133,12 @@ func loadReplacementPallets(fsPaths []string) (replacements []*forklift.FSPallet
 		if len(externalPallets) == 0 {
 			return nil, errors.Errorf("no replacement pallets found in path %s", replacementPath)
 		}
+		for _, pallet := range externalPallets {
+			version, clean := fcli.CheckGitRepoVersion(pallet.FS.Path())
+			if clean {
+				pallet.Version = version
+			}
+		}
 		replacements = append(replacements, externalPallets...)
 	}
 	return replacements, nil
@@ -202,6 +208,12 @@ func loadReplacementRepos(
 		}
 		if len(externalRepos) == 0 {
 			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
+		}
+		for _, repo := range externalRepos {
+			version, clean := fcli.CheckGitRepoVersion(repo.FS.Path())
+			if clean {
+				repo.Version = version
+			}
 		}
 		replacements = append(replacements, externalRepos...)
 	}

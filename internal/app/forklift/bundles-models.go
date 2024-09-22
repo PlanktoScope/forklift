@@ -51,11 +51,16 @@ type BundleManifest struct {
 	Pallet BundlePallet `yaml:"pallet"`
 	// Includes describes repos and pallets used to define the bundle's package deployments.
 	Includes BundleInclusions `yaml:"includes,omitempty"`
-	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
-	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
+	// Imports lists the files imported from required pallets and the fully-qualified paths of those
+	// source files (relative to their respective source pallets). Keys are the target paths of the
+	// files, while values are lists showing the chain of provenance of the respective files (with
+	// the deepest ancestor at the end of each list).
+	Imports map[string][]string `yaml:"imports,omitempty"`
 	// Downloads lists the URLs of files and OCI images downloaded for export by the bundle's
 	// deployments. Keys are names of the bundle's deployments which export downloaded files.
 	Downloads map[string][]string `yaml:"downloads,omitempty"`
+	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
+	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
 	// Exports lists the target paths of file exports provided by the bundle's deployments. Keys are
 	// names of the bundle's deployments which provide file exports.
 	Exports map[string][]string `yaml:"exports,omitempty"`
@@ -90,6 +95,13 @@ type BundlePalletInclusion struct {
 	// Override describes the pallet used to override the required pallet, if an override was
 	// specified for the pallet when building the bundled pallet.
 	Override BundleInclusionOverride `yaml:"override,omitempty"`
+	// Includes describes pallets used to define the pallet, omitting information about file imports.
+	Includes map[string]BundlePalletInclusion `yaml:"includes,omitempty"`
+	// Imports lists the files imported from the pallet, organized by import group. Keys are the names
+	// of the import groups, and values are the results of evaluating the respective import groups -
+	// i.e. maps whose keys are target file paths (where the files are imported to) and whose values
+	// are source file paths (where the files are imported from).
+	Imports map[string]map[string]string `yaml:"imports,omitempty"`
 }
 
 // BundleRepoInclusion describes a package repository used to build the bundled pallet.
