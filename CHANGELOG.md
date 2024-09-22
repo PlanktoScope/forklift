@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - (cli) Added a `[dev] plt locate-plt-file` command to print the actual filesystem path of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `[dev] plt show-plt-file` command to print the contents of the specified file in the specified pallet required by the local/development pallet.
 - (cli) Added a `cache rm-dl` command to delete the cache of downloaded files for export.
+- (cli) The bundle manifest's `includes` section now reports when required pallets were overridden.
+- (cli) The bundle manifest's `includes` section now shows the results (as target file path -> source file path mappings) of evaluating each file import group attached to required pallets.
+- (cli) The bundle manifest now has an `imports` section which describes the provenance of each imported file, as a list of how the file has been transitively imported across pallets (with pallets farther down the list being depeer in the transitive import chain).
 
 ### Changed
 
