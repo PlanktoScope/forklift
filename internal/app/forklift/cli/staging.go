@@ -102,7 +102,7 @@ func StagePallet(
 	}
 	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
 	if err = buildBundle(
-		pallet, repoCacheWithMerged, caches.Downloads,
+		pallet, caches.Pallets, repoCacheWithMerged, caches.Downloads,
 		versions.NewBundle, path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", pallet.Path(), index)
@@ -120,13 +120,12 @@ func StagePallet(
 
 func buildBundle(
 	pallet *forklift.FSPallet,
-	repoCache forklift.PathedRepoCache, dlCache *forklift.FSDownloadCache,
+	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	dlCache *forklift.FSDownloadCache,
 	forkliftVersion, outputPath string,
 ) (err error) {
 	outputBundle := forklift.NewFSBundle(outputPath)
-	// TODO: once we can overlay pallets, save the result of overlaying the pallets to a `overlay`
-	// subdir
-	outputBundle.Manifest, err = newBundleManifest(pallet, repoCache, forkliftVersion)
+	outputBundle.Manifest, err = newBundleManifest(pallet, palletCache, repoCache, forkliftVersion)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
 	}
@@ -157,7 +156,9 @@ func buildBundle(
 }
 
 func newBundleManifest(
-	pallet *forklift.FSPallet, repoCache forklift.PathedRepoCache, forkliftVersion string,
+	pallet *forklift.FSPallet,
+	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	forkliftVersion string,
 ) (forklift.BundleManifest, error) {
 	desc := forklift.BundleManifest{
 		ForkliftVersion: forkliftVersion,
@@ -178,13 +179,8 @@ func newBundleManifest(
 	if err != nil {
 		return desc, errors.Wrapf(err, "couldn't determine pallets required by pallet %s", pallet.Path())
 	}
-	// TODO: once we can overlay pallets, the description of pallet & repo inclusions should probably
-	// be made from the result of overlaying. We could also describe pre-overlay requirements from the
-	// bundled pallet, in desc.Pallet.Requires.
 	for _, req := range palletReqs {
-		inclusion := forklift.BundlePalletInclusion{Req: req.PalletReq}
-		// TODO: also check for overridden pallets
-		desc.Includes.Pallets[req.RequiredPath] = inclusion
+		desc.Includes.Pallets[req.RequiredPath] = newBundlePalletInclusion(req, palletCache)
 	}
 	repoReqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
@@ -218,6 +214,35 @@ func checkGitRepoVersion(palletPath string) (version string, clean bool) {
 		return versionString, false
 	}
 	return versionString, status.IsClean()
+}
+
+func newBundlePalletInclusion(
+	req *forklift.FSPalletReq, palletCache forklift.PathedPalletCache,
+) forklift.BundlePalletInclusion {
+	inclusion := forklift.BundlePalletInclusion{Req: req.PalletReq}
+	for {
+		if palletCache == nil {
+			return inclusion
+		}
+		layeredCache, ok := palletCache.(*forklift.LayeredPalletCache)
+		if !ok {
+			return inclusion
+		}
+		overlay := layeredCache.Overlay
+		if overlay == nil {
+			palletCache = layeredCache.Underlay
+			continue
+		}
+
+		if repo, err := overlay.LoadFSPallet(
+			req.RequiredPath, req.VersionLock.Version,
+		); err == nil { // i.e. the repo was overridden
+			inclusion.Override.Path = repo.FS.Path()
+			inclusion.Override.Version, inclusion.Override.Clean = checkGitRepoVersion(repo.FS.Path())
+			return inclusion
+		}
+		palletCache = layeredCache.Underlay
+	}
 }
 
 func newBundleRepoInclusion(
