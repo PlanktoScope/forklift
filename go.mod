@@ -9,9 +9,9 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.2.0
 	github.com/containerd/platforms v0.2.1
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v27.3.0-rc.1+incompatible
-	github.com/docker/compose/v2 v2.29.4
-	github.com/docker/docker v27.3.0-rc.1+incompatible
+	github.com/docker/cli v27.3.0-rc.2+incompatible
+	github.com/docker/compose/v2 v2.29.7
+	github.com/docker/docker v27.3.0-rc.2+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-containerregistry v0.20.2
