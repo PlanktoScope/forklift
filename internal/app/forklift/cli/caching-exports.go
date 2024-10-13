@@ -44,7 +44,7 @@ func DownloadExportFiles(
 ) error {
 	httpDownloads, ociDownloads, err := ListRequiredDownloads(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
-		return errors.Wrap(err, "couldn't determine images required by package deployments")
+		return errors.Wrap(err, "couldn't determine file downloads required by package deployments")
 	}
 	if len(httpDownloads)+len(ociDownloads) == 0 {
 		return nil
