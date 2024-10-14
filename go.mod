@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/blang/semver/v4 v4.0.0
-	github.com/bmatcuk/doublestar/v4 v4.6.1
+	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/compose-spec/compose-go/v2 v2.2.0
 	github.com/containerd/platforms v0.2.1
