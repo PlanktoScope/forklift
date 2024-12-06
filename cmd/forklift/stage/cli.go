@@ -74,6 +74,12 @@ func makeQuerySubcmds(versions Versions) []*cli.Command {
 				Usage:    "Shows the history of successfully-applied staged pallet bundles",
 				Action:   showHistAction(versions),
 			},
+			{
+				Name:     "show-next-index",
+				Category: category,
+				Usage:    "Prints the index of next staged pallet bundle to be applied",
+				Action:   showNextIndexAction(versions),
+			},
 		},
 		makeQueryBunSubcmds(versions)...,
 	)

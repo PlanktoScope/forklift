@@ -237,6 +237,27 @@ func showHistAction(versions Versions) cli.ActionFunc {
 	}
 }
 
+// show-next-index
+
+func showNextIndexAction(versions Versions) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
+		if err != nil {
+			return err
+		}
+		if !store.Exists() {
+			return errMissingStore
+		}
+
+		next, ok := store.GetNext()
+		if !ok {
+			return errors.New("there is currently no staged pallet bundle to be applied next!")
+		}
+		fmt.Println(next)
+		return nil
+	}
+}
+
 // set-next
 
 func setNextAction(versions Versions) cli.ActionFunc {
@@ -251,7 +272,10 @@ func setNextAction(versions Versions) cli.ActionFunc {
 
 		if c.Args().First() == "0" {
 			store.SetNext(0)
-			fmt.Println("Committing update to the stage store so that no stage will be applied next...")
+			fmt.Println(
+				"Committing update to the stage store so that no staged pallet bundle will be applied " +
+					"next...",
+			)
 			if err := store.CommitState(); err != nil {
 				return errors.Wrap(err, "couldn't commit updated stage store state")
 			}
