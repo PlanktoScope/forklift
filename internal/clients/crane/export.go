@@ -12,14 +12,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ExportOCIImage(ctx context.Context, imageName string, w io.Writer) error {
+type Platform = v1.Platform
+
+func ExportOCIImage(
+	ctx context.Context, imageName string, w io.Writer, platform string,
+) error {
 	ref, err := name.ParseReference(imageName, name.StrictValidation)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't parse image name: %s", imageName)
 	}
 	imageName = ref.Name()
 
-	desc, err := crane.Get(imageName, crane.WithContext(ctx), crane.WithPlatform(detectPlatform()))
+	parsedPlatform, err := v1.ParsePlatform(platform)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't parse platform: %s", platform)
+	}
+	desc, err := crane.Get(imageName, crane.WithContext(ctx), crane.WithPlatform(parsedPlatform))
 	if err != nil {
 		return errors.Wrapf(err, "couldn't pull image %s", imageName)
 	}
@@ -36,9 +44,9 @@ func ExportOCIImage(ctx context.Context, imageName string, w io.Writer) error {
 	return crane.Export(image, w)
 }
 
-func detectPlatform() *v1.Platform {
+func DetectPlatform() Platform {
 	detectedPlatform := platforms.Normalize(platforms.DefaultSpec())
-	return &v1.Platform{
+	return Platform{
 		Architecture: detectedPlatform.Architecture,
 		OS:           detectedPlatform.OS,
 		Variant:      detectedPlatform.Variant,

@@ -261,7 +261,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 
 		if err = fcli.CacheAllReqs(
 			0, plt, caches.m, caches.p, caches.r, caches.d,
-			c.Bool("include-disabled"), c.Bool("parallel"),
+			c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
@@ -360,7 +360,8 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		if _, err = fcli.StagePallet(
 			0, plt, stageStore, caches.staging(), c.String("exports"),
-			versions.Staging, c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			versions.Staging, c.Bool("no-cache-img"), c.String("platform"), c.Bool("parallel"),
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -400,7 +401,8 @@ func applyAction(versions Versions) cli.ActionFunc {
 		}
 		index, err := fcli.StagePallet(
 			0, plt, stageStore, caches.staging(), c.String("exports"),
-			versions.Staging, false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			versions.Staging, false, c.String("platform"), c.Bool("parallel"),
+			c.Bool("ignore-tool-version"),
 		)
 		if err != nil {
 			return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
@@ -513,7 +515,8 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d,
+				c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

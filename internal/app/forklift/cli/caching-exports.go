@@ -40,7 +40,8 @@ func GetDownloadCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache
 
 func DownloadExportFiles(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
-	dlCache *forklift.FSDownloadCache, includeDisabled, parallel bool,
+	dlCache *forklift.FSDownloadCache,
+	platform string, includeDisabled, parallel bool,
 ) error {
 	httpDownloads, ociDownloads, err := ListRequiredDownloads(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
@@ -83,9 +84,9 @@ func DownloadExportFiles(
 	}
 
 	if parallel {
-		return downloadParallel(indent, newHTTP, newOCI, dlCache, http.DefaultClient)
+		return downloadParallel(indent, newHTTP, newOCI, platform, dlCache, http.DefaultClient)
 	}
-	return downloadSerial(indent, newHTTP, newOCI, dlCache, http.DefaultClient)
+	return downloadSerial(indent, newHTTP, newOCI, platform, dlCache, http.DefaultClient)
 }
 
 func ListRequiredDownloads(
@@ -140,7 +141,8 @@ func ListRequiredDownloads(
 }
 
 func downloadParallel(
-	indent int, httpURLs, ociImageNames []string, cache *forklift.FSDownloadCache, hc *http.Client,
+	indent int, httpURLs, ociImageNames []string, platform string, cache *forklift.FSDownloadCache,
+	hc *http.Client,
 ) error {
 	eg, egctx := errgroup.WithContext(context.Background())
 	for _, url := range httpURLs {
@@ -164,7 +166,7 @@ func downloadParallel(
 			if err != nil {
 				return errors.Wrapf(err, "couldn't determine path to cache download for %s", imageName)
 			}
-			if err = downloadOCIImage(egctx, imageName, outputPath); err != nil {
+			if err = downloadOCIImage(egctx, imageName, outputPath, platform); err != nil {
 				return errors.Wrapf(err, "couldn't download %s", imageName)
 			}
 			IndentedPrintf(indent, "Downloaded %s\n", imageName)
@@ -178,7 +180,8 @@ func downloadParallel(
 }
 
 func downloadSerial(
-	indent int, httpURLs, ociImageNames []string, cache *forklift.FSDownloadCache, hc *http.Client,
+	indent int, httpURLs, ociImageNames []string, platform string, cache *forklift.FSDownloadCache,
+	hc *http.Client,
 ) error {
 	for _, url := range httpURLs {
 		IndentedPrintf(indent, "Downloading file %s to cache...\n", url)
@@ -197,7 +200,7 @@ func downloadSerial(
 		if err != nil {
 			return errors.Wrapf(err, "couldn't determine path to cache download for %s", imageName)
 		}
-		if err = downloadOCIImage(context.Background(), imageName, outputPath); err != nil {
+		if err = downloadOCIImage(context.Background(), imageName, outputPath, platform); err != nil {
 			return errors.Wrapf(err, "couldn't download %s", imageName)
 		}
 		IndentedPrintf(indent, "Downloaded %s\n", imageName)
@@ -249,7 +252,7 @@ func downloadFile(ctx context.Context, url, outputPath string, hc *http.Client) 
 	return nil
 }
 
-func downloadOCIImage(ctx context.Context, imageName, outputPath string) error {
+func downloadOCIImage(ctx context.Context, imageName, outputPath, platform string) error {
 	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(outputPath))); err != nil {
 		return err
 	}
@@ -265,7 +268,7 @@ func downloadOCIImage(ctx context.Context, imageName, outputPath string) error {
 		}
 	}()
 
-	if err = crane.ExportOCIImage(ctx, imageName, file); err != nil {
+	if err = crane.ExportOCIImage(ctx, imageName, file, platform); err != nil {
 		return errors.Wrapf(err, "couldn't download and export image as a tarball: %s", imageName)
 	}
 

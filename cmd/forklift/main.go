@@ -14,6 +14,7 @@ import (
 	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
 	"github.com/PlanktoScope/forklift/cmd/forklift/stage"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
+	"github.com/PlanktoScope/forklift/internal/clients/crane"
 )
 
 func main() {
@@ -22,7 +23,10 @@ func main() {
 	}
 }
 
-var defaultWorkspaceBase, _ = os.UserHomeDir()
+var (
+	defaultWorkspaceBase, _ = os.UserHomeDir()
+	defaultPlatform         = crane.DetectPlatform().String()
+)
 
 var fcliVersions fcli.StagingVersions = fcli.StagingVersions{
 	Core: fcli.Versions{
@@ -82,6 +86,12 @@ var app = &cli.App{
 			Usage: "Allow parallel execution of I/O-bound tasks, such as downloading container images " +
 				"or starting containers",
 			EnvVars: []string{"FORKLIFT_PARALLEL"},
+		},
+		&cli.StringFlag{
+			Name:    "platform",
+			Value:   defaultPlatform,
+			Usage:   "Select the os/arch or os/arch/variant platform for downloading container images",
+			EnvVars: []string{"FORKLIFT_PLATFORM"},
 		},
 	},
 	Suggest: true,
