@@ -36,7 +36,8 @@ func GetStageStore(
 
 func SetNextStagedBundle(
 	indent int, store *forklift.FSStageStore, index int, exportPath,
-	toolVersion, bundleMinVersion string, skipImageCaching, parallel, ignoreToolVersion bool,
+	toolVersion, bundleMinVersion string, skipImageCaching bool, platform string, parallel,
+	ignoreToolVersion bool,
 ) error {
 	store.SetNext(index)
 	fmt.Printf(
@@ -51,7 +52,7 @@ func SetNextStagedBundle(
 	}
 
 	if err := DownloadImagesForStoreApply(
-		indent, store, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
+		indent, store, platform, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
 	); err != nil {
 		return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
 	}
@@ -111,7 +112,7 @@ func StagePallet(
 	}
 	if err = SetNextStagedBundle(
 		indent, stageStore, index, exportPath, versions.Core.Tool, versions.MinSupportedBundle,
-		skipImageCaching, parallel, ignoreToolVersion,
+		skipImageCaching, platform, parallel, ignoreToolVersion,
 	); err != nil {
 		return index, errors.Wrapf(
 			err, "couldn't prepare staged pallet bundle %d to be applied next", index,

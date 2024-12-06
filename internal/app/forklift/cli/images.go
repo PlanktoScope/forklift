@@ -18,7 +18,7 @@ import (
 // Download
 
 func DownloadImagesForStoreApply(
-	indent int, store *forklift.FSStageStore, toolVersion, bundleMinVersion string,
+	indent int, store *forklift.FSStageStore, platform, toolVersion, bundleMinVersion string,
 	parallel, ignoreToolVersion bool,
 ) error {
 	next, hasNext := store.GetNext()
@@ -39,7 +39,7 @@ func DownloadImagesForStoreApply(
 			"Downloading Docker container images specified by the last successfully-applied staged " +
 				"pallet bundle, in case the next to be applied fails to be applied...",
 		)
-		if err := DownloadImages(indent, bundle, bundle, false, parallel); err != nil {
+		if err := DownloadImages(indent, bundle, bundle, platform, false, parallel); err != nil {
 			return err
 		}
 	}
@@ -57,7 +57,7 @@ func DownloadImagesForStoreApply(
 			"Downloading Docker container images specified by the next staged pallet bundle to be " +
 				"applied...",
 		)
-		if err := DownloadImages(indent, bundle, bundle, false, parallel); err != nil {
+		if err := DownloadImages(indent, bundle, bundle, platform, false, parallel); err != nil {
 			return err
 		}
 		fmt.Println()
@@ -67,7 +67,7 @@ func DownloadImagesForStoreApply(
 
 func DownloadImages(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
-	includeDisabled, parallel bool,
+	platform string, includeDisabled, parallel bool,
 ) error {
 	orderedImages, err := ListRequiredImages(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
@@ -85,9 +85,9 @@ func DownloadImages(
 	}
 
 	if parallel {
-		return downloadImagesParallel(indent, orderedImages, dc)
+		return downloadImagesParallel(indent, orderedImages, platform, dc)
 	}
-	return downloadImagesSerial(indent, orderedImages, dc)
+	return downloadImagesSerial(indent, orderedImages, platform, dc)
 }
 
 func ListRequiredImages(
@@ -132,12 +132,12 @@ func ListRequiredImages(
 	return orderedImages, nil
 }
 
-func downloadImagesParallel(indent int, images []string, dc *docker.Client) error {
+func downloadImagesParallel(indent int, images []string, platform string, dc *docker.Client) error {
 	eg, egctx := errgroup.WithContext(context.Background())
 	for _, image := range images {
 		eg.Go(func() error {
 			IndentedPrintf(indent, "Downloading %s...\n", image)
-			pulled, err := dc.PullImage(egctx, image, docker.NewOutStream(io.Discard))
+			pulled, err := dc.PullImage(egctx, image, platform, docker.NewOutStream(io.Discard))
 			if err != nil {
 				return errors.Wrapf(err, "couldn't download %s", image)
 			}
@@ -153,11 +153,12 @@ func downloadImagesParallel(indent int, images []string, dc *docker.Client) erro
 	return nil
 }
 
-func downloadImagesSerial(indent int, images []string, dc *docker.Client) error {
+func downloadImagesSerial(indent int, images []string, platform string, dc *docker.Client) error {
 	for _, image := range images {
 		IndentedPrintf(indent, "Downloading %s...\n", image)
 		pulled, err := dc.PullImage(
-			context.Background(), image, docker.NewOutStream(cli.NewIndentedWriter(indent+1, os.Stdout)),
+			context.Background(), image, platform,
+			docker.NewOutStream(cli.NewIndentedWriter(indent+1, os.Stdout)),
 		)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't download %s", image)
