@@ -316,7 +316,7 @@ func makeQueryRepoReqSubcmds(category string) []*cli.Command {
 			Category:  category,
 			Usage:     "Prints the required version of the available repo",
 			ArgsUsage: "repo_path",
-			// Action:    showRepoVersionAction,
+			Action:    showRepoVersionAction,
 		},
 	}
 }
