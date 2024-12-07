@@ -22,7 +22,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 
 		if err = fcli.DownloadImagesForStoreApply(
 			0, store, versions.Tool, versions.MinSupportedBundle,
-			c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			c.String("platform"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}

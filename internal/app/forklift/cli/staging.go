@@ -36,7 +36,8 @@ func GetStageStore(
 
 func SetNextStagedBundle(
 	indent int, store *forklift.FSStageStore, index int, exportPath,
-	toolVersion, bundleMinVersion string, skipImageCaching, parallel, ignoreToolVersion bool,
+	toolVersion, bundleMinVersion string, skipImageCaching bool, platform string, parallel,
+	ignoreToolVersion bool,
 ) error {
 	store.SetNext(index)
 	fmt.Printf(
@@ -51,7 +52,7 @@ func SetNextStagedBundle(
 	}
 
 	if err := DownloadImagesForStoreApply(
-		indent, store, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
+		indent, store, platform, toolVersion, bundleMinVersion, parallel, ignoreToolVersion,
 	); err != nil {
 		return errors.Wrap(err, "couldn't cache Docker container images required by staged pallet")
 	}
@@ -76,14 +77,15 @@ type StagingCaches struct {
 func StagePallet(
 	indent int, merged *forklift.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
 	exportPath string, versions StagingVersions,
-	skipImageCaching, parallel, ignoreToolVersion bool,
+	skipImageCaching bool, platform string, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
 	if _, isMerged := merged.FS.(*forklift.MergeFS); isMerged {
 		return 0, errors.Errorf("the pallet provided for staging should not be a merged pallet!")
 	}
 
 	merged, repoCacheWithMerged, err := CacheStagingReqs(
-		0, merged, caches.Mirrors, caches.Pallets, caches.Repos, caches.Downloads, false, parallel,
+		0, merged, caches.Mirrors, caches.Pallets, caches.Repos, caches.Downloads,
+		platform, false, parallel,
 	)
 	if err != nil {
 		return 0, errors.Wrap(err, "couldn't cache requirements for staging the pallet")
@@ -110,7 +112,7 @@ func StagePallet(
 	}
 	if err = SetNextStagedBundle(
 		indent, stageStore, index, exportPath, versions.Core.Tool, versions.MinSupportedBundle,
-		skipImageCaching, parallel, ignoreToolVersion,
+		skipImageCaching, platform, parallel, ignoreToolVersion,
 	); err != nil {
 		return index, errors.Wrapf(
 			err, "couldn't prepare staged pallet bundle %d to be applied next", index,
@@ -178,7 +180,9 @@ func newBundleManifest(
 	desc.Pallet.Version, desc.Pallet.Clean = CheckGitRepoVersion(merged.FS.Path())
 	palletReqs, err := merged.LoadFSPalletReqs("**")
 	if err != nil {
-		return desc, errors.Wrapf(err, "couldn't determine pallets required by pallet %s", merged.Path())
+		return desc, errors.Wrapf(
+			err, "couldn't determine pallets required by pallet %s", merged.Path(),
+		)
 	}
 	for _, req := range palletReqs {
 		if desc.Includes.Pallets[req.RequiredPath], err = newBundlePalletInclusion(

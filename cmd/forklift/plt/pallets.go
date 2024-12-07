@@ -99,7 +99,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 
 		if err = fcli.CacheAllReqs(
 			0, plt, caches.m, caches.p, caches.r, caches.d,
-			c.Bool("include-disabled"), c.Bool("parallel"),
+			c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
@@ -136,7 +136,8 @@ func switchAction(versions Versions) cli.ActionFunc {
 		if err = preparePallet(
 			// Note: we don't cache staging requirements because that will be handled by the apply/stage
 			// step anyways:
-			workspace, query, true, false, c.Bool("parallel"), c.Bool("ignore-tool-version"), versions,
+			workspace, query, true, false, c.String("platform"), c.Bool("parallel"),
+			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
 		}
@@ -370,7 +371,8 @@ func isHeadInRemotes(indent int, gitRepo *git.Repo) (bool, error) {
 
 func preparePallet(
 	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
-	updateLocalMirror, cacheStagingReqs, parallel, ignoreToolVersion bool, versions Versions,
+	updateLocalMirror, cacheStagingReqs bool, platform string, parallel, ignoreToolVersion bool,
+	versions Versions,
 ) error {
 	// clone pallet
 	if err := fcli.CloneQueriedGitRepoUsingLocalMirror(
@@ -394,7 +396,7 @@ func preparePallet(
 	if cacheStagingReqs {
 		fmt.Println()
 		if _, _, err = fcli.CacheStagingReqs(
-			0, plt, caches.m, caches.p, caches.r, caches.d, false, parallel,
+			0, plt, caches.m, caches.p, caches.r, caches.d, platform, false, parallel,
 		); err != nil {
 			return err
 		}
@@ -431,7 +433,8 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 		if err = preparePallet(
 			// Note: we don't cache staging requirements because that will be handled by the apply/stage
 			// step anyways:
-			workspace, query, false, false, c.Bool("parallel"), c.Bool("ignore-tool-version"), versions,
+			workspace, query, false, false, c.String("platform"), c.Bool("parallel"),
+			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
 		}
@@ -669,7 +672,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = preparePallet(
-			workspace, query, true, !c.Bool("no-cache-req"), c.Bool("parallel"),
+			workspace, query, true, !c.Bool("no-cache-req"), c.String("platform"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
@@ -744,7 +747,8 @@ func pullAction(versions Versions) cli.ActionFunc {
 
 		if !c.Bool("no-cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d,
+				c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -865,7 +869,8 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		if _, err = fcli.StagePallet(
 			0, plt, stageStore, caches.staging(), c.String("exports"),
-			versions.Staging, c.Bool("no-cache-img"), c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			versions.Staging, c.Bool("no-cache-img"), c.String("platform"), c.Bool("parallel"),
+			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -900,7 +905,8 @@ func applyAction(versions Versions) cli.ActionFunc {
 		}
 		index, err := fcli.StagePallet(
 			0, plt, stageStore, caches.staging(), c.String("exports"),
-			versions.Staging, false, c.Bool("parallel"), c.Bool("ignore-tool-version"),
+			versions.Staging, false, c.String("platform"), c.Bool("parallel"),
+			c.Bool("ignore-tool-version"),
 		)
 		if err != nil {
 			return errors.Wrap(err, "couldn't stage pallet to be applied immediately")
@@ -1011,7 +1017,8 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d, false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.r, caches.d,
+				c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

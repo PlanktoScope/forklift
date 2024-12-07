@@ -53,7 +53,7 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err := fcli.DownloadExportFiles(
-			0, plt, caches.r, caches.d, false, c.Bool("parallel"),
+			0, plt, caches.r, caches.d, c.String("platform"), false, c.Bool("parallel"),
 		); err != nil {
 			return err
 		}

@@ -11,17 +11,23 @@ func CacheAllReqs(
 	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
 	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
 	dlCache *forklift.FSDownloadCache,
-	includeDisabled, parallel bool,
+	platform string, includeDisabled, parallel bool,
 ) error {
 	pallet, repoCacheWithMerged, err := CacheStagingReqs(
-		indent, pallet, mirrorsCache, palletCache, repoCache, dlCache, includeDisabled, parallel,
+		indent, pallet, mirrorsCache, palletCache, repoCache, dlCache,
+		platform, includeDisabled, parallel,
 	)
 	if err != nil {
 		return err
 	}
 
-	IndentedPrintln(indent, "Downloading Docker container images to be deployed by the local pallet...")
-	if err := DownloadImages(1, pallet, repoCacheWithMerged, includeDisabled, parallel); err != nil {
+	IndentedPrintln(
+		indent,
+		"Downloading Docker container images to be deployed by the local pallet...",
+	)
+	if err := DownloadImages(
+		1, pallet, repoCacheWithMerged, platform, includeDisabled, parallel,
+	); err != nil {
 		return err
 	}
 	return nil
@@ -31,7 +37,7 @@ func CacheStagingReqs(
 	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
 	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
 	dlCache *forklift.FSDownloadCache,
-	includeDisabled, parallel bool,
+	platform string, includeDisabled, parallel bool,
 ) (merged *forklift.FSPallet, repoCacheWithMerged *forklift.LayeredRepoCache, err error) {
 	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
 	indent++
@@ -65,7 +71,7 @@ func CacheStagingReqs(
 	}
 
 	if err = DownloadExportFiles(
-		indent, merged, repoCacheWithMerged, dlCache, includeDisabled, parallel,
+		indent, merged, repoCacheWithMerged, dlCache, platform, includeDisabled, parallel,
 	); err != nil {
 		return merged, repoCacheWithMerged, err
 	}

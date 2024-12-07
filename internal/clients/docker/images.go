@@ -134,7 +134,7 @@ func CompareDeletedImages(i, j dti.DeleteResponse) int {
 }
 
 func (c *Client) PullImage(
-	ctx context.Context, taggedName string, outStream *streams.Out,
+	ctx context.Context, taggedName, platform string, outStream *streams.Out,
 ) (trust.ImageRefAndAuth, error) {
 	// This function is adapted from the github.com/docker/cli/cli/command/image
 	// package's RunPull function, which is licensed under Apache-2.0. This function was changed to
@@ -157,7 +157,7 @@ func (c *Client) PullImage(
 		)
 	}
 
-	if err = c.pullImage(ctx, imgRefAndAuth, outStream); err != nil {
+	if err = c.pullImage(ctx, imgRefAndAuth, platform, outStream); err != nil {
 		return trust.ImageRefAndAuth{}, err
 	}
 
@@ -173,7 +173,7 @@ func authResolver(ctx context.Context, index *dtr.IndexInfo) dtr.AuthConfig {
 }
 
 func (c *Client) pullImage(
-	ctx context.Context, imgRefAndAuth trust.ImageRefAndAuth, out *streams.Out,
+	ctx context.Context, imgRefAndAuth trust.ImageRefAndAuth, platform string, out *streams.Out,
 ) (err error) {
 	// This function is adapted from the github.com/docker/cli/cli/command/image
 	// package's imagePullPrivileged function, which is licensed under Apache-2.0. This function was
@@ -186,6 +186,7 @@ func (c *Client) pullImage(
 	responseBody, err := c.Client.ImagePull(
 		ctx, reference.FamiliarString(imgRefAndAuth.Reference()), dti.PullOptions{
 			RegistryAuth: encodedAuth,
+			Platform:     platform,
 		},
 	)
 	if err != nil {
