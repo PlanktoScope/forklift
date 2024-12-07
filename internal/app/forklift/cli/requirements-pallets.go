@@ -115,6 +115,21 @@ func printPalletReq(indent int, req forklift.PalletReq) {
 	IndentedPrintf(indent, "Locked pallet version: %s\n", req.VersionLock.Version)
 }
 
+func PrintRequiredPalletVersion(
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+	requiredPalletPath string,
+) error {
+	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load pallet version lock definition %s from pallet %s",
+			requiredPalletPath, pallet.FS.Path(),
+		)
+	}
+	IndentedPrintln(indent, req.VersionLock.Version)
+	return nil
+}
+
 // Add
 
 func AddPalletReqs(

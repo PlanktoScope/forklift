@@ -485,6 +485,20 @@ func showPltAction(c *cli.Context) error {
 	return fcli.PrintRequiredPalletInfo(0, plt, caches.p, c.Args().First())
 }
 
+// show-plt-version
+
+func showPltVersionAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requirePalletCache: true,
+		enableOverrides:    true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return fcli.PrintRequiredPalletVersion(0, plt, caches.p, c.Args().First())
+}
+
 // add-plt
 
 func addPltAction(versions Versions) cli.ActionFunc {
