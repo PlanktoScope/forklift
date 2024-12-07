@@ -85,6 +85,21 @@ func showRepoAction(c *cli.Context) error {
 	return fcli.PrintRequiredRepoInfo(0, plt, caches.r, c.Args().First())
 }
 
+// show-repo-version
+
+func showRepoVersionAction(c *cli.Context) error {
+	plt, caches, err := processFullBaseArgs(c, processingOptions{
+		requireRepoCache: true,
+		enableOverrides:  true,
+		merge:            true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return fcli.PrintRequiredRepoVersion(0, plt, caches.r, c.Args().First())
+}
+
 // add-repo
 
 func addRepoAction(versions Versions) cli.ActionFunc {

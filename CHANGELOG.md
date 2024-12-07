@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- (cli) Added `[dev] plt show-plt-version` and `[dev] plt show-repo-version` commands to print the version/pseudoversion string for the required version of the specified pallet/repo.
 - (cli) Added a `stage show-next-index` command to print the index of the next staged pallet bundle (if it exists).
 - (cli) Added a `--platform` flag (and `FORKLIFT_PLATFORM` env var) to override the auto-detected platform (e.g. `linux/amd64` or `linux/arm64`) used for downloading container images for file exports and for pre-downloading container images needed for the next `forklift stage apply`.
 

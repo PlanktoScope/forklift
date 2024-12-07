@@ -149,6 +149,20 @@ func printRepoReq(indent int, req forklift.RepoReq) {
 	IndentedPrintf(indent, "Locked repo version: %s\n", req.VersionLock.Version)
 }
 
+func PrintRequiredRepoVersion(
+	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, requiredRepoPath string,
+) error {
+	req, err := pallet.LoadFSRepoReq(requiredRepoPath)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't load repo version lock definition %s from pallet %s",
+			requiredRepoPath, pallet.FS.Path(),
+		)
+	}
+	IndentedPrintln(indent, req.VersionLock.Version)
+	return nil
+}
+
 // Add
 
 func AddRepoReqs(

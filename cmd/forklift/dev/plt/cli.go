@@ -148,7 +148,8 @@ func makeQuerySubcmds() []*cli.Command {
 				Action:   showAction,
 			},
 		},
-		makeQueryReqSubcmds(category),
+		makeQueryPltReqSubcmds(category),
+		makeQueryRepoReqSubcmds(category),
 		makeQueryImportSubcmds(category),
 		makeQueryFileSubcmds(category),
 		makeQueryPkgSubcmds(category),
@@ -185,54 +186,74 @@ func makeQuerySubcmds() []*cli.Command {
 	)
 }
 
-func makeQueryReqSubcmds(category string) []*cli.Command {
+func makeQueryPltReqSubcmds(category string) []*cli.Command {
 	return slices.Concat(
 		[]*cli.Command{
 			{
 				Name:     "ls-plt",
 				Aliases:  []string{"list-pallets"},
 				Category: category,
-				Usage:    "Lists pallets which the development pallet may import files from",
+				Usage:    "Lists available pallets which the development pallet may import files from",
 				Action:   lsPltAction,
 			},
 			{
-				Name:      "show-plt",
-				Aliases:   []string{"show-pallet"},
-				Category:  category,
-				Usage:     "Describes a pallet which the development pallet may import files from",
+				Name:     "show-plt",
+				Aliases:  []string{"show-pallet"},
+				Category: category,
+				Usage: "Describes an available pallet which the development pallet may import files " +
+					"from",
 				ArgsUsage: "plt_path",
 				Action:    showPltAction,
+			},
+			{
+				Name:      "show-plt-version",
+				Aliases:   []string{"show-pallet-version"},
+				Category:  category,
+				Usage:     "Prints the required version of the available pallet",
+				ArgsUsage: "plt_path",
+				Action:    showPltVersionAction,
 			},
 		},
 		makeQueryPltFileSubcmds(category),
 		makeQueryPltFeatSubcmds(category),
-		[]*cli.Command{
-			{
-				Name:     "ls-repo",
-				Aliases:  []string{"list-repositories"},
-				Category: category,
-				Usage:    "Lists repos specified by the development pallet",
-				Action:   lsRepoAction,
-			},
-			{
-				Name:     "locate-repo",
-				Aliases:  []string{"locate-repository"},
-				Category: category,
-				Usage: "Prints the absolute filesystem path of a repo available in the development " +
-					"pallet",
-				ArgsUsage: "repo_path",
-				Action:    locateRepoAction,
-			},
-			{
-				Name:      "show-repo",
-				Aliases:   []string{"show-repository"},
-				Category:  category,
-				Usage:     "Describes a repo available in the development pallet",
-				ArgsUsage: "repo_path",
-				Action:    showRepoAction,
-			},
-		},
 	)
+}
+
+func makeQueryRepoReqSubcmds(category string) []*cli.Command {
+	return []*cli.Command{
+		{
+			Name:     "ls-repo",
+			Aliases:  []string{"list-repositories"},
+			Category: category,
+			Usage:    "Lists repos specified by the development pallet",
+			Action:   lsRepoAction,
+		},
+		{
+			Name:     "locate-repo",
+			Aliases:  []string{"locate-repository"},
+			Category: category,
+			Usage: "Prints the absolute filesystem path of a repo available in the development " +
+				"pallet",
+			ArgsUsage: "repo_path",
+			Action:    locateRepoAction,
+		},
+		{
+			Name:      "show-repo",
+			Aliases:   []string{"show-repository"},
+			Category:  category,
+			Usage:     "Describes a repo available in the development pallet",
+			ArgsUsage: "repo_path",
+			Action:    showRepoAction,
+		},
+		{
+			Name:      "show-repo-version",
+			Aliases:   []string{"show-repository-version"},
+			Category:  category,
+			Usage:     "Prints the required version of the available repo",
+			ArgsUsage: "repo_path",
+			// Action:    showRepoVersionAction,
+		},
+	}
 }
 
 func makeQueryPltFileSubcmds(category string) []*cli.Command {
