@@ -105,7 +105,7 @@ var Cmd = &cli.Command{
 			Name:     "rm-mir",
 			Aliases:  []string{"remove-mirrors", "del-mir", "delete-mirrors"},
 			Category: "Modify the cache",
-			Usage:    "Removes locally-cached pallets",
+			Usage:    "Removes local mirrors of git repositories",
 			// TODO: allow only removing mirrors matching a glob pattern
 			Action: rmGitRepoAction("mirror", getMirrorCache),
 		},

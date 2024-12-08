@@ -11,6 +11,7 @@ import (
 	"github.com/PlanktoScope/forklift/cmd/forklift/cache"
 	"github.com/PlanktoScope/forklift/cmd/forklift/dev"
 	"github.com/PlanktoScope/forklift/cmd/forklift/host"
+	"github.com/PlanktoScope/forklift/cmd/forklift/inspector"
 	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
 	"github.com/PlanktoScope/forklift/cmd/forklift/stage"
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
@@ -54,6 +55,7 @@ var app = &cli.App{
 		}),
 		cache.Cmd,
 		host.Cmd,
+		inspector.Cmd,
 		dev.MakeCmd(dev.Versions{
 			Staging:       fcliVersions,
 			NewStageStore: newStageStoreVersion,
