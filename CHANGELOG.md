@@ -5,15 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.8.0-alpha.4 - 2024-12-07
 
 ### Added
 
-- (cli) Added `inspector resolve-git-repo` command to resolve version queries on git repositories.
+- (cli) Added a `inspector resolve-git-repo` command to resolve version queries on git repositories.
 
 ### Fixed
 
-- (cli) `[dev] plt show-plt-version` and `[dev] plt show-repo-version` no longer require the required pallets/repos to be cached before the commands work.
+- (cli) The `[dev] plt show-plt-version` and `[dev] plt show-repo-version` commands no longer require the required pallets/repos to be cached before the respective commands work.
 
 ## 0.8.0-alpha.3 - 2024-12-06
 
