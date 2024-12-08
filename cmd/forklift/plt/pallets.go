@@ -103,7 +103,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -126,8 +126,8 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if forklift.DirExists(workspace.GetCurrentPalletPath()) {
-			fmt.Printf("Deleting the local pallet to replace it with %s...", query)
-			fmt.Println()
+			fmt.Fprintf(os.Stderr, "Deleting the local pallet to replace it with %s...", query)
+			fmt.Fprintln(os.Stderr)
 		}
 		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
 			return errors.Wrap(err, "couldn't remove local pallet")
@@ -141,7 +141,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 
 		if c.Bool("apply") {
 			return applyAction(versions)(c)
@@ -152,7 +152,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 
 func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 	if !forklift.DirExists(wpath) {
-		fmt.Printf("Making a new workspace at %s...", wpath)
+		fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 	}
 	if err := forklift.EnsureExists(wpath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
@@ -179,24 +179,27 @@ func handlePalletQuery(
 
 	printed := false
 	if !provided.Complete() {
-		fmt.Printf(
+		fmt.Fprintf(
+			os.Stderr,
 			"Provided query %s was completed with stored query %s as %s!\n", provided, loaded, query,
 		)
 		printed = true
 	}
 	if query == loaded {
 		if printed {
-			fmt.Println()
+			fmt.Fprintln(os.Stderr)
 		}
 		return query, nil
 	}
 
 	if loaded == (forklift.GitRepoQuery{}) {
-		fmt.Printf(
+		fmt.Fprintf(
+			os.Stderr,
 			"Initializing the tracked path & version query for the current pallet as %s...\n", query,
 		)
 	} else {
-		fmt.Printf(
+		fmt.Fprintf(
+			os.Stderr,
 			"Updating the tracked path & version query for the current pallet from %s to %s...\n",
 			loaded, query,
 		)
@@ -204,7 +207,7 @@ func handlePalletQuery(
 	if err := workspace.CommitCurrentPalletUpgrades(query); err != nil {
 		return query, errors.Wrapf(err, "couldn't commit pallet query %s", query)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	return query, nil
 }
 
@@ -243,6 +246,16 @@ func completePalletQuery(
 	return query, loaded, provided, nil
 }
 
+const (
+	notGitSnippet       = "is not a valid Git repo"
+	noBackupSnippet     = "(i.e. not yet backed up)"
+	uncommittedSnippet  = "has changes which not yet saved in a Git commit " + noBackupSnippet
+	unpushedSnippet     = "is on a commit which might not be in a remote Git repo " + noBackupSnippet
+	existsSnippet       = "the local pallet already exists"
+	forceEnabledSnippet = "we can only delete and replace such pallets if the --force flag is enabled"
+	evenThoughSnippet   = "we will delete and replace the local pallet even though"
+)
+
 func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 	pltPath := workspace.GetCurrentPalletPath()
 	if !forklift.DirExists(pltPath) {
@@ -253,11 +266,10 @@ func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 	if err != nil {
 		if !force {
 			return errors.Errorf(
-				"the local pallet already exists and is not a valid Git repo, but we can only delete and " +
-					"replace such pallets if the --force flag is enabled",
+				existsSnippet + " and " + notGitSnippet + ", but " + forceEnabledSnippet,
 			)
 		}
-		fmt.Println("Warning: the local pallet isn't a Git repo, but we'll delete and replace it!")
+		fmt.Fprintln(os.Stderr, "Warning: "+evenThoughSnippet+" "+notGitSnippet+"!")
 	}
 
 	status, err := gitRepo.Status()
@@ -267,22 +279,20 @@ func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 	if len(status) > 0 {
 		if !force {
 			return errors.Errorf(
-				"the local pallet already exists and has changes which have not yet been saved in a Git " +
-					"commit (i.e. not yet backed up); to ignore this, enable the --force flag",
+				existsSnippet + " and " + uncommittedSnippet + "; to ignore this, enable the --force flag",
 			)
 		}
-		fmt.Println(
-			"Warning: we'll delete and replace the local pallet even though it has changes which " +
-				"have not yet been saved in a Git commit (i.e. which have not yet been backed up)!",
-		)
+		fmt.Fprintln(os.Stderr, "Warning: "+evenThoughSnippet+" it "+uncommittedSnippet+"!")
 	}
 
-	fmt.Println("Fetching changes from the remote...")
+	fmt.Fprintln(os.Stderr, "Fetching changes from the remote...")
 	if err = gitRepo.FetchAll(1, os.Stdout); err != nil {
 		return errors.Wrap(err, "couldn't fetch changes from the remote Git repo")
 	}
 
-	fmt.Printf("Checking whether the current commit of %s exists on a remote Git repo...\n", pltPath)
+	fmt.Fprintf(
+		os.Stderr, "Checking whether current commit of %s exists on a remote Git repo...\n", pltPath,
+	)
 	remotesHaveHead, err := isHeadInRemotes(1, gitRepo)
 	if err != nil {
 		return errors.Wrapf(
@@ -291,57 +301,18 @@ func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 	}
 	if !remotesHaveHead {
 		if !force {
-			return errors.Errorf(
-				"the local pallet already exists and is on a commit which might not exist on a remote " +
-					"Git repo (i.e. which has not yet been backed up), but we can only delete and replace " +
-					"such pallets if the --force flag is enabled",
-			)
+			return errors.Errorf(existsSnippet + " and " + unpushedSnippet + ", " + forceEnabledSnippet)
 		}
-		fmt.Println(
-			"Warning: we will delete and replace the local pallet even though it is on a commit which " +
-				"might not exist on a remote Git repo (i.e. which has not yet been backed up)!",
-		)
+		fmt.Fprintln(os.Stderr, "Warning: "+evenThoughSnippet+" it "+unpushedSnippet+"!")
 	}
 
 	return nil
 }
 
 func isHeadInRemotes(indent int, gitRepo *git.Repo) (bool, error) {
-	remotes, err := gitRepo.Remotes()
+	refs, err := getRemoteRefs(indent, gitRepo)
 	if err != nil {
-		return false, errors.Wrapf(err, "couldn't check Git remotes")
-	}
-	fcli.SortRemotes(remotes)
-
-	refs := make([]*plumbing.Reference, 0)
-	queryCacheMirrorRemote := false
-	for _, remote := range remotes {
-		if remote.Config().Name == fcli.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
-			fcli.IndentedPrintf(
-				indent, "Skipped remote %s, because remote origin's references were successfully "+
-					"retrieved!\n",
-				remote.Config().Name,
-			)
-			continue
-		}
-
-		remoteRefs, err := remote.List(git.EmptyListOptions())
-		if err != nil {
-			fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrapf(
-				err, "couldn't retrieve references for remote %s", remote.Config().Name,
-			))
-			if remote.Config().Name == fcli.OriginRemoteName {
-				queryCacheMirrorRemote = true
-			}
-			continue
-		}
-		fcli.IndentedPrintf(indent, "Retrieved references for remote %s!\n", remote.Config().Name)
-		for _, ref := range remoteRefs {
-			if strings.HasPrefix(string(ref.Name()), "refs/pull/") {
-				continue
-			}
-			refs = append(refs, ref)
-		}
+		return false, errors.Wrapf(err, "couldn't retrieve references of remotes")
 	}
 
 	head, err := gitRepo.GetHead()
@@ -349,24 +320,67 @@ func isHeadInRemotes(indent int, gitRepo *git.Repo) (bool, error) {
 		return false, errors.Wrapf(err, "couldn't determine the current Git commit")
 	}
 	const shortHashLength = 7
-	fcli.IndentedPrintf(
-		indent, "Searching ancestors of retrieved remote references for current commit %s...\n",
+	fcli.IndentedFprintf(
+		indent, os.Stderr,
+		"Searching ancestors of retrieved remote references for current commit %s...\n",
 		head[:shortHashLength],
 	)
 	// Warning: the following function call assumes that head commits are available to the git repo,
 	// which requires the git repo to have fetched all updated heads from the remotes!
 	remotesHaveHead, err := gitRepo.RefsHaveAncestor(refs, head)
 	if err != nil {
-		fcli.IndentedPrintln(
-			indent, errors.Wrapf(err, "Warning: couldn't check whether remotes have commit %s", head),
-		)
+		fcli.IndentedFprintln(indent, os.Stderr, errors.Wrapf(
+			err, "Warning: couldn't check whether remotes have commit %s", head,
+		))
 	}
 	if remotesHaveHead {
-		fcli.IndentedPrintf(
-			indent, "Found current commit %s in one of the remotes!\n", head[:shortHashLength],
+		fcli.IndentedFprintf(
+			indent, os.Stderr, "Found current commit %s in one of the remotes!\n", head[:shortHashLength],
 		)
 	}
 	return remotesHaveHead, nil
+}
+
+func getRemoteRefs(indent int, gitRepo *git.Repo) ([]*plumbing.Reference, error) {
+	remotes, err := gitRepo.Remotes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't check Git remotes")
+	}
+	fcli.SortRemotes(remotes)
+
+	refs := make([]*plumbing.Reference, 0)
+	queryCacheMirrorRemote := false
+	for _, remote := range remotes {
+		if remote.Config().Name == fcli.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
+			fcli.IndentedFprintf(
+				indent, os.Stderr,
+				"Skipped remote %s, because remote origin's references were successfully retrieved!\n",
+				remote.Config().Name,
+			)
+			continue
+		}
+
+		remoteRefs, err := remote.List(git.EmptyListOptions())
+		if err != nil {
+			fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrapf(
+				err, "couldn't retrieve references for remote %s", remote.Config().Name,
+			))
+			if remote.Config().Name == fcli.OriginRemoteName {
+				queryCacheMirrorRemote = true
+			}
+			continue
+		}
+		fcli.IndentedFprintf(
+			indent, os.Stderr, "Retrieved references for remote %s!\n", remote.Config().Name,
+		)
+		for _, ref := range remoteRefs {
+			if strings.HasPrefix(string(ref.Name()), "refs/pull/") {
+				continue
+			}
+			refs = append(refs, ref)
+		}
+	}
+	return refs, nil
 }
 
 func preparePallet(
@@ -394,7 +408,7 @@ func preparePallet(
 
 	// cache everything required by pallet
 	if cacheStagingReqs {
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 		if _, _, err = fcli.CacheStagingReqs(
 			0, plt, caches.m, caches.p, caches.r, caches.d, platform, false, parallel,
 		); err != nil {
@@ -424,8 +438,8 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 		if err = checkPalletDirtiness(workspace, c.Bool("force")); err != nil {
 			return err
 		}
-		fmt.Printf("Deleting the local pallet to replace it with %s...", query)
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "Deleting the local pallet to replace it with %s...", query)
+		fmt.Fprintln(os.Stderr)
 		if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
 			return errors.Wrap(err, "couldn't remove local pallet")
 		}
@@ -438,7 +452,7 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 
 		if c.Bool("apply") {
 			return applyAction(versions)(c)
@@ -451,7 +465,7 @@ func checkUpgrade(
 	indent int, workspace *forklift.FSWorkspace, upgradeQuery forklift.GitRepoQuery,
 	allowDowngrade bool,
 ) error {
-	fcli.IndentedPrintln(indent, "Resolving upgrade version query...")
+	fcli.IndentedFprintln(indent, os.Stderr, "Resolving upgrade version query...")
 	upgradeResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
 		indent+1, workspace.GetMirrorCachePath(), []string{upgradeQuery.String()}, true,
 	)
@@ -462,14 +476,14 @@ func checkUpgrade(
 	currentResolved, err := resolveCurrentPalletVersion(indent, workspace)
 	if err != nil {
 		currentResolved = forklift.GitRepoReq{}
-		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
+		fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrap(
 			err,
 			"we couldn't determine & resolve the current version of the local pallet, so any change "+
 				"could be either an upgrade or a downgrade",
 		))
 	}
 
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	return printUpgrade(
 		indent, currentResolved, upgradeResolved[upgradeQuery.String()], allowDowngrade,
 	)
@@ -494,23 +508,26 @@ func resolveCurrentPalletVersion(
 		Path:         plt.Def.Pallet.Path,
 		VersionQuery: ref.Hash().String(),
 	}
-	fcli.IndentedPrintf(
-		indent, "Local pallet currently is %s at %s\n", plt.Def.Pallet.Path, git.StringifyRef(ref),
+	fcli.IndentedFprintf(
+		indent, os.Stderr,
+		"Local pallet currently is %s at %s\n", plt.Def.Pallet.Path, git.StringifyRef(ref),
 	)
 	indent++
-	fcli.IndentedPrintln(indent, "Resolving current version query...")
+	fcli.IndentedFprintln(indent, os.Stderr, "Resolving current version query...")
 	currentResolved, err := fcli.ResolveQueriesUsingLocalMirrors(
 		// Note: we don't update the local mirror because we already updated it to resolve the current
 		// version query
 		indent, workspace.GetMirrorCachePath(), []string{currentQuery.String()}, false,
 	)
 	if err != nil {
-		fcli.IndentedPrintf(indent, "Warning: %s\n", errors.Wrap(
+		fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrap(
 			err,
 			"couldn't resolve current version query from the Forklift pallet cache's local mirror of "+
 				"the remote repo (is the local pallet currently on a commit not in the remote origin?)",
 		))
-		fcli.IndentedPrintln(indent, "Resolving current version query using local pallet instead...")
+		fcli.IndentedFprintln(
+			indent, os.Stderr, "Resolving current version query using local pallet instead...",
+		)
 		resolvedVersionLock, err := fcli.ResolveVersionQueryUsingRepo(
 			plt.FS.Path(), currentQuery.VersionQuery,
 		)
@@ -520,8 +537,8 @@ func resolveCurrentPalletVersion(
 			)
 		}
 
-		fcli.IndentedPrintf(
-			indent, "Resolved %s as %s@%s",
+		fcli.IndentedFprintf(
+			indent, os.Stderr, "Resolved %s as %s@%s",
 			currentQuery.String(), plt.Def.Pallet.Path, resolvedVersionLock.Version,
 		)
 		return forklift.GitRepoReq{
@@ -563,8 +580,9 @@ func printUpgrade(indent int, current, upgrade forklift.GitRepoReq, allowDowngra
 				current.RequiredPath, upgrade.RequiredPath,
 			)
 		}
-		fcli.IndentedPrintf(
-			indent, "Warning: the upgrade query would change the local pallet from %s to %s!\n",
+		fcli.IndentedFprintf(
+			indent, os.Stderr,
+			"Warning: the upgrade query would change the local pallet from %s to %s!\n",
 			current.RequiredPath, upgrade.RequiredPath,
 		)
 	} else if current.VersionLock.Version > upgrade.VersionLock.Version {
@@ -600,9 +618,10 @@ func checkUpgradeAction(c *cli.Context) error {
 		return errors.Wrapf(err, "couldn't complete provided version query %s", providedQuery)
 	}
 	if providedQuery == "" {
-		fmt.Printf("Loaded upgrade query: %s\n", query)
+		fmt.Fprintf(os.Stderr, "Loaded upgrade query: %s\n", query)
 	} else if !provided.Complete() {
-		fmt.Printf(
+		fmt.Fprintf(
+			os.Stderr,
 			"Provided query %s was completed with stored query %s as %s!\n", provided, loaded, query,
 		)
 	}
@@ -641,7 +660,7 @@ func setUpgradeQueryAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 	}
-	fmt.Println("Done!")
+	fmt.Fprintln(os.Stderr, "Done!")
 	return nil
 }
 
@@ -660,12 +679,13 @@ func cloneAction(versions Versions) cli.ActionFunc {
 		}
 
 		if c.Bool("force") {
-			fmt.Printf(
+			fmt.Fprintf(
+				os.Stderr,
 				"Warning: if a local pallet already exists, it will be deleted now to be replaced with "+
 					"%s...\n",
 				query,
 			)
-			fmt.Println()
+			fmt.Fprintln(os.Stderr)
 			if err := os.RemoveAll(workspace.GetCurrentPalletPath()); err != nil {
 				return errors.Wrap(err, "couldn't remove local pallet")
 			}
@@ -677,7 +697,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 
 		switch {
 		case c.Bool("apply"):
@@ -685,7 +705,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -700,13 +720,13 @@ func fetchAction(c *cli.Context) error {
 	}
 	pltPath := workspace.GetCurrentPalletPath()
 
-	fmt.Println("Fetching updates...")
+	fmt.Fprintln(os.Stderr, "Fetching updates...")
 	updated, err := git.Fetch(0, pltPath, os.Stdout)
 	if err != nil {
 		return errors.Wrap(err, "couldn't fetch changes from the remote release")
 	}
 	if !updated {
-		fmt.Println("No updates from the remote release.")
+		fmt.Fprintln(os.Stderr, "No updates from the remote release.")
 	}
 
 	// TODO: display changes
@@ -725,17 +745,17 @@ func pullAction(versions Versions) cli.ActionFunc {
 
 		// FIXME: update the local mirror
 
-		fmt.Println("Attempting to fast-forward the local pallet...")
+		fmt.Fprintln(os.Stderr, "Attempting to fast-forward the local pallet...")
 		updated, err := git.Pull(1, pltPath, os.Stdout)
 		if err != nil {
 			return errors.Wrap(err, "couldn't fast-forward the local pallet")
 		}
 		if !updated {
-			fmt.Println("No changes from the remote release.")
+			fmt.Fprintln(os.Stderr, "No changes from the remote release.")
 		}
 		// TODO: display changes
 
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 
 		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 		if err != nil {
@@ -760,7 +780,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -775,7 +795,7 @@ func rmAction(c *cli.Context) error {
 	}
 	pltPath := workspace.GetCurrentPalletPath()
 
-	fmt.Printf("Removing local pallet from workspace...\n")
+	fmt.Fprintf(os.Stderr, "Removing local pallet from workspace...\n")
 	// TODO: return an error if there are uncommitted or unpushed changes to be removed - in which
 	// case require a --force flag
 	return errors.Wrap(os.RemoveAll(pltPath), "couldn't remove local pallet")
@@ -788,7 +808,7 @@ func showAction(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return fcli.PrintPalletInfo(0, plt)
+	return fcli.FprintPalletInfo(0, os.Stdout, plt)
 }
 
 // check
@@ -874,7 +894,10 @@ func stageAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.")
+		fmt.Fprintln(
+			os.Stderr,
+			"Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.",
+		)
 		return nil
 	}
 }
@@ -919,7 +942,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 		if err = fcli.ApplyNextOrCurrentBundle(0, stageStore, bundle, c.Bool("parallel")); err != nil {
 			return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
 		}
-		fmt.Println("Done! You may need to reboot for some changes to take effect.")
+		fmt.Fprintln(os.Stderr, "Done! You may need to reboot for some changes to take effect.")
 		return nil
 	}
 }
@@ -954,13 +977,13 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if len(downloaded) == 0 {
-			fmt.Println("Done! No further actions are needed at this time.")
+			fmt.Fprintln(os.Stderr, "Done! No further actions are needed at this time.")
 			return nil
 		}
 
 		// TODO: warn if any downloaded pallet doesn't appear to be an actual pallet, or if any pallet's
 		// forklift version is incompatible or ahead of the pallet version
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -973,7 +996,7 @@ func lsPltAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPallets(0, plt)
+	return fcli.FprintRequiredPallets(0, os.Stdout, plt)
 }
 
 // show-plt
@@ -986,7 +1009,7 @@ func showPltAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPalletInfo(0, plt, caches.p, c.Args().First())
+	return fcli.FprintRequiredPalletInfo(0, os.Stdout, plt, caches.p, c.Args().First())
 }
 
 // show-plt-version
@@ -997,7 +1020,7 @@ func showPltVersionAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPalletVersion(0, plt, caches.p, c.Args().First())
+	return fcli.FprintRequiredPalletVersion(0, os.Stdout, plt, caches.p, c.Args().First())
 }
 
 // add-plt
@@ -1035,7 +1058,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 			}
 			// TODO: check version compatibility between the pallet and the added pallet!
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -1056,7 +1079,7 @@ func rmPltAction(versions Versions) cli.ActionFunc {
 		if err = fcli.RemovePalletReqs(0, plt, c.Args().Slice(), c.Bool("force")); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -1120,7 +1143,7 @@ func showPltFileAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintFile(plt, c.Args().Get(1))
+	return fcli.FprintFile(os.Stdout, plt, c.Args().Get(1))
 }
 
 // ls-plt-feat
@@ -1135,7 +1158,7 @@ func lsPltFeatAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintPalletFeatures(0, plt)
+	return fcli.FprintPalletFeatures(0, os.Stdout, plt)
 }
 
 // show-plt-feat
@@ -1150,5 +1173,5 @@ func showPltFeatAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintFeatureInfo(0, plt, caches.p, c.Args().Get(1))
+	return fcli.FprintFeatureInfo(0, os.Stdout, plt, caches.p, c.Args().Get(1))
 }

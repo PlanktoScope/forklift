@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -26,7 +27,9 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done caching images! They will be used when the staged pallet bundle is applied.")
+		fmt.Fprintln(
+			os.Stderr, "Done caching images! They will be used when the staged pallet bundle is applied.",
+		)
 		return nil
 	}
 }

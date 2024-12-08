@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -19,7 +20,7 @@ func lsDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPalletDepls(0, plt)
+	return fcli.FprintPalletDepls(0, os.Stdout, plt)
 }
 
 // show-depl
@@ -34,7 +35,7 @@ func showDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintDeplInfo(0, plt, caches.r, c.Args().First())
+	return fcli.FprintDeplInfo(0, os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // locate-depl-pkg
@@ -49,7 +50,9 @@ func locateDeplPkgAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintDeplPkgLocation(0, plt, caches.r, c.Args().First(), c.Bool("allow-disabled"))
+	return fcli.FprintDeplPkgLocation(
+		0, os.Stdout, plt, caches.r, c.Args().First(), c.Bool("allow-disabled"),
+	)
 }
 
 // add-depl
@@ -86,7 +89,7 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -121,7 +124,7 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -158,7 +161,7 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -197,7 +200,7 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -234,7 +237,7 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -270,7 +273,7 @@ func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}

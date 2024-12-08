@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -47,14 +48,14 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		fmt.Println("Downloading Docker container images specified by the local pallet...")
+		fmt.Fprintln(os.Stderr, "Downloading Docker container images specified by the local pallet...")
 		if err := fcli.DownloadImages(
 			0, plt, caches.r, c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}
-		fmt.Println()
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }

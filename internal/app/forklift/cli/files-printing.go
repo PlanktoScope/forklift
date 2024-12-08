@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -59,13 +60,13 @@ func GetFileLocation(pallet *forklift.FSPallet, filePath string) (string, error)
 	return resolved, nil
 }
 
-func PrintFile(pallet *forklift.FSPallet, filePath string) error {
+func FprintFile(out io.Writer, pallet *forklift.FSPallet, filePath string) error {
 	data, err := fs.ReadFile(pallet.FS, filePath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't read file %s in %s", filePath, pallet.FS.Path())
 	}
 
-	fmt.Print(string(data))
+	_, _ = fmt.Fprint(out, string(data))
 	return nil
 }
 
@@ -95,14 +96,14 @@ func EditFileWithCOW(pallet *forklift.FSPallet, filePath, editor string) error {
 		return errors.Wrapf(err, "couldn't edit %s in a temporary file", filePath)
 	}
 	if bytes.Equal(edited, original) {
-		fmt.Printf(
-			"Warning: the file wasn't changed from %s, so it won't be saved to %s!\n",
+		fmt.Fprintf(
+			os.Stderr, "Warning: the file wasn't changed from %s, so it won't be saved to %s!\n",
 			resolved, overlayPath,
 		)
 		return nil
 	}
 
-	fmt.Printf("Saving edits on %s to %s...\n", resolved, overlayPath)
+	fmt.Fprintf(os.Stderr, "Saving edits on %s to %s...\n", resolved, overlayPath)
 	if err = forklift.EnsureExists(filepath.FromSlash(path.Dir(overlayPath))); err != nil {
 		return err
 	}
@@ -115,13 +116,13 @@ func EditFileWithCOW(pallet *forklift.FSPallet, filePath, editor string) error {
 	defer func() {
 		// FIXME: handle this error more rigorously
 		if err := overlayFile.Close(); err != nil {
-			fmt.Printf("Error: couldn't close dest file %s\n", overlayPath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close dest file %s\n", overlayPath)
 		}
 	}()
 	if _, err := overlayFile.Write(edited); err != nil {
 		return errors.Wrapf(err, "couldn't write edits to %s", overlayPath)
 	}
-	fmt.Println("Done!")
+	fmt.Fprintln(os.Stderr, "Done!")
 	return nil
 }
 
@@ -143,11 +144,12 @@ func editWithTempFile(editor, filePath string, original []byte) (edited []byte, 
 	defer func() {
 		if err := tempFile.Close(); err != nil {
 			// FIXME: handle this error more rigorously
-			fmt.Printf("Error: couldn't close temporary file %s\n", filePath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close temporary file %s\n", filePath)
 		}
 		if err := os.Remove(tempFile.Name()); err != nil {
-			fmt.Printf(
-				"Error: couldn't delete temporary file %s; you may need to delete it yourself\n", filePath,
+			fmt.Fprintf(
+				os.Stderr, "Error: couldn't delete temporary file %s; you may need to delete it yourself\n",
+				filePath,
 			)
 		}
 	}()
@@ -179,10 +181,12 @@ func RemoveFile(indent int, pallet *forklift.FSPallet, filePath string) error {
 		return nil
 	}
 
-	IndentedPrintln(indent, "Warning: the following files are currently imported from other pallets:")
+	IndentedFprintln(
+		indent, os.Stderr, "Warning: the following files are currently imported from other pallets:",
+	)
 	indent++
 	for _, p := range paths {
-		IndentedPrintln(indent, p)
+		IndentedFprintln(indent, os.Stderr, p)
 	}
 	return nil
 }

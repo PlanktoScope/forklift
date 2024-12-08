@@ -2,6 +2,8 @@ package cache
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
 
@@ -40,9 +42,12 @@ func lsGitRepo[GitRepo versionQuerier](
 // show-*
 
 func showGitRepo[GitRepo any](
+	out io.Writer,
 	cache core.Pather, versionQuery string,
 	loader func(path, version string) (GitRepo, error),
-	printer func(indent int, cache core.Pather, gitRepo GitRepo, printHeader bool) error,
+	fprinter func(
+		indent int, out io.Writer, cache core.Pather, gitRepo GitRepo, printHeader bool,
+	) error,
 	printHeader bool,
 ) error {
 	gitRepoPath, version, ok := strings.Cut(versionQuery, "@")
@@ -55,7 +60,7 @@ func showGitRepo[GitRepo any](
 	if err != nil {
 		return errors.Wrapf(err, "couldn't find %s@%s", gitRepoPath, version)
 	}
-	return printer(0, cache, gitRepo, printHeader)
+	return fprinter(0, out, cache, gitRepo, printHeader)
 }
 
 // add-*
@@ -79,8 +84,8 @@ func addGitRepoAction[Cache core.Pather](
 		); err != nil {
 			return err
 		}
-		fmt.Println()
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -100,7 +105,7 @@ func rmGitRepoAction[Cache remover](
 			return err
 		}
 
-		fmt.Printf("Clearing %s cache...\n", gitRepoType)
+		fmt.Fprintf(os.Stderr, "Clearing %s cache...\n", gitRepoType)
 		if err = cache.Remove(); err != nil {
 			return errors.Wrapf(err, "couldn't clear %s cache", gitRepoType)
 		}

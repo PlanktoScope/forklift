@@ -51,7 +51,7 @@ func DownloadExportFiles(
 		return nil
 	}
 
-	IndentedPrintln(indent, "Downloading files for export...")
+	IndentedFprintln(indent, os.Stderr, "Downloading files for export...")
 	indent++
 	newHTTP := make([]string, 0, len(httpDownloads))
 	for _, url := range httpDownloads {
@@ -62,7 +62,7 @@ func DownloadExportFiles(
 			)
 		}
 		if ok {
-			IndentedPrintf(indent, "Skipped already-cached file download: %s\n", url)
+			IndentedFprintf(indent, os.Stderr, "Skipped already-cached file download: %s\n", url)
 			continue
 		}
 		newHTTP = append(newHTTP, url)
@@ -77,7 +77,7 @@ func DownloadExportFiles(
 			)
 		}
 		if ok {
-			IndentedPrintf(indent, "Skipped already-cached OCI image download: %s\n", url)
+			IndentedFprintf(indent, os.Stderr, "Skipped already-cached OCI image download: %s\n", url)
 			continue
 		}
 		newOCI = append(newOCI, url)
@@ -147,7 +147,7 @@ func downloadParallel(
 	eg, egctx := errgroup.WithContext(context.Background())
 	for _, url := range httpURLs {
 		eg.Go(func() error {
-			IndentedPrintf(indent, "Downloading file %s...\n", url)
+			IndentedFprintf(indent, os.Stderr, "Downloading file %s...\n", url)
 			outputPath, err := cache.GetFilePath(url)
 			if err != nil {
 				return errors.Wrapf(err, "couldn't determine path to cache download for %s", url)
@@ -155,13 +155,13 @@ func downloadParallel(
 			if err = downloadFile(egctx, url, outputPath, hc); err != nil {
 				return errors.Wrapf(err, "couldn't download %s", url)
 			}
-			IndentedPrintf(indent, "Downloaded %s\n", url)
+			IndentedFprintf(indent, os.Stderr, "Downloaded %s\n", url)
 			return nil
 		})
 	}
 	for _, imageName := range ociImageNames {
 		eg.Go(func() error {
-			IndentedPrintf(indent, "Downloading OCI container image %s...\n", imageName)
+			IndentedFprintf(indent, os.Stderr, "Downloading OCI container image %s...\n", imageName)
 			outputPath, err := cache.GetOCIImagePath(imageName)
 			if err != nil {
 				return errors.Wrapf(err, "couldn't determine path to cache download for %s", imageName)
@@ -169,7 +169,7 @@ func downloadParallel(
 			if err = downloadOCIImage(egctx, imageName, outputPath, platform); err != nil {
 				return errors.Wrapf(err, "couldn't download %s", imageName)
 			}
-			IndentedPrintf(indent, "Downloaded %s\n", imageName)
+			IndentedFprintf(indent, os.Stderr, "Downloaded %s\n", imageName)
 			return nil
 		})
 	}
@@ -184,7 +184,7 @@ func downloadSerial(
 	hc *http.Client,
 ) error {
 	for _, url := range httpURLs {
-		IndentedPrintf(indent, "Downloading file %s to cache...\n", url)
+		IndentedFprintf(indent, os.Stderr, "Downloading file %s to cache...\n", url)
 		outputPath, err := cache.GetFilePath(url)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't determine path to cache download for %s", url)
@@ -192,10 +192,12 @@ func downloadSerial(
 		if err = downloadFile(context.Background(), url, outputPath, hc); err != nil {
 			return errors.Wrapf(err, "couldn't download %s", url)
 		}
-		IndentedPrintf(indent, "Downloaded %s\n", url)
+		IndentedFprintf(indent, os.Stderr, "Downloaded %s\n", url)
 	}
 	for _, imageName := range ociImageNames {
-		IndentedPrintf(indent, "Downloading OCI container image %s to cache...\n", imageName)
+		IndentedFprintf(
+			indent, os.Stderr, "Downloading OCI container image %s to cache...\n", imageName,
+		)
 		outputPath, err := cache.GetFilePath(imageName)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't determine path to cache download for %s", imageName)
@@ -203,7 +205,7 @@ func downloadSerial(
 		if err = downloadOCIImage(context.Background(), imageName, outputPath, platform); err != nil {
 			return errors.Wrapf(err, "couldn't download %s", imageName)
 		}
-		IndentedPrintf(indent, "Downloaded %s\n", imageName)
+		IndentedFprintf(indent, os.Stderr, "Downloaded %s\n", imageName)
 	}
 	return nil
 }
@@ -220,7 +222,7 @@ func downloadFile(ctx context.Context, url, outputPath string, hc *http.Client) 
 	defer func() {
 		if err := file.Close(); err != nil {
 			// FIXME: handle this error better
-			fmt.Printf("Error: couldn't close temporary download file %s\n", tmpPath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close temporary download file %s\n", tmpPath)
 		}
 	}()
 
@@ -235,7 +237,7 @@ func downloadFile(ctx context.Context, url, outputPath string, hc *http.Client) 
 	defer func() {
 		if err := res.Body.Close(); err != nil {
 			// FIXME: handle this error better
-			fmt.Printf("Error: couldn't close http response for %s\n", url)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close http response for %s\n", url)
 		}
 	}()
 
@@ -264,7 +266,7 @@ func downloadOCIImage(ctx context.Context, imageName, outputPath, platform strin
 	defer func() {
 		if err := file.Close(); err != nil {
 			// FIXME: handle this error better
-			fmt.Printf("Error: couldn't close temporary download file %s\n", tmpPath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close temporary download file %s\n", tmpPath)
 		}
 	}()
 

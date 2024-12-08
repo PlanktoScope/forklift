@@ -1,6 +1,8 @@
 package plt
 
 import (
+	"os"
+
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
@@ -17,7 +19,7 @@ func lsPkgAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPalletPkgs(0, plt, caches.r)
+	return fcli.FprintPalletPkgs(0, os.Stdout, plt, caches.r)
 }
 
 // locate-pkg
@@ -31,7 +33,7 @@ func locatePkgAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPkgLocation(plt, caches.r, c.Args().First())
+	return fcli.FprintPkgLocation(os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // show-pkg
@@ -45,5 +47,5 @@ func showPkgAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPkgInfo(0, plt, caches.r, c.Args().First())
+	return fcli.FprintPkgInfo(0, os.Stdout, plt, caches.r, c.Args().First())
 }

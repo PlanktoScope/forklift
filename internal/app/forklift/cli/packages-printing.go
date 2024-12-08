@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"path"
 	"slices"
 
@@ -11,209 +12,213 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func PrintPkg(indent int, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
-	IndentedPrintf(indent, "Package: %s\n", pkg.Path())
+func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
+	IndentedFprintf(indent, out, "Package: %s\n", pkg.Path())
 	indent++
 
-	printPkgRepo(indent, cache, pkg)
+	fprintPkgRepo(indent, out, cache, pkg)
 	if core.CoversPath(cache, pkg.FS.Path()) {
-		IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pkg.FS.Path()))
+		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
-		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
+		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
 	}
 
-	PrintPkgSpec(indent, pkg.Def.Package)
-	fmt.Println()
-	PrintDeplSpec(indent, pkg.Def.Deployment)
-	fmt.Println()
-	PrintFeatureSpecs(indent, pkg.Def.Features)
+	FprintPkgSpec(indent, out, pkg.Def.Package)
+	_, _ = fmt.Fprintln(out)
+	FprintDeplSpec(indent, out, pkg.Def.Deployment)
+	_, _ = fmt.Fprintln(out)
+	FprintFeatureSpecs(indent, out, pkg.Def.Features)
 }
 
-func printPkgRepo(indent int, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
-	IndentedPrintf(indent, "Provided by repo: %s\n", pkg.Repo.Path())
+func fprintPkgRepo(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
+	IndentedFprintf(indent, out, "Provided by repo: %s\n", pkg.Repo.Path())
 	indent++
 
 	if core.CoversPath(cache, pkg.FS.Path()) {
-		IndentedPrintf(indent, "Version: %s\n", pkg.Repo.Version)
+		IndentedFprintf(indent, out, "Version: %s\n", pkg.Repo.Version)
 	} else {
-		IndentedPrintf(
-			indent, "Absolute path (replacing any cached copy): %s\n", pkg.Repo.FS.Path(),
+		IndentedFprintf(
+			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.Repo.FS.Path(),
 		)
 	}
 
-	IndentedPrintf(indent, "Description: %s\n", pkg.Repo.Def.Repo.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pkg.Repo.Def.Repo.Description)
 }
 
-func PrintPkgSpec(indent int, spec core.PkgSpec) {
-	IndentedPrintf(indent, "Description: %s\n", spec.Description)
+func FprintPkgSpec(indent int, out io.Writer, spec core.PkgSpec) {
+	IndentedFprintf(indent, out, "Description: %s\n", spec.Description)
 
-	IndentedPrint(indent, "Maintainers:")
+	IndentedFprint(indent, out, "Maintainers:")
 	if len(spec.Maintainers) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for _, maintainer := range spec.Maintainers {
-		printMaintainer(indent+1, maintainer)
+		fprintMaintainer(indent+1, out, maintainer)
 	}
 
 	if spec.License != "" {
-		IndentedPrintf(indent, "License: %s\n", spec.License)
+		IndentedFprintf(indent, out, "License: %s\n", spec.License)
 	} else {
-		IndentedPrintf(indent, "License: (custom license)\n")
+		IndentedFprint(indent, out, "License: (custom license)\n")
 	}
 
-	IndentedPrint(indent, "Sources:")
+	IndentedFprint(indent, out, "Sources:")
 	if len(spec.Sources) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for _, source := range spec.Sources {
-		BulletedPrintln(indent+1, source)
+		BulletedFprintln(indent+1, out, source)
 	}
 }
 
-func printMaintainer(indent int, maintainer core.PkgMaintainer) {
+func fprintMaintainer(indent int, out io.Writer, maintainer core.PkgMaintainer) {
 	if maintainer.Email != "" {
-		BulletedPrintf(indent, "%s <%s>\n", maintainer.Name, maintainer.Email)
+		BulletedFprintf(indent, out, "%s <%s>\n", maintainer.Name, maintainer.Email)
 	} else {
-		BulletedPrintln(indent, maintainer.Name)
+		BulletedFprintln(indent, out, maintainer.Name)
 	}
 }
 
-func PrintDeplSpec(indent int, spec core.PkgDeplSpec) {
-	IndentedPrintf(indent, "Deployment:\n")
+func FprintDeplSpec(indent int, out io.Writer, spec core.PkgDeplSpec) {
+	IndentedFprint(indent, out, "Deployment:\n")
 	indent++
 
-	IndentedPrintf(indent, "Compose files:")
+	IndentedFprint(indent, out, "Compose files:")
 	if len(spec.ComposeFiles) == 0 {
-		fmt.Printf(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for _, file := range spec.ComposeFiles {
-		BulletedPrintln(indent+1, file)
+		BulletedFprintln(indent+1, out, file)
 	}
 
-	printFileExports(indent, spec.Provides.FileExports)
+	fprintFileExports(indent, out, spec.Provides.FileExports)
 }
 
-func printFileExports(indent int, fileExports []core.FileExportRes) {
-	IndentedPrint(indent, "File exports:")
+func fprintFileExports(indent int, out io.Writer, fileExports []core.FileExportRes) {
+	IndentedFprint(indent, out, "File exports:")
 	if len(fileExports) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 	for _, fileExport := range fileExports {
 		switch fileExport.SourceType {
 		case core.FileExportSourceTypeLocal:
-			printFileExportLocal(indent, fileExport)
+			fprintFileExportLocal(indent, out, fileExport)
 		case core.FileExportSourceTypeHTTP:
-			printFileExportHTTP(indent, fileExport)
+			fprintFileExportHTTP(indent, out, fileExport)
 		case core.FileExportSourceTypeHTTPArchive:
-			printFileExportHTTPArchive(indent, fileExport)
+			fprintFileExportHTTPArchive(indent, out, fileExport)
 		case core.FileExportSourceTypeOCIImage:
-			printFileExportOCIImage(indent, fileExport)
+			fprintFileExportOCIImage(indent, out, fileExport)
 		default:
-			BulletedPrintf(indent, "Unknown source type %s: %+v\n", fileExport.SourceType, fileExport)
+			BulletedFprintf(
+				indent, out, "Unknown source type %s: %+v\n", fileExport.SourceType, fileExport,
+			)
 		}
 	}
 }
 
-func printFileExportLocal(indent int, fileExport core.FileExportRes) {
-	BulletedPrintf(indent, "Export from the package's local directory")
+func fprintFileExportLocal(indent int, out io.Writer, fileExport core.FileExportRes) {
+	BulletedFprint(indent, out, "Export from the package's local directory")
 	indent++
 	if fileExport.Description == "" {
-		fmt.Println()
+		_, _ = fmt.Fprintln(out)
 	} else {
-		fmt.Println(":")
-		IndentedPrintln(indent+1, fileExport.Description)
+		_, _ = fmt.Fprintln(out, ":")
+		IndentedFprintln(indent+1, out, fileExport.Description)
 	}
 	if fileExport.Source == fileExport.Target {
-		IndentedPrintf(indent, "Export: %s\n", fileExport.Target)
+		IndentedFprintf(indent, out, "Export: %s\n", fileExport.Target)
 		return
 	}
-	IndentedPrintf(indent, "From file: %s\n", fileExport.Source)
-	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+	IndentedFprintf(indent, out, "From file: %s\n", fileExport.Source)
+	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func printFileExportHTTP(indent int, fileExport core.FileExportRes) {
-	BulletedPrintf(indent, "Export from an HTTP download")
+func fprintFileExportHTTP(indent int, out io.Writer, fileExport core.FileExportRes) {
+	BulletedFprint(indent, out, "Export from an HTTP download")
 	indent++
 	if fileExport.Description == "" {
-		fmt.Println()
+		_, _ = fmt.Fprintln(out)
 	} else {
-		fmt.Println(":")
-		IndentedPrintln(indent+1, fileExport.Description)
+		_, _ = fmt.Fprintln(out, ":")
+		IndentedFprintln(indent+1, out, fileExport.Description)
 	}
-	IndentedPrintf(indent, "From file: %s\n", fileExport.URL)
-	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+	IndentedFprintf(indent, out, "From file: %s\n", fileExport.URL)
+	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func printFileExportHTTPArchive(indent int, fileExport core.FileExportRes) {
-	BulletedPrintf(indent, "Export from an HTTP archive download")
+func fprintFileExportHTTPArchive(indent int, out io.Writer, fileExport core.FileExportRes) {
+	BulletedFprint(indent, out, "Export from an HTTP archive download")
 	indent++
 	if fileExport.Description == "" {
-		fmt.Println()
+		_, _ = fmt.Fprintln(out)
 	} else {
-		fmt.Println(":")
-		IndentedPrintln(indent+1, fileExport.Description)
+		_, _ = fmt.Fprintln(out, ":")
+		IndentedFprintln(indent+1, out, fileExport.Description)
 	}
-	IndentedPrintf(indent, "From file: [%s]/%s\n", fileExport.URL, fileExport.Source)
-	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+	IndentedFprintf(indent, out, "From file: [%s]/%s\n", fileExport.URL, fileExport.Source)
+	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func printFileExportOCIImage(indent int, fileExport core.FileExportRes) {
-	BulletedPrintf(indent, "Export from a Docker/OCI image")
+func fprintFileExportOCIImage(indent int, out io.Writer, fileExport core.FileExportRes) {
+	BulletedFprint(indent, out, "Export from a Docker/OCI image")
 	indent++
 	if fileExport.Description == "" {
-		fmt.Println()
+		_, _ = fmt.Fprintln(out)
 	} else {
-		fmt.Println(":")
-		IndentedPrintln(indent+1, fileExport.Description)
+		_, _ = fmt.Fprintln(out, ":")
+		IndentedFprintln(indent+1, out, fileExport.Description)
 	}
-	IndentedPrintf(indent, "From file: [%s]/%s\n", fileExport.URL, fileExport.Source)
-	IndentedPrintf(indent, "Export as: %s\n", fileExport.Target)
+	IndentedFprintf(indent, out, "From file: [%s]/%s\n", fileExport.URL, fileExport.Source)
+	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func PrintFeatureSpecs(indent int, features map[string]core.PkgFeatureSpec) {
-	IndentedPrint(indent, "Optional features:")
+func FprintFeatureSpecs(indent int, out io.Writer, features map[string]core.PkgFeatureSpec) {
+	IndentedFprint(indent, out, "Optional features:")
 	names := make([]string, 0, len(features))
 	for name := range features {
 		names = append(names, name)
 	}
 	slices.Sort(names)
 	if len(names) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 
 	for _, name := range names {
-		PrintFeatureSpec(indent, name, features[name])
+		FprintFeatureSpec(indent, out, name, features[name])
 	}
 }
 
-func PrintFeatureSpec(indent int, name string, spec core.PkgFeatureSpec) {
-	IndentedPrintf(indent, "%s:\n", name)
+func FprintFeatureSpec(indent int, out io.Writer, name string, spec core.PkgFeatureSpec) {
+	IndentedFprintf(indent, out, "%s:\n", name)
 	indent++
 
-	IndentedPrintf(indent, "Description: %s\n", spec.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", spec.Description)
 
-	IndentedPrintf(indent, "Compose files:")
+	IndentedFprint(indent, out, "Compose files:")
 	if len(spec.ComposeFiles) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for _, file := range spec.ComposeFiles {
-		BulletedPrintln(indent+1, file)
+		BulletedFprintln(indent+1, out, file)
 	}
 
-	printFileExports(indent, spec.Provides.FileExports)
+	fprintFileExports(indent, out, spec.Provides.FileExports)
 }
 
 // Pallet packages
 
-func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPkgLoader) error {
+func FprintPalletPkgs(
+	indent int, out io.Writer, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+) error {
 	reqs, err := pallet.LoadFSRepoReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify repos in pallet %s", pallet.FS.Path())
@@ -245,13 +250,13 @@ func PrintPalletPkgs(indent int, pallet *forklift.FSPallet, loader forklift.FSPk
 		return core.ComparePkgs(a.Pkg, b.Pkg)
 	})
 	for _, pkg := range pkgs {
-		IndentedPrintf(indent, "%s\n", pkg.Path())
+		IndentedFprintf(indent, out, "%s\n", pkg.Path())
 	}
 	return nil
 }
 
-func PrintPkgLocation(
-	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+func FprintPkgLocation(
+	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
 ) error {
 	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
 	if err != nil {
@@ -261,7 +266,7 @@ func PrintPkgLocation(
 	}
 	fsys, ok := pkg.FS.(*forklift.MergeFS)
 	if !ok {
-		fmt.Println(pkg.FS.Path())
+		_, _ = fmt.Fprintln(out, pkg.FS.Path())
 		return nil
 	}
 
@@ -269,12 +274,13 @@ func PrintPkgLocation(
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve the location of package %s", pkgPath)
 	}
-	fmt.Println(path.Dir(resolved))
+	_, _ = fmt.Fprintln(out, path.Dir(resolved))
 	return nil
 }
 
-func PrintPkgInfo(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+func FprintPkgInfo(
+	indent int, out io.Writer,
+	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
 ) error {
 	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
 	if err != nil {
@@ -282,6 +288,6 @@ func PrintPkgInfo(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
 		)
 	}
-	PrintPkg(indent, cache, pkg)
+	FprintPkg(indent, out, cache, pkg)
 	return nil
 }

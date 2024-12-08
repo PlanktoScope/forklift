@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -27,13 +28,13 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !changed {
-			fmt.Println("Done! No further actions are needed at this time.")
+			fmt.Fprintln(os.Stderr, "Done! No further actions are needed at this time.")
 			return nil
 		}
 
 		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
 		// forklift version is incompatible or ahead of the pallet version
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -48,7 +49,7 @@ func lsRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepos(0, plt)
+	return fcli.FprintRequiredRepos(0, os.Stdout, plt)
 }
 
 // locate-repo
@@ -62,7 +63,7 @@ func locateRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepoLocation(plt, caches.r, c.Args().First())
+	return fcli.FprintRequiredRepoLocation(os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // show-repo
@@ -76,7 +77,7 @@ func showRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepoInfo(0, plt, caches.r, c.Args().First())
+	return fcli.FprintRequiredRepoInfo(0, os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // show-repo-version
@@ -89,7 +90,7 @@ func showRepoVersionAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepoVersion(0, plt, caches.r, c.Args().First())
+	return fcli.FprintRequiredRepoVersion(0, os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // add-repo
@@ -118,7 +119,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			}
 			// TODO: check version compatibility between the pallet and the added repo!
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -138,7 +139,7 @@ func rmRepoAction(versions Versions) cli.ActionFunc {
 		if err = fcli.RemoveRepoReqs(0, plt, c.Args().Slice(), c.Bool("force")); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }

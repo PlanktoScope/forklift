@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"os"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -35,5 +37,7 @@ func showPltAction(c *cli.Context) error {
 		return errMissingCache
 	}
 
-	return showGitRepo(cache, c.Args().First(), cache.LoadFSPallet, fcli.PrintCachedPallet, true)
+	return showGitRepo(
+		os.Stdout, cache, c.Args().First(), cache.LoadFSPallet, fcli.FprintCachedPallet, true,
+	)
 }

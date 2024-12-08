@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -265,7 +266,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -277,7 +278,7 @@ func showAction(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return fcli.PrintPalletInfo(0, plt)
+	return fcli.FprintPalletInfo(0, os.Stdout, plt)
 }
 
 // check
@@ -365,8 +366,8 @@ func stageAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println(
-			"Done! To apply the staged pallet, you may need to reboot or run " +
+		fmt.Fprintln(
+			os.Stderr, "Done! To apply the staged pallet, you may need to reboot or run "+
 				"`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
 		)
 		return nil
@@ -415,7 +416,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 		if err = fcli.ApplyNextOrCurrentBundle(0, stageStore, bundle, c.Bool("parallel")); err != nil {
 			return errors.Wrapf(err, "couldn't apply staged pallet bundle %d", index)
 		}
-		fmt.Println("Done! You may need to reboot for some changes to take effect.")
+		fmt.Fprintln(os.Stderr, "Done! You may need to reboot for some changes to take effect.")
 		return nil
 	}
 }
@@ -450,13 +451,13 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if len(downloaded) == 0 {
-			fmt.Println("Done! No further actions are needed at this time.")
+			fmt.Fprintln(os.Stderr, "Done! No further actions are needed at this time.")
 			return nil
 		}
 
 		// TODO: warn if any downloaded pallet doesn't appear to be an actual pallet, or if any pallet's
 		// forklift version is incompatible or ahead of the pallet version
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -468,7 +469,7 @@ func lsPltAction(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return fcli.PrintRequiredPallets(0, plt)
+	return fcli.FprintRequiredPallets(0, os.Stdout, plt)
 }
 
 // show-plt
@@ -482,7 +483,7 @@ func showPltAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPalletInfo(0, plt, caches.p, c.Args().First())
+	return fcli.FprintRequiredPalletInfo(0, os.Stdout, plt, caches.p, c.Args().First())
 }
 
 // show-plt-version
@@ -495,7 +496,7 @@ func showPltVersionAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPalletVersion(0, plt, caches.p, c.Args().First())
+	return fcli.FprintRequiredPalletVersion(0, os.Stdout, plt, caches.p, c.Args().First())
 }
 
 // add-plt
@@ -535,7 +536,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 			}
 			// TODO: check version compatibility between the pallet and the added pallet!
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -556,7 +557,7 @@ func rmPltAction(versions Versions) cli.ActionFunc {
 		if err = fcli.RemovePalletReqs(0, plt, c.Args().Slice(), c.Bool("force")); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -626,7 +627,7 @@ func showPltFileAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintFile(plt, c.Args().Get(1))
+	return fcli.FprintFile(os.Stdout, plt, c.Args().Get(1))
 }
 
 // ls-plt-feat
@@ -643,7 +644,7 @@ func lsPltFeatAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintPalletFeatures(0, plt)
+	return fcli.FprintPalletFeatures(0, os.Stdout, plt)
 }
 
 // show-plt-feat
@@ -660,5 +661,5 @@ func showPltFeatAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintFeatureInfo(0, plt, caches.p, c.Args().Get(1))
+	return fcli.FprintFeatureInfo(0, os.Stdout, plt, caches.p, c.Args().Get(1))
 }

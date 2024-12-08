@@ -3,6 +3,7 @@ package cli
 import (
 	"cmp"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
@@ -15,84 +16,156 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func PrintCachedPallet(
-	indent int, cache core.Pather, pallet *forklift.FSPallet, printHeader bool,
+func FprintCachedPallet(
+	indent int, out io.Writer, cache core.Pather, pallet *forklift.FSPallet, printHeader bool,
 ) error {
 	if printHeader {
-		IndentedPrintf(indent, "Cached pallet: %s\n", pallet.Path())
+		IndentedFprintf(indent, out, "Cached pallet: %s\n", pallet.Path())
 		indent++
 	}
 
-	IndentedPrintf(indent, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
-	fmt.Println()
+	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	_, _ = fmt.Fprintln(out)
 
-	IndentedPrintf(indent, "Version: %s\n", pallet.Version)
+	IndentedFprintf(indent, out, "Version: %s\n", pallet.Version)
 	if core.CoversPath(cache, pallet.FS.Path()) {
-		IndentedPrintf(indent, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
 	} else {
-		// Note: this is used when the repo is replaced by an overlay from outside the cache
-		IndentedPrintf(indent, "Absolute path (replacing any cached copy): %s\n", pallet.FS.Path())
+		// Note: this is used when the pallet is replaced by an overlay from outside the cache
+		IndentedFprintf(
+			indent, out, "Absolute path (replacing any cached copy): %s\n", pallet.FS.Path(),
+		)
 	}
-	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pallet.Def.Pallet.Description)
 
-	if err := printReadme(indent, pallet); err != nil {
+	if err := fprintReadme(indent, out, pallet); err != nil {
 		return errors.Wrapf(
 			err, "couldn't preview readme file for pallet %s@%s from cache",
 			pallet.Path(), pallet.Version,
 		)
 	}
+
+	_, _ = fmt.Fprintln(out)
+	if err := fprintRepoPkgs(indent, out, pallet.Repo); err != nil {
+		return errors.Wrapf(err, "couldn't list packages provided by pallet %s", pallet.Path())
+	}
+
+	_, _ = fmt.Fprintln(out)
+	if err := fprintPalletDepls(indent, out, pallet); err != nil {
+		return errors.Wrapf(
+			err, "couldn't list package deployments in by pallet %s", pallet.Path(),
+		)
+	}
+
+	_, _ = fmt.Fprintln(out)
+	if err := fprintPalletFeatures(indent, out, pallet); err != nil {
+		return errors.Wrapf(
+			err, "couldn't list importable features provided by pallet %s", pallet.Path(),
+		)
+	}
 	return nil
 }
 
-func PrintPalletInfo(indent int, pallet *forklift.FSPallet) error {
-	IndentedPrintf(indent, "Pallet: %s\n", pallet.Path())
+func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+	IndentedFprint(indent, out, "Package deployments:")
+	depls, err := pallet.LoadDepls("**/*")
+	if err != nil {
+		return err
+	}
+	if len(depls) == 0 {
+		_, _ = fmt.Fprint(out, " (none)")
+	}
+	_, _ = fmt.Fprintln(out)
+	indent += 1
+	for _, depl := range depls {
+		BulletedFprintf(indent, out, "%s: %s", depl.Name, depl.Def.Package)
+		slices.Sort(depl.Def.Features)
+		if len(depl.Def.Features) > 0 {
+			_, _ = fmt.Fprintf(out, " +[%s]", strings.Join(depl.Def.Features, ", "))
+		}
+		if depl.Def.Disabled {
+			_, _ = fmt.Fprint(out, " (disabled)")
+		}
+		_, _ = fmt.Fprintln(out)
+	}
+	return nil
+}
+
+func fprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+	IndentedFprint(indent, out, "Importable features:")
+	imps, err := pallet.LoadFeatures("**/*")
+	if err != nil {
+		return err
+	}
+	if len(imps) == 0 {
+		_, _ = fmt.Fprint(out, " (none)")
+	}
+	_, _ = fmt.Fprintln(out)
+	indent += 1
+	for _, imp := range imps {
+		BulletedFprintf(indent, out, "%s\n", imp.Name)
+	}
+	return nil
+}
+
+func FprintPalletInfo(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+	IndentedFprintf(indent, out, "Pallet: %s\n", pallet.Path())
 	indent++
 
-	IndentedPrintf(indent, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
-	fmt.Println()
+	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	_, _ = fmt.Fprintln(out)
 
 	if pallet.Def.Pallet.Path != "" {
-		IndentedPrintf(indent, "Path in filesystem: %s\n", pallet.FS.Path())
+		IndentedFprintf(indent, out, "Path in filesystem: %s\n", pallet.FS.Path())
 	}
-	IndentedPrintf(indent, "Description: %s\n", pallet.Def.Pallet.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pallet.Def.Pallet.Description)
 	if pallet.Def.Pallet.ReadmeFile == "" {
-		fmt.Println()
-	} else if err := printReadme(indent, pallet); err != nil {
+		_, _ = fmt.Fprintln(out)
+	} else if err := fprintReadme(indent, out, pallet); err != nil {
 		return errors.Wrapf(err, "couldn't preview readme file for pallet %s", pallet.FS.Path())
 	}
 
-	return printGitRepoInfo(indent, pallet.FS.Path())
+	_, _ = fmt.Fprintln(out)
+	if err := fprintGitRepoInfo(indent, out, pallet.FS.Path()); err != nil {
+		return errors.Wrapf(
+			err, "couldn't show information about local git repo for pallet %s", pallet.Path(),
+		)
+	}
+
+	// Note: we don't automatically print the list of package deployments, because it'd require us to
+	// merge the pallet before printing it.
+	return nil
 }
 
-func printGitRepoInfo(indent int, palletPath string) error {
+func fprintGitRepoInfo(indent int, out io.Writer, palletPath string) error {
 	ref, err := git.Head(palletPath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query pallet %s for its HEAD", palletPath)
 	}
-	IndentedPrintf(indent, "Currently on: %s\n", git.StringifyRef(ref))
+	IndentedFprintf(indent, out, "Currently on: %s\n", git.StringifyRef(ref))
 	// TODO: report any divergence between head and remotes
-	if err := printUncommittedChanges(indent+1, palletPath); err != nil {
+	if err := fprintUncommittedChanges(indent+1, out, palletPath); err != nil {
 		return err
 	}
-	if err := printLocalRefsInfo(indent, palletPath); err != nil {
+	if err := fprintLocalRefsInfo(indent, out, palletPath); err != nil {
 		return err
 	}
-	if err := printRemotesInfo(indent, palletPath); err != nil {
+	if err := fprintRemotesInfo(indent, out, palletPath); err != nil {
 		return err
 	}
 	return nil
 }
 
-func printUncommittedChanges(indent int, palletPath string) error {
+func fprintUncommittedChanges(indent int, out io.Writer, palletPath string) error {
 	status, err := git.Status(palletPath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query the pallet %s for its status", palletPath)
 	}
-	IndentedPrint(indent, "Uncommitted changes:")
+	IndentedFprint(indent, out, "Uncommitted changes:")
 	if len(status) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 
 	for file, status := range status {
@@ -102,56 +175,57 @@ func printUncommittedChanges(indent int, palletPath string) error {
 		if status.Staging == git.StatusRenamed {
 			file = fmt.Sprintf("%s -> %s", file, status.Extra)
 		}
-		BulletedPrintf(indent, "%c%c %s\n", status.Staging, status.Worktree, file)
+		BulletedFprintf(indent, out, "%c%c %s\n", status.Staging, status.Worktree, file)
 	}
 	return nil
 }
 
-func printLocalRefsInfo(indent int, palletPath string) error {
+func fprintLocalRefsInfo(indent int, out io.Writer, palletPath string) error {
 	refs, err := git.Refs(palletPath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query pallet %s for its refs", palletPath)
 	}
 
-	IndentedPrintf(indent, "References:")
+	IndentedFprint(indent, out, "References:")
 	if len(refs) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 
 	for _, ref := range refs {
-		BulletedPrintf(indent, "%s\n", git.StringifyRef(ref))
+		BulletedFprintf(indent, out, "%s\n", git.StringifyRef(ref))
 	}
 
 	return nil
 }
 
-func printRemotesInfo(indent int, palletPath string) error {
+func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 	remotes, err := git.Remotes(palletPath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't query pallet %s for its remotes", palletPath)
 	}
 
-	IndentedPrintf(indent, "Remotes:")
+	IndentedFprint(indent, out, "Remotes:")
 	if len(remotes) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 
 	SortRemotes(remotes)
 	printCacheMirrorRemote := false
 	for _, remote := range remotes {
 		if remote.Config().Name == ForkliftCacheMirrorRemoteName && !printCacheMirrorRemote {
-			IndentedPrintf(
-				indent, "%s: (skipped because origin was successfully queried)\n", remote.Config().Name,
+			IndentedFprintf(
+				indent, out,
+				"%s: (skipped because origin was successfully queried)\n", remote.Config().Name,
 			)
 			continue
 		}
 
-		if err := printRemoteInfo(
-			indent, remote,
+		if err := fprintRemoteInfo(
+			indent, out, remote,
 		); err != nil && remote.Config().Name == OriginRemoteName {
 			printCacheMirrorRemote = true
 		}
@@ -171,35 +245,35 @@ func SortRemotes(remotes []*ggit.Remote) {
 	})
 }
 
-func printRemoteInfo(indent int, remote *ggit.Remote) error {
+func fprintRemoteInfo(indent int, out io.Writer, remote *ggit.Remote) error {
 	config := remote.Config()
-	IndentedPrintf(indent, "%s:\n", config.Name)
+	IndentedFprintf(indent, out, "%s:\n", config.Name)
 	indent++
 
-	IndentedPrintf(indent, "URLs:")
+	IndentedFprint(indent, out, "URLs:")
 	if len(config.URLs) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for i, url := range config.URLs {
-		BulletedPrintf(indent+1, "%s: ", url)
+		BulletedFprintf(indent+1, out, "%s: ", url)
 		if i == 0 {
-			fmt.Print("fetch, ")
+			_, _ = fmt.Fprint(out, "fetch, ")
 		}
-		fmt.Println("push")
+		_, _ = fmt.Fprintln(out, "push")
 	}
 
-	IndentedPrintf(indent, "Up-to-date references:")
+	IndentedFprint(indent, out, "Up-to-date references:")
 	refs, err := remote.List(git.EmptyListOptions())
 	if err != nil {
-		fmt.Printf(" (couldn't retrieve references: %s)\n", err)
+		_, _ = fmt.Fprintf(out, " (couldn't retrieve references: %s)\n", err)
 		return err
 	}
 
 	if len(refs) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	slices.SortFunc(refs, func(a, b *plumbing.Reference) int {
 		return cmp.Compare(git.StringifyRef(a), git.StringifyRef(b))
 	})
@@ -207,7 +281,7 @@ func printRemoteInfo(indent int, remote *ggit.Remote) error {
 		if strings.HasPrefix(git.StringifyRef(ref), "pull/") {
 			continue
 		}
-		BulletedPrintf(indent+1, "%s\n", git.StringifyRef(ref))
+		BulletedFprintf(indent+1, out, "%s\n", git.StringifyRef(ref))
 	}
 
 	return nil

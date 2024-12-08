@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -61,7 +62,7 @@ func showFileAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintFile(plt, c.Args().First())
+	return fcli.FprintFile(os.Stdout, plt, c.Args().First())
 }
 
 // edit-file

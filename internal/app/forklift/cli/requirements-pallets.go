@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"path"
@@ -70,7 +71,7 @@ func GetRequiredPallet(
 
 // Printing
 
-func PrintRequiredPallets(indent int, pallet *forklift.FSPallet) error {
+func FprintRequiredPallets(indent int, out io.Writer, pallet *forklift.FSPallet) error {
 	loadedPallets, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify pallets")
@@ -79,14 +80,14 @@ func PrintRequiredPallets(indent int, pallet *forklift.FSPallet) error {
 		return forklift.CompareGitRepoReqs(a.PalletReq.GitRepoReq, b.PalletReq.GitRepoReq)
 	})
 	for _, pallet := range loadedPallets {
-		IndentedPrintf(indent, "%s\n", pallet.Path())
+		IndentedFprintf(indent, out, "%s\n", pallet.Path())
 	}
 	return nil
 }
 
-func PrintRequiredPalletInfo(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
-	requiredPalletPath string,
+func FprintRequiredPalletInfo(
+	indent int, out io.Writer,
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
 ) error {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -95,7 +96,7 @@ func PrintRequiredPalletInfo(
 			requiredPalletPath, pallet.FS.Path(),
 		)
 	}
-	printPalletReq(indent, req.PalletReq)
+	fprintPalletReq(indent, out, req.PalletReq)
 	indent++
 
 	version := req.VersionLock.Version
@@ -106,18 +107,26 @@ func PrintRequiredPalletInfo(
 			requiredPalletPath, version,
 		)
 	}
-	return PrintCachedPallet(indent, cache, cachedPallet, false)
+	// We must merge the required pallet to get an accurate list of its deployments & packages:
+	mergedPallet, err := forklift.MergeFSPallet(cachedPallet, cache, nil)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't merge pallet %s with file imports from any pallets required by it",
+			cachedPallet.Path(),
+		)
+	}
+	return FprintCachedPallet(indent, out, cache, mergedPallet, false)
 }
 
-func printPalletReq(indent int, req forklift.PalletReq) {
-	IndentedPrintf(indent, "Pallet: %s\n", req.Path())
+func fprintPalletReq(indent int, out io.Writer, req forklift.PalletReq) {
+	IndentedFprintf(indent, out, "Pallet: %s\n", req.Path())
 	indent++
-	IndentedPrintf(indent, "Locked pallet version: %s\n", req.VersionLock.Version)
+	IndentedFprintf(indent, out, "Locked pallet version: %s\n", req.VersionLock.Version)
 }
 
-func PrintRequiredPalletVersion(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
-	requiredPalletPath string,
+func FprintRequiredPalletVersion(
+	indent int, out io.Writer,
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
 ) error {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -126,7 +135,7 @@ func PrintRequiredPalletVersion(
 			requiredPalletPath, pallet.FS.Path(),
 		)
 	}
-	IndentedPrintln(indent, req.VersionLock.Version)
+	IndentedFprintln(indent, out, req.VersionLock.Version)
 	return nil
 }
 
@@ -142,8 +151,8 @@ func AddPalletReqs(
 	if err != nil {
 		return err
 	}
-	fmt.Println()
-	fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
+	fmt.Fprintln(os.Stderr)
+	IndentedFprintf(indent, os.Stderr, "Saving configurations to %s...\n", pallet.FS.Path())
 	for _, palletQuery := range palletQueries {
 		req, ok := resolved[palletQuery]
 		if !ok {
@@ -175,11 +184,11 @@ func RemovePalletReqs(
 		)
 	}
 
-	fmt.Printf("Removing requirements from %s...\n", pallet.FS.Path())
+	IndentedFprintf(indent, os.Stderr, "Removing requirements from %s...\n", pallet.FS.Path())
 	for _, palletPath := range palletPaths {
 		if actualPalletPath, _, ok := strings.Cut(palletPath, "@"); ok {
-			IndentedPrintf(
-				indent,
+			IndentedFprintf(
+				indent, os.Stderr,
 				"Warning: provided pallet path %s is actually a pallet query; removing %s instead...\n",
 				palletPath, actualPalletPath,
 			)
@@ -219,7 +228,7 @@ func determineUsedPalletReqs(
 		if !force {
 			return nil, err
 		}
-		IndentedPrintf(indent, "Warning: %s\n", err.Error())
+		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
 	}
 	usedPalletReqs := make(map[string][]string)
 	if len(imports) == 0 {
@@ -240,7 +249,7 @@ func determineUsedPalletReqs(
 			if !force {
 				return nil, err
 			}
-			IndentedPrintf(indent, "Warning: %s\n", err.Error())
+			IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
 		}
 		usedPalletReqs[fsPalletReq.Path()] = append(usedPalletReqs[fsPalletReq.Path()], imp.Name)
 	}
@@ -262,7 +271,7 @@ func DownloadAllRequiredPallets(
 		return nil, nil
 	}
 
-	IndentedPrintln(indent, "Downloading required pallets...")
+	IndentedFprintln(indent, os.Stderr, "Downloading required pallets...")
 	return downloadRequiredPallets(
 		indent+1, loadedPalletReqs, mirrorsCache, palletsCache, skipPalletQueries,
 	)
@@ -277,7 +286,7 @@ func downloadRequiredPallets(
 	maps.Insert(allSkip, maps.All(skipPalletQueries))
 	downloadedPallets = make(structures.Set[string])
 	for _, req := range reqs {
-		IndentedPrintf(indent, "Caching required pallet %s...\n", req.GetQueryPath())
+		IndentedFprintf(indent, os.Stderr, "Caching required pallet %s...\n", req.GetQueryPath())
 		palletIndent := indent + 1
 		if !allSkip.Has(req.GetQueryPath()) {
 			downloaded, err := DownloadLockedGitRepoUsingLocalMirror(
@@ -292,7 +301,7 @@ func downloadRequiredPallets(
 				)
 			}
 		} else {
-			IndentedPrintln(palletIndent, "Skipped download of pallet!")
+			IndentedFprintln(palletIndent, os.Stderr, "Skipped download of pallet!")
 		}
 
 		plt, err := palletsCache.LoadFSPallet(req.Path(), req.VersionLock.Version)

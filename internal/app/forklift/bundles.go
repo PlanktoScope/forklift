@@ -138,7 +138,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 			return copyFSSymlink(readLinkFS, sourcePath, destPath)
 		}
 	} else {
-		fmt.Printf("Warning: %s was not loaded as a ReadLinkFS!\n", fsys.Path())
+		fmt.Fprintf(os.Stderr, "Warning: %s was not loaded as a ReadLinkFS!\n", fsys.Path())
 	}
 
 	sourceFile, err := fsys.Open(sourcePath)
@@ -149,7 +149,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 	defer func() {
 		// FIXME: handle this error more rigorously
 		if err := sourceFile.Close(); err != nil {
-			fmt.Printf("Error: couldn't close source file %s\n", fullSourcePath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close source file %s\n", fullSourcePath)
 		}
 	}()
 	sourceInfo, err := sourceFile.Stat()
@@ -173,7 +173,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 	defer func() {
 		// FIXME: handle this error more rigorously
 		if err := destFile.Close(); err != nil {
-			fmt.Printf("Error: couldn't close dest file %s\n", destPath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close dest file %s\n", destPath)
 		}
 	}()
 
@@ -404,7 +404,7 @@ func exportArchiveFile(
 	defer func() {
 		if err := archiveFile.Close(); err != nil {
 			// TODO: handle this error more rigorously
-			fmt.Printf("Error: couldn't close cached download archive %s\n", export.URL)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close cached download archive %s\n", export.URL)
 		}
 	}()
 
@@ -461,7 +461,7 @@ func determineFileType(
 	defer func() {
 		if err := archiveFile.Close(); err != nil {
 			// TODO: handle this error more rigorously
-			fmt.Printf("Error: couldn't close cached download %s\n", export.URL)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close cached download %s\n", export.URL)
 		}
 	}()
 	return filetype.MatchReader(archiveFile)
@@ -544,7 +544,7 @@ func extractRegularFile(
 	defer func(file fs.File, filePath string) {
 		if err := file.Close(); err != nil {
 			// FIXME: handle this error more rigorously
-			fmt.Printf("Error: couldn't close export file %s\n", filePath)
+			fmt.Fprintf(os.Stderr, "Error: couldn't close export file %s\n", filePath)
 		}
 	}(targetFile, targetPath)
 

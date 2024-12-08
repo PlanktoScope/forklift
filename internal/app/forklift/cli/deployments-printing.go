@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"path"
 	"sort"
 
@@ -12,19 +13,20 @@ import (
 	"github.com/PlanktoScope/forklift/pkg/core"
 )
 
-func PrintPalletDepls(indent int, pallet *forklift.FSPallet) error {
+func FprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
 		return err
 	}
 	for _, depl := range depls {
-		IndentedPrintf(indent, "%s\n", depl.Name)
+		IndentedFprintf(indent, out, "%s\n", depl.Name)
 	}
 	return nil
 }
 
-func PrintDeplInfo(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
+func FprintDeplInfo(
+	indent int, out io.Writer,
+	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -37,16 +39,16 @@ func PrintDeplInfo(
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
-	if err = PrintResolvedDepl(indent, cache, resolved); err != nil {
+	if err = FprintResolvedDepl(indent, out, cache, resolved); err != nil {
 		return errors.Wrapf(err, "couldn't print resolved package deployment %s", depl.Name)
 	}
 	return nil
 }
 
-func PrintResolvedDepl(
-	indent int, cache forklift.PathedRepoCache, resolved *forklift.ResolvedDepl,
+func FprintResolvedDepl(
+	indent int, out io.Writer, cache forklift.PathedRepoCache, resolved *forklift.ResolvedDepl,
 ) error {
-	if err := printDepl(indent, cache, resolved); err != nil {
+	if err := fprintDepl(indent, out, cache, resolved); err != nil {
 		return err
 	}
 	indent++
@@ -63,74 +65,78 @@ func PrintResolvedDepl(
 	if err != nil {
 		return errors.Wrap(err, "couldn't load Compose app definition")
 	}
-	IndentedPrintf(indent, "Deploys as Docker Compose app %s:\n", appDef.Name)
+	IndentedFprintf(indent, out, "Deploys as Docker Compose app %s:\n", appDef.Name)
 	indent++
 
-	if err = printDockerAppDefFiles(indent, resolved); err != nil {
+	if err = fprintDockerAppDefFiles(indent, out, resolved); err != nil {
 		return err
 	}
-	printDockerAppDef(indent, appDef)
+	fprintDockerAppDef(indent, out, appDef)
 
 	// TODO: print the state of the Docker Compose app associated with deplName - or maybe that should
 	// be a `forklift depl show-d deplName` command instead?
 	return nil
 }
 
-func printDepl(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) error {
-	IndentedPrint(indent, "Package deployment")
+func fprintDepl(
+	indent int, out io.Writer, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl,
+) error {
+	IndentedFprint(indent, out, "Package deployment")
 	if depl.Depl.Def.Disabled {
-		fmt.Print(" (disabled!)")
+		_, _ = fmt.Fprint(out, " (disabled!)")
 	}
-	fmt.Printf(": %s\n", depl.Name)
+	_, _ = fmt.Fprintf(out, ": %s\n", depl.Name)
 	indent++
 
-	printDeplPkg(indent, cache, depl)
+	fprintDeplPkg(indent, out, cache, depl)
 
-	IndentedPrint(indent, "Enabled features:")
+	IndentedFprint(indent, out, "Enabled features:")
 	if len(depl.Def.Features) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	enabledFeatures, err := depl.EnabledFeatures()
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine enabled features")
 	}
-	printFeatures(indent+1, enabledFeatures)
+	fprintFeatures(indent+1, out, enabledFeatures)
 
 	disabledFeatures := depl.DisabledFeatures()
-	IndentedPrint(indent, "Disabled features:")
+	IndentedFprint(indent, out, "Disabled features:")
 	if len(disabledFeatures) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
-	printFeatures(indent+1, disabledFeatures)
+	_, _ = fmt.Fprintln(out)
+	fprintFeatures(indent+1, out, disabledFeatures)
 
 	fileExportTargets, err := depl.GetFileExportTargets()
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine export file targets")
 	}
-	IndentedPrint(indent, "File export targets:")
+	IndentedFprint(indent, out, "File export targets:")
 	if len(fileExportTargets) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for _, fileExport := range fileExportTargets {
-		BulletedPrintln(indent+1, fileExport)
+		BulletedFprintln(indent+1, out, fileExport)
 	}
 	return nil
 }
 
-func printDeplPkg(indent int, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl) {
-	IndentedPrintf(indent, "Deploys package: %s\n", depl.Def.Package)
+func fprintDeplPkg(
+	indent int, out io.Writer, cache forklift.PathedRepoCache, depl *forklift.ResolvedDepl,
+) {
+	IndentedFprintf(indent, out, "Deploys package: %s\n", depl.Def.Package)
 	indent++
 
-	IndentedPrintf(indent, "Description: %s\n", depl.Pkg.Def.Package.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", depl.Pkg.Def.Package.Description)
 	if depl.Pkg.Repo.Def.Repo != (core.RepoSpec{}) {
-		printPkgRepo(indent, cache, depl.Pkg)
+		fprintPkgRepo(indent, out, cache, depl.Pkg)
 	}
 }
 
-func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {
+func fprintFeatures(indent int, out io.Writer, features map[string]core.PkgFeatureSpec) {
 	orderedNames := make([]string, 0, len(features))
 	for name := range features {
 		orderedNames = append(orderedNames, name)
@@ -138,42 +144,42 @@ func printFeatures(indent int, features map[string]core.PkgFeatureSpec) {
 	sort.Strings(orderedNames)
 	for _, name := range orderedNames {
 		if description := features[name].Description; description != "" {
-			IndentedPrintf(indent, "%s: %s\n", name, description)
+			IndentedFprintf(indent, out, "%s: %s\n", name, description)
 			continue
 		}
-		IndentedPrintf(indent, "%s\n", name)
+		IndentedFprintf(indent, out, "%s\n", name)
 	}
 }
 
-func printDockerAppDefFiles(indent int, depl *forklift.ResolvedDepl) error {
+func fprintDockerAppDefFiles(indent int, out io.Writer, depl *forklift.ResolvedDepl) error {
 	composeFiles, err := depl.GetComposeFilenames()
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine Compose files for deployment")
 	}
 
-	IndentedPrintf(indent, "Compose files: ")
+	IndentedFprint(indent, out, "Compose files: ")
 	if len(composeFiles) == 0 {
-		fmt.Printf("(none)")
+		_, _ = fmt.Fprint(out, "(none)")
 		return nil
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	for _, file := range composeFiles {
-		BulletedPrintln(indent+1, path.Join(depl.Pkg.Path(), file))
+		BulletedFprintln(indent+1, out, path.Join(depl.Pkg.Path(), file))
 	}
 	return nil
 }
 
-func printDockerAppDef(indent int, appDef *dct.Project) {
-	printDockerAppServices(indent, appDef.Services)
-	printDockerAppNetworks(indent, appDef.Networks)
-	printDockerAppVolumes(indent, appDef.Volumes)
+func fprintDockerAppDef(indent int, out io.Writer, appDef *dct.Project) {
+	fprintDockerAppServices(indent, out, appDef.Services)
+	fprintDockerAppNetworks(indent, out, appDef.Networks)
+	fprintDockerAppVolumes(indent, out, appDef.Volumes)
 }
 
-func printDockerAppServices(indent int, services dct.Services) {
+func fprintDockerAppServices(indent int, out io.Writer, services dct.Services) {
 	if len(services) == 0 {
 		return
 	}
-	IndentedPrintln(indent, "Services:")
+	IndentedFprintln(indent, out, "Services:")
 	sortedServices := make([]dct.ServiceConfig, 0, len(services))
 	for _, service := range services {
 		sortedServices = append(sortedServices, service)
@@ -184,11 +190,11 @@ func printDockerAppServices(indent int, services dct.Services) {
 	indent++
 
 	for _, service := range sortedServices {
-		IndentedPrintf(indent, "%s: %s\n", service.Name, service.Image)
+		IndentedFprintf(indent, out, "%s: %s\n", service.Name, service.Image)
 	}
 }
 
-func printDockerAppNetworks(indent int, networks dct.Networks) {
+func fprintDockerAppNetworks(indent int, out io.Writer, networks dct.Networks) {
 	if len(networks) == 0 {
 		return
 	}
@@ -200,22 +206,22 @@ func printDockerAppNetworks(indent int, networks dct.Networks) {
 		}
 		networkNames = append(networkNames, name)
 	}
-	IndentedPrint(indent, "Networks:")
+	IndentedFprint(indent, out, "Networks:")
 	sort.Slice(networkNames, func(i, j int) bool {
 		return networks[networkNames[i]].Name < networks[networkNames[j]].Name
 	})
 	if len(networkNames) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 
 	for _, name := range networkNames {
-		BulletedPrintln(indent, networks[name].Name)
+		BulletedFprintln(indent, out, networks[name].Name)
 	}
 }
 
-func printDockerAppVolumes(indent int, volumes dct.Volumes) {
+func fprintDockerAppVolumes(indent int, out io.Writer, volumes dct.Volumes) {
 	if len(volumes) == 0 {
 		return
 	}
@@ -223,24 +229,24 @@ func printDockerAppVolumes(indent int, volumes dct.Volumes) {
 	for name := range volumes {
 		volumeNames = append(volumeNames, name)
 	}
-	IndentedPrint(indent, "Volumes:")
+	IndentedFprint(indent, out, "Volumes:")
 	sort.Slice(volumeNames, func(i, j int) bool {
 		return volumeNames[i] < volumeNames[j]
 	})
 	if len(volumeNames) == 0 {
-		fmt.Print(" (none)")
+		_, _ = fmt.Fprint(out, " (none)")
 	}
-	fmt.Println()
+	_, _ = fmt.Fprintln(out)
 	indent++
 
 	for _, name := range volumeNames {
-		BulletedPrintln(indent, name)
+		BulletedFprintln(indent, out, name)
 	}
 }
 
-func PrintDeplPkgLocation(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string,
-	allowDisabled bool,
+func FprintDeplPkgLocation(
+	indent int, out io.Writer,
+	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, deplName string, allowDisabled bool,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -256,6 +262,6 @@ func PrintDeplPkgLocation(
 	if resolved.Def.Disabled && !allowDisabled {
 		return errors.Errorf("package deployment %s is not enabled!", depl.Name)
 	}
-	fmt.Println(resolved.Pkg.FS.Path())
+	_, _ = fmt.Fprintln(out, resolved.Pkg.FS.Path())
 	return nil
 }
