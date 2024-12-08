@@ -77,7 +77,7 @@ func fprintRepoPkgs(indent int, out io.Writer, repo *core.FSRepo) error {
 	_, _ = fmt.Fprintln(out)
 	indent += 1
 	for _, pkg := range pkgs {
-		BulletedFprintf(indent, out, "%s: ", pkg.Path())
+		IndentedFprintf(indent, out, "...%s: ", strings.TrimPrefix(pkg.Path(), repo.Path()))
 
 		names := make([]string, 0, len(pkg.Def.Features))
 		for name := range pkg.Def.Features {

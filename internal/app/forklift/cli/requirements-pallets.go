@@ -107,7 +107,15 @@ func FprintRequiredPalletInfo(
 			requiredPalletPath, version,
 		)
 	}
-	return FprintCachedPallet(indent, out, cache, cachedPallet, false)
+	// We must merge the required pallet to get an accurate list of its deployments & packages:
+	mergedPallet, err := forklift.MergeFSPallet(cachedPallet, cache, nil)
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't merge pallet %s with file imports from any pallets required by it",
+			cachedPallet.Path(),
+		)
+	}
+	return FprintCachedPallet(indent, out, cache, mergedPallet, false)
 }
 
 func fprintPalletReq(indent int, out io.Writer, req forklift.PalletReq) {

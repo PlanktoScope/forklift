@@ -44,6 +44,67 @@ func FprintCachedPallet(
 			pallet.Path(), pallet.Version,
 		)
 	}
+
+	_, _ = fmt.Fprintln(out)
+	if err := fprintRepoPkgs(indent, out, pallet.Repo); err != nil {
+		return errors.Wrapf(err, "couldn't list packages provided by pallet %s", pallet.Path())
+	}
+
+	_, _ = fmt.Fprintln(out)
+	if err := fprintPalletDepls(indent, out, pallet); err != nil {
+		return errors.Wrapf(
+			err, "couldn't list package deployments in by pallet %s", pallet.Path(),
+		)
+	}
+
+	_, _ = fmt.Fprintln(out)
+	if err := fprintPalletFeatures(indent, out, pallet); err != nil {
+		return errors.Wrapf(
+			err, "couldn't list importable features provided by pallet %s", pallet.Path(),
+		)
+	}
+	return nil
+}
+
+func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+	IndentedFprint(indent, out, "Package deployments:")
+	depls, err := pallet.LoadDepls("**/*")
+	if err != nil {
+		return err
+	}
+	if len(depls) == 0 {
+		_, _ = fmt.Fprint(out, " (none)")
+	}
+	_, _ = fmt.Fprintln(out)
+	indent += 1
+	for _, depl := range depls {
+		BulletedFprintf(indent, out, "%s: %s", depl.Name, depl.Def.Package)
+		slices.Sort(depl.Def.Features)
+		if len(depl.Def.Features) > 0 {
+			_, _ = fmt.Fprintf(out, " +[%s]", strings.Join(depl.Def.Features, ", "))
+		}
+		if depl.Def.Disabled {
+			_, _ = fmt.Fprint(out, " (disabled)")
+		}
+		_, _ = fmt.Fprintln(out)
+	}
+	return nil
+}
+
+func fprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+	IndentedFprint(indent, out, "Importable features:")
+	imps, err := pallet.LoadFeatures("**/*")
+	if err != nil {
+		return err
+	}
+	if len(imps) == 0 {
+		_, _ = fmt.Fprint(out, " (none)")
+	}
+	_, _ = fmt.Fprintln(out)
+	indent += 1
+	for _, imp := range imps {
+		BulletedFprintf(indent, out, "%s\n", imp.Name)
+	}
 	return nil
 }
 
@@ -64,7 +125,16 @@ func FprintPalletInfo(indent int, out io.Writer, pallet *forklift.FSPallet) erro
 		return errors.Wrapf(err, "couldn't preview readme file for pallet %s", pallet.FS.Path())
 	}
 
-	return fprintGitRepoInfo(indent, out, pallet.FS.Path())
+	_, _ = fmt.Fprintln(out)
+	if err := fprintGitRepoInfo(indent, out, pallet.FS.Path()); err != nil {
+		return errors.Wrapf(
+			err, "couldn't show information about local git repo for pallet %s", pallet.Path(),
+		)
+	}
+
+	// Note: we don't automatically print the list of package deployments, because it'd require us to
+	// merge the pallet before printing it.
+	return nil
 }
 
 func fprintGitRepoInfo(indent int, out io.Writer, palletPath string) error {
