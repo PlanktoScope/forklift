@@ -28,8 +28,8 @@ func AddDepl(
 	if len(features) > 0 {
 		featuresString = fmt.Sprintf(" (with feature flags: %+v)", features)
 	}
-	IndentedPrintf(
-		indent, "Adding %spackage deployment %s for %s%s...\n",
+	IndentedFprintf(
+		indent, os.Stderr, "Adding %spackage deployment %s for %s%s...\n",
 		disabledString, deplName, pkgPath, featuresString,
 	)
 	depl := forklift.Depl{
@@ -47,7 +47,9 @@ func AddDepl(
 				err, "package deployment has invalid settings; to skip this check, enable the --force flag",
 			)
 		}
-		IndentedPrintf(indent, "Warning: package deployment has invalid settings: %s", err.Error())
+		IndentedFprintf(
+			indent, os.Stderr, "Warning: package deployment has invalid settings: %s", err.Error(),
+		)
 	}
 
 	if err := writeDepl(pallet, depl); err != nil {
@@ -110,7 +112,7 @@ func writeDepl(pallet *forklift.FSPallet, depl forklift.Depl) error {
 // Remove
 
 func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) error {
-	fmt.Printf("Removing package deployments from %s...\n", pallet.FS.Path())
+	IndentedFprintf(indent, os.Stderr, "Removing package deployments from %s...\n", pallet.FS.Path())
 	for _, deplName := range deplNames {
 		deplsFS, err := pallet.GetDeplsFS()
 		if err != nil {
@@ -134,8 +136,8 @@ func SetDeplPkg(
 	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
 	deplName, pkgPath string, force bool,
 ) error {
-	IndentedPrintf(
-		indent, "Setting package deployment %s to deploy package %s...\n", deplName, pkgPath,
+	IndentedFprintf(
+		indent, os.Stderr, "Setting package deployment %s to deploy package %s...\n", deplName, pkgPath,
 	)
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -154,7 +156,9 @@ func SetDeplPkg(
 				err, "package deployment has invalid settings; to skip this check, enable the --force flag",
 			)
 		}
-		IndentedPrintf(indent, "Warning: package deployment has invalid settings: %s", err.Error())
+		IndentedFprintf(
+			indent, os.Stderr, "Warning: package deployment has invalid settings: %s", err.Error(),
+		)
 	}
 
 	if err := writeDepl(pallet, depl); err != nil {
@@ -169,7 +173,9 @@ func AddDeplFeat(
 	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
 	deplName string, features []string, force bool,
 ) error {
-	IndentedPrintf(indent, "Enabling features %+v in package deployment %s...\n", features, deplName)
+	IndentedFprintf(
+		indent, os.Stderr, "Enabling features %+v in package deployment %s...\n", features, deplName,
+	)
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
@@ -207,7 +213,7 @@ func AddDeplFeat(
 		if !force {
 			return err
 		}
-		IndentedPrintf(indent, "Warning: %s", err.Error())
+		IndentedFprintf(indent, os.Stderr, "Warning: %s", err.Error())
 	}
 
 	depl.Def.Features = append(depl.Def.Features, newFeatures...)
@@ -222,7 +228,9 @@ func AddDeplFeat(
 func RemoveDeplFeat(
 	indent int, pallet *forklift.FSPallet, deplName string, features []string,
 ) error {
-	IndentedPrintf(indent, "Disabling features %+v in package deployment %s...\n", features, deplName)
+	IndentedFprintf(
+		indent, os.Stderr, "Disabling features %+v in package deployment %s...\n", features, deplName,
+	)
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
 		return errors.Wrapf(
@@ -254,9 +262,9 @@ func RemoveDeplFeat(
 
 func SetDeplDisabled(indent int, pallet *forklift.FSPallet, deplName string, disabled bool) error {
 	if disabled {
-		IndentedPrintf(indent, "Disabling package deployment %s...\n", deplName)
+		IndentedFprintf(indent, os.Stderr, "Disabling package deployment %s...\n", deplName)
 	} else {
-		IndentedPrintf(indent, "Enabling package deployment %s...\n", deplName)
+		IndentedFprintf(indent, os.Stderr, "Enabling package deployment %s...\n", deplName)
 	}
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {

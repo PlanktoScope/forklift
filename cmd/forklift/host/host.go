@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -83,6 +84,6 @@ func rmAction(c *cli.Context) error {
 			err, "couldn't fully remove all apps (remaining resources must be manually removed)",
 		)
 	}
-	fmt.Println("Done!")
+	fmt.Fprintln(os.Stderr, "Done!")
 	return nil
 }

@@ -35,8 +35,9 @@ func DownloadImagesForStoreApply(
 		); err != nil {
 			return err
 		}
-		fmt.Println(
-			"Downloading Docker container images specified by the last successfully-applied staged " +
+		IndentedFprintln(
+			indent, os.Stderr,
+			"Downloading Docker container images specified by the last successfully-applied staged "+
 				"pallet bundle, in case the next to be applied fails to be applied...",
 		)
 		if err := DownloadImages(indent, bundle, bundle, platform, false, parallel); err != nil {
@@ -53,14 +54,15 @@ func DownloadImagesForStoreApply(
 		); err != nil {
 			return err
 		}
-		fmt.Println(
-			"Downloading Docker container images specified by the next staged pallet bundle to be " +
+		IndentedFprintln(
+			indent, os.Stderr,
+			"Downloading Docker container images specified by the next staged pallet bundle to be "+
 				"applied...",
 		)
 		if err := DownloadImages(indent, bundle, bundle, platform, false, parallel); err != nil {
 			return err
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 	}
 	return nil
 }
@@ -136,13 +138,13 @@ func downloadImagesParallel(indent int, images []string, platform string, dc *do
 	eg, egctx := errgroup.WithContext(context.Background())
 	for _, image := range images {
 		eg.Go(func() error {
-			IndentedPrintf(indent, "Downloading %s...\n", image)
+			IndentedFprintf(indent, os.Stderr, "Downloading %s...\n", image)
 			pulled, err := dc.PullImage(egctx, image, platform, docker.NewOutStream(io.Discard))
 			if err != nil {
 				return errors.Wrapf(err, "couldn't download %s", image)
 			}
-			IndentedPrintf(
-				indent, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
+			IndentedFprintf(
+				indent, os.Stderr, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
 			)
 			return nil
 		})
@@ -155,7 +157,7 @@ func downloadImagesParallel(indent int, images []string, platform string, dc *do
 
 func downloadImagesSerial(indent int, images []string, platform string, dc *docker.Client) error {
 	for _, image := range images {
-		IndentedPrintf(indent, "Downloading %s...\n", image)
+		IndentedFprintf(indent, os.Stderr, "Downloading %s...\n", image)
 		pulled, err := dc.PullImage(
 			context.Background(), image, platform,
 			docker.NewOutStream(cli.NewIndentedWriter(indent+1, os.Stdout)),
@@ -163,7 +165,9 @@ func downloadImagesSerial(indent int, images []string, platform string, dc *dock
 		if err != nil {
 			return errors.Wrapf(err, "couldn't download %s", image)
 		}
-		IndentedPrintf(indent+1, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name)
+		IndentedFprintf(
+			indent+1, os.Stderr, "Downloaded %s from %s\n", pulled.Reference(), pulled.RepoInfo().Name,
+		)
 	}
 	return nil
 }

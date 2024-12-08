@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -30,13 +31,13 @@ func cacheRepoAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if !changed {
-			fmt.Println("Done! No further actions are needed at this time.")
+			fmt.Fprintln(os.Stderr, "Done! No further actions are needed at this time.")
 			return nil
 		}
 
 		// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
 		// forklift version is incompatible or ahead of the pallet version
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -126,7 +127,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 			}
 			// TODO: check version compatibility between the pallet and the added repo!
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -148,7 +149,7 @@ func rmRepoAction(versions Versions) cli.ActionFunc {
 		if err = fcli.RemoveRepoReqs(0, plt, c.Args().Slice(), c.Bool("force")); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }

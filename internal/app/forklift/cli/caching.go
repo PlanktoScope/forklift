@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+
 	"github.com/pkg/errors"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -21,8 +23,8 @@ func CacheAllReqs(
 		return err
 	}
 
-	IndentedPrintln(
-		indent,
+	IndentedFprintln(
+		indent, os.Stderr,
 		"Downloading Docker container images to be deployed by the local pallet...",
 	)
 	if err := DownloadImages(
@@ -39,7 +41,7 @@ func CacheStagingReqs(
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
 ) (merged *forklift.FSPallet, repoCacheWithMerged *forklift.LayeredRepoCache, err error) {
-	IndentedPrintln(indent, "Caching everything needed to stage the pallet...")
+	IndentedFprintln(indent, os.Stderr, "Caching everything needed to stage the pallet...")
 	indent++
 
 	downloadedPallets, err := DownloadAllRequiredPallets(

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
@@ -24,8 +25,8 @@ func CheckPltCompat(
 	pallet *forklift.FSPallet, toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
-		fmt.Printf(
-			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
+		fmt.Fprintf(
+			os.Stderr, "Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
 			toolVersions.Tool,
 		)
 	}
@@ -80,8 +81,8 @@ func CheckDeepCompat(
 	toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
-		fmt.Printf(
-			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
+		fmt.Fprintf(
+			os.Stderr, "Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
 			toolVersions.Tool,
 		)
 	}
@@ -237,8 +238,8 @@ func CheckBundleShallowCompat(
 	bundle *forklift.FSBundle, toolVersion, bundleMinVersion string, ignoreTool bool,
 ) error {
 	if ignoreTool {
-		fmt.Printf(
-			"Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
+		fmt.Fprintf(
+			os.Stderr, "Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
 			toolVersion,
 		)
 	}

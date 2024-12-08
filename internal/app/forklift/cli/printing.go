@@ -4,6 +4,8 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -18,7 +20,11 @@ const (
 // Indented
 
 func IndentedPrintf(indent int, format string, a ...any) {
-	fmt.Printf("%s%s", makeIndentation(indent), fmt.Sprintf(format, a...))
+	IndentedFprintf(indent, os.Stdout, format, a...)
+}
+
+func IndentedFprintf(indent int, w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, "%s%s", makeIndentation(indent), fmt.Sprintf(format, a...))
 }
 
 func makeIndentation(indent int) string {
@@ -26,14 +32,26 @@ func makeIndentation(indent int) string {
 }
 
 func IndentedPrint(indent int, a ...any) {
-	fmt.Printf("%s%s", makeIndentation(indent), fmt.Sprint(a...))
+	IndentedFprint(indent, os.Stdout, a...)
+}
+
+func IndentedFprint(indent int, w io.Writer, a ...any) {
+	_, _ = fmt.Fprintf(w, "%s%s", makeIndentation(indent), fmt.Sprint(a...))
 }
 
 func IndentedPrintln(indent int, a ...any) {
-	fmt.Printf("%s%s\n", makeIndentation(indent), fmt.Sprint(a...))
+	IndentedFprintln(indent, os.Stdout, a...)
+}
+
+func IndentedFprintln(indent int, w io.Writer, a ...any) {
+	_, _ = fmt.Fprintf(w, "%s%s\n", makeIndentation(indent), fmt.Sprint(a...))
 }
 
 func IndentedPrintYaml(indent int, a any) error {
+	return IndentedFprintYaml(indent, os.Stdout, a)
+}
+
+func IndentedFprintYaml(indent int, w io.Writer, a any) error {
 	buf := &bytes.Buffer{}
 	encoder := yaml.NewEncoder(buf)
 	encoder.SetIndent(len(indentation))
@@ -47,7 +65,7 @@ func IndentedPrintYaml(indent int, a any) error {
 	}
 	lines := strings.Split(buf.String(), "\n")
 	for _, line := range lines[:len(lines)-1] { // last line follows last "\n" and is empty
-		IndentedPrintln(indent, line)
+		IndentedFprintln(indent, w, line)
 	}
 	return nil
 }
@@ -55,7 +73,11 @@ func IndentedPrintYaml(indent int, a any) error {
 // Bulleted
 
 func BulletedPrintf(indent int, format string, a ...any) {
-	fmt.Printf("%s%s", makeBullet(indent), fmt.Sprintf(format, a...))
+	BulletedFprintf(indent, os.Stdout, format, a...)
+}
+
+func BulletedFprintf(indent int, w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, "%s%s", makeBullet(indent), fmt.Sprintf(format, a...))
 }
 
 func makeBullet(indent int) string {
@@ -63,14 +85,26 @@ func makeBullet(indent int) string {
 }
 
 func BulletedPrint(indent int, a ...any) {
-	fmt.Printf("%s%s", makeBullet(indent), fmt.Sprint(a...))
+	BulletedFprint(indent, os.Stdout, a...)
+}
+
+func BulletedFprint(indent int, w io.Writer, a ...any) {
+	_, _ = fmt.Fprintf(w, "%s%s", makeBullet(indent), fmt.Sprint(a...))
 }
 
 func BulletedPrintln(indent int, a ...any) {
-	fmt.Printf("%s%s\n", makeBullet(indent), fmt.Sprint(a...))
+	BulletedFprintln(indent, os.Stdout, a...)
+}
+
+func BulletedFprintln(indent int, w io.Writer, a ...any) {
+	_, _ = fmt.Fprintf(w, "%s%s\n", makeBullet(indent), fmt.Sprint(a...))
 }
 
 func BulletedPrintYaml(indent int, a any) error {
+	return BulletedFprintYaml(indent, os.Stdout, a)
+}
+
+func BulletedFprintYaml(indent int, w io.Writer, a any) error {
 	buf := &bytes.Buffer{}
 	encoder := yaml.NewEncoder(buf)
 	encoder.SetIndent(len(indentation))
@@ -83,9 +117,9 @@ func BulletedPrintYaml(indent int, a any) error {
 	lines := strings.Split(buf.String(), "\n")
 	for i, line := range lines[:len(lines)-1] { // last line follows last "\n" and is empty
 		if i == 0 {
-			BulletedPrintln(indent, line)
+			BulletedFprintln(indent, w, line)
 		} else {
-			IndentedPrintln(indent+1, line)
+			IndentedFprintln(indent+1, w, line)
 		}
 	}
 	return nil
@@ -94,6 +128,10 @@ func BulletedPrintYaml(indent int, a any) error {
 // Markdown files
 
 func PrintMarkdown(indent int, text []byte, widthLimit, lengthLimit int) {
+	FprintMarkdown(indent, os.Stdout, text, widthLimit, lengthLimit)
+}
+
+func FprintMarkdown(indent int, w io.Writer, text []byte, widthLimit, lengthLimit int) {
 	lines := strings.Split(string(text), "\n")
 	for i, line := range lines {
 		if lengthLimit > 0 && i >= lengthLimit {
@@ -101,18 +139,18 @@ func PrintMarkdown(indent int, text []byte, widthLimit, lengthLimit int) {
 		}
 		line = strings.TrimRight(line, "\r")
 		if line == "" {
-			IndentedPrintln(indent)
+			IndentedFprintln(indent, w)
 		}
 		for len(line) > 0 {
 			if len(line) < widthLimit { // we've printed everything!
-				IndentedPrintln(indent, line)
+				IndentedFprintln(indent, w, line)
 				break
 			}
-			IndentedPrintln(indent, line[:widthLimit])
+			IndentedFprintln(indent, w, line[:widthLimit])
 			line = line[widthLimit:]
 		}
 	}
 	if lengthLimit > 0 && len(lines) > lengthLimit {
-		IndentedPrintln(indent, "[remainder of file truncated]")
+		IndentedFprintln(indent, w, "[remainder of file truncated]")
 	}
 }

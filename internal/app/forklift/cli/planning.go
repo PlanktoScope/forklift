@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -103,7 +104,7 @@ func Plan(
 	// same resulting dependency graph) regardless of serial vs. concurrent execution.
 	deps := forklift.ResolveDeps(satisfiedDeps, true)
 
-	IndentedPrintln(indent, "Determining and ordering package deployment changes...")
+	IndentedFprintln(indent, os.Stderr, "Determining and ordering package deployment changes...")
 	apps, err := dc.ListApps(context.Background())
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "couldn't list active Docker Compose apps")
@@ -113,12 +114,12 @@ func Plan(
 		return nil, nil, errors.Wrap(err, "couldn't compute a plan for changes")
 	}
 
-	IndentedPrintln(indent, "Ordering relationships:")
+	IndentedFprintln(indent, os.Stderr, "Ordering relationships:")
 	printDigraph(indent+1, changeDeps, "after")
 	if len(cycles) > 0 {
-		fmt.Println("Detected ordering cycles:")
+		IndentedFprintln(indent, os.Stderr, "Detected ordering cycles:")
 		for _, cycle := range cycles {
-			IndentedPrintf(indent+1, "cycle between: %s\n", cycle)
+			IndentedFprintf(indent+1, os.Stderr, "cycle between: %s\n", cycle)
 		}
 		if parallel {
 			return nil, nil, errors.Errorf(
@@ -131,10 +132,10 @@ func Plan(
 		return changeDeps, nil, nil
 	}
 
-	fmt.Println()
-	IndentedPrintln(indent, "Serialized ordering of package deployment changes:")
+	fmt.Fprintln(os.Stderr)
+	IndentedFprintln(indent, os.Stderr, "Serialized ordering of package deployment changes:")
 	for _, change := range serialization {
-		IndentedPrintln(indent+1, change.PlanString())
+		IndentedFprintln(indent+1, os.Stderr, change.PlanString())
 	}
 	return changeDeps, serialization, nil
 }
@@ -165,11 +166,11 @@ func printNodeOutboundEdges[Node comparable, Digraph structures.MapDigraph[Node]
 		return cmp.Compare(fmt.Sprintf("%v", i), fmt.Sprintf("%v", j))
 	})
 	if len(upstreamNodes) == 0 {
-		IndentedPrintf(indent, "%v %s nothing", node, edgeType)
+		IndentedFprintf(indent, os.Stderr, "%v %s nothing", node, edgeType)
 	} else {
-		IndentedPrintf(indent, "%v %s: %+v", node, edgeType, upstreamNodes)
+		IndentedFprintf(indent, os.Stderr, "%v %s: %+v", node, edgeType, upstreamNodes)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 }
 
 // planChanges builds a dependency graph of changes to make to the Docker host (as a plan for
@@ -187,7 +188,7 @@ func planChanges(
 	serialization []*ReconciliationChange, err error,
 ) {
 	// TODO: make a reconciliation plan where relevant resources (i.e. Docker networks) are created
-	// simultaneously/independently so that circular dependencies for those resouces won't prevent
+	// simultaneously/independently so that circular dependencies for those resources won't prevent
 	// successful application.
 	changes, err := identifyReconciliationChanges(depls, apps)
 	if err != nil {

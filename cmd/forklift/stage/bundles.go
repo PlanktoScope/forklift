@@ -65,7 +65,7 @@ func getBundleNames(store *forklift.FSStageStore) map[int][]string {
 func printBundleSummary(store *forklift.FSStageStore, index int, names map[int][]string) {
 	bundle, err := store.LoadFSBundle(index)
 	if err != nil {
-		fmt.Printf("%d: Error: couldn't load bundle: %s\n", index, err)
+		fmt.Fprintf(os.Stderr, "%d: Error: couldn't load bundle: %s\n", index, err)
 		return
 	}
 	fmt.Print(index)
@@ -130,6 +130,8 @@ func locateBunAction(versions Versions) cli.ActionFunc {
 
 // rm-bun
 
+const knownSnippet = "last staged pallet bundle known to have been successfully applied"
+
 func rmBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
@@ -144,7 +146,7 @@ func rmBunAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Staged pallet bundle %d will be deleted...\n", deleteIndex)
+		fmt.Fprintf(os.Stderr, "Staged pallet bundle %d will be deleted...\n", deleteIndex)
 		preNext, preHasNext := store.GetNext()
 		preCurrent, preHasCurrent := store.GetCurrent()
 
@@ -153,41 +155,38 @@ func rmBunAction(versions Versions) cli.ActionFunc {
 		postCurrent, postHasCurrent := store.GetCurrent()
 		switch {
 		case preHasCurrent && !postHasCurrent:
-			fmt.Println(
-				"Warning: now there will be no staged pallet bundle known to have been successfully " +
-					"applied!",
-			)
+			fmt.Fprintln(os.Stderr, "Warning: now there will be no "+knownSnippet+"!")
 		case postHasCurrent && postCurrent != preCurrent:
-			fmt.Printf(
-				"The last staged pallet bundle known to have been successfully applied will change "+
-					"from %d to %d!\n",
-				preCurrent, postCurrent,
+			fmt.Fprintf(
+				os.Stderr, "The "+knownSnippet+" will change from %d to %d!\n", preCurrent, postCurrent,
 			)
 		}
 		switch {
 		case preHasNext && (preNext == deleteIndex) && postHasCurrent:
 			store.SetNext(postCurrent)
-			fmt.Printf(
+			fmt.Fprintf(
+				os.Stderr,
 				"Because pallet bundle %d will be deleted, %d will now be the next staged pallet bundle "+
 					"to be applied!\n",
 				deleteIndex, postCurrent,
 			)
 		case preHasNext && (preNext == deleteIndex) && !postHasCurrent:
 			store.SetNext(0)
-			fmt.Printf(
+			fmt.Fprintf(
+				os.Stderr,
 				"Because bundle %d will be deleted, and there is no remaining successfully-applied pallet "+
 					"bundle in the store's history, now no bundle will be applied next!\n",
 				deleteIndex,
 			)
 		}
-		fmt.Println("Saving the updated state of the stage store...")
+		fmt.Fprintln(os.Stderr, "Saving the updated state of the stage store...")
 		// Note: we commit the state before deleting the stage (rather than the other way around)
 		// because it's better to accidentally leave the stage on the filesystem than to have indices
 		// of deleted bundles in our history/names/next-state.
 		if err = store.CommitState(); err != nil {
 			return errors.Wrap(err, "couldn't commit the stage store's new state!")
 		}
-		fmt.Println("Deleting the staged pallet bundle from the filesystem...")
+		fmt.Fprintln(os.Stderr, "Deleting the staged pallet bundle from the filesystem...")
 		return os.RemoveAll(filepath.FromSlash(store.GetBundlePath(deleteIndex)))
 	}
 }
@@ -222,11 +221,11 @@ func pruneBunAction(versions Versions) cli.ActionFunc {
 			deleteIndices = append(deleteIndices, index)
 		}
 		if len(deleteIndices) == 0 {
-			fmt.Println("There are no staged pallet bundles to prune!")
+			fmt.Fprintln(os.Stderr, "There are no staged pallet bundles to prune!")
 			return nil
 		}
 
-		fmt.Printf("Deleting staged pallet bundles: %+v\n", deleteIndices)
+		fmt.Fprintf(os.Stderr, "Deleting staged pallet bundles: %+v\n", deleteIndices)
 		failedIndices := make([]int, 0, len(deleteIndices))
 		for _, index := range deleteIndices {
 			if err = os.RemoveAll(filepath.FromSlash(store.GetBundlePath(index))); err != nil {

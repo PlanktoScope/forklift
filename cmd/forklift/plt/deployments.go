@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -82,7 +83,7 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -116,7 +117,7 @@ func rmDeplAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -152,7 +153,7 @@ func setDeplPkgAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -190,7 +191,7 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -226,7 +227,7 @@ func rmDeplFeatAction(versions Versions) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}
@@ -261,7 +262,7 @@ func setDeplDisabledAction(versions Versions, setting bool) cli.ActionFunc {
 		case c.Bool("stage"):
 			return stageAction(versions)(c)
 		default:
-			fmt.Println("Done!")
+			fmt.Fprintln(os.Stderr, "Done!")
 			return nil
 		}
 	}

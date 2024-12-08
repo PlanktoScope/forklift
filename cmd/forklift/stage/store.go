@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ func loadNextBundle(
 		)
 	}
 	if store.NextFailed() {
-		fmt.Printf("Next stage failed in the past: %d\n", next)
+		fmt.Fprintf(os.Stderr, "Next stage failed in the past: %d\n", next)
 		current, ok := store.GetCurrent()
 		switch {
 		case !ok:
@@ -43,18 +44,18 @@ func loadNextBundle(
 					"applied successfully in the past, so we have no fallback!",
 			)
 		case current != next:
-			fmt.Printf("Current stage will be used instead, as a fallback: %d\n", current)
+			fmt.Fprintf(os.Stderr, "Current stage will be used instead, as a fallback: %d\n", current)
 		default:
-			fmt.Println("Trying again, since it had succeeded in the past!")
+			fmt.Fprintln(os.Stderr, "Trying again, since it had succeeded in the past!")
 		}
 		next = current
 	} else {
 		if pending, ok := store.GetPending(); ok && next == pending {
-			fmt.Printf("Next stage is pending: %d\n", next)
+			fmt.Fprintf(os.Stderr, "Next stage is pending: %d\n", next)
 		} else if current, ok := store.GetCurrent(); ok && next == current {
-			fmt.Printf("Next stage previously had a successful apply: %d\n", next)
+			fmt.Fprintf(os.Stderr, "Next stage previously had a successful apply: %d\n", next)
 		} else {
-			fmt.Printf("Next stage: %d\n", next)
+			fmt.Fprintf(os.Stderr, "Next stage: %d\n", next)
 		}
 	}
 
@@ -272,8 +273,9 @@ func setNextAction(versions Versions) cli.ActionFunc {
 
 		if c.Args().First() == "0" {
 			store.SetNext(0)
-			fmt.Println(
-				"Committing update to the stage store so that no staged pallet bundle will be applied " +
+			fmt.Fprintln(
+				os.Stderr,
+				"Committing update to the stage store so that no staged pallet bundle will be applied "+
 					"next...",
 			)
 			if err := store.CommitState(); err != nil {
@@ -291,9 +293,11 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		}
 
 		if next, hasNext := store.GetNext(); hasNext {
-			fmt.Printf("Changing the next staged pallet bundle from %d to %d...\n", next, newNext)
+			fmt.Fprintf(
+				os.Stderr, "Changing the next staged pallet bundle from %d to %d...\n", next, newNext,
+			)
 		} else {
-			fmt.Printf("Setting the next staged pallet bundle to %d...\n", newNext)
+			fmt.Fprintf(os.Stderr, "Setting the next staged pallet bundle to %d...\n", newNext)
 		}
 
 		if err = fcli.SetNextStagedBundle(
@@ -303,8 +307,9 @@ func setNextAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println(
-			"Done! To apply the staged pallet, you may need to reboot or run " +
+		fmt.Fprintln(
+			os.Stderr,
+			"Done! To apply the staged pallet, you may need to reboot or run "+
 				"`forklift stage apply` (or `sudo -E forklift stage apply` if you need sudo for Docker).",
 		)
 		return nil
@@ -324,7 +329,9 @@ func unsetNextAction(versions Versions) cli.ActionFunc {
 		}
 
 		store.SetNext(0)
-		fmt.Println("Committing update to the stage store so that no stage will be applied next...")
+		fmt.Fprintln(
+			os.Stderr, "Committing update to the stage store so that no stage will be applied next...",
+		)
 		if err := store.CommitState(); err != nil {
 			return errors.Wrap(err, "couldn't commit updated stage store state")
 		}
@@ -447,12 +454,12 @@ func applyAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 
 		if err = fcli.ApplyNextOrCurrentBundle(0, store, bundle, c.Bool("parallel")); err != nil {
 			return err
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -481,11 +488,11 @@ func setNextResultAction(versions Versions) cli.ActionFunc {
 				"unknown result (must be 'pending', 'success', or 'failure'): %s", result,
 			)
 		}
-		fmt.Println("Committing result to the stage store...")
+		fmt.Fprintln(os.Stderr, "Committing result to the stage store...")
 		if err := store.CommitState(); err != nil {
 			return errors.Wrap(err, "couldn't commit updated stage store state")
 		}
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }

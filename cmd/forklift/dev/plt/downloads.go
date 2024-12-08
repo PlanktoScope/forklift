@@ -2,6 +2,7 @@ package plt
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v2"
 
@@ -57,8 +58,8 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		fmt.Println()
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }

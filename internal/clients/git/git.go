@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -367,7 +368,7 @@ func (r *Repo) RefsHaveAncestor(refs []*plumbing.Reference, commit string) (bool
 		}
 		commitObject, err := r.repository.CommitObject(ref.Hash())
 		if err != nil {
-			fmt.Printf("Warning: %s\n", errors.Wrapf(
+			fmt.Fprintf(os.Stderr, "Warning: %s\n", errors.Wrapf(
 				err, "couldn't load commit %s (from %s)", ref.Hash(), ref.Name(),
 			))
 			continue

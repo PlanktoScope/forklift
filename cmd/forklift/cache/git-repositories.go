@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -79,8 +80,8 @@ func addGitRepoAction[Cache core.Pather](
 		); err != nil {
 			return err
 		}
-		fmt.Println()
-		fmt.Println("Done!")
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "Done!")
 		return nil
 	}
 }
@@ -100,7 +101,7 @@ func rmGitRepoAction[Cache remover](
 			return err
 		}
 
-		fmt.Printf("Clearing %s cache...\n", gitRepoType)
+		fmt.Fprintf(os.Stderr, "Clearing %s cache...\n", gitRepoType)
 		if err = cache.Remove(); err != nil {
 			return errors.Wrapf(err, "couldn't clear %s cache", gitRepoType)
 		}

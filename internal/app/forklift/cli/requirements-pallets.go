@@ -142,8 +142,8 @@ func AddPalletReqs(
 	if err != nil {
 		return err
 	}
-	fmt.Println()
-	fmt.Printf("Saving configurations to %s...\n", pallet.FS.Path())
+	fmt.Fprintln(os.Stderr)
+	IndentedFprintf(indent, os.Stderr, "Saving configurations to %s...\n", pallet.FS.Path())
 	for _, palletQuery := range palletQueries {
 		req, ok := resolved[palletQuery]
 		if !ok {
@@ -175,7 +175,7 @@ func RemovePalletReqs(
 		)
 	}
 
-	fmt.Printf("Removing requirements from %s...\n", pallet.FS.Path())
+	IndentedFprintf(indent, os.Stderr, "Removing requirements from %s...\n", pallet.FS.Path())
 	for _, palletPath := range palletPaths {
 		if actualPalletPath, _, ok := strings.Cut(palletPath, "@"); ok {
 			IndentedPrintf(

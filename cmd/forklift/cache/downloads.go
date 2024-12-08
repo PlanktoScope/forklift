@@ -3,6 +3,7 @@ package cache
 import (
 	"fmt"
 	"io/fs"
+	"os"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ func rmDlAction(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Println("Clearing downloads cache...")
+	fmt.Fprintln(os.Stderr, "Clearing downloads cache...")
 	if err = cache.Remove(); err != nil {
 		return errors.Wrap(err, "couldn't clear downloads cache")
 	}

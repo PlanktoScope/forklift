@@ -40,7 +40,8 @@ func SetNextStagedBundle(
 	ignoreToolVersion bool,
 ) error {
 	store.SetNext(index)
-	fmt.Printf(
+	IndentedFprintf(
+		indent, os.Stderr,
 		"Committing update to the stage store for stage %d as the next stage to be applied...\n", index,
 	)
 	if err := store.CommitState(); err != nil {
@@ -97,13 +98,15 @@ func StagePallet(
 	); err != nil {
 		return 0, err
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 
 	index, err = stageStore.AllocateNew()
 	if err != nil {
 		return 0, errors.Wrap(err, "couldn't allocate a directory for staging")
 	}
-	fmt.Printf("Bundling pallet as stage %d for staged application...\n", index)
+	IndentedFprintf(
+		indent, os.Stderr, "Bundling pallet as stage %d for staged application...\n", index,
+	)
 	if err = buildBundle(
 		merged, caches.Pallets, repoCacheWithMerged, caches.Downloads,
 		versions.NewBundle, path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
@@ -374,27 +377,27 @@ func ApplyNextOrCurrentBundle(
 	applyErr := applyBundle(0, bundle, parallel)
 	current, _ := store.GetCurrent()
 	next, _ := store.GetNext()
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	if !applyingFallback || current == next {
 		store.RecordNextSuccess(applyErr == nil)
 	}
 	if applyErr != nil {
 		if applyingFallback {
-			IndentedPrintln(
-				indent,
+			IndentedFprintln(
+				indent, os.Stderr,
 				"Failed to apply the fallback pallet bundle, even though it was successfully applied "+
 					"in the past! You may need to try resetting your host, with `forklift host rm`.",
 			)
 			return applyErr
 		}
 		if err := store.CommitState(); err != nil {
-			IndentedPrintf(
-				indent,
+			IndentedFprintf(
+				indent, os.Stderr,
 				"Error: couldn't record failure of the next staged pallet bundle: %s\n", err.Error(),
 			)
 		}
-		IndentedPrintln(
-			indent,
+		IndentedFprintln(
+			indent, os.Stderr,
 			"Failed to apply next staged bundle; if you run `forklift stage apply` again, it will "+
 				"attempt to apply the last successfully-applied pallet bundle (if it exists) as a "+
 				"fallback!",
@@ -422,18 +425,19 @@ func applyBundle(indent int, bundle *forklift.FSBundle, parallel bool) error {
 func applyChangesSerially(indent int, plan []*ReconciliationChange) error {
 	const dockerIndent = 2 // docker's indentation is flaky, so we indent extra
 	dc, err := docker.NewClient(
-		docker.WithOutputStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stdout)),
+		// we want to send all of Docker's log messages to stderr:
+		docker.WithOutputStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
 		docker.WithErrorStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
 
-	fmt.Println()
-	fmt.Println("Applying changes serially...")
+	fmt.Fprintln(os.Stderr)
+	IndentedFprintln(indent, os.Stderr, os.Stderr, "Applying changes serially...")
 	indent++
 	for _, change := range plan {
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 		if err := applyReconciliationChange(context.Background(), indent, change, dc); err != nil {
 			return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
 		}
@@ -448,8 +452,9 @@ func applyReconciliationChange(
 	default:
 		return errors.Errorf("unknown change type '%s'", change.Type)
 	case addReconciliationChange:
-		IndentedPrintf(
-			indent, "Adding package deployment %s as Compose app %s...\n", change.Depl.Name, change.Name,
+		IndentedFprintf(
+			indent, os.Stderr,
+			"Adding package deployment %s as Compose app %s...\n", change.Depl.Name, change.Name,
 		)
 		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
 			return errors.Wrapf(err, "couldn't add %s", change.Name)
@@ -457,14 +462,16 @@ func applyReconciliationChange(
 		return nil
 	case removeReconciliationChange:
 		// Note: removeReconciliationChange has a nil Depl field
-		IndentedPrintf(indent, "Removing Compose app %s (unknown deployment)...\n", change.Name)
+		IndentedFprintf(
+			indent, os.Stderr, "Removing Compose app %s (unknown deployment)...\n", change.Name,
+		)
 		if err := dc.RemoveApps(ctx, []string{change.Name}); err != nil {
 			return errors.Wrapf(err, "couldn't remove %s", change.Name)
 		}
 		return nil
 	case updateReconciliationChange:
-		IndentedPrintf(
-			indent, "Updating package deployment %s as Compose app %s...\n",
+		IndentedFprintf(
+			indent, os.Stderr, "Updating package deployment %s as Compose app %s...\n",
 			change.Depl.Name, change.Name,
 		)
 		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
@@ -484,7 +491,7 @@ func deployApp(
 		)
 	}
 	if !definesApp {
-		IndentedPrintln(indent, "No Docker Compose app to deploy!")
+		IndentedFprintln(indent, os.Stderr, "No Docker Compose app to deploy!")
 		return nil
 	}
 
@@ -517,12 +524,18 @@ func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
 }
 
 func applyChangesConcurrently(indent int, plan structures.Digraph[*ReconciliationChange]) error {
-	dc, err := docker.NewClient(docker.WithConcurrencySafeOutput())
+	const dockerIndent = 2 // docker's indentation is flaky, so we indent extra
+	dc, err := docker.NewClient(
+		docker.WithConcurrencySafeOutput(),
+		// we want to send all of Docker's log messages to stderr:
+		docker.WithOutputStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
+		docker.WithErrorStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
+	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
 	}
-	fmt.Println()
-	IndentedPrintln(indent, "Applying changes concurrently...")
+	fmt.Fprintln(os.Stderr)
+	IndentedFprintln(indent, os.Stderr, "Applying changes concurrently...")
 	indent++
 
 	changeDone := make(map[*ReconciliationChange]chan struct{})

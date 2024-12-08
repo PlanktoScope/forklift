@@ -43,9 +43,9 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 			)
 		}
 		if !downloaded {
-			IndentedPrintf(
-				indent, "Didn't download %s@%s because it already exists\n",
-				req.Path(), req.VersionLock.Version,
+			IndentedFprintf(
+				indent, os.Stderr,
+				"Didn't download %s@%s because it already exists\n", req.Path(), req.VersionLock.Version,
 			)
 		}
 		changed[req] = true
@@ -68,7 +68,9 @@ func validateGitRepoQueries(queries []string) error {
 func ResolveQueriesUsingLocalMirrors(
 	indent int, mirrorsPath string, queries []string, updateLocalMirror bool,
 ) (resolved map[string]forklift.GitRepoReq, err error) {
-	IndentedPrintln(indent, "Resolving version queries using local mirrors of remote Git repos...")
+	IndentedFprintln(
+		indent, os.Stderr, "Resolving version queries using local mirrors of remote Git repos...",
+	)
 	indent++
 	resolved, err = resolveGitRepoQueriesUsingLocalMirrors(indent, queries, mirrorsPath)
 	if err != nil {
@@ -77,17 +79,17 @@ func ResolveQueriesUsingLocalMirrors(
 				err, "couldn't resolve one or more version queries, and we're not updating local mirrors",
 			)
 		}
-		IndentedPrintln(
-			indent,
+		IndentedFprintln(
+			indent, os.Stderr,
 			"Couldn't resolve one or more version queries, so we'll update local mirrors of remote Git "+
 				"repos and try again",
 		)
 
-		IndentedPrintln(indent, "Updating local mirrors of remote Git repos...")
+		IndentedFprintln(indent, os.Stderr, "Updating local mirrors of remote Git repos...")
 		if err = updateQueriedLocalGitRepoMirrors(indent+1, queries, mirrorsPath); err != nil {
 			return nil, errors.Wrap(err, "couldn't update local Git repo mirrors")
 		}
-		IndentedPrintln(indent, "Resolving version queries from updated local mirrors...")
+		IndentedFprintln(indent, os.Stderr, "Resolving version queries from updated local mirrors...")
 		if resolved, err = resolveGitRepoQueriesUsingLocalMirrors(
 			indent+1, queries, mirrorsPath,
 		); err != nil {
@@ -100,26 +102,26 @@ func ResolveQueriesUsingLocalMirrors(
 		return resolved, nil
 	}
 
-	IndentedPrintln(
-		indent, "Updating local mirrors of remote Git repos (even though it's not required)...",
+	IndentedFprintln(
+		indent, os.Stderr,
+		"Updating local mirrors of remote Git repos (even though it's not required)...",
 	)
 	if err = updateQueriedLocalGitRepoMirrors(indent+1, queries, mirrorsPath); err != nil {
-		IndentedPrintf(
-			indent+1,
+		IndentedFprintf(
+			indent+1, os.Stderr,
 			"Couldn't update local mirrors (do you have internet access? does the "+
-				"remote repo actually exist?): %s\n",
-			err,
+				"remote repo actually exist?): %s\n", err,
 		)
 		return resolved, nil
 	}
-	IndentedPrintln(indent, "Resolving version queries from updated local mirrors...")
+	IndentedFprintln(indent, os.Stderr, "Resolving version queries from updated local mirrors...")
 	newResolved, err := resolveGitRepoQueriesUsingLocalMirrors(
 		indent, queries, mirrorsPath,
 	)
 	if err != nil {
-		IndentedPrintln(
-			indent, "Couldn't resolve version query with updated local mirror, falling back to "+
-				"previous value",
+		IndentedFprintln(
+			indent, os.Stderr,
+			"Couldn't resolve version query with updated local mirror, falling back to previous value",
 		)
 	}
 	return newResolved, nil
@@ -148,7 +150,7 @@ func updateLocalGitRepoMirror(indent int, remote, mirrorPath string) error {
 	remote = filepath.FromSlash(remote)
 	mirrorPath = filepath.FromSlash(mirrorPath)
 	if _, err := os.Stat(mirrorPath); errors.Is(err, fs.ErrNotExist) {
-		IndentedPrintf(indent, "Cloning %s to local mirror...\n", remote)
+		IndentedFprintf(indent, os.Stderr, "Cloning %s to local mirror...\n", remote)
 		_, err := git.CloneMirrored(indent+1, remote, mirrorPath, os.Stdout)
 		return err
 	}
@@ -182,7 +184,7 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 			)
 		}
 
-		IndentedPrintf(indent, "Resolved %s as %+v\n", query, req.VersionLock.Version)
+		IndentedFprintf(indent, os.Stderr, "Resolved %s as %+v\n", query, req.VersionLock.Version)
 		resolved[query] = req
 	}
 	return resolved, nil
@@ -307,9 +309,9 @@ func DownloadLockedGitRepoUsingLocalMirror(
 	)
 	if err != nil {
 		indent++
-		IndentedPrintln(
-			indent, "Couldn't clone from local mirror, so we'll update it from the remote Git repo "+
-				"and try again...",
+		IndentedFprintln(
+			indent, os.Stderr,
+			"Couldn't clone from local mirror, so we'll update from the remote Git repo and try again...",
 		)
 		if err = updateLocalGitRepoMirror(indent, gitRepoPath, mirrorPath); err != nil {
 			return false, errors.Wrap(err, "couldn't update local Git repo mirrors")
@@ -325,15 +327,16 @@ func DownloadLockedGitRepoUsingLocalMirror(
 	}
 
 	if !downloaded {
-		IndentedPrintf(indent, "%s@%s was already downloaded!\n", gitRepoPath, lock.Version)
+		IndentedFprintf(indent, os.Stderr, "%s@%s was already downloaded!\n", gitRepoPath, lock.Version)
 	}
-	IndentedPrintln(
-		indent, "Optionally updating local mirror from remote Git origin...",
+	IndentedFprintln(
+		indent, os.Stderr, "Optionally updating local mirror from remote Git origin...",
 	)
 	indent++
 	if err = updateLocalGitRepoMirror(indent, gitRepoPath, mirrorPath); err != nil {
-		IndentedPrintf(
-			indent, "Couldn't update local mirror (do you have internet access?): %s\n", err.Error(),
+		IndentedFprintf(
+			indent, os.Stderr,
+			"Couldn't update local mirror (do you have internet access?): %s\n", err.Error(),
 		)
 	}
 	return downloaded, nil
@@ -357,7 +360,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	}
 
 	mirrorCachePath := filepath.Join(filepath.FromSlash(mirrorsPath), filepath.FromSlash(gitRepoPath))
-	IndentedPrintln(indent, "Cloning from local mirror...")
+	IndentedFprintln(indent, os.Stderr, "Cloning from local mirror...")
 	gitRepo, err := git.Clone(
 		indent+1, fmt.Sprintf("file://%s", mirrorCachePath), gitRepoCachePath, io.Discard,
 	)
@@ -373,8 +376,8 @@ func cloneLockedGitRepoFromLocalMirror(
 	if err = validateCommit(lock, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
-			IndentedPrintf(
-				indent,
+			IndentedFprintf(
+				indent, os.Stderr,
 				"Error: couldn't clean up %s after failed validation! You'll need to delete it yourself.\n",
 				gitRepoCachePath,
 			)
@@ -387,8 +390,8 @@ func cloneLockedGitRepoFromLocalMirror(
 	// Checkout commit
 	if err = gitRepo.Checkout(lock.Def.Commit, ""); err != nil {
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
-			IndentedPrintf(
-				indent, "Error: couldn't clean up %s! You'll need to delete it yourself.\n",
+			IndentedFprintf(
+				indent, os.Stderr, "Error: couldn't clean up %s! You'll need to delete it yourself.\n",
 				gitRepoCachePath,
 			)
 		}
@@ -444,7 +447,9 @@ func CloneQueriedGitRepoUsingLocalMirror(
 	}
 
 	mirrorCachePath := filepath.Join(filepath.FromSlash(mirrorsPath), filepath.FromSlash(gitRepoPath))
-	IndentedPrintf(indent, "Cloning %s to %s via local mirror...\n", gitRepoPath, destination)
+	IndentedFprintf(
+		indent, os.Stderr, "Cloning %s to %s via local mirror...\n", gitRepoPath, destination,
+	)
 	gitRepo, err := git.Clone(
 		indent+1, fmt.Sprintf("file://%s", mirrorCachePath), destination, os.Stdout,
 	)
@@ -470,11 +475,12 @@ func CloneQueriedGitRepoUsingLocalMirror(
 		return errors.Wrapf(err, "couldn't add a remote for the local mirror")
 	}
 
-	IndentedPrintf(indent, "Checking out %s in %s...\n", versionQuery, destination)
+	IndentedFprintf(indent, os.Stderr, "Checking out %s in %s...\n", versionQuery, destination)
 	if err = gitRepo.Checkout(versionQuery, ""); err != nil {
 		if cerr := os.RemoveAll(destination); cerr != nil {
-			IndentedPrintf(
-				indent, "Error: couldn't clean up %s! You'll need to delete it yourself.\n", destination,
+			IndentedFprintf(
+				indent, os.Stderr,
+				"Error: couldn't clean up %s! You'll need to delete it yourself.\n", destination,
 			)
 		}
 		return errors.Wrapf(err, "couldn't check out version query %s", versionQuery)
