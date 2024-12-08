@@ -992,9 +992,7 @@ func showPltAction(c *cli.Context) error {
 // show-plt-version
 
 func showPltVersionAction(c *cli.Context) error {
-	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
-		requirePalletCache: true,
-	})
+	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 	if err != nil {
 		return err
 	}

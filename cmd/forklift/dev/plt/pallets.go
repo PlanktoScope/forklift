@@ -489,8 +489,7 @@ func showPltAction(c *cli.Context) error {
 
 func showPltVersionAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c, processingOptions{
-		requirePalletCache: true,
-		enableOverrides:    true,
+		enableOverrides: true,
 	})
 	if err != nil {
 		return err

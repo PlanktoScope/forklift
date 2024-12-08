@@ -83,8 +83,7 @@ func showRepoAction(c *cli.Context) error {
 
 func showRepoVersionAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
-		requireRepoCache: true,
-		merge:            true,
+		merge: true,
 	})
 	if err != nil {
 		return err

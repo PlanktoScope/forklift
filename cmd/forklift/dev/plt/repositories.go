@@ -89,9 +89,8 @@ func showRepoAction(c *cli.Context) error {
 
 func showRepoVersionAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c, processingOptions{
-		requireRepoCache: true,
-		enableOverrides:  true,
-		merge:            true,
+		enableOverrides: true,
+		merge:           true,
 	})
 	if err != nil {
 		return err
