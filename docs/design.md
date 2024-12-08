@@ -17,8 +17,8 @@ Forklift's design is guided by the following values for infrastructural software
 
 As a software deployment & configuration system, Forklift consists of the following technical components:
 
-- The `forklift` tool, a single self-contained executable file which provides user interfaces (currently only a command-line interface, though a browser app is also planned) for managing the configuration of apps deployed on a Docker host.
-- The Forklift specifications, which describe the syntax, structure, and semantics of configuration files and Git repositories used by the `forklift` tool.
+- The `forklift` tool, a single self-contained executable file which provides user interfaces (currently only a command-line interface, though a browser app is also planned) for managing the deployment of apps and system configurations on a Docker host.
+- The Forklift specifications, which describe the syntax, structure, and semantics of files and Git repositories used by the `forklift` tool.
 - Publicly-hosted Git repositories (e.g. on GitHub) complying with the Forklift specifications.
 - Container image registries (e.g. [Docker Hub](https://hub.docker.com/) or the [GitHub Container Registry](https://github.com/features/packages)) complying with the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).
 
@@ -29,6 +29,8 @@ Together, the Forklift specifications and the `forklift` tool can be used by pro
 3. Specify the exact and complete configuration of a set of packages to be deployed as apps on a computer; the complete configuration for a computer is called a *pallet*, which is a Git repository which may be hosted online.
 4. Run continuous integration checks on a pallet - including first-class support for GitHub Actions - to automatically ensure that many kinds of changes to a pallet will not break compatibility or introduce conflicts between deployed apps.
 5. Apply a specified version of a pallet to a computer, replacing any previous deployments of apps on that computer.
+6. Manually or automatically upgrade a pallet whenever new versions are released.
+7. Compose one or more pallets together into a new pallet by *layering*.
 
 ## Forklift specifications
 

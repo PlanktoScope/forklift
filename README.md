@@ -19,7 +19,13 @@
 Composable, reprovisionable, decentralized management of apps & configs on Raspberry Pis and other
 embedded Linux systems
 
-Note: this is still an experimental prototype and is not yet ready for general use.
+Note: this is still an experimental prototype in the sense that Forklift's architectural design and
+command-line interface may undergo significant backwards-incompatible changes (including removal of
+unnecessary functionalities) for simplification. Thus, while Forklift is already used in production
+as a lower-level implementation detail of the
+[PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/)
+and is exposed to advanced users with a command-line interface for customization of PlanktoScope OS,
+any other use of Forklift is not yet officially supported.
 
 ## Introduction
 
@@ -35,7 +41,7 @@ this demo video: <https://www.youtube.com/watch?v=4lHh_NDlFKA>
 For end-users operating open-source instruments with application services (e.g. network APIs or
 browser-based interfaces) and/or system services (for e.g. data backups/transfer, hardware support,
 computer networking, monitoring, etc.), Forklift aims to provide an experience for installing,
-updating, uninstalling software and OS customizations similar what is achieved by app stores for
+updating, and uninstalling software and OS customizations similar what is achieved by app stores for
 mobile phones - but with more user control. Forklift also simplifies the process of keeping software
 up-to-date and the process of rolling software back to older versions if needed; this reduces the
 need to (for example) re-flash a Raspberry Pi's SD card with a new OS image just to update the
@@ -44,23 +50,21 @@ the system.
 
 For open-hardware project developers, Forklift enables Linux-based devices and
 [appliances](https://en.wikipedia.org/wiki/Computer_appliance) (especially those based on the
-Raspberry Pi) to be retrofitted and extended with an open ecosystem of containerized software -
-device-specific or general-purpose, project-maintained or third-party. Forklift also provides an
-incremental path for migrating project-specific application/system services and OS configs into
-management by Forklift so that they can be configured, distributed, installed, and replaced by users
-just like any other app managed by Forklift - i.e. with version control and easy upgrades/rollbacks.
+Raspberry Pi) to have the "interesting" parts of their software programs and configurations to be
+specified, composed, deployed, and reversibly upgraded/downgraded as version-controlled changes to a
+configurable Bill-of-Materials of software modules.
 The [PlanktoScope](https://www.planktoscope.org/), an open-source microscope for quantitative
 imaging of plankton, uses Forklift as foundational infrastructure for software releases, deployment,
 and extensibility in the
 [PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), a
 hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
-specifically to solve the OS/software maintenance and operations challenges experienced in the
-PlanktoScope project.
+specifically to solve the OS/software maintenance, customization, and operations challenges
+experienced in the PlanktoScope project.
 
 For indie software developers and sysadmins familiar with DevOps and cloud-native patterns, Forklift
-is just a GitOps-inspired system which is small and simple enough to work beyond the cloud - using
-Docker Compose to avoid the unnecessary architectural complexity and overhead even minimal
-Kubernetes distributions like k3s for situations where a container workload orchestrator is
+is just a GitOps-inspired no-orchestrator system which is small and simple enough to work beyond the
+cloud - using Docker Compose to avoid the unnecessary architectural complexity and overhead even
+minimal Kubernetes distributions like k0s for situations where a container workload orchestrator is
 unnecessary; and bundling app deployment with the deployment of system files, executables, and
 systemd units from configuration files version-controlled in Git repositories. Thus, Forklift allows
 hassle-free management of software configurations on one or more machines with only occasional
@@ -68,7 +72,7 @@ internet access (or, in the future, no internet access at all!) and no specializ
 team.
 
 For people who are Very Into Linux, Forklift is a way to bring some of the architectural benefits of
-atomic/immutable OSes (such as
+atomic/"immutable" OSes (such as
 [ChromeOS](https://www.chromium.org/chromium-os/chromiumos-design-docs/filesystem-autoupdate/),
 [Fedora Atomic Desktops](https://fedoraproject.org/atomic-desktops/),
 [Universal Blue](https://universal-blue.org/),
@@ -272,7 +276,7 @@ cd /home/pi/
 /home/pi/forklift dev --cwd /home/pi/dev/pallet-example-minimal plt --repos /home/pi/forklift/dev/device-pkgs check
 ```
 
-## Similar projects
+## Similar-ish projects
 
 The following projects solve related problems with containers for application software, though they
 make different trade-offs compared to Forklift:
@@ -338,10 +342,43 @@ Other related OS-level projects can be found at
 
 ## Licensing
 
+We have chosen the following licenses in order to give away our work for free, so that you can
+freely use it for whatever purposes you have, with minimal restrictions, while still protecting our
+disclaimer that this work is provided without any warranties at all. If you're using this project,
+or if you have questions about the licenses, we'd love to hear from you - please start a new
+discussion thread in the "Discussions" tab of this repository on Github or email us at
+<lietk12@gmail.com> .
+
+### Software
+
 Except where otherwise indicated, source code provided here is covered by the following information:
 
-Copyright Ethan Li and PlanktoScope project contributors
+**Copyright Ethan Li and Forklift project contributors**
 
 SPDX-License-Identifier: Apache-2.0 OR BlueOak-1.0.0
 
-You can use the source code provided here either under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0) or under the [Blue Oak Model License 1.0.0](https://blueoakcouncil.org/license/1.0.0); you get to decide. We are making the software available under the Apache license because it's [OSI-approved](https://writing.kemitchell.com/2019/05/05/Rely-on-OSI.html), but we like the Blue Oak Model License more because it's easier to read and understand.
+Software files in this repository are released under the
+[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0) and the
+[Blue Oak Model License 1.0.0](https://blueoakcouncil.org/license/1.0.0);
+you can use the source code provided here either under the Apache License or under the
+Blue Oak Model License, and you get to decide which license you will agree to.
+We are making the software available under the Apache license because it's
+[OSI-approved](https://writing.kemitchell.com/2019/05/05/Rely-on-OSI.html),
+but we like the Blue Oak Model License more because it's easier to read and understand.
+Please read and understand the licenses for the specific language governing permissions and
+limitations.
+
+### Everything else
+
+Except where otherwise indicated in this repository, any other files (such as images, media, data,
+and textual documentation) provided here not already covered by the software license (described
+above) are instead covered by the following information:
+
+**Copyright Ethan Li and Forklift project contributors**
+
+SPDX-License-Identifier: `CC-BY-4.0`
+
+Files in this project are released under the
+[Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
+Please read and understand the license for the specific language governing permissions and
+limitations.
