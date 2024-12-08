@@ -808,7 +808,7 @@ func showAction(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return fcli.PrintPalletInfo(0, plt)
+	return fcli.FprintPalletInfo(0, os.Stdout, plt)
 }
 
 // check
@@ -996,7 +996,7 @@ func lsPltAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPallets(0, plt)
+	return fcli.FprintRequiredPallets(0, os.Stdout, plt)
 }
 
 // show-plt
@@ -1009,7 +1009,7 @@ func showPltAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPalletInfo(0, plt, caches.p, c.Args().First())
+	return fcli.FprintRequiredPalletInfo(0, os.Stdout, plt, caches.p, c.Args().First())
 }
 
 // show-plt-version
@@ -1020,7 +1020,7 @@ func showPltVersionAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredPalletVersion(0, plt, caches.p, c.Args().First())
+	return fcli.FprintRequiredPalletVersion(0, os.Stdout, plt, caches.p, c.Args().First())
 }
 
 // add-plt
@@ -1143,7 +1143,7 @@ func showPltFileAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintFile(plt, c.Args().Get(1))
+	return fcli.FprintFile(os.Stdout, plt, c.Args().Get(1))
 }
 
 // ls-plt-feat
@@ -1158,7 +1158,7 @@ func lsPltFeatAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintPalletFeatures(0, plt)
+	return fcli.FprintPalletFeatures(0, os.Stdout, plt)
 }
 
 // show-plt-feat
@@ -1173,5 +1173,5 @@ func showPltFeatAction(c *cli.Context) error {
 	if err != nil {
 		return nil
 	}
-	return fcli.PrintFeatureInfo(0, plt, caches.p, c.Args().Get(1))
+	return fcli.FprintFeatureInfo(0, os.Stdout, plt, caches.p, c.Args().Get(1))
 }

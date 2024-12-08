@@ -49,7 +49,7 @@ func lsRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepos(0, plt)
+	return fcli.FprintRequiredRepos(0, os.Stdout, plt)
 }
 
 // locate-repo
@@ -63,7 +63,7 @@ func locateRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepoLocation(plt, caches.r, c.Args().First())
+	return fcli.FprintRequiredRepoLocation(os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // show-repo
@@ -77,7 +77,7 @@ func showRepoAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepoInfo(0, plt, caches.r, c.Args().First())
+	return fcli.FprintRequiredRepoInfo(0, os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // show-repo-version
@@ -90,7 +90,7 @@ func showRepoVersionAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintRequiredRepoVersion(0, plt, caches.r, c.Args().First())
+	return fcli.FprintRequiredRepoVersion(0, os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // add-repo

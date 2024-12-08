@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -59,6 +60,6 @@ func showPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package query %s@%s", pkgPath, version)
 	}
-	fcli.PrintPkg(0, cache, pkg)
+	fcli.FprintPkg(0, os.Stdout, cache, pkg)
 	return nil
 }

@@ -19,7 +19,7 @@ func lsDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPalletDepls(0, plt)
+	return fcli.FprintPalletDepls(0, os.Stdout, plt)
 }
 
 // show-depl
@@ -33,7 +33,7 @@ func showDeplAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintDeplInfo(0, plt, caches.r, c.Args().First())
+	return fcli.FprintDeplInfo(0, os.Stdout, plt, caches.r, c.Args().First())
 }
 
 // locate-depl-pkg
@@ -47,7 +47,9 @@ func locateDeplPkgAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintDeplPkgLocation(0, plt, caches.r, c.Args().First(), c.Bool("allow-disabled"))
+	return fcli.FprintDeplPkgLocation(
+		0, os.Stdout, plt, caches.r, c.Args().First(), c.Bool("allow-disabled"),
+	)
 }
 
 // add-depl

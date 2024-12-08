@@ -2,6 +2,7 @@ package stage
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -34,7 +35,7 @@ func showBunDeplAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load deployment %s from bundle %d", deplName, index)
 		}
-		return fcli.PrintResolvedDepl(0, bundle, resolved)
+		return fcli.FprintResolvedDepl(0, os.Stdout, bundle, resolved)
 	}
 }
 

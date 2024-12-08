@@ -102,7 +102,7 @@ func showBunAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load staged bundle %d", index)
 		}
-		fcli.PrintStagedBundle(0, store, bundle, index, getBundleNames(store)[index])
+		fcli.FprintStagedBundle(0, os.Stdout, store, bundle, index, getBundleNames(store)[index])
 		return nil
 	}
 }

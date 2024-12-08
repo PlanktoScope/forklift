@@ -1,6 +1,8 @@
 package plt
 
 import (
+	"os"
+
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
@@ -14,7 +16,7 @@ func lsImpAction(c *cli.Context) error {
 		return err
 	}
 
-	return fcli.PrintPalletImports(0, plt)
+	return fcli.FprintPalletImports(0, os.Stdout, plt)
 }
 
 // show-imp
@@ -28,5 +30,5 @@ func showImpAction(c *cli.Context) error {
 	}
 
 	importName := c.Args().First()
-	return fcli.PrintImportInfo(0, plt, caches.p, importName)
+	return fcli.FprintImportInfo(0, os.Stdout, plt, caches.p, importName)
 }

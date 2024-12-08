@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -59,13 +60,13 @@ func GetFileLocation(pallet *forklift.FSPallet, filePath string) (string, error)
 	return resolved, nil
 }
 
-func PrintFile(pallet *forklift.FSPallet, filePath string) error {
+func FprintFile(out io.Writer, pallet *forklift.FSPallet, filePath string) error {
 	data, err := fs.ReadFile(pallet.FS, filePath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't read file %s in %s", filePath, pallet.FS.Path())
 	}
 
-	fmt.Print(string(data))
+	_, _ = fmt.Fprint(out, string(data))
 	return nil
 }
 

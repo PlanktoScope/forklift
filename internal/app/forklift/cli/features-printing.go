@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"slices"
 
 	"github.com/pkg/errors"
@@ -9,19 +10,20 @@ import (
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
 )
 
-func PrintPalletFeatures(indent int, pallet *forklift.FSPallet) error {
+func FprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) error {
 	imps, err := pallet.LoadFeatures("**/*")
 	if err != nil {
 		return err
 	}
 	for _, imp := range imps {
-		IndentedPrintf(indent, "%s\n", imp.Name)
+		IndentedFprintf(indent, out, "%s\n", imp.Name)
 	}
 	return nil
 }
 
-func PrintFeatureInfo(
-	indent int, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, featureName string,
+func FprintFeatureInfo(
+	indent int, out io.Writer,
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, featureName string,
 ) error {
 	imp, err := pallet.LoadFeature(featureName, cache)
 	if err != nil {
@@ -40,7 +42,7 @@ func PrintFeatureInfo(
 			featureName, imp.Name,
 		)
 	}
-	if err = PrintFeature(indent, resolved, cache); err != nil {
+	if err = FprintFeature(indent, out, resolved, cache); err != nil {
 		return errors.Wrapf(
 			err, "couldn't print feature %s resolved as import group %s", featureName, imp.Name,
 		)
@@ -48,35 +50,37 @@ func PrintFeatureInfo(
 	return nil
 }
 
-func PrintFeature(indent int, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader) error {
-	IndentedPrintf(indent, "Feature %s:\n", imp.Name)
+func FprintFeature(
+	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+) error {
+	IndentedFprintf(indent, out, "Feature %s:\n", imp.Name)
 	indent++
 	deprecations, err := imp.CheckDeprecations(loader)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't check deprecations for import %s", imp.Name)
 	}
 	if len(deprecations) > 0 {
-		IndentedPrintln(indent, "Deprecation warnings:")
+		IndentedFprintln(indent, out, "Deprecation warnings:")
 		for _, deprecation := range deprecations {
-			BulletedPrintln(indent+1, deprecation)
+			BulletedFprintln(indent+1, out, deprecation)
 		}
 	}
 
-	if err := printModifiers(indent, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
+	if err := fprintModifiers(indent, out, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
 		return err
 	}
 
-	fmt.Println()
-	IndentedPrintln(indent, "Files grouped for import:")
-	if err := printFeatureEvaluation(indent+1, imp, loader); err != nil {
+	_, _ = fmt.Fprintln(out)
+	IndentedFprintln(indent, out, "Files grouped for import:")
+	if err := fprintFeatureEvaluation(indent+1, out, imp, loader); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func printFeatureEvaluation(
-	indent int, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+func fprintFeatureEvaluation(
+	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
 ) error {
 	importMappings, err := imp.Evaluate(loader)
 	if err != nil {
@@ -89,7 +93,7 @@ func printFeatureEvaluation(
 	}
 	slices.Sort(targets)
 	for _, target := range targets {
-		BulletedPrintln(indent, target)
+		BulletedFprintln(indent, out, target)
 	}
 
 	return nil
