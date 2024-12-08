@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- (cli) Added `inspector resolve-git-repo` command to resolve version queries on git repositories.
+
 ### Fixed
 
 - (cli) `[dev] plt show-plt-version` and `[dev] plt show-repo-version` no longer require the required pallets/repos to be cached before the commands work.
