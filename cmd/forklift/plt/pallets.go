@@ -746,7 +746,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 		// FIXME: update the local mirror
 
 		fmt.Fprintln(os.Stderr, "Attempting to fast-forward the local pallet...")
-		updated, err := git.Pull(1, pltPath, os.Stdout)
+		updated, err := git.Pull(1, pltPath, os.Stderr)
 		if err != nil {
 			return errors.Wrap(err, "couldn't fast-forward the local pallet")
 		}

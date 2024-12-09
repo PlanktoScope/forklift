@@ -151,7 +151,7 @@ func updateLocalGitRepoMirror(indent int, remote, mirrorPath string) error {
 	mirrorPath = filepath.FromSlash(mirrorPath)
 	if _, err := os.Stat(mirrorPath); errors.Is(err, fs.ErrNotExist) {
 		IndentedFprintf(indent, os.Stderr, "Cloning %s to local mirror...\n", remote)
-		_, err := git.CloneMirrored(indent+1, remote, mirrorPath, os.Stdout)
+		_, err := git.CloneMirrored(indent+1, remote, mirrorPath, os.Stderr)
 		return err
 	}
 	gitRepo, err := git.Open(mirrorPath)
@@ -451,7 +451,7 @@ func CloneQueriedGitRepoUsingLocalMirror(
 		indent, os.Stderr, "Cloning %s to %s via local mirror...\n", gitRepoPath, destination,
 	)
 	gitRepo, err := git.Clone(
-		indent+1, fmt.Sprintf("file://%s", mirrorCachePath), destination, os.Stdout,
+		indent+1, fmt.Sprintf("file://%s", mirrorCachePath), destination, os.Stderr,
 	)
 	if err != nil {
 		return errors.Wrapf(
