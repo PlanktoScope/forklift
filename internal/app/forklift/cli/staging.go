@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -527,9 +528,10 @@ func applyChangesConcurrently(indent int, plan structures.Digraph[*Reconciliatio
 	const dockerIndent = 2 // docker's indentation is flaky, so we indent extra
 	dc, err := docker.NewClient(
 		docker.WithConcurrencySafeOutput(),
-		// we want to send all of Docker's log messages to stderr:
 		docker.WithOutputStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
-		docker.WithErrorStream(cli.NewIndentedWriter(indent+dockerIndent, os.Stderr)),
+		// Docker's usual stderr output looks weird with concurrency, so we discard it.
+		// TODO: direct it to a concurrency-safe logger instead?
+		docker.WithErrorStream(cli.NewIndentedWriter(indent+dockerIndent, io.Discard)),
 	)
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")
