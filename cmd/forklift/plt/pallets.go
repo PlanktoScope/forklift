@@ -786,9 +786,9 @@ func pullAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm
+// del
 
-func rmAction(c *cli.Context) error {
+func delAction(c *cli.Context) error {
 	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return err
@@ -1063,9 +1063,9 @@ func addPltAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-plt
+// del-plt
 
-func rmPltAction(versions Versions) cli.ActionFunc {
+func delPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, err := getShallowPallet(c.String("workspace"))
 		if err != nil {

@@ -78,9 +78,9 @@ func editFileAction(c *cli.Context) error {
 	return fcli.EditFileWithCOW(plt, c.Args().First(), c.String("editor"))
 }
 
-// rm-file
+// del-file
 
-func rmFileAction(c *cli.Context) error {
+func delFileAction(c *cli.Context) error {
 	plt, _, err := processFullBaseArgs(c.String("workspace"), processingOptions{
 		merge: true,
 	})

@@ -57,9 +57,11 @@ func MakeCmd(versions Versions) *cli.Command {
 }
 
 func makeUpgradeSubcmds(versions Versions) []*cli.Command {
+	const category = "Upgrade the pallet"
 	return []*cli.Command{
 		{
-			Name: "upgrade",
+			Name:     "upgrade",
+			Category: category,
 			Usage: "Replaces the local pallet with an upgraded version, updates the cache, and " +
 				"stages the pallet",
 			ArgsUsage: "[[pallet_path]@[version_query]]",
@@ -85,7 +87,8 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 			},
 		},
 		{
-			Name: "check-upgrade",
+			Name:     "check-upgrade",
+			Category: category,
 			// TODO: also check whether the upgrade is cached
 			Usage:     "Checks whether an upgrade is available",
 			ArgsUsage: "[[pallet_path]@[version_query]]",
@@ -100,12 +103,14 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 		},
 		// TODO: add a cache-upgrade command
 		{
-			Name:   "show-upgrade-query",
-			Usage:  "Shows the query used for pallet upgrades",
-			Action: showUpgradeQueryAction,
+			Name:     "show-upgrade-query",
+			Category: category,
+			Usage:    "Shows the query used for pallet upgrades",
+			Action:   showUpgradeQueryAction,
 		},
 		{
 			Name:      "set-upgrade-query",
+			Category:  category,
 			Usage:     "Changes the query used for pallet upgrades",
 			ArgsUsage: "[[pallet_path]@[version_query]]",
 			Action:    setUpgradeQueryAction,
@@ -511,17 +516,17 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 		makeModifyGitSubcmds(versions),
 		[]*cli.Command{
 			{
-				Name:     "rm",
-				Aliases:  []string{"remove"},
+				Name:     "del",
+				Aliases:  []string{"delete"},
 				Category: category,
 				Usage:    "Removes the local pallet",
-				Action:   rmAction,
+				Action:   delAction,
 			},
 		},
 		makeModifyFileSubcmds(),
 		makeModifyPltSubcmds(versions),
-		// TODO: add `add-imp`, `rm-imp`, `set-imp-disabled`, `unset-imp-disabled`,
-		// `add-imp-mod`, and `rm-imp-mod` subcommands
+		// TODO: add `add-imp`, `del-imp`, `set-imp-disabled`, `unset-imp-disabled`,
+		// `add-imp-mod`, and `del-imp-mod` subcommands
 		makeModifyRepoSubcmds(versions),
 		makeModifyDeplSubcmds(versions),
 	)
@@ -629,18 +634,18 @@ func makeModifyFileSubcmds() []*cli.Command {
 			},
 		},
 		{
-			Name:      "rm-file",
-			Aliases:   []string{"remove-file", "del-file", "delete-file"},
+			Name:      "del-file",
+			Aliases:   []string{"delete-file"},
 			Category:  category,
 			Usage:     "Removes the specified file in the development pallet",
 			ArgsUsage: "file_path",
-			Action:    rmFileAction,
+			Action:    delFileAction,
 		},
 	}
 }
 
 func makeModifyPltSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet's pallet requirements"
+	const category = "Modify the pallet's requirements"
 	return []*cli.Command{
 		{
 			Name: "add-plt",
@@ -667,11 +672,9 @@ func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 		// TODO: add a show-upgrade-plt-query plt_path[@] command
 		// TODO: add a set-upgrade-plt-query plt_path@version_query command
 		{
-			Name: "rm-plt",
+			Name: "del-plt",
 			Aliases: []string{
-				"remove-pallet", "remove-pallets",
-				"del-plt", "delete-pallet", "delete-pallets",
-				"drop-plt", "drop-pallet", "drop-pallets",
+				"delete-pallet", "delete-pallets", "drop-plt", "drop-pallet", "drop-pallets",
 			},
 			Category:  category,
 			Usage:     "Removes pallet requirements from the pallet",
@@ -683,13 +686,13 @@ func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 						"depend on them",
 				},
 			},
-			Action: rmPltAction(versions),
+			Action: delPltAction(versions),
 		},
 	}
 }
 
 func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet's package repository requirements"
+	const category = "Modify the pallet's requirements"
 	return []*cli.Command{
 		{
 			Name: "add-repo",
@@ -716,10 +719,9 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 		// TODO: add a show-upgrade-repo-query repo_path[@] command
 		// TODO: add a set-upgrade-repo-query repo_path@version_query command
 		{
-			Name: "rm-repo",
+			Name: "del-repo",
 			Aliases: []string{
-				"remove-repository", "remove-repositories",
-				"del-repo", "delete-repository", "delete-repositories",
+				"delete-repository", "delete-repositories",
 				"drop-repo", "drop-repository", "drop-repositories",
 			},
 			Category:  category,
@@ -732,7 +734,7 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 						"depend on them",
 				},
 			},
-			Action: rmRepoAction(versions),
+			Action: delRepoAction(versions),
 		},
 	}
 }
@@ -770,16 +772,13 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Action: addDeplAction(versions),
 		},
 		{
-			Name: "rm-depl",
-			Aliases: []string{
-				"remove-deployment", "remove-deployments",
-				"del-depl", "delete-deployment", "delete-deployments",
-			},
+			Name:      "del-depl",
+			Aliases:   []string{"delete-deployment", "delete-deployments"},
 			Category:  category,
 			Usage:     "Removes deployment from the pallet",
 			ArgsUsage: "deployment_name...",
 			Flags:     modifyDeplBaseFlags,
-			Action:    rmDeplAction(versions),
+			Action:    delDeplAction(versions),
 		},
 		{
 			Name:      "set-depl-pkg",
@@ -824,22 +823,16 @@ func makeModifyDeplSubcmds( //nolint:funlen // this is already decomposed; it's 
 			Action: addDeplFeatAction(versions),
 		},
 		{
-			Name: "rm-depl-feat",
+			Name: "del-depl-feat",
 			Aliases: []string{
-				"remove-deployment-feature",
-				"remove-deployment-features",
-				"del-depl-feat",
-				"delete-deployment-feature",
-				"delete-deployment-features",
-				"disable-depl-feat",
-				"disable-deployment-feature",
-				"disable-deployment-features",
+				"delete-deployment-feature", "delete-deployment-features",
+				"disable-depl-feat", "disable-deployment-feature", "disable-deployment-features",
 			},
 			Category:  category,
 			Usage:     "Disables the specified package features in the specified deployment",
 			ArgsUsage: "deployment_name feature_name...",
 			Flags:     modifyDeplBaseFlags,
-			Action:    rmDeplFeatAction(versions),
+			Action:    delDeplFeatAction(versions),
 		},
 		{
 			Name:      "set-depl-disabled",

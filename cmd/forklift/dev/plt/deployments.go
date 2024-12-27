@@ -95,9 +95,9 @@ func addDeplAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-depl
+// del-depl
 
-func rmDeplAction(versions Versions) cli.ActionFunc {
+func delDeplAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requirePalletCache: true,
@@ -206,9 +206,9 @@ func addDeplFeatAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-depl-feat
+// del-depl-feat
 
-func rmDeplFeatAction(versions Versions) cli.ActionFunc {
+func delDeplFeatAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requirePalletCache: true,

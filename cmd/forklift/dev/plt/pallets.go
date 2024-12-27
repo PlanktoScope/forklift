@@ -541,9 +541,9 @@ func addPltAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-plt
+// del-plt
 
-func rmPltAction(versions Versions) cli.ActionFunc {
+func delPltAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, err := getShallowPallet(c.String("cwd"))
 		if err != nil {

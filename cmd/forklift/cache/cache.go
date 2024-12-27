@@ -79,28 +79,28 @@ func getRepoCache(wpath string, ensureWorkspace bool) (*forklift.FSRepoCache, er
 	return cache, nil
 }
 
-// rm-all
+// del-all
 
-func rmAllAction(c *cli.Context) error {
-	if err := rmGitRepoAction("mirror", getMirrorCache)(c); err != nil {
+func delAllAction(c *cli.Context) error {
+	if err := delGitRepoAction("mirror", getMirrorCache)(c); err != nil {
 		return errors.Wrap(err, "couldn't remove cached mirrors")
 	}
-	if err := rmGitRepoAction("pallet", getPalletCache)(c); err != nil {
+	if err := delGitRepoAction("pallet", getPalletCache)(c); err != nil {
 		return errors.Wrap(err, "couldn't remove cached pallets")
 	}
-	if err := rmGitRepoAction("repo", getRepoCache)(c); err != nil {
+	if err := delGitRepoAction("repo", getRepoCache)(c); err != nil {
 		return errors.Wrap(err, "couldn't remove cached repositories")
 	}
 
-	if err := rmImgAction(c); err != nil {
+	if err := delImgAction(c); err != nil {
 		return errors.Wrap(err, "couldn't remove unused Docker container images")
 	}
 	return nil
 }
 
-// rm-img
+// del-img
 
-func rmImgAction(_ *cli.Context) error {
+func delImgAction(_ *cli.Context) error {
 	fmt.Fprintln(os.Stderr, "Removing unused Docker container images...")
 	client, err := docker.NewClient()
 	if err != nil {

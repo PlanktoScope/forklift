@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- (Breaking change; cli) The verbs `rm` and `remove` have been deleted from all commands (e.g. `forklift pallet rm`), because the two-character verb `rm` doesn't line up nicely with the three-character verb `add`; `del` or `delete` should be used instead (e.g. `forklift pallet del`).
+
 ### Fixed
 
 - (cli) Git progress log messages are now printed to stderr instead of stdout.

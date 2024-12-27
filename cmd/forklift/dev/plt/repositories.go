@@ -132,9 +132,9 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-repo
+// del-repo
 
-func rmRepoAction(versions Versions) cli.ActionFunc {
+func delRepoAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, _, err := processFullBaseArgs(c, processingOptions{
 			enableOverrides: true,

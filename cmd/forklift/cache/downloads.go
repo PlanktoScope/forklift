@@ -44,9 +44,9 @@ func lsDlAction(c *cli.Context) error {
 	return nil
 }
 
-// rm-dl
+// del-dl
 
-func rmDlAction(c *cli.Context) error {
+func delDlAction(c *cli.Context) error {
 	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return err

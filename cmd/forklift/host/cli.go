@@ -24,11 +24,11 @@ var Cmd = &cli.Command{
 			Action:   lsConAction,
 		},
 		{
-			Name:     "rm",
-			Aliases:  []string{"remove", "del", "delete"},
+			Name:     "del",
+			Aliases:  []string{"delete"},
 			Category: "Modify the Docker host",
 			Usage:    "Removes all Docker Compose applications",
-			Action:   rmAction,
+			Action:   delAction,
 		},
 	},
 }

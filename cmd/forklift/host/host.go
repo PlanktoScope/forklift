@@ -57,9 +57,9 @@ func lsConAction(c *cli.Context) error {
 	return nil
 }
 
-// rm
+// del
 
-func rmAction(c *cli.Context) error {
+func delAction(c *cli.Context) error {
 	client, err := docker.NewClient()
 	if err != nil {
 		return errors.Wrap(err, "couldn't make Docker API client")

@@ -94,9 +94,9 @@ type remover interface {
 	Remove() error
 }
 
-// rm-*
+// del-*
 
-func rmGitRepoAction[Cache remover](
+func delGitRepoAction[Cache remover](
 	gitRepoType string, cacheGetter func(wpath string, ensureWorkspace bool) (Cache, error),
 ) func(c *cli.Context) error {
 	return func(c *cli.Context) error {

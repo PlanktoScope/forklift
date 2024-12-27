@@ -110,9 +110,9 @@ func addBunNameAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-bun-name
+// del-bun-name
 
-func rmBunNameAction(versions Versions) cli.ActionFunc {
+func delBunNameAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {

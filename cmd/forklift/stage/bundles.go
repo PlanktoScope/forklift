@@ -128,11 +128,11 @@ func locateBunAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-// rm-bun
+// del-bun
 
 const knownSnippet = "last staged pallet bundle known to have been successfully applied"
 
-func rmBunAction(versions Versions) cli.ActionFunc {
+func delBunAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		store, err := getStageStore(c.String("workspace"), c.String("stage-store"), versions)
 		if err != nil {
