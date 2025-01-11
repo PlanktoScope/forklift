@@ -152,20 +152,6 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 
 // ResolvedDepl: File Downloads
 
-// GetDownloadURLs returns a list of the URLs of files and OCI container images to be downloaded for
-// export by the package deployment, with all URLs sorted alphabetically.
-func (d *ResolvedDepl) GetDownloadURLs() ([]string, error) {
-	httpURLs, err := d.GetHTTPFileDownloadURLs()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine urls of http files to download")
-	}
-	ociImageNames, err := d.GetOCIImageDownloadNames()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine names of oci images to download")
-	}
-	return slices.Concat(httpURLs, ociImageNames), nil
-}
-
 // GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export
 // by the package deployment, with all URLs sorted alphabetically.
 func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {

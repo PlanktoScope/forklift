@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // FSBundle
@@ -209,13 +211,30 @@ func (b *FSBundle) getBundledMergedPalletPath() string {
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
-	if b.Manifest.Downloads[depl.Name], err = depl.GetDownloadURLs(); err != nil {
+	httpFiles := b.Manifest.Downloads.HTTPFile
+	if httpFiles[depl.Name], err = depl.GetHTTPFileDownloadURLs(); err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
 		)
 	}
-	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
+	if len(httpFiles[depl.Name]) == 0 {
+		delete(httpFiles, depl.Name)
+	}
+	ociImages := b.Manifest.Downloads.OCIImage
+	if ociImages[depl.Name], err = depl.GetOCIImageDownloadNames(); err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
+		)
+	}
+	if len(ociImages[depl.Name]) == 0 {
+		delete(ociImages, depl.Name)
+	}
+	exports := b.Manifest.Exports
+	if exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
+	}
+	if len(exports[depl.Name]) == 0 {
+		delete(exports, depl.Name)
 	}
 	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
@@ -636,4 +655,21 @@ func (i *BundleInclusions) HasOverrides() bool {
 		}
 	}
 	return false
+}
+
+// BundleDownloads
+
+func (d *BundleDownloads) All() []string {
+	all := make(structures.Set[string])
+	for _, urls := range d.HTTPFile {
+		for _, url := range urls {
+			all.Add(url)
+		}
+	}
+	for _, urls := range d.OCIImage {
+		for _, url := range urls {
+			all.Add(url)
+		}
+	}
+	return slices.Sorted(maps.Keys(all))
 }

@@ -177,9 +177,12 @@ func newBundleManifest(
 			Pallets: make(map[string]forklift.BundlePalletInclusion),
 			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},
-		Deploys:   make(map[string]forklift.DeplDef),
-		Downloads: make(map[string][]string),
-		Exports:   make(map[string][]string),
+		Deploys: make(map[string]forklift.DeplDef),
+		Downloads: forklift.BundleDownloads{
+			HTTPFile: make(map[string][]string),
+			OCIImage: make(map[string][]string),
+		},
+		Exports: make(map[string][]string),
 	}
 	desc.Pallet.Version, desc.Pallet.Clean = CheckGitRepoVersion(merged.FS.Path())
 	palletReqs, err := merged.LoadFSPalletReqs("**")

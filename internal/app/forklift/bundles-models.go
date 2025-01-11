@@ -56,9 +56,8 @@ type BundleManifest struct {
 	// files, while values are lists showing the chain of provenance of the respective files (with
 	// the deepest ancestor at the end of each list).
 	Imports map[string][]string `yaml:"imports,omitempty"`
-	// Downloads lists the URLs of files and OCI images downloaded for export by the bundle's
-	// deployments. Keys are names of the bundle's deployments which export downloaded files.
-	Downloads map[string][]string `yaml:"downloads,omitempty"`
+	// Downloads lists the URLs of resources downloaded for creation and/or use of the bundle.
+	Downloads BundleDownloads `yaml:"downloads,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
 	// Exports lists the target paths of file exports provided by the bundle's deployments. Keys are
@@ -112,6 +111,7 @@ type BundleRepoInclusion struct {
 	Override BundleInclusionOverride `yaml:"override,omitempty"`
 }
 
+// BundleInclusionOverride describes a pallet used to override a required pallet.
 type BundleInclusionOverride struct {
 	// Path is the path of the override. This should be a filesystem path.
 	Path string `yaml:"path"`
@@ -120,4 +120,16 @@ type BundleInclusionOverride struct {
 	// Clean indicates whether the override has been determined to have no changes beyond its latest
 	// Git commit, if the it's version-controlled with Git.
 	Clean bool `yaml:"clean"`
+}
+
+// BundleDownloads lists the URLs of resources which are downloaded for creation and/or use of the
+// bundle.
+type BundleDownloads struct {
+	// HTTPFile lists HTTP(S) URLs of files downloaded for export by the bundle's deployments. Keys
+	// are the names of the bundle's deployments which export downloaded files.
+	HTTPFile map[string][]string `yaml:"http,omitempty"`
+	// OCIImage lists URLs of OCI images downloaded either for export by the bundle's deployments or
+	// for use in the Compose apps of the bundle's deployments. Keys are the names of the bundle's
+	// deployments which make use of downloaded OCI images.
+	OCIImage map[string][]string `yaml:"oci-image,omitempty"`
 }

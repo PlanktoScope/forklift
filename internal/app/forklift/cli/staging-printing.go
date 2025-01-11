@@ -47,7 +47,7 @@ func FprintStagedBundle(
 	}
 
 	IndentedFprint(indent, out, "Downloads:")
-	if len(bundle.Manifest.Downloads) == 0 {
+	if len(bundle.Manifest.Downloads.All()) == 0 {
 		_, _ = fmt.Fprintln(out, " (none)")
 	} else {
 		_, _ = fmt.Fprintln(out)
@@ -138,18 +138,35 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 	}
 }
 
-func fprintBundleDownloads(indent int, out io.Writer, downloads map[string][]string) {
+func fprintBundleDownloads(indent int, out io.Writer, downloads forklift.BundleDownloads) {
+	IndentedFprint(indent, out, "HTTP files:")
+	if len(downloads.HTTPFile) == 0 {
+		_, _ = fmt.Fprintln(out, " (none)")
+	} else {
+		_, _ = fmt.Fprintln(out)
+		fprintBundleTypedDownloads(indent+1, out, downloads.HTTPFile)
+	}
+
+	IndentedFprint(indent, out, "OCI images:")
+	if len(downloads.OCIImage) == 0 {
+		_, _ = fmt.Fprintln(out, " (none)")
+	} else {
+		_, _ = fmt.Fprintln(out)
+		fprintBundleTypedDownloads(indent+1, out, downloads.OCIImage)
+	}
+}
+
+func fprintBundleTypedDownloads(indent int, out io.Writer, downloads map[string][]string) {
 	sortedDeplNames := make([]string, 0, len(downloads))
 	for deplName := range downloads {
 		sortedDeplNames = append(sortedDeplNames, deplName)
 	}
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
-		IndentedFprintf(indent, out, "%s:", deplName)
 		if len(downloads[deplName]) == 0 {
-			_, _ = fmt.Fprint(out, " (none)")
+			continue
 		}
-		_, _ = fmt.Fprintln(out)
+		IndentedFprintf(indent, out, "%s:\n", deplName)
 		for _, targetPath := range downloads[deplName] {
 			BulletedFprintln(indent+1, out, targetPath)
 		}
@@ -163,11 +180,10 @@ func fprintBundleExports(indent int, out io.Writer, exports map[string][]string)
 	}
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
-		IndentedFprintf(indent, out, "%s:", deplName)
 		if len(exports[deplName]) == 0 {
-			_, _ = fmt.Fprint(out, " (none)")
+			continue
 		}
-		_, _ = fmt.Fprintln(out)
+		IndentedFprintf(indent, out, "%s:\n", deplName)
 		for _, targetPath := range exports[deplName] {
 			BulletedFprintln(indent+1, out, targetPath)
 		}
