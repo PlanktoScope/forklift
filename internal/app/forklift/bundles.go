@@ -211,23 +211,19 @@ func (b *FSBundle) getBundledMergedPalletPath() string {
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
-	httpFiles := b.Manifest.Downloads.HTTPFile
-	if httpFiles[depl.Name], err = depl.GetHTTPFileDownloadURLs(); err != nil {
+	downloads := BundleDeplDownloads{}
+	if downloads.HTTPFile, err = depl.GetHTTPFileDownloadURLs(); err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
 		)
 	}
-	if len(httpFiles[depl.Name]) == 0 {
-		delete(httpFiles, depl.Name)
-	}
-	ociImages := b.Manifest.Downloads.OCIImage
-	if ociImages[depl.Name], err = depl.GetOCIImageDownloadNames(); err != nil {
+	if downloads.OCIImage, err = depl.GetOCIImageDownloadNames(); err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
 		)
 	}
-	if len(ociImages[depl.Name]) == 0 {
-		delete(ociImages, depl.Name)
+	if len(downloads.All()) > 0 {
+		b.Manifest.Downloads[depl.Name] = downloads
 	}
 	exports := b.Manifest.Exports
 	if exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
@@ -659,17 +655,13 @@ func (i *BundleInclusions) HasOverrides() bool {
 
 // BundleDownloads
 
-func (d *BundleDownloads) All() []string {
+func (d BundleDeplDownloads) All() []string {
 	all := make(structures.Set[string])
-	for _, urls := range d.HTTPFile {
-		for _, url := range urls {
-			all.Add(url)
-		}
+	for _, url := range d.HTTPFile {
+		all.Add(url)
 	}
-	for _, urls := range d.OCIImage {
-		for _, url := range urls {
-			all.Add(url)
-		}
+	for _, url := range d.OCIImage {
+		all.Add(url)
 	}
 	return slices.Sorted(maps.Keys(all))
 }

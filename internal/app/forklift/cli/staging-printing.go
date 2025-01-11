@@ -47,7 +47,7 @@ func FprintStagedBundle(
 	}
 
 	IndentedFprint(indent, out, "Downloads:")
-	if len(bundle.Manifest.Downloads.All()) == 0 {
+	if len(bundle.Manifest.Downloads) == 0 {
 		_, _ = fmt.Fprintln(out, " (none)")
 	} else {
 		_, _ = fmt.Fprintln(out)
@@ -138,37 +138,31 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 	}
 }
 
-func fprintBundleDownloads(indent int, out io.Writer, downloads forklift.BundleDownloads) {
-	IndentedFprint(indent, out, "HTTP files:")
-	if len(downloads.HTTPFile) == 0 {
-		_, _ = fmt.Fprintln(out, " (none)")
-	} else {
-		_, _ = fmt.Fprintln(out)
-		fprintBundleTypedDownloads(indent+1, out, downloads.HTTPFile)
-	}
-
-	IndentedFprint(indent, out, "OCI images:")
-	if len(downloads.OCIImage) == 0 {
-		_, _ = fmt.Fprintln(out, " (none)")
-	} else {
-		_, _ = fmt.Fprintln(out)
-		fprintBundleTypedDownloads(indent+1, out, downloads.OCIImage)
-	}
-}
-
-func fprintBundleTypedDownloads(indent int, out io.Writer, downloads map[string][]string) {
+func fprintBundleDownloads(
+	indent int, out io.Writer, downloads map[string]forklift.BundleDeplDownloads,
+) {
 	sortedDeplNames := make([]string, 0, len(downloads))
 	for deplName := range downloads {
 		sortedDeplNames = append(sortedDeplNames, deplName)
 	}
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
-		if len(downloads[deplName]) == 0 {
+		if len(downloads[deplName].All()) == 0 {
 			continue
 		}
 		IndentedFprintf(indent, out, "%s:\n", deplName)
-		for _, targetPath := range downloads[deplName] {
-			BulletedFprintln(indent+1, out, targetPath)
+		deplIndent := indent + 1
+		if len(downloads[deplName].HTTPFile) > 0 {
+			IndentedFprintln(deplIndent, out, "HTTP Files:")
+			for _, targetPath := range downloads[deplName].HTTPFile {
+				BulletedFprintln(deplIndent+1, out, targetPath)
+			}
+		}
+		if len(downloads[deplName].OCIImage) > 0 {
+			IndentedFprintln(deplIndent, out, "OCI Images:")
+			for _, targetPath := range downloads[deplName].OCIImage {
+				BulletedFprintln(deplIndent+1, out, targetPath)
+			}
 		}
 	}
 }

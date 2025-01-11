@@ -56,10 +56,11 @@ type BundleManifest struct {
 	// files, while values are lists showing the chain of provenance of the respective files (with
 	// the deepest ancestor at the end of each list).
 	Imports map[string][]string `yaml:"imports,omitempty"`
-	// Downloads lists the URLs of resources downloaded for creation and/or use of the bundle.
-	Downloads BundleDownloads `yaml:"downloads,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
+	// Downloads lists the URLs of resources downloaded for creation and/or use of the bundle. Keys
+	// are the names of deployments.
+	Downloads map[string]BundleDeplDownloads `yaml:"downloads,omitempty"`
 	// Exports lists the target paths of file exports provided by the bundle's deployments. Keys are
 	// names of the bundle's deployments which provide file exports.
 	Exports map[string][]string `yaml:"exports,omitempty"`
@@ -122,14 +123,12 @@ type BundleInclusionOverride struct {
 	Clean bool `yaml:"clean"`
 }
 
-// BundleDownloads lists the URLs of resources which are downloaded for creation and/or use of the
-// bundle.
-type BundleDownloads struct {
-	// HTTPFile lists HTTP(S) URLs of files downloaded for export by the bundle's deployments. Keys
-	// are the names of the bundle's deployments which export downloaded files.
-	HTTPFile map[string][]string `yaml:"http,omitempty"`
-	// OCIImage lists URLs of OCI images downloaded either for export by the bundle's deployments or
-	// for use in the Compose apps of the bundle's deployments. Keys are the names of the bundle's
-	// deployments which make use of downloaded OCI images.
-	OCIImage map[string][]string `yaml:"oci-image,omitempty"`
+// BundleDeplDownloads lists the URLs of resources which are downloaded for a deployment, whether
+// during creation of the bundle or during staging of the bundle.
+type BundleDeplDownloads struct {
+	// HTTPFile lists HTTP(S) URLs of files downloaded for export by the deployment.
+	HTTPFile []string `yaml:"http,omitempty"`
+	// OCIImage lists URLs of OCI images downloaded either for export by the deployment or for use in
+	// the deployment's Docker Compose app.
+	OCIImage []string `yaml:"oci-image,omitempty"`
 }
