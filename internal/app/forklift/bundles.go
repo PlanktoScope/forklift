@@ -225,12 +225,21 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	if len(downloads.All()) > 0 {
 		b.Manifest.Downloads[depl.Name] = downloads
 	}
-	exports := b.Manifest.Exports
-	if exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
+	exports := BundleDeplExports{}
+	if exports.File, err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
 	}
-	if len(exports[depl.Name]) == 0 {
-		delete(exports, depl.Name)
+	definesComposeApp, err := depl.DefinesComposeApp()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't check whether deployment %s defines a Compose app", depl.Depl.Name,
+		)
+	}
+	if definesComposeApp {
+		exports.ComposeApp = GetComposeAppName(depl.Name)
+	}
+	if len(exports.All()) > 0 {
+		b.Manifest.Exports[depl.Name] = exports
 	}
 	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
@@ -662,6 +671,19 @@ func (d BundleDeplDownloads) All() []string {
 	}
 	for _, url := range d.OCIImage {
 		all.Add(url)
+	}
+	return slices.Sorted(maps.Keys(all))
+}
+
+// BundleExports
+
+func (d BundleDeplExports) All() []string {
+	all := make(structures.Set[string])
+	for _, file := range d.File {
+		all.Add(file)
+	}
+	if d.ComposeApp != "" {
+		all.Add(d.ComposeApp)
 	}
 	return slices.Sorted(maps.Keys(all))
 }

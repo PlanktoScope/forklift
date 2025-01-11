@@ -58,12 +58,12 @@ type BundleManifest struct {
 	Imports map[string][]string `yaml:"imports,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
-	// Downloads lists the URLs of resources downloaded for creation and/or use of the bundle. Keys
-	// are the names of deployments.
+	// Downloads lists the downloadable paths of resources downloaded for creation and/or use of the
+	// bundle. Keys are the names of the bundle's deployments which include downloads.
 	Downloads map[string]BundleDeplDownloads `yaml:"downloads,omitempty"`
-	// Exports lists the target paths of file exports provided by the bundle's deployments. Keys are
-	// names of the bundle's deployments which provide file exports.
-	Exports map[string][]string `yaml:"exports,omitempty"`
+	// Exports lists the exposed paths of resources created by the bundle's deployments. Keys are
+	// names of the bundle's deployments which provide resources.
+	Exports map[string]BundleDeplExports `yaml:"exports,omitempty"`
 }
 
 // BundlePallet describes a bundle's bundled pallet.
@@ -123,12 +123,20 @@ type BundleInclusionOverride struct {
 	Clean bool `yaml:"clean"`
 }
 
-// BundleDeplDownloads lists the URLs of resources which are downloaded for a deployment, whether
-// during creation of the bundle or during staging of the bundle.
+// BundleDeplDownloads lists the downloadable paths of resources which are downloaded for a
+// deployment, whether during creation of the bundle or during staging of the bundle.
 type BundleDeplDownloads struct {
 	// HTTPFile lists HTTP(S) URLs of files downloaded for export by the deployment.
 	HTTPFile []string `yaml:"http,omitempty"`
 	// OCIImage lists URLs of OCI images downloaded either for export by the deployment or for use in
 	// the deployment's Docker Compose app.
 	OCIImage []string `yaml:"oci-image,omitempty"`
+}
+
+// BundleDeplExports lists the exposed paths of resources which are provided by a deployment.
+type BundleDeplExports struct {
+	// File lists the filesystem target paths of files exported by the deployment.
+	File []string `yaml:"file,omitempty"`
+	// ComposeApp lists the name of the Docker Compose App exported by the deployment
+	ComposeApp string `yaml:"compose-app,omitempty"`
 }

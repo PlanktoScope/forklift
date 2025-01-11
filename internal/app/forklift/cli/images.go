@@ -110,7 +110,7 @@ func ListRequiredImages(
 	orderedImages := make([]string, 0, len(resolved))
 	images := make(structures.Set[string])
 	for _, depl := range resolved {
-		definesApp, err := depl.DefinesApp()
+		definesApp, err := depl.DefinesComposeApp()
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,

@@ -147,39 +147,48 @@ func fprintBundleDownloads(
 	}
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
-		if len(downloads[deplName].All()) == 0 {
+		depl := downloads[deplName]
+		if len(depl.All()) == 0 {
 			continue
 		}
 		IndentedFprintf(indent, out, "%s:\n", deplName)
 		deplIndent := indent + 1
-		if len(downloads[deplName].HTTPFile) > 0 {
+		if len(depl.HTTPFile) > 0 {
 			IndentedFprintln(deplIndent, out, "HTTP Files:")
-			for _, targetPath := range downloads[deplName].HTTPFile {
+			for _, targetPath := range depl.HTTPFile {
 				BulletedFprintln(deplIndent+1, out, targetPath)
 			}
 		}
-		if len(downloads[deplName].OCIImage) > 0 {
+		if len(depl.OCIImage) > 0 {
 			IndentedFprintln(deplIndent, out, "OCI Images:")
-			for _, targetPath := range downloads[deplName].OCIImage {
+			for _, targetPath := range depl.OCIImage {
 				BulletedFprintln(deplIndent+1, out, targetPath)
 			}
 		}
 	}
 }
 
-func fprintBundleExports(indent int, out io.Writer, exports map[string][]string) {
+func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.BundleDeplExports) {
 	sortedDeplNames := make([]string, 0, len(exports))
 	for deplName := range exports {
 		sortedDeplNames = append(sortedDeplNames, deplName)
 	}
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
-		if len(exports[deplName]) == 0 {
+		depl := exports[deplName]
+		if len(depl.All()) == 0 {
 			continue
 		}
 		IndentedFprintf(indent, out, "%s:\n", deplName)
-		for _, targetPath := range exports[deplName] {
-			BulletedFprintln(indent+1, out, targetPath)
+		deplIndent := indent + 1
+		if len(depl.File) > 0 {
+			IndentedFprintln(deplIndent, out, "Files:")
+			for _, targetPath := range depl.File {
+				BulletedFprintln(deplIndent+1, out, targetPath)
+			}
+		}
+		if depl.ComposeApp != "" {
+			IndentedFprintf(deplIndent, out, "Compose App: %s\n", depl.ComposeApp)
 		}
 	}
 }

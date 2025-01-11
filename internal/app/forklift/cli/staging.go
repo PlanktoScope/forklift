@@ -179,7 +179,7 @@ func newBundleManifest(
 		},
 		Deploys:   make(map[string]forklift.DeplDef),
 		Downloads: make(map[string]forklift.BundleDeplDownloads),
-		Exports:   make(map[string][]string),
+		Exports:   make(map[string]forklift.BundleDeplExports),
 	}
 	desc.Pallet.Version, desc.Pallet.Clean = CheckGitRepoVersion(merged.FS.Path())
 	palletReqs, err := merged.LoadFSPalletReqs("**")
@@ -485,7 +485,7 @@ func applyReconciliationChange(
 func deployApp(
 	ctx context.Context, indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client,
 ) error {
-	definesApp, err := depl.DefinesApp()
+	definesApp, err := depl.DefinesComposeApp()
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
@@ -513,7 +513,7 @@ func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
 	}
 
 	appDef, err := docker.LoadAppDefinition(
-		depl.Pkg.FS, getAppName(depl.Name), composeFiles, nil,
+		depl.Pkg.FS, forklift.GetComposeAppName(depl.Name), composeFiles, nil,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(

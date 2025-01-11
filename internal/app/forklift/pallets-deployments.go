@@ -133,8 +133,8 @@ func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
 	return composeFiles, nil
 }
 
-// DefinesApp determines whether the deployment defines a Docker Compose app to be deployed.
-func (d *ResolvedDepl) DefinesApp() (bool, error) {
+// DefinesComposeApp determines whether the deployment defines a Docker Compose app to be deployed.
+func (d *ResolvedDepl) DefinesComposeApp() (bool, error) {
 	composeFiles, err := d.GetComposeFilenames()
 	if err != nil {
 		return false, errors.Wrap(err, "couldn't determine Compose files for deployment")
@@ -148,6 +148,13 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// GetComposeAppName converts the deployment's name into a string which is allowed for use as a
+// Docker Compose app name. It assumes that the resulting name will not be excessively long for
+// Docker Compose.
+func GetComposeAppName(deplName string) string {
+	return strings.ReplaceAll(deplName, "/", "_")
 }
 
 // ResolvedDepl: File Downloads
