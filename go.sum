@@ -93,8 +93,8 @@ github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vc
 github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb h1:EDmT6Q9Zs+SbUoc7Ik9EfrFqcylYqgPZ9ANSbTAntnE=
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb/go.mod h1:ZjrT6AXHbDs86ZSdt/osfBi5qfexBrKUdONk989Wnk4=
-github.com/compose-spec/compose-go/v2 v2.4.6 h1:QiqXQ2L/f0OCbAl41bPpeiGAWVRIQ+GEDrYxO+dRPhQ=
-github.com/compose-spec/compose-go/v2 v2.4.6/go.mod h1:lFN0DrMxIncJGYAXTfWuajfwj5haBJqrBkarHcnjJKc=
+github.com/compose-spec/compose-go/v2 v2.4.7 h1:WNpz5bIbKG+G+w9pfu72B1ZXr+Og9jez8TMEo8ecXPk=
+github.com/compose-spec/compose-go/v2 v2.4.7/go.mod h1:lFN0DrMxIncJGYAXTfWuajfwj5haBJqrBkarHcnjJKc=
 github.com/containerd/cgroups v1.1.0 h1:v8rEWFl6EoqHB+swVNjVoCJE8o3jX7e8nqBGPLaDFBM=
 github.com/containerd/cgroups/v3 v3.0.3 h1:S5ByHZ/h9PMe5IOQoN7E+nMc2UcLEM/V48DGDJ9kip0=
 github.com/containerd/cgroups/v3 v3.0.3/go.mod h1:8HBe7V3aWGLFPd/k03swSIsGjZhHI2WzJmticMgVuz0=
@@ -143,8 +143,8 @@ github.com/docker/cli v27.4.1+incompatible h1:VzPiUlRJ/xh+otB75gva3r05isHMo5wXDf
 github.com/docker/cli v27.4.1+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/cli-docs-tool v0.8.0 h1:YcDWl7rQJC3lJ7WVZRwSs3bc9nka97QLWfyJQli8yJU=
 github.com/docker/cli-docs-tool v0.8.0/go.mod h1:8TQQ3E7mOXoYUs811LiPdUnAhXrcVsBIrW21a5pUbdk=
-github.com/docker/compose/v2 v2.32.1 h1:k9+3w5SG/8FrerEuyjWem3h2+NOWhNu0I/h9ix87/C4=
-github.com/docker/compose/v2 v2.32.1/go.mod h1:O0rsCrcVFu/pl3fNGVh4jFqjDcHN0qENcO0SD5+J+YM=
+github.com/docker/compose/v2 v2.32.3 h1:7KKVpTudYUrqs9GueTnJ+N6qnnzI2bqmANq6kXfmuv8=
+github.com/docker/compose/v2 v2.32.3/go.mod h1:fcK4rrf1bm8pfDsYdZIR+l4RSk9j6HVtBvJKGYyXsZ4=
 github.com/docker/distribution v2.7.1+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
 github.com/docker/distribution v2.8.3+incompatible h1:AtKxIZ36LoNK51+Z6RpzLpddBirtxJnzDrHLEKxTAYk=
 github.com/docker/distribution v2.8.3+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
