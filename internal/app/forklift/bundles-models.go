@@ -137,6 +137,32 @@ type BundleDeplDownloads struct {
 type BundleDeplExports struct {
 	// File lists the filesystem target paths of files exported by the deployment.
 	File []string `yaml:"file,omitempty"`
-	// ComposeApp lists the name of the Docker Compose App exported by the deployment
-	ComposeApp string `yaml:"compose-app,omitempty"`
+	// ComposeApp lists the name of the Docker Compose app exported by the deployment.
+	ComposeApp BundleDeplComposeApp `yaml:"compose-app,omitempty"`
+	// ContainerImage lists the OCI container images exported by the deployment to the Docker
+	// environment. These container images will be used in the deployment's Docker Compose app.
+	ContainerImage []string `yaml:"container-image,omitempty"`
+	// FIXME: implement this field!
+}
+
+// BundleDeplComposeApp lists information about a Docker Compose app provided by a deployment.
+type BundleDeplComposeApp struct {
+	// Name is the name of the Docker Compose app.
+	Name string `yaml:"name,omitempty"`
+	// Services lists the names of the services of the Docker Compose app.
+	Services []string `yaml:"services,omitempty"`
+	// Images lists the names of the container images used by services of the Docker Compose app.
+	Images []string `yaml:"images,omitempty"`
+	// CreatedBindMounts lists the names of the bind mounts created by the Docker Compose app.
+	CreatedBindMounts []string `yaml:"created-bind-mounts,omitempty"`
+	// RequiredBindMounts lists the names of the bind mounts required by the Docker Compose app.
+	RequiredBindMounts []string `yaml:"required-bind-mounts,omitempty"`
+	// CreatedVolumes lists the names of the volumes created by the Docker Compose app.
+	CreatedVolumes []string `yaml:"created-volumes,omitempty"`
+	// RequiredVolumes lists the names of the volumes required by the Docker Compose app.
+	RequiredVolumes []string `yaml:"required-volumes,omitempty"`
+	// CreatedNetworks lists the names of the networks created by the Docker Compose app.
+	CreatedNetworks []string `yaml:"created-networks,omitempty"`
+	// RequiredNetworks lists the names of the networks required by the Docker Compose app.
+	RequiredNetworks []string `yaml:"required-networks,omitempty"`
 }

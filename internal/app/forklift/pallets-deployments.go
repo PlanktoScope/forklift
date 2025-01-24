@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/pkg/core"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
@@ -148,6 +150,25 @@ func (d *ResolvedDepl) DefinesComposeApp() (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// LoadComposeAppDefinition loads the deployment's Docker Compose app.
+func (d *ResolvedDepl) LoadComposeAppDefinition(resolvePaths bool) (*dct.Project, error) {
+	composeFiles, err := d.GetComposeFilenames()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't determine Compose files for deployment")
+	}
+
+	appDef, err := docker.LoadAppDefinition(
+		d.Pkg.FS, GetComposeAppName(d.Name), composeFiles, nil, resolvePaths,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "couldn't load Docker Compose app definition for deployment %s of %s",
+			d.Name, d.Pkg.FS.Path(),
+		)
+	}
+	return appDef, nil
 }
 
 // GetComposeAppName converts the deployment's name into a string which is allowed for use as a

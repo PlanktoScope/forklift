@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -107,7 +109,6 @@ func ListRequiredImages(
 		return nil, err
 	}
 
-	orderedImages := make([]string, 0, len(resolved))
 	images := make(structures.Set[string])
 	for _, depl := range resolved {
 		definesApp, err := depl.DefinesComposeApp()
@@ -120,18 +121,15 @@ func ListRequiredImages(
 			continue
 		}
 
-		appDef, err := loadAppDefinition(depl)
+		appDef, err := depl.LoadComposeAppDefinition(false)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't load Compose app definition")
 		}
 		for _, service := range appDef.Services {
-			if !images.Has(service.Image) {
-				images.Add(service.Image)
-				orderedImages = append(orderedImages, service.Image)
-			}
+			images.Add(service.Image)
 		}
 	}
-	return orderedImages, nil
+	return slices.Sorted(maps.Keys(images)), nil
 }
 
 func downloadImagesParallel(indent int, images []string, platform string, dc *docker.Client) error {

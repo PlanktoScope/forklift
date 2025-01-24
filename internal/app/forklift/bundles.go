@@ -3,6 +3,7 @@ package forklift
 import (
 	"archive/tar"
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/h2non/filetype"
 	ftt "github.com/h2non/filetype/types"
 	"github.com/pkg/errors"
@@ -236,7 +238,10 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 		)
 	}
 	if definesComposeApp {
-		exports.ComposeApp = GetComposeAppName(depl.Name)
+		exports.ComposeApp, err = makeComposeAppSummary(depl)
+		if err != nil {
+			return errors.Wrap(err, "couldn't make summary of Compose app definition")
+		}
 	}
 	if len(exports.All()) > 0 {
 		b.Manifest.Exports[depl.Name] = exports
@@ -250,6 +255,104 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 		)
 	}
 	return nil
+}
+
+func makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
+	appDef, err := depl.LoadComposeAppDefinition(false)
+	if err != nil {
+		return BundleDeplComposeApp{}, errors.Wrap(err, "couldn't load Compose app definition")
+	}
+
+	images := make(structures.Set[string])
+	for _, service := range appDef.Services {
+		images.Add(service.Image)
+	}
+
+	createdBindMounts, requiredBindMounts := makeComposeAppBindMountSummaries(appDef)
+	createdVolumes, requiredVolumes := makeComposeAppVolumeSummaries(appDef)
+	createdNetworks, requiredNetworks := makeComposeAppNetworkSummaries(appDef)
+
+	app := BundleDeplComposeApp{
+		Name:               appDef.Name,
+		Services:           slices.Sorted(maps.Keys(appDef.Services)),
+		Images:             slices.Sorted(maps.Keys(images)),
+		CreatedBindMounts:  slices.Sorted(maps.Keys(createdBindMounts)),
+		RequiredBindMounts: slices.Sorted(maps.Keys(requiredBindMounts)),
+		CreatedVolumes:     slices.Sorted(maps.Keys(createdVolumes)),
+		RequiredVolumes:    slices.Sorted(maps.Keys(requiredVolumes)),
+		CreatedNetworks:    slices.Sorted(maps.Keys(createdNetworks)),
+		RequiredNetworks:   slices.Sorted(maps.Keys(requiredNetworks)),
+	}
+	return app, nil
+}
+
+func makeComposeAppBindMountSummaries(
+	appDef *dct.Project,
+) (created structures.Set[string], required structures.Set[string]) {
+	created = make(structures.Set[string])
+	required = make(structures.Set[string])
+	for _, service := range appDef.Services {
+		for _, volume := range service.Volumes {
+			if volume.Type != "bind" {
+				continue
+			}
+			if !path.IsAbs(volume.Source) {
+				// If the path on the host is declared as a relative path, then it's supposed to be a path
+				// managed by Forklift, and its location will depend on where the bundle is. So it shouldn't
+				// be reported verbatim in the manifest.
+				// TODO: instead report the source path relative to the parent dir of the bundle manifest
+				// file. We'd need to make sure that the Compose app is loaded from the bundle itself as a
+				// pallet, not from the pallet used to make the bundle.
+				continue
+			}
+			if volume.Bind != nil && !volume.Bind.CreateHostPath {
+				required.Add(volume.Source)
+				continue
+			}
+			created.Add(volume.Source)
+		}
+	}
+
+	for bindMount := range created {
+		delete(required, bindMount)
+	}
+	return created, required
+}
+
+func makeComposeAppVolumeSummaries(
+	appDef *dct.Project,
+) (created structures.Set[string], required structures.Set[string]) {
+	created = make(structures.Set[string])
+	required = make(structures.Set[string])
+	for volumeName, volume := range appDef.Volumes {
+		if volume.External {
+			required.Add(cmp.Or(volume.Name, volumeName))
+			continue
+		}
+		created.Add(cmp.Or(volume.Name, volumeName))
+	}
+	return created, required
+}
+
+func makeComposeAppNetworkSummaries(
+	appDef *dct.Project,
+) (created structures.Set[string], required structures.Set[string]) {
+	created = make(structures.Set[string])
+	required = make(structures.Set[string])
+	for networkName, network := range appDef.Networks {
+		if network.External {
+			if networkName == "default" && network.Name == "none" {
+				// If the network is Docker's pre-made "none" network (which uses the null network driver),
+				// we ignore it for brevity since the intention is to suppress creating a network for the
+				// container.
+				continue
+			}
+			required.Add(cmp.Or(network.Name, networkName))
+			continue
+		}
+		created.Add(cmp.Or(network.Name, networkName))
+	}
+	return created, required
 }
 
 func (b *FSBundle) LoadDepl(name string) (Depl, error) {
@@ -682,8 +785,8 @@ func (d BundleDeplExports) All() []string {
 	for _, file := range d.File {
 		all.Add(file)
 	}
-	if d.ComposeApp != "" {
-		all.Add(d.ComposeApp)
+	if d.ComposeApp.Name != "" {
+		all.Add(d.ComposeApp.Name)
 	}
 	return slices.Sorted(maps.Keys(all))
 }

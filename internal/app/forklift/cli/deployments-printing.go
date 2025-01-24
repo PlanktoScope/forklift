@@ -61,7 +61,7 @@ func FprintResolvedDepl(
 		return nil
 	}
 
-	appDef, err := loadAppDefinition(resolved)
+	appDef, err := resolved.LoadComposeAppDefinition(false)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load Compose app definition")
 	}

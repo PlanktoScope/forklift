@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"io/fs"
 	"path"
 	"strings"
@@ -18,7 +19,7 @@ import (
 // working directory, applies the provided environment variables, and returns a representation of
 // the app as a Docker Compose project.
 func LoadAppDefinition(
-	fsys core.PathedFS, name string, configPaths []string, env map[string]string,
+	fsys core.PathedFS, name string, configPaths []string, env map[string]string, resolvePaths bool,
 ) (*dct.Project, error) {
 	// This function is adapted from the github.com/compose-spec/compose-go/cli package's
 	// ProjectFromOptions function, which is licensed under Apache-2.0. This function was changed to
@@ -45,12 +46,13 @@ func LoadAppDefinition(
 	if env == nil {
 		env = map[string]string{}
 	}
-	project, err := loader.Load(dct.ConfigDetails{
+	project, err := loader.LoadWithContext(context.TODO(), dct.ConfigDetails{
 		ConfigFiles: configs,
 		WorkingDir:  fsys.Path(),
 		Environment: env,
 	}, func(opts *loader.Options) {
 		opts.SetProjectName(name, true)
+		opts.ResolvePaths = resolvePaths
 	})
 	if err != nil {
 		return nil, err

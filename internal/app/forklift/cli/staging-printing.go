@@ -187,8 +187,8 @@ func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.
 				BulletedFprintln(deplIndent+1, out, targetPath)
 			}
 		}
-		if depl.ComposeApp != "" {
-			IndentedFprintf(deplIndent, out, "Compose App: %s\n", depl.ComposeApp)
+		if depl.ComposeApp.Name != "" {
+			IndentedFprintf(deplIndent, out, "Compose App: %s\n", depl.ComposeApp.Name)
 		}
 	}
 }
