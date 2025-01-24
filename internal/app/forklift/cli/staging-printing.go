@@ -189,6 +189,36 @@ func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.
 		}
 		if depl.ComposeApp.Name != "" {
 			IndentedFprintf(deplIndent, out, "Compose App: %s\n", depl.ComposeApp.Name)
+			fprintOptionalList(deplIndent+1, out, "Services", depl.ComposeApp.Services)
+			fprintOptionalList(deplIndent+1, out, "Images", depl.ComposeApp.Images)
+			fprintOptionalList(
+				deplIndent+1, out, "Bind Mounts (auto-created)", depl.ComposeApp.CreatedBindMounts,
+			)
+			fprintOptionalList(
+				deplIndent+1, out, "Bind Mounts (required)", depl.ComposeApp.RequiredBindMounts,
+			)
+			fprintOptionalList(
+				deplIndent+1, out, "Volumes (auto-created)", depl.ComposeApp.CreatedVolumes,
+			)
+			fprintOptionalList(
+				deplIndent+1, out, "Volumes (required)", depl.ComposeApp.RequiredVolumes,
+			)
+			fprintOptionalList(
+				deplIndent+1, out, "Networks (auto-created)", depl.ComposeApp.CreatedNetworks,
+			)
+			fprintOptionalList(
+				deplIndent+1, out, "Networks (required)", depl.ComposeApp.RequiredNetworks,
+			)
 		}
+	}
+}
+
+func fprintOptionalList(indent int, out io.Writer, name string, items []string) {
+	if len(items) == 0 {
+		return
+	}
+	IndentedFprintf(indent, out, "%s:\n", name)
+	for _, item := range items {
+		BulletedFprintln(indent+1, out, item)
 	}
 }
