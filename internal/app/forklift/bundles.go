@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -263,8 +262,10 @@ func makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
 		return BundleDeplComposeApp{}, errors.Wrap(err, "couldn't load Compose app definition")
 	}
 
+	services := make(structures.Set[string])
 	images := make(structures.Set[string])
 	for _, service := range appDef.Services {
+		services.Add(service.Name)
 		images.Add(service.Image)
 	}
 
@@ -274,14 +275,14 @@ func makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
 
 	app := BundleDeplComposeApp{
 		Name:               appDef.Name,
-		Services:           slices.Sorted(maps.Keys(appDef.Services)),
-		Images:             slices.Sorted(maps.Keys(images)),
-		CreatedBindMounts:  slices.Sorted(maps.Keys(createdBindMounts)),
-		RequiredBindMounts: slices.Sorted(maps.Keys(requiredBindMounts)),
-		CreatedVolumes:     slices.Sorted(maps.Keys(createdVolumes)),
-		RequiredVolumes:    slices.Sorted(maps.Keys(requiredVolumes)),
-		CreatedNetworks:    slices.Sorted(maps.Keys(createdNetworks)),
-		RequiredNetworks:   slices.Sorted(maps.Keys(requiredNetworks)),
+		Services:           slices.Sorted(services.All()),
+		Images:             slices.Sorted(images.All()),
+		CreatedBindMounts:  slices.Sorted(createdBindMounts.All()),
+		RequiredBindMounts: slices.Sorted(requiredBindMounts.All()),
+		CreatedVolumes:     slices.Sorted(createdVolumes.All()),
+		RequiredVolumes:    slices.Sorted(requiredVolumes.All()),
+		CreatedNetworks:    slices.Sorted(createdNetworks.All()),
+		RequiredNetworks:   slices.Sorted(requiredNetworks.All()),
 	}
 	return app, nil
 }
@@ -772,7 +773,7 @@ func (d BundleDeplDownloads) All() []string {
 	for _, url := range d.OCIImage {
 		all.Add(url)
 	}
-	return slices.Sorted(maps.Keys(all))
+	return slices.Sorted(all.All())
 }
 
 // BundleExports
@@ -785,5 +786,5 @@ func (d BundleDeplExports) All() []string {
 	if d.ComposeApp.Name != "" {
 		all.Add(d.ComposeApp.Name)
 	}
-	return slices.Sorted(maps.Keys(all))
+	return slices.Sorted(all.All())
 }

@@ -1,6 +1,11 @@
 // Package structures provides a few generic data structures.
 package structures
 
+import (
+	"iter"
+	"maps"
+)
+
 type Set[Node comparable] map[Node]struct{}
 
 // Add adds the node to the set. If the node was already in the set, nothing changes.
@@ -26,4 +31,9 @@ func (s Set[Node]) Difference(t Set[Node]) Set[Node] {
 		}
 	}
 	return difference
+}
+
+// All returns an iterator over all elements in s.
+func (s Set[Node]) All() iter.Seq[Node] {
+	return maps.Keys(s)
 }

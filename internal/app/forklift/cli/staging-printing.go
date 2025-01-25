@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"maps"
 	"slices"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
@@ -143,56 +142,47 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 func fprintBundleDownloads(
 	indent int, out io.Writer, downloads map[string]forklift.BundleDeplDownloads,
 ) {
-	// FIXME: instead print a condensed summary, aggregating across deployments
-	sortedDeplNames := make([]string, 0, len(downloads))
-	for deplName := range downloads {
-		sortedDeplNames = append(sortedDeplNames, deplName)
+	lists := []string{"httpFiles", "ociImages"}
+	aggs := make(map[string]structures.Set[string])
+	for _, l := range lists {
+		aggs[l] = make(structures.Set[string])
 	}
-	slices.Sort(sortedDeplNames)
-	for _, deplName := range sortedDeplNames {
-		depl := downloads[deplName]
-		if len(depl.All()) == 0 {
-			continue
-		}
-		IndentedFprintf(indent, out, "%s:\n", deplName)
-		deplIndent := indent + 1
-		if len(depl.HTTPFile) > 0 {
-			IndentedFprintln(deplIndent, out, "HTTP Files:")
-			for _, targetPath := range depl.HTTPFile {
-				BulletedFprintln(deplIndent+1, out, targetPath)
-			}
-		}
-		if len(depl.OCIImage) > 0 {
-			IndentedFprintln(deplIndent, out, "OCI Images:")
-			for _, targetPath := range depl.OCIImage {
-				BulletedFprintln(deplIndent+1, out, targetPath)
-			}
-		}
+
+	for _, depl := range downloads {
+		aggs["httpFiles"].Add(depl.HTTPFile...)
+		aggs["ociImages"].Add(depl.OCIImage...)
+	}
+	fprintOptionalSet(indent, out, "HTTP Files", aggs["httpFiles"])
+	fprintOptionalSet(indent, out, "OCI Images", aggs["ociImages"])
+}
+
+func fprintOptionalSet(indent int, out io.Writer, name string, items structures.Set[string]) {
+	if len(items) == 0 {
+		return
+	}
+	IndentedFprintf(indent, out, "%s:\n", name)
+	for _, item := range slices.Sorted(items.All()) {
+		BulletedFprintln(indent+1, out, item)
 	}
 }
 
 func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.BundleDeplExports) {
 	lists := []string{
-		"files", "appNames", "appServices", "appImages",
-		"appNewBindMounts", "appReqBindMounts", "appNewVolumes", "appReqVolumes",
-		"appNewNetworks", "appReqNetworks",
+		"files", "appNames", "appServices", "appImages", "appNewBindMounts", "appReqBindMounts",
+		"appNewVolumes", "appReqVolumes", "appNewNetworks", "appReqNetworks",
 	}
 	aggs := make(map[string]structures.Set[string])
 	for _, l := range lists {
 		aggs[l] = make(structures.Set[string])
 	}
 
-	sortedDeplNames := make([]string, 0, len(exports))
-	for deplName := range exports {
-		sortedDeplNames = append(sortedDeplNames, deplName)
-	}
-	slices.Sort(sortedDeplNames)
-	for _, deplName := range sortedDeplNames {
-		depl := exports[deplName]
+	for _, depl := range exports {
 		aggs["files"].Add(depl.File...)
 		if depl.ComposeApp.Name != "" {
 			aggs["appNames"].Add(depl.ComposeApp.Name)
-			aggs["appServices"].Add(depl.ComposeApp.Services...)
+			for _, service := range depl.ComposeApp.Services {
+				aggs["appServices"].Add(fmt.Sprintf("%s-%s", depl.ComposeApp.Name, service))
+			}
 			aggs["appImages"].Add(depl.ComposeApp.Images...)
 			aggs["appNewBindMounts"].Add(depl.ComposeApp.CreatedBindMounts...)
 			aggs["appReqBindMounts"].Add(depl.ComposeApp.RequiredBindMounts...)
@@ -217,14 +207,4 @@ func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.
 	fprintOptionalSet(indent, out, "Compose App Volumes (required)", aggs["appReqVolumes"])
 	fprintOptionalSet(indent, out, "Compose App Networks (auto-created)", aggs["appNewNetworks"])
 	fprintOptionalSet(indent, out, "Compose App Networks (required)", aggs["appReqNetworks"])
-}
-
-func fprintOptionalSet(indent int, out io.Writer, name string, items structures.Set[string]) {
-	if len(items) == 0 {
-		return
-	}
-	IndentedFprintf(indent, out, "%s:\n", name)
-	for _, item := range slices.Sorted(maps.Keys(items)) {
-		BulletedFprintln(indent+1, out, item)
-	}
 }
