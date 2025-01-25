@@ -3,9 +3,11 @@ package cli
 import (
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // Bundles
@@ -141,6 +143,7 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 func fprintBundleDownloads(
 	indent int, out io.Writer, downloads map[string]forklift.BundleDeplDownloads,
 ) {
+	// FIXME: instead print a condensed summary, aggregating across deployments
 	sortedDeplNames := make([]string, 0, len(downloads))
 	for deplName := range downloads {
 		sortedDeplNames = append(sortedDeplNames, deplName)
@@ -169,6 +172,16 @@ func fprintBundleDownloads(
 }
 
 func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.BundleDeplExports) {
+	lists := []string{
+		"files", "appNames", "appServices", "appImages",
+		"appNewBindMounts", "appReqBindMounts", "appNewVolumes", "appReqVolumes",
+		"appNewNetworks", "appReqNetworks",
+	}
+	aggs := make(map[string]structures.Set[string])
+	for _, l := range lists {
+		aggs[l] = make(structures.Set[string])
+	}
+
 	sortedDeplNames := make([]string, 0, len(exports))
 	for deplName := range exports {
 		sortedDeplNames = append(sortedDeplNames, deplName)
@@ -176,49 +189,42 @@ func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.
 	slices.Sort(sortedDeplNames)
 	for _, deplName := range sortedDeplNames {
 		depl := exports[deplName]
-		if len(depl.All()) == 0 {
-			continue
-		}
-		IndentedFprintf(indent, out, "%s:\n", deplName)
-		deplIndent := indent + 1
-		if len(depl.File) > 0 {
-			IndentedFprintln(deplIndent, out, "Files:")
-			for _, targetPath := range depl.File {
-				BulletedFprintln(deplIndent+1, out, targetPath)
-			}
-		}
+		aggs["files"].Add(depl.File...)
 		if depl.ComposeApp.Name != "" {
-			IndentedFprintf(deplIndent, out, "Compose App: %s\n", depl.ComposeApp.Name)
-			fprintOptionalList(deplIndent+1, out, "Services", depl.ComposeApp.Services)
-			fprintOptionalList(deplIndent+1, out, "Images", depl.ComposeApp.Images)
-			fprintOptionalList(
-				deplIndent+1, out, "Bind Mounts (auto-created)", depl.ComposeApp.CreatedBindMounts,
-			)
-			fprintOptionalList(
-				deplIndent+1, out, "Bind Mounts (required)", depl.ComposeApp.RequiredBindMounts,
-			)
-			fprintOptionalList(
-				deplIndent+1, out, "Volumes (auto-created)", depl.ComposeApp.CreatedVolumes,
-			)
-			fprintOptionalList(
-				deplIndent+1, out, "Volumes (required)", depl.ComposeApp.RequiredVolumes,
-			)
-			fprintOptionalList(
-				deplIndent+1, out, "Networks (auto-created)", depl.ComposeApp.CreatedNetworks,
-			)
-			fprintOptionalList(
-				deplIndent+1, out, "Networks (required)", depl.ComposeApp.RequiredNetworks,
-			)
+			aggs["appNames"].Add(depl.ComposeApp.Name)
+			aggs["appServices"].Add(depl.ComposeApp.Services...)
+			aggs["appImages"].Add(depl.ComposeApp.Images...)
+			aggs["appNewBindMounts"].Add(depl.ComposeApp.CreatedBindMounts...)
+			aggs["appReqBindMounts"].Add(depl.ComposeApp.RequiredBindMounts...)
+			aggs["appNewVolumes"].Add(depl.ComposeApp.CreatedVolumes...)
+			aggs["appReqVolumes"].Add(depl.ComposeApp.RequiredVolumes...)
+			aggs["appNewNetworks"].Add(depl.ComposeApp.CreatedNetworks...)
+			aggs["appReqNetworks"].Add(depl.ComposeApp.RequiredNetworks...)
 		}
 	}
+
+	aggs["appReqBindMounts"] = aggs["appReqBindMounts"].Difference(aggs["appNewBindMounts"])
+	aggs["appReqVolumes"] = aggs["appReqVolumes"].Difference(aggs["appNewVolumes"])
+	aggs["appReqNetworks"] = aggs["appReqNetworks"].Difference(aggs["appNewNetworks"])
+
+	fprintOptionalSet(indent, out, "Files", aggs["files"])
+	fprintOptionalSet(indent, out, "Compose Apps", aggs["appNames"])
+	fprintOptionalSet(indent, out, "Compose App Services", aggs["appServices"])
+	fprintOptionalSet(indent, out, "Compose App Images", aggs["appImages"])
+	fprintOptionalSet(indent, out, "Compose App Bind Mounts (auto-created)", aggs["appNewBindMounts"])
+	fprintOptionalSet(indent, out, "Compose App Bind Mounts (required)", aggs["appReqBindMounts"])
+	fprintOptionalSet(indent, out, "Compose App Volumes (auto-created)", aggs["appNewVolumes"])
+	fprintOptionalSet(indent, out, "Compose App Volumes (required)", aggs["appReqVolumes"])
+	fprintOptionalSet(indent, out, "Compose App Networks (auto-created)", aggs["appNewNetworks"])
+	fprintOptionalSet(indent, out, "Compose App Networks (required)", aggs["appReqNetworks"])
 }
 
-func fprintOptionalList(indent int, out io.Writer, name string, items []string) {
+func fprintOptionalSet(indent int, out io.Writer, name string, items structures.Set[string]) {
 	if len(items) == 0 {
 		return
 	}
 	IndentedFprintf(indent, out, "%s:\n", name)
-	for _, item := range items {
+	for _, item := range slices.Sorted(maps.Keys(items)) {
 		BulletedFprintln(indent+1, out, item)
 	}
 }

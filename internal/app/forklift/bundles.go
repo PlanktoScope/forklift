@@ -313,10 +313,7 @@ func makeComposeAppBindMountSummaries(
 		}
 	}
 
-	for bindMount := range created {
-		delete(required, bindMount)
-	}
-	return created, required
+	return created.Difference(required), required
 }
 
 func makeComposeAppVolumeSummaries(

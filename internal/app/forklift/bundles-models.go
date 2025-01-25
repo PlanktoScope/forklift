@@ -139,10 +139,6 @@ type BundleDeplExports struct {
 	File []string `yaml:"file,omitempty"`
 	// ComposeApp lists the name of the Docker Compose app exported by the deployment.
 	ComposeApp BundleDeplComposeApp `yaml:"compose-app,omitempty"`
-	// ContainerImage lists the OCI container images exported by the deployment to the Docker
-	// environment. These container images will be used in the deployment's Docker Compose app.
-	ContainerImage []string `yaml:"container-image,omitempty"`
-	// FIXME: implement this field!
 }
 
 // BundleDeplComposeApp lists information about a Docker Compose app provided by a deployment.
