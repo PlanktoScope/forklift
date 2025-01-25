@@ -3,6 +3,7 @@ package forklift
 import (
 	"archive/tar"
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -14,12 +15,14 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/h2non/filetype"
 	ftt "github.com/h2non/filetype/types"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // FSBundle
@@ -209,14 +212,19 @@ func (b *FSBundle) getBundledMergedPalletPath() string {
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
-	if b.Manifest.Downloads[depl.Name], err = depl.GetDownloadURLs(); err != nil {
+	downloads := BundleDeplDownloads{}
+	if downloads.HTTPFile, err = depl.GetHTTPFileDownloadURLs(); err != nil {
 		return errors.Wrapf(
-			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
+			err, "couldn't determine HTTP file downloads for deployment %s", depl.Depl.Name,
 		)
 	}
-	if b.Manifest.Exports[depl.Name], err = depl.GetFileExportTargets(); err != nil {
-		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
+	if downloads.OCIImage, err = depl.GetOCIImageDownloadNames(); err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine OCI image downloads for deployment %s", depl.Depl.Name,
+		)
 	}
+	b.Manifest.Downloads[depl.Name] = downloads
+
 	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
 	)); err != nil {
@@ -225,7 +233,144 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 			depl.Pkg.Path(), depl.Depl.Name, depl.Pkg.FS.Path(),
 		)
 	}
+
+	exports := BundleDeplExports{}
+	if exports.File, err = depl.GetFileExportTargets(); err != nil {
+		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
+	}
+	definesComposeApp, err := depl.DefinesComposeApp()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't check deployment %s for a Compose app", depl.Depl.Name,
+		)
+	}
+	if definesComposeApp {
+		exports.ComposeApp, err = makeComposeAppSummary(depl, b.FS)
+		if err != nil {
+			return errors.Wrap(err, "couldn't make summary of Compose app definition")
+		}
+	}
+	b.Manifest.Exports[depl.Name] = exports
+
+	allOCIImages := make(structures.Set[string])
+	allOCIImages.Add(downloads.OCIImage...)
+	allOCIImages.Add(exports.ComposeApp.Images...)
+	downloads.OCIImage = slices.Sorted(allOCIImages.All())
+	b.Manifest.Downloads[depl.Name] = downloads
+
+	if downloads.Empty() {
+		delete(b.Manifest.Downloads, depl.Name)
+	}
+	if exports.Empty() {
+		delete(b.Manifest.Exports, depl.Name)
+	}
 	return nil
+}
+
+func makeComposeAppSummary(
+	depl *ResolvedDepl, bundleFS core.PathedFS,
+) (BundleDeplComposeApp, error) {
+	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Def.Package))
+	if err != nil {
+		return BundleDeplComposeApp{}, errors.Wrapf(
+			err, "couldn't load bundled package %s", depl.Pkg.Path(),
+		)
+	}
+	depl = &ResolvedDepl{
+		Depl:   depl.Depl,
+		PkgReq: depl.PkgReq,
+		Pkg:    bundlePkg,
+	}
+
+	appDef, err := depl.LoadComposeAppDefinition(true)
+	if err != nil {
+		return BundleDeplComposeApp{}, errors.Wrap(err, "couldn't load Compose app definition")
+	}
+
+	services := make(structures.Set[string])
+	images := make(structures.Set[string])
+	for _, service := range appDef.Services {
+		services.Add(service.Name)
+		images.Add(service.Image)
+	}
+
+	createdBindMounts, requiredBindMounts := makeComposeAppBindMountSummaries(appDef, bundleFS.Path())
+	createdVolumes, requiredVolumes := makeComposeAppVolumeSummaries(appDef)
+	createdNetworks, requiredNetworks := makeComposeAppNetworkSummaries(appDef)
+
+	app := BundleDeplComposeApp{
+		Name:               appDef.Name,
+		Services:           slices.Sorted(services.All()),
+		Images:             slices.Sorted(images.All()),
+		CreatedBindMounts:  slices.Sorted(createdBindMounts.All()),
+		RequiredBindMounts: slices.Sorted(requiredBindMounts.All()),
+		CreatedVolumes:     slices.Sorted(createdVolumes.All()),
+		RequiredVolumes:    slices.Sorted(requiredVolumes.All()),
+		CreatedNetworks:    slices.Sorted(createdNetworks.All()),
+		RequiredNetworks:   slices.Sorted(requiredNetworks.All()),
+	}
+	return app, nil
+}
+
+func makeComposeAppBindMountSummaries(
+	appDef *dct.Project, bundleRoot string,
+) (created structures.Set[string], required structures.Set[string]) {
+	created = make(structures.Set[string])
+	required = make(structures.Set[string])
+	for _, service := range appDef.Services {
+		for _, volume := range service.Volumes {
+			if volume.Type != "bind" {
+				continue
+			}
+			// If the path on the host is declared as a relative path, then it's supposed to be a path
+			// managed by Forklift, and its location will depend on where the bundle is. So we record it
+			// relative to the path of the bundle.
+			volume.Source = strings.TrimPrefix(volume.Source, bundleRoot+"/")
+			if volume.Bind != nil && !volume.Bind.CreateHostPath {
+				required.Add(volume.Source)
+				continue
+			}
+			created.Add(volume.Source)
+		}
+	}
+
+	return created.Difference(required), required
+}
+
+func makeComposeAppVolumeSummaries(
+	appDef *dct.Project,
+) (created structures.Set[string], required structures.Set[string]) {
+	created = make(structures.Set[string])
+	required = make(structures.Set[string])
+	for volumeName, volume := range appDef.Volumes {
+		if volume.External {
+			required.Add(cmp.Or(volume.Name, volumeName))
+			continue
+		}
+		created.Add(cmp.Or(volume.Name, volumeName))
+	}
+	return created, required
+}
+
+func makeComposeAppNetworkSummaries(
+	appDef *dct.Project,
+) (created structures.Set[string], required structures.Set[string]) {
+	created = make(structures.Set[string])
+	required = make(structures.Set[string])
+	for networkName, network := range appDef.Networks {
+		if network.External {
+			if networkName == "default" && network.Name == "none" {
+				// If the network is Docker's pre-made "none" network (which uses the null network driver),
+				// we ignore it for brevity since the intention is to suppress creating a network for the
+				// container.
+				continue
+			}
+			required.Add(cmp.Or(network.Name, networkName))
+			continue
+		}
+		created.Add(cmp.Or(network.Name, networkName))
+	}
+	return created, required
 }
 
 func (b *FSBundle) LoadDepl(name string) (Depl, error) {
@@ -636,4 +781,28 @@ func (i *BundleInclusions) HasOverrides() bool {
 		}
 	}
 	return false
+}
+
+// BundleDownloads
+
+func (d BundleDeplDownloads) Empty() bool {
+	if len(d.HTTPFile) > 0 {
+		return false
+	}
+	if len(d.OCIImage) > 0 {
+		return false
+	}
+	return true
+}
+
+// BundleExports
+
+func (d BundleDeplExports) Empty() bool {
+	if len(d.File) > 0 {
+		return false
+	}
+	if d.ComposeApp.Name != "" {
+		return false
+	}
+	return true
 }

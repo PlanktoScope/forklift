@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
@@ -178,8 +177,8 @@ func newBundleManifest(
 			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},
 		Deploys:   make(map[string]forklift.DeplDef),
-		Downloads: make(map[string][]string),
-		Exports:   make(map[string][]string),
+		Downloads: make(map[string]forklift.BundleDeplDownloads),
+		Exports:   make(map[string]forklift.BundleDeplExports),
 	}
 	desc.Pallet.Version, desc.Pallet.Clean = CheckGitRepoVersion(merged.FS.Path())
 	palletReqs, err := merged.LoadFSPalletReqs("**")
@@ -485,7 +484,7 @@ func applyReconciliationChange(
 func deployApp(
 	ctx context.Context, indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client,
 ) error {
-	definesApp, err := depl.DefinesApp()
+	definesApp, err := depl.DefinesComposeApp()
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
@@ -496,7 +495,7 @@ func deployApp(
 		return nil
 	}
 
-	appDef, err := loadAppDefinition(depl)
+	appDef, err := depl.LoadComposeAppDefinition(true)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load Compose app definition")
 	}
@@ -504,24 +503,6 @@ func deployApp(
 		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
 	}
 	return nil
-}
-
-func loadAppDefinition(depl *forklift.ResolvedDepl) (*dct.Project, error) {
-	composeFiles, err := depl.GetComposeFilenames()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine Compose files for deployment")
-	}
-
-	appDef, err := docker.LoadAppDefinition(
-		depl.Pkg.FS, getAppName(depl.Name), composeFiles, nil,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load Docker Compose app definition for deployment %s of %s",
-			depl.Name, depl.Pkg.FS.Path(),
-		)
-	}
-	return appDef, nil
 }
 
 func applyChangesConcurrently(indent int, plan structures.Digraph[*ReconciliationChange]) error {

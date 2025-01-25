@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/PlanktoScope/forklift/pkg/structures"
 )
 
 // Bundles
@@ -79,8 +80,16 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 	if len(inclusions.Pallets) == 0 {
 		_, _ = fmt.Fprintln(out, " (none)")
 	} else {
-		_, _ = fmt.Fprintln(out, " (unimplemented)")
-		// TODO: implement this once we add support for including pallets
+		_, _ = fmt.Fprintln(out)
+		sortedPaths := make([]string, 0, len(inclusions.Pallets))
+		for path := range inclusions.Pallets {
+			sortedPaths = append(sortedPaths, path)
+		}
+		slices.Sort(sortedPaths)
+		for _, path := range sortedPaths {
+			inclusion := inclusions.Pallets[path]
+			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
+		}
 	}
 	IndentedFprint(indent, out, "Repos:")
 	if len(inclusions.Repos) == 0 {
@@ -93,35 +102,37 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 		}
 		slices.Sort(sortedPaths)
 		for _, path := range sortedPaths {
-			fprintBundleRepoInclusion(indent+1, out, path, inclusions.Repos[path])
+			inclusion := inclusions.Repos[path]
+			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
 		}
 	}
 }
 
-func fprintBundleRepoInclusion(
-	indent int, out io.Writer, path string, inclusion forklift.BundleRepoInclusion,
+func fprintBundleInclusion(
+	indent int, out io.Writer, path string,
+	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock forklift.VersionLock,
 ) {
 	IndentedFprintf(indent, out, "%s:\n", path)
 	indent++
 	IndentedFprint(indent, out, "Required version")
-	if inclusion.Override == (forklift.BundleInclusionOverride{}) {
+	if inclOverride != (forklift.BundleInclusionOverride{}) {
 		_, _ = fmt.Fprint(out, " (overridden)")
 	}
 	_, _ = fmt.Fprint(out, ": ")
-	_, _ = fmt.Fprintln(out, inclusion.Req.VersionLock.Version)
+	_, _ = fmt.Fprintln(out, inclReqVersionLock.Version)
 
-	if inclusion.Override == (forklift.BundleInclusionOverride{}) {
+	if inclOverride == (forklift.BundleInclusionOverride{}) {
 		return
 	}
 	IndentedFprintln(indent, out, "Override:")
-	IndentedFprintf(indent+1, out, "Path: %s\n", inclusion.Override.Path)
+	IndentedFprintf(indent+1, out, "Path: %s\n", inclOverride.Path)
 	IndentedFprint(indent+1, out, "Version: ")
-	if inclusion.Override.Version == "" {
+	if inclOverride.Version == "" {
 		_, _ = fmt.Fprint(out, "(unknown)")
 	} else {
-		_, _ = fmt.Fprint(out, inclusion.Override.Version)
+		_, _ = fmt.Fprint(out, inclOverride.Version)
 	}
-	if !inclusion.Override.Clean {
+	if !inclOverride.Clean {
 		_, _ = fmt.Fprint(out, " (includes uncommitted changes)")
 	}
 	_, _ = fmt.Fprintln(out)
@@ -138,38 +149,72 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 	}
 }
 
-func fprintBundleDownloads(indent int, out io.Writer, downloads map[string][]string) {
-	sortedDeplNames := make([]string, 0, len(downloads))
-	for deplName := range downloads {
-		sortedDeplNames = append(sortedDeplNames, deplName)
+func fprintBundleDownloads(
+	indent int, out io.Writer, downloads map[string]forklift.BundleDeplDownloads,
+) {
+	lists := []string{"httpFiles", "ociImages"}
+	aggs := make(map[string]structures.Set[string])
+	for _, l := range lists {
+		aggs[l] = make(structures.Set[string])
 	}
-	slices.Sort(sortedDeplNames)
-	for _, deplName := range sortedDeplNames {
-		IndentedFprintf(indent, out, "%s:", deplName)
-		if len(downloads[deplName]) == 0 {
-			_, _ = fmt.Fprint(out, " (none)")
-		}
-		_, _ = fmt.Fprintln(out)
-		for _, targetPath := range downloads[deplName] {
-			BulletedFprintln(indent+1, out, targetPath)
-		}
+
+	for _, depl := range downloads {
+		aggs["httpFiles"].Add(depl.HTTPFile...)
+		aggs["ociImages"].Add(depl.OCIImage...)
+	}
+	fprintOptionalSet(indent, out, "HTTP Files", aggs["httpFiles"])
+	fprintOptionalSet(indent, out, "OCI Images", aggs["ociImages"])
+}
+
+func fprintOptionalSet(indent int, out io.Writer, name string, items structures.Set[string]) {
+	if len(items) == 0 {
+		return
+	}
+	IndentedFprintf(indent, out, "%s:\n", name)
+	for _, item := range slices.Sorted(items.All()) {
+		BulletedFprintln(indent+1, out, item)
 	}
 }
 
-func fprintBundleExports(indent int, out io.Writer, exports map[string][]string) {
-	sortedDeplNames := make([]string, 0, len(exports))
-	for deplName := range exports {
-		sortedDeplNames = append(sortedDeplNames, deplName)
+func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.BundleDeplExports) {
+	lists := []string{
+		"files", "appNames", "appServices", "appImages", "appNewBindMounts", "appReqBindMounts",
+		"appNewVolumes", "appReqVolumes", "appNewNetworks", "appReqNetworks",
 	}
-	slices.Sort(sortedDeplNames)
-	for _, deplName := range sortedDeplNames {
-		IndentedFprintf(indent, out, "%s:", deplName)
-		if len(exports[deplName]) == 0 {
-			_, _ = fmt.Fprint(out, " (none)")
-		}
-		_, _ = fmt.Fprintln(out)
-		for _, targetPath := range exports[deplName] {
-			BulletedFprintln(indent+1, out, targetPath)
+	aggs := make(map[string]structures.Set[string])
+	for _, l := range lists {
+		aggs[l] = make(structures.Set[string])
+	}
+
+	for _, depl := range exports {
+		aggs["files"].Add(depl.File...)
+		if depl.ComposeApp.Name != "" {
+			aggs["appNames"].Add(depl.ComposeApp.Name)
+			for _, service := range depl.ComposeApp.Services {
+				aggs["appServices"].Add(fmt.Sprintf("%s-%s", depl.ComposeApp.Name, service))
+			}
+			aggs["appImages"].Add(depl.ComposeApp.Images...)
+			aggs["appNewBindMounts"].Add(depl.ComposeApp.CreatedBindMounts...)
+			aggs["appReqBindMounts"].Add(depl.ComposeApp.RequiredBindMounts...)
+			aggs["appNewVolumes"].Add(depl.ComposeApp.CreatedVolumes...)
+			aggs["appReqVolumes"].Add(depl.ComposeApp.RequiredVolumes...)
+			aggs["appNewNetworks"].Add(depl.ComposeApp.CreatedNetworks...)
+			aggs["appReqNetworks"].Add(depl.ComposeApp.RequiredNetworks...)
 		}
 	}
+
+	aggs["appReqBindMounts"] = aggs["appReqBindMounts"].Difference(aggs["appNewBindMounts"])
+	aggs["appReqVolumes"] = aggs["appReqVolumes"].Difference(aggs["appNewVolumes"])
+	aggs["appReqNetworks"] = aggs["appReqNetworks"].Difference(aggs["appNewNetworks"])
+
+	fprintOptionalSet(indent, out, "Files", aggs["files"])
+	fprintOptionalSet(indent, out, "Compose Apps", aggs["appNames"])
+	fprintOptionalSet(indent, out, "Compose App Services", aggs["appServices"])
+	fprintOptionalSet(indent, out, "Compose App Images", aggs["appImages"])
+	fprintOptionalSet(indent, out, "Compose App Bind Mounts (auto-created)", aggs["appNewBindMounts"])
+	fprintOptionalSet(indent, out, "Compose App Bind Mounts (required)", aggs["appReqBindMounts"])
+	fprintOptionalSet(indent, out, "Compose App Volumes (auto-created)", aggs["appNewVolumes"])
+	fprintOptionalSet(indent, out, "Compose App Volumes (required)", aggs["appReqVolumes"])
+	fprintOptionalSet(indent, out, "Compose App Networks (auto-created)", aggs["appNewNetworks"])
+	fprintOptionalSet(indent, out, "Compose App Networks (required)", aggs["appReqNetworks"])
 }

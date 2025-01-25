@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/pkg/errors"
@@ -48,21 +47,17 @@ func newAddReconciliationChange(
 	deplName string, depl *forklift.ResolvedDepl,
 ) *ReconciliationChange {
 	return &ReconciliationChange{
-		Name: getAppName(deplName),
+		Name: forklift.GetComposeAppName(deplName),
 		Type: addReconciliationChange,
 		Depl: depl,
 	}
-}
-
-func getAppName(deplName string) string {
-	return strings.ReplaceAll(deplName, "/", "_")
 }
 
 func newUpdateReconciliationChange(
 	deplName string, depl *forklift.ResolvedDepl, app api.Stack,
 ) *ReconciliationChange {
 	return &ReconciliationChange{
-		Name: getAppName(deplName),
+		Name: forklift.GetComposeAppName(deplName),
 		Type: updateReconciliationChange,
 		Depl: depl,
 		App:  app,
@@ -231,8 +226,8 @@ func identifyReconciliationChanges(
 	appDeplNames := make(map[string]string)
 	changes := make([]*ReconciliationChange, 0, len(depls)+len(apps))
 	for name, depl := range deplsByName {
-		appDeplNames[getAppName(name)] = name
-		app, ok := appsByName[getAppName(name)]
+		appDeplNames[forklift.GetComposeAppName(name)] = name
+		app, ok := appsByName[forklift.GetComposeAppName(name)]
 		if !ok {
 			if composeAppDefinerSet.Has(name) {
 				changes = append(changes, newAddReconciliationChange(name, depl))
@@ -260,7 +255,7 @@ func identifyComposeAppDefiners(
 ) (structures.Set[string], error) {
 	composeAppDefinerSet := make(structures.Set[string])
 	for _, depl := range depls {
-		definesApp, err := depl.DefinesApp()
+		definesApp, err := depl.DefinesComposeApp()
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,

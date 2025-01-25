@@ -56,14 +56,14 @@ type BundleManifest struct {
 	// files, while values are lists showing the chain of provenance of the respective files (with
 	// the deepest ancestor at the end of each list).
 	Imports map[string][]string `yaml:"imports,omitempty"`
-	// Downloads lists the URLs of files and OCI images downloaded for export by the bundle's
-	// deployments. Keys are names of the bundle's deployments which export downloaded files.
-	Downloads map[string][]string `yaml:"downloads,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
 	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
-	// Exports lists the target paths of file exports provided by the bundle's deployments. Keys are
-	// names of the bundle's deployments which provide file exports.
-	Exports map[string][]string `yaml:"exports,omitempty"`
+	// Downloads lists the downloadable paths of resources downloaded for creation and/or use of the
+	// bundle. Keys are the names of the bundle's deployments which include downloads.
+	Downloads map[string]BundleDeplDownloads `yaml:"downloads,omitempty"`
+	// Exports lists the exposed paths of resources created by the bundle's deployments. Keys are
+	// names of the bundle's deployments which provide resources.
+	Exports map[string]BundleDeplExports `yaml:"exports,omitempty"`
 }
 
 // BundlePallet describes a bundle's bundled pallet.
@@ -112,6 +112,7 @@ type BundleRepoInclusion struct {
 	Override BundleInclusionOverride `yaml:"override,omitempty"`
 }
 
+// BundleInclusionOverride describes a pallet used to override a required pallet.
 type BundleInclusionOverride struct {
 	// Path is the path of the override. This should be a filesystem path.
 	Path string `yaml:"path"`
@@ -120,4 +121,44 @@ type BundleInclusionOverride struct {
 	// Clean indicates whether the override has been determined to have no changes beyond its latest
 	// Git commit, if the it's version-controlled with Git.
 	Clean bool `yaml:"clean"`
+}
+
+// BundleDeplDownloads lists the downloadable paths of resources which are downloaded for a
+// deployment, whether during creation of the bundle or during staging of the bundle.
+type BundleDeplDownloads struct {
+	// HTTPFile lists HTTP(S) URLs of files downloaded for export by the deployment.
+	HTTPFile []string `yaml:"http,omitempty"`
+	// OCIImage lists URLs of OCI images downloaded either for export by the deployment or for use in
+	// the deployment's Docker Compose app.
+	OCIImage []string `yaml:"oci-image,omitempty"`
+}
+
+// BundleDeplExports lists the exposed paths of resources which are provided by a deployment.
+type BundleDeplExports struct {
+	// File lists the filesystem target paths of files exported by the deployment.
+	File []string `yaml:"file,omitempty"`
+	// ComposeApp lists the name of the Docker Compose app exported by the deployment.
+	ComposeApp BundleDeplComposeApp `yaml:"compose-app,omitempty"`
+}
+
+// BundleDeplComposeApp lists information about a Docker Compose app provided by a deployment.
+type BundleDeplComposeApp struct {
+	// Name is the name of the Docker Compose app.
+	Name string `yaml:"name,omitempty"`
+	// Services lists the names of the services of the Docker Compose app.
+	Services []string `yaml:"services,omitempty"`
+	// Images lists the names of the container images used by services of the Docker Compose app.
+	Images []string `yaml:"images,omitempty"`
+	// CreatedBindMounts lists the names of the bind mounts created by the Docker Compose app.
+	CreatedBindMounts []string `yaml:"created-bind-mounts,omitempty"`
+	// RequiredBindMounts lists the names of the bind mounts required by the Docker Compose app.
+	RequiredBindMounts []string `yaml:"required-bind-mounts,omitempty"`
+	// CreatedVolumes lists the names of the volumes created by the Docker Compose app.
+	CreatedVolumes []string `yaml:"created-volumes,omitempty"`
+	// RequiredVolumes lists the names of the volumes required by the Docker Compose app.
+	RequiredVolumes []string `yaml:"required-volumes,omitempty"`
+	// CreatedNetworks lists the names of the networks created by the Docker Compose app.
+	CreatedNetworks []string `yaml:"created-networks,omitempty"`
+	// RequiredNetworks lists the names of the networks required by the Docker Compose app.
+	RequiredNetworks []string `yaml:"required-networks,omitempty"`
 }

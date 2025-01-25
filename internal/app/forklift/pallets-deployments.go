@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
+	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/PlanktoScope/forklift/internal/clients/docker"
 	"github.com/PlanktoScope/forklift/pkg/core"
 	"github.com/PlanktoScope/forklift/pkg/structures"
 )
@@ -133,8 +135,8 @@ func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
 	return composeFiles, nil
 }
 
-// DefinesApp determines whether the deployment defines a Docker Compose app to be deployed.
-func (d *ResolvedDepl) DefinesApp() (bool, error) {
+// DefinesComposeApp determines whether the deployment defines a Docker Compose app to be deployed.
+func (d *ResolvedDepl) DefinesComposeApp() (bool, error) {
 	composeFiles, err := d.GetComposeFilenames()
 	if err != nil {
 		return false, errors.Wrap(err, "couldn't determine Compose files for deployment")
@@ -150,21 +152,33 @@ func (d *ResolvedDepl) DefinesApp() (bool, error) {
 	return false, nil
 }
 
-// ResolvedDepl: File Downloads
+// LoadComposeAppDefinition loads the deployment's Docker Compose app.
+func (d *ResolvedDepl) LoadComposeAppDefinition(resolvePaths bool) (*dct.Project, error) {
+	composeFiles, err := d.GetComposeFilenames()
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't determine Compose files for deployment")
+	}
 
-// GetDownloadURLs returns a list of the URLs of files and OCI container images to be downloaded for
-// export by the package deployment, with all URLs sorted alphabetically.
-func (d *ResolvedDepl) GetDownloadURLs() ([]string, error) {
-	httpURLs, err := d.GetHTTPFileDownloadURLs()
+	appDef, err := docker.LoadAppDefinition(
+		d.Pkg.FS, GetComposeAppName(d.Name), composeFiles, nil, resolvePaths,
+	)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine urls of http files to download")
+		return nil, errors.Wrapf(
+			err, "couldn't load Docker Compose app definition for deployment %s of %s",
+			d.Name, d.Pkg.FS.Path(),
+		)
 	}
-	ociImageNames, err := d.GetOCIImageDownloadNames()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine names of oci images to download")
-	}
-	return slices.Concat(httpURLs, ociImageNames), nil
+	return appDef, nil
 }
+
+// GetComposeAppName converts the deployment's name into a string which is allowed for use as a
+// Docker Compose app name. It assumes that the resulting name will not be excessively long for
+// Docker Compose.
+func GetComposeAppName(deplName string) string {
+	return strings.ReplaceAll(deplName, "/", "_")
+}
+
+// ResolvedDepl: File Downloads
 
 // GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export
 // by the package deployment, with all URLs sorted alphabetically.

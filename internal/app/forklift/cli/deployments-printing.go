@@ -53,7 +53,7 @@ func FprintResolvedDepl(
 	}
 	indent++
 
-	definesApp, err := resolved.DefinesApp()
+	definesApp, err := resolved.DefinesComposeApp()
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine whether package deployment defines a Compose app")
 	}
@@ -61,7 +61,7 @@ func FprintResolvedDepl(
 		return nil
 	}
 
-	appDef, err := loadAppDefinition(resolved)
+	appDef, err := resolved.LoadComposeAppDefinition(false)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load Compose app definition")
 	}
