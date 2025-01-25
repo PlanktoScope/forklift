@@ -80,8 +80,16 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 	if len(inclusions.Pallets) == 0 {
 		_, _ = fmt.Fprintln(out, " (none)")
 	} else {
-		_, _ = fmt.Fprintln(out, " (unimplemented)")
-		// TODO: implement this once we add support for including pallets
+		_, _ = fmt.Fprintln(out)
+		sortedPaths := make([]string, 0, len(inclusions.Pallets))
+		for path := range inclusions.Pallets {
+			sortedPaths = append(sortedPaths, path)
+		}
+		slices.Sort(sortedPaths)
+		for _, path := range sortedPaths {
+			inclusion := inclusions.Pallets[path]
+			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
+		}
 	}
 	IndentedFprint(indent, out, "Repos:")
 	if len(inclusions.Repos) == 0 {
@@ -94,35 +102,37 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 		}
 		slices.Sort(sortedPaths)
 		for _, path := range sortedPaths {
-			fprintBundleRepoInclusion(indent+1, out, path, inclusions.Repos[path])
+			inclusion := inclusions.Repos[path]
+			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
 		}
 	}
 }
 
-func fprintBundleRepoInclusion(
-	indent int, out io.Writer, path string, inclusion forklift.BundleRepoInclusion,
+func fprintBundleInclusion(
+	indent int, out io.Writer, path string,
+	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock forklift.VersionLock,
 ) {
 	IndentedFprintf(indent, out, "%s:\n", path)
 	indent++
 	IndentedFprint(indent, out, "Required version")
-	if inclusion.Override == (forklift.BundleInclusionOverride{}) {
+	if inclOverride != (forklift.BundleInclusionOverride{}) {
 		_, _ = fmt.Fprint(out, " (overridden)")
 	}
 	_, _ = fmt.Fprint(out, ": ")
-	_, _ = fmt.Fprintln(out, inclusion.Req.VersionLock.Version)
+	_, _ = fmt.Fprintln(out, inclReqVersionLock.Version)
 
-	if inclusion.Override == (forklift.BundleInclusionOverride{}) {
+	if inclOverride == (forklift.BundleInclusionOverride{}) {
 		return
 	}
 	IndentedFprintln(indent, out, "Override:")
-	IndentedFprintf(indent+1, out, "Path: %s\n", inclusion.Override.Path)
+	IndentedFprintf(indent+1, out, "Path: %s\n", inclOverride.Path)
 	IndentedFprint(indent+1, out, "Version: ")
-	if inclusion.Override.Version == "" {
+	if inclOverride.Version == "" {
 		_, _ = fmt.Fprint(out, "(unknown)")
 	} else {
-		_, _ = fmt.Fprint(out, inclusion.Override.Version)
+		_, _ = fmt.Fprint(out, inclOverride.Version)
 	}
-	if !inclusion.Override.Clean {
+	if !inclOverride.Clean {
 		_, _ = fmt.Fprint(out, " (includes uncommitted changes)")
 	}
 	_, _ = fmt.Fprintln(out)

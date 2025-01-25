@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - (spec) Now the bundle manifest file's `exports` section lists information about the Docker Compose apps created by the bundle's package deployments.
 - (spec) Now the bundle manifest file's `downloads` section lists OCI images to be cached for Docker Compose apps; this is enabled by a breaking change in the layout of that section, described below.
+- (cli) Now `stage show-bun` prints information about required pallets in the "Includes" section.
 
 ### Changed
 
