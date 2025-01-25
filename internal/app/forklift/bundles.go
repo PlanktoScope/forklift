@@ -215,15 +215,24 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	downloads := BundleDeplDownloads{}
 	if downloads.HTTPFile, err = depl.GetHTTPFileDownloadURLs(); err != nil {
 		return errors.Wrapf(
-			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
+			err, "couldn't determine HTTP file downloads for deployment %s", depl.Depl.Name,
 		)
 	}
 	if downloads.OCIImage, err = depl.GetOCIImageDownloadNames(); err != nil {
 		return errors.Wrapf(
-			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
+			err, "couldn't determine OCI image downloads for deployment %s", depl.Depl.Name,
 		)
 	}
 	b.Manifest.Downloads[depl.Name] = downloads
+
+	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
+		path.Join(b.getPackagesPath(), depl.Def.Package),
+	)); err != nil {
+		return errors.Wrapf(
+			err, "couldn't bundle files from package %s for deployment %s from %s",
+			depl.Pkg.Path(), depl.Depl.Name, depl.Pkg.FS.Path(),
+		)
+	}
 
 	exports := BundleDeplExports{}
 	if exports.File, err = depl.GetFileExportTargets(); err != nil {
@@ -232,11 +241,11 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	definesComposeApp, err := depl.DefinesComposeApp()
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't check whether deployment %s defines a Compose app", depl.Depl.Name,
+			err, "couldn't check deployment %s for a Compose app", depl.Depl.Name,
 		)
 	}
 	if definesComposeApp {
-		exports.ComposeApp, err = makeComposeAppSummary(depl)
+		exports.ComposeApp, err = makeComposeAppSummary(depl, b.FS)
 		if err != nil {
 			return errors.Wrap(err, "couldn't make summary of Compose app definition")
 		}
@@ -255,20 +264,25 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	if exports.Empty() {
 		delete(b.Manifest.Exports, depl.Name)
 	}
-
-	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
-		path.Join(b.getPackagesPath(), depl.Def.Package),
-	)); err != nil {
-		return errors.Wrapf(
-			err, "couldn't bundle files from package %s for deployment %s from %s",
-			depl.Pkg.Path(), depl.Depl.Name, depl.Pkg.FS.Path(),
-		)
-	}
 	return nil
 }
 
-func makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
-	appDef, err := depl.LoadComposeAppDefinition(false)
+func makeComposeAppSummary(
+	depl *ResolvedDepl, bundleFS core.PathedFS,
+) (BundleDeplComposeApp, error) {
+	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Def.Package))
+	if err != nil {
+		return BundleDeplComposeApp{}, errors.Wrapf(
+			err, "couldn't load bundled package %s", depl.Pkg.Path(),
+		)
+	}
+	depl = &ResolvedDepl{
+		Depl:   depl.Depl,
+		PkgReq: depl.PkgReq,
+		Pkg:    bundlePkg,
+	}
+
+	appDef, err := depl.LoadComposeAppDefinition(true)
 	if err != nil {
 		return BundleDeplComposeApp{}, errors.Wrap(err, "couldn't load Compose app definition")
 	}
@@ -280,7 +294,7 @@ func makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
 		images.Add(service.Image)
 	}
 
-	createdBindMounts, requiredBindMounts := makeComposeAppBindMountSummaries(appDef)
+	createdBindMounts, requiredBindMounts := makeComposeAppBindMountSummaries(appDef, bundleFS.Path())
 	createdVolumes, requiredVolumes := makeComposeAppVolumeSummaries(appDef)
 	createdNetworks, requiredNetworks := makeComposeAppNetworkSummaries(appDef)
 
@@ -299,7 +313,7 @@ func makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
 }
 
 func makeComposeAppBindMountSummaries(
-	appDef *dct.Project,
+	appDef *dct.Project, bundleRoot string,
 ) (created structures.Set[string], required structures.Set[string]) {
 	created = make(structures.Set[string])
 	required = make(structures.Set[string])
@@ -308,15 +322,10 @@ func makeComposeAppBindMountSummaries(
 			if volume.Type != "bind" {
 				continue
 			}
-			if !path.IsAbs(volume.Source) {
-				// If the path on the host is declared as a relative path, then it's supposed to be a path
-				// managed by Forklift, and its location will depend on where the bundle is. So it shouldn't
-				// be reported verbatim in the manifest.
-				// TODO: instead report the source path relative to the parent dir of the bundle manifest
-				// file. We'd need to make sure that the Compose app is loaded from the bundle itself as a
-				// pallet, not from the pallet used to make the bundle.
-				continue
-			}
+			// If the path on the host is declared as a relative path, then it's supposed to be a path
+			// managed by Forklift, and its location will depend on where the bundle is. So we record it
+			// relative to the path of the bundle.
+			volume.Source = strings.TrimPrefix(volume.Source, bundleRoot+"/")
 			if volume.Bind != nil && !volume.Bind.CreateHostPath {
 				required.Add(volume.Source)
 				continue
