@@ -223,9 +223,8 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 			err, "couldn't determine HTTP file downloads for export by deployment %s", depl.Depl.Name,
 		)
 	}
-	if len(downloads.All()) > 0 {
-		b.Manifest.Downloads[depl.Name] = downloads
-	}
+	b.Manifest.Downloads[depl.Name] = downloads
+
 	exports := BundleDeplExports{}
 	if exports.File, err = depl.GetFileExportTargets(); err != nil {
 		return errors.Wrapf(err, "couldn't determine file exports of deployment %s", depl.Depl.Name)
@@ -242,9 +241,21 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 			return errors.Wrap(err, "couldn't make summary of Compose app definition")
 		}
 	}
-	if len(exports.All()) > 0 {
-		b.Manifest.Exports[depl.Name] = exports
+	b.Manifest.Exports[depl.Name] = exports
+
+	allOCIImages := make(structures.Set[string])
+	allOCIImages.Add(downloads.OCIImage...)
+	allOCIImages.Add(exports.ComposeApp.Images...)
+	downloads.OCIImage = slices.Sorted(allOCIImages.All())
+	b.Manifest.Downloads[depl.Name] = downloads
+
+	if downloads.Empty() {
+		delete(b.Manifest.Downloads, depl.Name)
 	}
+	if exports.Empty() {
+		delete(b.Manifest.Exports, depl.Name)
+	}
+
 	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
 		path.Join(b.getPackagesPath(), depl.Def.Package),
 	)); err != nil {
@@ -765,26 +776,24 @@ func (i *BundleInclusions) HasOverrides() bool {
 
 // BundleDownloads
 
-func (d BundleDeplDownloads) All() []string {
-	all := make(structures.Set[string])
-	for _, url := range d.HTTPFile {
-		all.Add(url)
+func (d BundleDeplDownloads) Empty() bool {
+	if len(d.HTTPFile) > 0 {
+		return false
 	}
-	for _, url := range d.OCIImage {
-		all.Add(url)
+	if len(d.OCIImage) > 0 {
+		return false
 	}
-	return slices.Sorted(all.All())
+	return true
 }
 
 // BundleExports
 
-func (d BundleDeplExports) All() []string {
-	all := make(structures.Set[string])
-	for _, file := range d.File {
-		all.Add(file)
+func (d BundleDeplExports) Empty() bool {
+	if len(d.File) > 0 {
+		return false
 	}
 	if d.ComposeApp.Name != "" {
-		all.Add(d.ComposeApp.Name)
+		return false
 	}
-	return slices.Sorted(all.All())
+	return true
 }
