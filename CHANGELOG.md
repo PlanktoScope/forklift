@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.8.0-alpha.6 - 2024-01-27
 
 ### Added
 
+- (spec) Added an optional `permissions` field to file exports in the packaging spec. If specified, this field enables overriding the source file's Unix permissions with an explicitly-provided permissions value for creating a regular file at the target path. The permissions should be specified as an octal value (e.g. `0644`).
 - (spec) Now the bundle manifest file's `exports` section lists information about the Docker Compose apps created by the bundle's package deployments.
 - (spec) Now the bundle manifest file's `downloads` section lists OCI images to be cached for Docker Compose apps; this is enabled by a breaking change in the layout of that section, described below.
 - (cli) Now `stage show-bun` prints information about required pallets in the "Includes" section.

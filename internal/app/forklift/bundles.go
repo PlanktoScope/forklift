@@ -125,11 +125,11 @@ func CopyFS(fsys core.PathedFS, dest string) error {
 			}
 			return os.MkdirAll(filepath.FromSlash(path.Join(dest, filePath)), fileInfo.Mode())
 		}
-		return copyFSFile(fsys, filePath, path.Join(dest, filePath))
+		return copyFSFile(fsys, filePath, path.Join(dest, filePath), 0)
 	})
 }
 
-func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
+func copyFSFile(fsys core.PathedFS, sourcePath, destPath string, destPerms fs.FileMode) error {
 	if readLinkFS, ok := fsys.(ReadLinkFS); ok {
 		sourceInfo, err := readLinkFS.StatLink(sourcePath)
 		if err != nil {
@@ -167,8 +167,11 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string) error {
 		return CopyFS(fsys, destPath)
 	}
 
+	if destPerms == 0 {
+		destPerms = sourceInfo.Mode().Perm()
+	}
 	destFile, err := os.OpenFile( //nolint:gosec // dest path is set by config files which we trust
-		destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, sourceInfo.Mode().Perm(),
+		destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, destPerms,
 	)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't open dest file %s for copying", destPath)
@@ -503,6 +506,7 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
 	if err := copyFSFile(
 		resolved.Pkg.FS, strings.TrimPrefix(export.Source, "/"), filepath.FromSlash(exportPath),
+		export.Permissions,
 	); err != nil {
 		return errors.Wrapf(err, "couldn't export file from %s to %s", export.Source, exportPath)
 	}
@@ -517,6 +521,7 @@ func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDow
 	if err := copyFSFile(
 		dlCache.FS, strings.TrimPrefix(strings.TrimPrefix(sourcePath, dlCache.FS.Path()), "/"),
 		filepath.FromSlash(exportPath),
+		export.Permissions,
 	); err != nil {
 		return errors.Wrapf(err, "couldn't export file from %s to %s", sourcePath, exportPath)
 	}
@@ -572,7 +577,9 @@ func exportArchiveFile(
 			"unrecognized archive file type: %s (.%s)", kind.MIME.Value, kind.Extension,
 		)
 	}
-	if err = extractFromArchive(archiveReader, export.Source, exportPath); err != nil {
+	if err = extractFromArchive(
+		archiveReader, export.Source, exportPath, export.Permissions,
+	); err != nil {
 		return errors.Wrapf(
 			err, "couldn't extract %s from cached download archive %s to %s",
 			export.Source, export.URL, exportPath,
@@ -612,7 +619,9 @@ func determineFileType(
 	return filetype.MatchReader(archiveFile)
 }
 
-func extractFromArchive(tarReader *tar.Reader, sourcePath, exportPath string) error {
+func extractFromArchive(
+	tarReader *tar.Reader, sourcePath, exportPath string, destPerms fs.FileMode,
+) error {
 	if sourcePath == "/" || sourcePath == "." {
 		sourcePath = ""
 	}
@@ -629,7 +638,7 @@ func extractFromArchive(tarReader *tar.Reader, sourcePath, exportPath string) er
 			continue
 		}
 
-		if err = extractFile(header, tarReader, sourcePath, exportPath); err != nil {
+		if err = extractFile(header, tarReader, sourcePath, exportPath, destPerms); err != nil {
 			return err
 		}
 	}
@@ -637,7 +646,8 @@ func extractFromArchive(tarReader *tar.Reader, sourcePath, exportPath string) er
 }
 
 func extractFile(
-	header *tar.Header, tarReader *tar.Reader, sourcePath, exportPath string,
+	// FIXME: also handle destPerms for directories and symlinks!
+	header *tar.Header, tarReader *tar.Reader, sourcePath, exportPath string, destPerms fs.FileMode,
 ) error {
 	targetPath := path.Join(exportPath, strings.TrimPrefix(header.Name, sourcePath))
 	switch header.Typeflag {
@@ -650,7 +660,7 @@ func extractFile(
 			)
 		}
 	case tar.TypeReg:
-		if err := extractRegularFile(header, tarReader, sourcePath, targetPath); err != nil {
+		if err := extractRegularFile(header, tarReader, sourcePath, targetPath, destPerms); err != nil {
 			return errors.Wrapf(
 				err, "couldn't export regular file %s from archive to %s", header.Name, targetPath,
 			)
@@ -677,11 +687,17 @@ func extractFile(
 }
 
 func extractRegularFile(
-	header *tar.Header, tarReader *tar.Reader, sourcePath, targetPath string,
+	header *tar.Header, tarReader *tar.Reader, sourcePath, targetPath string, destPerms fs.FileMode,
 ) error {
-	targetFile, err := os.OpenFile(
-		filepath.FromSlash(targetPath), os.O_RDWR|os.O_CREATE|os.O_TRUNC,
-		fs.FileMode(header.Mode)&fs.ModePerm, //nolint:gosec // tar's Mode won't(?) overflow fs.FileMode
+	if destPerms == 0 {
+		destPerms = fs.FileMode( //nolint:gosec // (G115) tar's Mode won't(?) overflow fs.FileMode
+			header.Mode,
+		) & fs.ModePerm
+	}
+	// FIXME: we suppress gosec G304 below, but for security we should check targetPath to ensure it's
+	// a valid path (i.e. within the Forklift workspace)!
+	targetFile, err := os.OpenFile( //nolint:gosec // (G304) the point is to write to arbitrary paths
+		filepath.Clean(filepath.FromSlash(targetPath)), os.O_RDWR|os.O_CREATE|os.O_TRUNC, destPerms,
 	)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't create export file at %s", targetPath)

@@ -1,5 +1,7 @@
 package core
 
+import "io/fs"
+
 // A FSPkg is a Forklift package stored at the root of a [fs.FS] filesystem.
 type FSPkg struct {
 	// Pkg is the Forklift package at the root of the filesystem.
@@ -197,6 +199,8 @@ type FileExportRes struct {
 	Source string `yaml:"source,omitempty"`
 	// URL is the URL of the file to be downloaded for export, for a `http` source.
 	URL string `yaml:"url,omitempty"`
+	// Permissions is the Unix permission bits to attach to the exported file.
+	Permissions fs.FileMode `yaml:"permissions,omitempty"`
 	// Target is the path where the file will be exported to, relative to an export directory.
 	Target string `yaml:"target"`
 }
