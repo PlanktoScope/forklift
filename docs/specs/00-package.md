@@ -1360,6 +1360,16 @@ url: ghcr.io/planktoscope/machine-name:0.1.3
   target: overlays/etc/dnsmasq.d/dhcp-and-dns.conf
   ```
 
+`permissions` is the octal Unix permission bits which should be attached to the exported file.
+
+- This field is optional: it defaults to the permissions of the source file. For `local`-type source files, this is likely to be `0644` (corresponding to `rw-r--r--`) due to how Git handles file permissions.
+
+- Example:
+  
+  ```yaml
+  permissions: 0777
+  ```
+
 `tags` is an array of strings which describe the file export. These tags are ignored in determining whether file exports conflict with each other, since they are not part of the file export's location(s).
 
 - This field is optional.
