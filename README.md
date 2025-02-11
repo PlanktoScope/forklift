@@ -16,16 +16,15 @@
 
 <hr>
 
-Composable, reprovisionable, decentralized management of apps & configs on Raspberry Pis and other
-embedded Linux systems
+A configurable bill-of-materials (CBOM) system for declaratively composing and upgrading/downgrading
+your hardware-specific embedded Linux operating systems.
 
 Note: this is still an experimental prototype in the sense that Forklift's architectural design and
-command-line interface may undergo significant backwards-incompatible changes (including removal of
-unnecessary functionalities) for simplification. Thus, while Forklift is already used in production
-as a lower-level implementation detail of the
+command-line interface may undergo significant backwards-incompatible simplifications. While
+Forklift is already used in production as a lower-level implementation detail of the
 [PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/)
 and is exposed to advanced users with a command-line interface for customization of PlanktoScope OS,
-any other use of Forklift is not yet officially supported.
+any other use of Forklift is not yet officially documented or supported.
 
 ## Introduction
 
@@ -38,6 +37,19 @@ administration by individual people, decentralized management & customization). 
 three-minute overview of the motivation for Forklift and how it can be used, refer to
 this demo video: <https://www.youtube.com/watch?v=4lHh_NDlFKA>
 
+For open-hardware project developers, Forklift enables Linux-based devices and
+[appliances](https://en.wikipedia.org/wiki/Computer_appliance) (especially those based on the
+Raspberry Pi) to have the "interesting" parts of their software programs and configurations to be
+specified, composed, deployed, and reversibly upgraded/downgraded as version-controlled changes to a
+[configurable bill-of-materials (CBOM)](https://en.wikipedia.org/wiki/Bill_of_materials#CBOM) of
+software modules. The [PlanktoScope](https://www.planktoscope.org/), an open-source microscope for
+quantitative imaging of plankton, uses Forklift as low-level infrastructure for software
+releases, deployment, and extensibility in the
+[PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), a
+hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
+specifically to solve the OS/software maintenance, customization, and operations challenges
+experienced in the PlanktoScope project.
+
 For end-users operating open-source instruments with application services (e.g. network APIs or
 browser-based interfaces) and/or system services (for e.g. data backups/transfer, hardware support,
 computer networking, monitoring, etc.), Forklift aims to provide an experience for installing,
@@ -48,23 +60,10 @@ need to (for example) re-flash a Raspberry Pi's SD card with a new OS image just
 application software running on the instrument while ensuring the validity of the resulting state of
 the system.
 
-For open-hardware project developers, Forklift enables Linux-based devices and
-[appliances](https://en.wikipedia.org/wiki/Computer_appliance) (especially those based on the
-Raspberry Pi) to have the "interesting" parts of their software programs and configurations to be
-specified, composed, deployed, and reversibly upgraded/downgraded as version-controlled changes to a
-configurable Bill-of-Materials of software modules.
-The [PlanktoScope](https://www.planktoscope.org/), an open-source microscope for quantitative
-imaging of plankton, uses Forklift as foundational infrastructure for software releases, deployment,
-and extensibility in the
-[PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), a
-hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
-specifically to solve the OS/software maintenance, customization, and operations challenges
-experienced in the PlanktoScope project.
-
 For indie software developers and sysadmins familiar with DevOps and cloud-native patterns, Forklift
 is just a GitOps-inspired no-orchestrator system which is small and simple enough to work beyond the
 cloud - using Docker Compose to avoid the unnecessary architectural complexity and overhead even
-minimal Kubernetes distributions like k0s for situations where a container workload orchestrator is
+minimal Kubernetes distributions like k0s for systems where a container workload orchestrator is
 unnecessary; and bundling app deployment with the deployment of system files, executables, and
 systemd units from configuration files version-controlled in Git repositories. Thus, Forklift allows
 hassle-free management of software configurations on one or more machines with only occasional
@@ -300,9 +299,13 @@ make different trade-offs compared to Forklift:
   container environment configurations as Git repositories but are generally designed for
   Kubernetes.
 
-The following projects solve related problems in the base OS, though they make different trade-offs
-compared to Forklift (especially because of the PlanktoScope project's legacy software):
+The following projects solve related problems in composing and updating the base OS, though they
+make different trade-offs compared to Forklift (especially because of the PlanktoScope project's
+legacy software):
 
+- [Rugix](https://github.com/silitics/rugix) is a suite of low-level tools for building and updating
+  OS images, including support for the Raspberry Pi's official A/B-style `tryboot` mechanism for
+  OS updates.
 - [systemd-sysext and systemd-confext](https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html)
   provide a more structured/opinionated way (compared to Forklift) to atomically overlay system
   files onto the base OS, but they don't specify a way to distribute/provision published
@@ -322,13 +325,6 @@ compared to Forklift (especially because of the PlanktoScope project's legacy so
   some of NixOS's design decisions, and it attempts to provide a few of NixOS's benefits but in a
   much more approachable, simple, and backwards-compatible system design by sacrificing some
   theoretical rigor for practical considerations.
-- [OSTree](https://ostreedev.github.io/ostree/) enables atomic updates of the base OS, but
-  [it is not supported by Raspberry Pi OS](https://github.com/ostreedev/ostree/issues/2223), and
-  delivery of the OS requires operating a server to host OSTree repositories. Forklift can be used
-  together with OSTree-based systems, as a way to provision/replace/deprovision a layer of `/etc`
-  config files over (and independently of) OSTree's
-  [3-way merge mechanism for `/etc`](https://ostreedev.github.io/ostree/atomic-upgrades/#assembling-a-new-deployment-directory),
-  and as a way to manage Docker Compose apps running on the system.
 - The [bootc](https://containers.github.io/bootc/) project enables the entire operating system to be
   delivered as a bootable OCI container image, but currently it relies on bootupd, which
   [currently only works on RPM-based distros](https://github.com/coreos/bootupd/issues/468).
@@ -337,8 +333,31 @@ compared to Forklift (especially because of the PlanktoScope project's legacy so
 - [gokrazy](https://gokrazy.org/) enables atomic deployment of Go programs (and also of software
   containers!), but it has a very different architecture compared to traditional Linux distros.
 
-Other related OS-level projects can be found at
-[github.com/castrojo/awesome-immutable](https://github.com/castrojo/awesome-immutable).
+The following projects solve related problems in updating (but not in composing) the base OS, making
+different trade-offs (especially in their need for OS maintainers or device operators to pay for or
+self-host a centralized management server - which is a non-starter for the PlanktoScope project)
+compared to Forklift:
+
+- [OSTree](https://ostreedev.github.io/ostree/) enables atomic updates of the base OS, but
+  [it is not supported by Raspberry Pi OS](https://github.com/ostreedev/ostree/issues/2223), and
+  delivery of the OS requires operating a server to host OSTree repositories. Forklift can be used
+  together with OSTree-based systems, as a way to provision/replace/deprovision a layer of `/etc`
+  config files over (and independently of, or as a bypass for) OSTree's
+  [3-way merge mechanism for `/etc`](https://ostreedev.github.io/ostree/atomic-upgrades/#assembling-a-new-deployment-directory),
+  and as a way to manage Docker Compose apps running on the system.
+- [swupdate](https://github.com/sbabic/swupdate) and [RAUC](https://github.com/rauc/rauc) both
+  facilitate local A/B-style OS image updates as well as over-the-air (OTA) updates (when combined
+  with [hawkbit](https://eclipse.dev/hawkbit/) as a centralized management server, which then must
+  be hosted and operated somewhere).
+- [Mender](https://github.com/mendersoftware/mender) facilitates A/B-style OTA OS image updates for
+  fleets of embedded Linux devices and can be retrofitted onto non-atomic OSes (such as Debian), but
+  it requires a centralized management server (either as a paid service or self-hosted) for
+  distributing updates.
+
+Other related OS-level composition+update projects can be found at
+[github.com/castrojo/awesome-immutable](https://github.com/castrojo/awesome-immutable); other
+related embedded OS update projects can be found at
+<https://mkrak.org/wp-content/uploads/2018/04/FOSS-NORTH_2018_Software_Updates.pdf>.
 
 ## Licensing
 
