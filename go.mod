@@ -2,6 +2,8 @@ module github.com/PlanktoScope/forklift
 
 go 1.23.0
 
+toolchain go1.24.0
+
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bmatcuk/doublestar/v4 v4.8.1
