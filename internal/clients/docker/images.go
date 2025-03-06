@@ -11,10 +11,10 @@ import (
 	"github.com/docker/cli/cli/command/inspect"
 	"github.com/docker/cli/cli/streams"
 	"github.com/docker/cli/cli/trust"
-	dt "github.com/docker/docker/api/types"
 	dtf "github.com/docker/docker/api/types/filters"
 	dti "github.com/docker/docker/api/types/image"
 	dtr "github.com/docker/docker/api/types/registry"
+	dc "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/pkg/errors"
 )
@@ -23,7 +23,7 @@ type Image struct {
 	Repository string
 	Tag        string
 	ID         string
-	Inspect    dt.ImageInspect
+	Inspect    dti.InspectResponse
 }
 
 // docker image ls
@@ -76,14 +76,16 @@ func (c *Client) ListImages(ctx context.Context, matchName string) ([]Image, err
 func (c *Client) InspectImage(ctx context.Context, imageHash string) (Image, error) {
 	buffer := &bytes.Buffer{}
 	getRefFunc := func(imageHash string) (interface{}, []byte, error) {
-		return c.Client.ImageInspectWithRaw(ctx, imageHash)
+		raw := bytes.Buffer{}
+		response, err := c.Client.ImageInspect(ctx, imageHash, dc.ImageInspectWithRawResponse(&raw))
+		return response, raw.Bytes(), err
 	}
 	if err := inspect.Inspect(buffer, []string{imageHash}, "", getRefFunc); err != nil {
 		return Image{}, errors.Wrapf(
 			err, "couldn't get more detailed information about image %s", imageHash,
 		)
 	}
-	inspect := []dt.ImageInspect{}
+	inspect := []dti.InspectResponse{}
 	if err := json.Unmarshal(buffer.Bytes(), &inspect); err != nil {
 		return Image{}, errors.Wrapf(
 			err, "couldn't parse detailed information about image %s", imageHash,
