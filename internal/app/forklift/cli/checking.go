@@ -329,16 +329,21 @@ func printMissingDep[Res any](indent int, out io.Writer, missingDep core.Missing
 		return errors.Wrap(err, "couldn't print resource")
 	}
 	IndentedFprintln(indent, out, "Best candidates to meet requirement:")
-	indent++
+	// indent++
 
-	for _, candidate := range missingDep.BestCandidates {
-		if err := printDepCandidate(indent, out, candidate); err != nil {
-			return errors.Wrap(err, "couldn't print dependency candidate")
+	// TODO: find a more intelligent way to determine what candidates to print; right now the signal
+	// to noise ratio is too low:
+	/*
+		for _, candidate := range missingDep.BestCandidates {
+			if err := printDepCandidate(indent, out, candidate); err != nil {
+				return errors.Wrap(err, "couldn't print dependency candidate")
+			}
 		}
-	}
+	*/
 	return nil
 }
 
+/*
 func printDepCandidate[Res any](
 	indent int, out io.Writer, candidate core.ResDepCandidate[Res],
 ) error {
@@ -356,3 +361,4 @@ func printDepCandidate[Res any](
 	}
 	return nil
 }
+*/
