@@ -5,14 +5,13 @@ import (
 	"fmt"
 
 	"github.com/docker/compose/v2/pkg/api"
-	dt "github.com/docker/docker/api/types"
 	dtc "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 )
 
 // docker container ls
 
-func (c *Client) ListContainers(ctx context.Context, appName string) ([]dt.Container, error) {
+func (c *Client) ListContainers(ctx context.Context, appName string) ([]dtc.Summary, error) {
 	f := filters.NewArgs(appFilter(appName), oneOffFilter(false))
 	if appName == "" {
 		f = filters.NewArgs(oneOffFilter(false))
