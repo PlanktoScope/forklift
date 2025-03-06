@@ -68,7 +68,7 @@ diff: ## git diff
 build: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --snapshot --skip=publish --clean
 build: install
 	$(call print-target)
-	# goreleaser --snapshot --skip=publish --clean
+	# go tool goreleaser --snapshot --skip=publish --clean
 	docker run \
 		--rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
@@ -81,7 +81,7 @@ build: install
 release: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --clean
 release: install
 	$(call print-target)
-	# goreleaser --clean
+	# go tool goreleaser --clean
 	docker run \
 		--rm \
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
