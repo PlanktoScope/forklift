@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- (cli) Symlinks to nonexistent targets no longer fail to be merged in as part of file imports from pallets.
+
 ## 0.8.0-alpha.6 - 2024-01-27
 
 ### Added
@@ -26,7 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- (cli) Symlinks to nonexistent targets no longer fail to be merged in as part of file imports from pallets.
 - (cli) Git progress log messages are now printed to stderr instead of stdout.
 
 ## 0.8.0-alpha.5 - 2024-12-08
