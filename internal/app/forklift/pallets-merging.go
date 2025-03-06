@@ -573,13 +573,24 @@ func matchUnderlayRef(
 		name: path.Base(underlayTarget),
 		ref:  underlayRef,
 	}
-	if entry.fileInfo, err = fs.Stat(underlayRef.FS, underlayRef.Path); err != nil {
+	if fsys, ok := underlayRef.FS.(ReadLinkFS); ok {
+		if entry.fileInfo, err = fsys.StatLink(underlayRef.Path); err != nil {
+			return nil, &fs.PathError{
+				Op:   "read",
+				Path: fileName,
+				Err: errors.Wrapf(
+					err, "couldn't stat (without following symlinks) file %s in %s",
+					entry.ref.Path, entry.ref.FS.Path(),
+				),
+			}
+		}
+	} /* else if entry.fileInfo, err = fs.Stat(underlayRef.FS, underlayRef.Path); err != nil {
 		return nil, &fs.PathError{
 			Op:   "read",
 			Path: fileName,
 			Err:  errors.Wrapf(err, "couldn't stat file %s in %s", entry.ref.Path, entry.ref.FS.Path()),
 		}
-	}
+	}*/
 	return entry, nil
 }
 
