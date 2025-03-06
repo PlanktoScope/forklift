@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- (cli) Symlinks to nonexistent targets no longer fail to be merged in as part of file imports from pallets.
 - (cli) Git progress log messages are now printed to stderr instead of stdout.
 
 ## 0.8.0-alpha.5 - 2024-12-08
