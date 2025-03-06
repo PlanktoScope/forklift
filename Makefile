@@ -20,7 +20,7 @@ clean: ## remove files created during build pipeline
 .PHONY: install
 install: ## go install tools
 	$(call print-target)
-	cd tools && go install $(shell cd tools && go list -e -f '{{ join .Imports " " }}' -tags=tools)
+	go install tool
 
 .PHONY: generate
 generate: ## go generate
@@ -40,15 +40,15 @@ fmt: ## go fmt
 .PHONY: spell
 spell: ##misspell
 	$(call print-target)
-	misspell -error -locale=US -w **.md
+	go tool misspell -error -locale=US -w **.md
 
 .PHONY: lint
 lint: ## golangci-lint
 	$(call print-target)
-	golangci-lint run
+	go tool golangci-lint run
 
 .PHONY: test
-test: ## go test with race detector and code covarage
+test: ## go test with race detector and code coverage
 	$(call print-target)
 	go test -race -covermode=atomic -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
@@ -57,7 +57,6 @@ test: ## go test with race detector and code covarage
 mod-tidy: ## go mod tidy
 	$(call print-target)
 	go mod tidy
-	cd tools && go mod tidy
 
 .PHONY: diff
 diff: ## git diff
