@@ -20,7 +20,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/muesli/reflow v0.3.0
 	github.com/pkg/errors v0.9.1
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/urfave/cli/v2 v2.27.6
 	golang.org/x/mod v0.24.0
 	golang.org/x/sync v0.12.0
 	gopkg.in/yaml.v3 v3.0.1
