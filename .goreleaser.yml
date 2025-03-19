@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - go mod download
@@ -44,7 +46,8 @@ archives:
     name_template: "forklift_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
     - goos: windows
-      format: zip
+      formats:
+        - zip
 
 release:
   github:
