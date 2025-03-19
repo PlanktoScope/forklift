@@ -151,8 +151,9 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 			Action:    setNextAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
-					Name:  "no-cache-img",
-					Usage: "Don't download container images",
+					Name:  "cache-img",
+					Usage: "Download container images",
+					Value: true,
 				},
 			},
 		},

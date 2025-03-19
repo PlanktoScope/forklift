@@ -191,14 +191,15 @@ staged pallet using a separate `forklift stage apply` command. For example:
 If you aren't running Docker in rootless mode and your user isn't in a `docker` group, we recommend
 a slightly different set of commands:
 
-- If you want to apply the pallet immediately, you can run `forklift pallet switch --no-cache` as a
-regular user, and then run `forklift stage apply` as root; the `--no-cache` flag prevents
-`forklift pallet switch` from attempting to make Docker pre-download all container images required
-by the pallet, as doing so would require root permissions for Forklift to talk to Docker.
+- If you want to apply the pallet immediately, you can run
+`forklift pallet switch --cache-img=false` as a regular user, and then run `forklift stage apply` as
+root; the `--cache-img=false` flag prevents `forklift pallet switch` from attempting to make Docker
+pre-download all container images required by the pallet, as doing so would require root permissions
+for Forklift to talk to Docker.
 For example:
 
   ```
-  forklift pallet switch --no-cache-img github.com/forklift-run/pallet-example-minimal@main
+  forklift pallet switch --cache-img=false github.com/forklift-run/pallet-example-minimal@main
   sudo -E forklift stage apply
   ```
 
@@ -209,7 +210,7 @@ For example:
 
   ```
   # Run now:
-  forklift pallet switch --no-cache-img github.com/forklift-run/pallet-example-minimal@main
+  forklift pallet switch --cache-img=false github.com/forklift-run/pallet-example-minimal@main
   sudo -E forklift stage cache-img
   # Run when you want to apply the pallet:
   sudo -E forklift stage apply
@@ -259,17 +260,18 @@ repositories for use in your development pallet, and/or to change the versions o
 repositories already required by your development pallet.
 
 You can also run commands like `forklift dev plt cache-all` and
-`forklift dev plt stage --no-cache-img` (with appropriate values in the `--cwd` flag if necessary)
-to download the Forklift repositories specified by your development pallet into your local cache and
-stage your development pallet to be applied with `sudo -E forklift stage apply`. This is useful if,
-for example, you want to make some experimental changes to your development pallet and test them on
-your local machine before committing and pushing those changes onto GitHub.
+`forklift dev plt stage --cache-img=false` (with appropriate values in the `--cwd` flag if
+necessary) to download the Forklift repositories specified by your development pallet into your
+local cache and stage your development pallet to be applied with `sudo -E forklift stage apply`.
+This is useful if, for example, you want to make some experimental changes to your development
+pallet and test them on your local machine before committing and pushing those changes onto GitHub.
 
 Finally, you can run the `forklift dev plt check` command to check the pallet for any problems, such
 as violations of resource constraints between package deployments.
 
 You can also override cached repos with repos from your filesystem by specifying one or more
-directories containing one or more repos; then the repos in those directories will be used instead of the respective repos from the cache, regardless of repo version. For example:
+directories containing one or more repos; then the repos in those directories will be used instead
+of the respective repos from the cache, regardless of repo version. For example:
 
 ```
 cd /home/pi/

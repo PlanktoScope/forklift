@@ -361,7 +361,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		if _, err = fcli.StagePallet(
 			0, plt, stageStore, caches.staging(), c.String("exports"),
-			versions.Staging, c.Bool("no-cache-img"), c.String("platform"), c.Bool("parallel"),
+			versions.Staging, !c.Bool("cache-img"), c.String("platform"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -521,7 +521,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		if !c.Bool("no-cache-req") {
+		if c.Bool("cache-req") {
 			plt, caches, err := processFullBaseArgs(c, processingOptions{
 				enableOverrides: true,
 			})

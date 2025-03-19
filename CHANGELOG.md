@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unrelease
 
+### Changed
+
+- (Breaking change; cli) The `--no-cache-img` flag has been replaced with `--cache-img=false`; and the `--no-cache-req` flag has been replaced with `--cache-req=false` to avoid causing double-negatives and to make flag naming slightly more logical.
+
 ### Fixed
 
 - (cli) In cases where trying to run `plt upgrade` without the `--force` flag (in order to upgrade from a commit which was only ancestral to the origin repo's references) incorrectly failed, now that operation should work.

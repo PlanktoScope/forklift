@@ -692,7 +692,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = preparePallet(
-			workspace, query, true, !c.Bool("no-cache-req"), c.String("platform"), c.Bool("parallel"),
+			workspace, query, true, c.Bool("cache-req"), c.String("platform"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"), versions,
 		); err != nil {
 			return err
@@ -765,7 +765,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if !c.Bool("no-cache-req") {
+		if c.Bool("cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
 				0, plt, caches.m, caches.p, caches.r, caches.d,
 				c.String("platform"), false, c.Bool("parallel"),
@@ -889,7 +889,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		if _, err = fcli.StagePallet(
 			0, plt, stageStore, caches.staging(), c.String("exports"),
-			versions.Staging, c.Bool("no-cache-img"), c.String("platform"), c.Bool("parallel"),
+			versions.Staging, !c.Bool("cache-img"), c.String("platform"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
@@ -1045,7 +1045,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		); err != nil {
 			return err
 		}
-		if !c.Bool("no-cache-req") {
+		if c.Bool("cache-req") {
 			plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{})
 			if err != nil {
 				return err
