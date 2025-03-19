@@ -34,7 +34,7 @@ network services, and system files on single-computer systems (such as a Raspber
 The design of Forklift makes tradeoffs specific to the ways in which many open-source scientific
 instruments need to be deployed and operated (e.g. intermittent internet access, independent
 administration by individual people, decentralized management & customization). For a quick
-three-minute overview of the motivation for Forklift and how it can be used, refer to
+three-minute overview of the motivation for Forklift and how it can be used, please refer to
 this demo video: <https://www.youtube.com/watch?v=4lHh_NDlFKA>
 
 For open-hardware project developers, Forklift enables Linux-based devices and
@@ -62,7 +62,7 @@ the system.
 
 For indie software developers and sysadmins familiar with DevOps and cloud-native patterns, Forklift
 is just a GitOps-inspired no-orchestrator system which is small and simple enough to work beyond the
-cloud - using Docker Compose to avoid the unnecessary architectural complexity and overhead even
+cloud - using Docker Compose to avoid the unnecessary architectural complexity and overhead of even
 minimal Kubernetes distributions like k0s for systems where a container workload orchestrator is
 unnecessary; and bundling app deployment with the deployment of system files, executables, and
 systemd units from configuration files version-controlled in Git repositories. Thus, Forklift allows
@@ -70,20 +70,21 @@ hassle-free management of software configurations on one or more machines with o
 internet access (or, in the future, no internet access at all!) and no specialized ops or platform
 team.
 
-For people who are Very Into Linux, Forklift is a way to bring some of the architectural benefits of
-atomic/"immutable" OSes (such as
+For people who are Very Into Linux, Forklift is a way to bring a partial subset of the architectural
+benefits of atomic/"immutable" OSes (such as
 [ChromeOS](https://www.chromium.org/chromium-os/chromiumos-design-docs/filesystem-autoupdate/),
 [Fedora Atomic Desktops](https://fedoraproject.org/atomic-desktops/),
 [Universal Blue](https://universal-blue.org/),
 [Fedora CoreOS](https://fedoraproject.org/coreos/)/[IoT](https://universal-blue.org/),
 [NixOS](https://nixos.org/), [Flatcar Container Linux](https://www.flatcar.org/),
-[etc.](https://github.com/castrojo/awesome-immutable?tab=readme-ov-file#distributions)) to
+[GNOME OS](https://os.gnome.org/),
+[etc.](https://github.com/castrojo/awesome-immutable?tab=readme-ov-file#distributions)) into
 more traditional non-atomic Linux distros (such as Raspberry Pi OS, Debian, etc.), by enabling
-atomic, composable, and reprovisionable changes for a subset of the OS. The specific scope of what
-Forklift manages depends on how Forklift gets integrated with the OS, but Forklift is intended to
-enable sysadmins to incrementally reduce reliance on system packages, and to incrementally reduce
-any responsibilities of the base OS beyond acting as a container host with hardware drivers
-(e.g. for Wi-Fi).
+atomic, composable, and reprovisionable changes for a sufficiently-interesting subset of the OS. The
+specific scope of what Forklift manages depends on how Forklift gets integrated with the OS, but
+Forklift is intended to enable sysadmins to incrementally reduce reliance on system packages, and to
+incrementally reduce any responsibilities of the base OS beyond acting as a container host with
+hardware drivers (e.g. for Wi-Fi).
 
 To learn more about the design of Forklift, please refer to
 [Forklift's design document](./docs/design.md).
@@ -308,11 +309,12 @@ legacy software):
   OS updates.
 - [systemd-sysext and systemd-confext](https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html)
   provide a more structured/opinionated way (compared to Forklift) to atomically overlay system
-  files onto the base OS, but they don't specify a way to distribute/provision published
-  sysext/confext images, and they are not available on Raspberry Pi OS 11 (bullseye). Forklift can
-  be used together with systemd-sysext/confext, as a way to download sysext/confext images,
-  constrain which images can be deployed together/separately, and manage which images are available
-  to systemd - see
+  files onto the base OS, but they not opinionated about (i.e. don't specify a way for)
+  distributing/provisioning published sysext/confext images, and they are not available on Raspberry
+  Pi OS 11 (bullseye), which until recently was a legacy-systems burden for the PlanktoScope OS.
+  Forklift can be used together with systemd-sysext/confext, as a way to download sysext/confext
+  images, constrain which images can be deployed together/separately, and manage which extension
+  images are available to systemd - see
   [this demo](https://github.com/ethanjli/ublue-forklift-sysext-demo?tab=readme-ov-file#explanation).
 - systemd's [Portable Services](https://systemd.io/PORTABLE_SERVICES/) pattern and `portablectl`
   tool provide a more structured/constrained/sandboxed way (compared to Forklift) to atomically add
@@ -345,6 +347,10 @@ compared to Forklift:
   config files over (and independently of, or as a bypass for) OSTree's
   [3-way merge mechanism for `/etc`](https://ostreedev.github.io/ostree/atomic-upgrades/#assembling-a-new-deployment-directory),
   and as a way to manage Docker Compose apps running on the system.
+- [systemd-sysupdate](https://www.freedesktop.org/software/systemd/man/latest/systemd-sysupdate.html)
+  provides an image-based mechanism for updating the base OS, container images, and systemd-sysext
+  and systemd-confext images hosted at HTTP/HTTPS URLs. It solves many of the same problems that
+  Forklift attempts to solve, but with different priorities and thus different opinions.
 - [swupdate](https://github.com/sbabic/swupdate) and [RAUC](https://github.com/rauc/rauc) both
   facilitate local A/B-style OS image updates as well as over-the-air (OTA) updates (when combined
   with [hawkbit](https://eclipse.dev/hawkbit/) as a centralized management server, which then must
