@@ -22,7 +22,7 @@ your hardware-specific embedded Linux operating systems.
 Note: this is still an experimental prototype in the sense that Forklift's architectural design and
 command-line interface may undergo significant backwards-incompatible simplifications. While
 Forklift is already used in production as a lower-level implementation detail of the
-[PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/)
+[PlanktoScope OS](https://docs.planktoscope.community/reference/software/architecture/os/)
 and is exposed to advanced users with a command-line interface for customization of PlanktoScope OS,
 any other use of Forklift is not yet officially documented or supported.
 
@@ -45,7 +45,7 @@ specified, composed, deployed, and reversibly upgraded/downgraded as version-con
 software modules. The [PlanktoScope](https://www.planktoscope.org/), an open-source microscope for
 quantitative imaging of plankton, uses Forklift as low-level infrastructure for software
 releases, deployment, and extensibility in the
-[PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), a
+[PlanktoScope OS](https://docs.planktoscope.community/reference/software/architecture/os/), a
 hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
 specifically to solve the OS/software maintenance, customization, and operations challenges
 experienced in the PlanktoScope project.

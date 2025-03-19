@@ -33,6 +33,12 @@ func MakeCmd(versions Versions) *cli.Command {
 					Action:    switchAction(versions),
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
+							Name: "set-upgrade-query",
+							Usage: "Remember the pallet path and version query used in this operation for " +
+								"future clone/switch/upgrade operations",
+							Value: true,
+						},
+						&cli.BoolFlag{
 							Name: "force",
 							Usage: "Even if the local pallet already exists and has uncommitted/unpushed " +
 								"changes, replace it",
@@ -67,26 +73,7 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 				"stages the pallet",
 			ArgsUsage: "[[pallet_path]@[version_query]]",
 			Action:    upgradeAction(versions),
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "allow-downgrade",
-					Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
-				},
-				&cli.BoolFlag{
-					Name: "force",
-					Usage: "Even if the local pallet has uncommitted/unpushed changes, replace it with the " +
-						"upgraded version",
-				},
-				&cli.BoolFlag{
-					Name:  "cache-img",
-					Usage: "Download container images (this flag is ignored if --apply is set)",
-					Value: true,
-				},
-				&cli.BoolFlag{
-					Name:  "apply",
-					Usage: "Immediately apply the upgraded pallet after staging it",
-				},
-			},
+			Flags:     upgradeFlags,
 		},
 		{
 			Name:     "check-upgrade",
@@ -118,6 +105,33 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 			Action:    setUpgradeQueryAction,
 		},
 	}
+}
+
+var upgradeFlags = []cli.Flag{
+	&cli.BoolFlag{
+		Name:  "allow-downgrade",
+		Usage: "Allow upgrading to an older version (i.e. performing a downgrade)",
+	},
+	&cli.BoolFlag{
+		Name: "set-upgrade-query",
+		Usage: "Remember the pallet path and version query used in this operation for future " +
+			"clone/switch/upgrade operations",
+		Value: true,
+	},
+	&cli.BoolFlag{
+		Name: "force",
+		Usage: "Even if the local pallet has uncommitted/unpushed changes, replace it with the " +
+			"upgraded version",
+	},
+	&cli.BoolFlag{
+		Name:  "cache-img",
+		Usage: "Download container images (this flag is ignored if --apply is set)",
+		Value: true,
+	},
+	&cli.BoolFlag{
+		Name:  "apply",
+		Usage: "Immediately apply the upgraded pallet after staging it",
+	},
 }
 
 func makeUseSubcmds(versions Versions) []*cli.Command {
@@ -545,6 +559,12 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "[[pallet_path]@[version_query]]",
 			Flags: slices.Concat(
 				[]cli.Flag{
+					&cli.BoolFlag{
+						Name: "set-upgrade-query",
+						Usage: "Remember the pallet path and version query used in this operation for " +
+							"future clone/switch/upgrade operations",
+						Value: true,
+					},
 					&cli.BoolFlag{
 						Name: "force",
 						Usage: "If a local pallet already exists, delete it to replace it with the specified" +
