@@ -302,7 +302,7 @@ func setNextAction(versions Versions) cli.ActionFunc {
 
 		if err = fcli.SetNextStagedBundle(
 			0, store, newNext, c.String("exports"), versions.Tool, versions.MinSupportedBundle,
-			c.Bool("no-cache-img"), c.String("platform"), c.Bool("parallel"),
+			!c.Bool("cache-img"), c.String("platform"), c.Bool("parallel"),
 			c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err

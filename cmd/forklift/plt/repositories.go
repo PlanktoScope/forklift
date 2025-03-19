@@ -110,7 +110,7 @@ func addRepoAction(versions Versions) cli.ActionFunc {
 		if err = fcli.AddRepoReqs(0, plt, caches.m.Path(), c.Args().Slice()); err != nil {
 			return err
 		}
-		if !c.Bool("no-cache-req") {
+		if c.Bool("cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
 				0, plt, caches.m, caches.p, caches.r, caches.d,
 				c.String("platform"), false, c.Bool("parallel"),

@@ -38,8 +38,9 @@ func MakeCmd(versions Versions) *cli.Command {
 								"changes, replace it",
 						},
 						&cli.BoolFlag{
-							Name:  "no-cache-img",
-							Usage: "Don't download container images (this flag is ignored if --apply is set)",
+							Name:  "cache-img",
+							Usage: "Download container images (this flag is ignored if --apply is set)",
+							Value: true,
 						},
 						&cli.BoolFlag{
 							Name:  "apply",
@@ -77,8 +78,9 @@ func makeUpgradeSubcmds(versions Versions) []*cli.Command {
 						"upgraded version",
 				},
 				&cli.BoolFlag{
-					Name:  "no-cache-img",
-					Usage: "Don't download container images (this flag is ignored if --apply is set)",
+					Name:  "cache-img",
+					Usage: "Download container images (this flag is ignored if --apply is set)",
+					Value: true,
 				},
 				&cli.BoolFlag{
 					Name:  "apply",
@@ -142,8 +144,9 @@ func makeUseSubcmds(versions Versions) []*cli.Command {
 			Action:   stageAction(versions),
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
-					Name:  "no-cache-img",
-					Usage: "Don't download container images",
+					Name:  "cache-img",
+					Usage: "Download container images",
+					Value: true,
 				},
 			},
 		},
@@ -548,8 +551,9 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 							"pallet",
 					},
 					&cli.BoolFlag{
-						Name:  "no-cache-req",
-						Usage: "Don't download repositories and pallets required by this pallet after cloning",
+						Name:  "cache-req",
+						Usage: "Download repositories and pallets required by this pallet after cloning",
+						Value: true,
 					},
 				},
 				modifyBaseFlags,
@@ -571,8 +575,9 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 			Flags: slices.Concat(
 				[]cli.Flag{
 					&cli.BoolFlag{
-						Name:  "no-cache-req",
-						Usage: "Don't download repositories and pallets required by this pallet after pulling",
+						Name:  "cache-req",
+						Usage: "Download repositories and pallets required by this pallet after pulling",
+						Value: true,
 					},
 					// TODO: add an option to fall back to a rebase if a fast-forward is not possible
 				},
@@ -592,8 +597,9 @@ var modifyBaseFlags []cli.Flag = []cli.Flag{
 			"is set)",
 	},
 	&cli.BoolFlag{
-		Name:  "no-cache-img",
-		Usage: "Don't download container images (this flag is only used if --stage is set)",
+		Name:  "cache-img",
+		Usage: "Download container images (this flag is only used if --stage is set)",
+		Value: true,
 	},
 	&cli.BoolFlag{
 		Name:  "apply",
@@ -659,9 +665,10 @@ func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "[plt_path@version_query]...",
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
-					Name: "no-cache-req",
-					Usage: "Don't download repositories and pallets required by this pallet after adding " +
-						"the pallet",
+					Name: "cache-req",
+					Usage: "Download repositories and pallets required by this pallet after adding the " +
+						"pallet",
+					Value: true,
 				},
 			},
 			Action: addPltAction(versions),
@@ -706,9 +713,10 @@ func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
 			ArgsUsage: "[repo_path@version_query]...",
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
-					Name: "no-cache-req",
-					Usage: "Don't download repositories and pallets required by this pallet after adding " +
-						"the repo",
+					Name: "cache-req",
+					Usage: "Download repositories and pallets required by this pallet after adding the " +
+						"repo",
+					Value: true,
 				},
 			},
 			Action: addRepoAction(versions),
@@ -862,8 +870,9 @@ var modifyDeplBaseFlags []cli.Flag = []cli.Flag{
 			"if --apply is set)",
 	},
 	&cli.BoolFlag{
-		Name:  "no-cache-img",
-		Usage: "Don't download container images (this flag is only used if --stage is set)",
+		Name:  "cache-img",
+		Usage: "Download container images (this flag is only used if --stage is set)",
+		Value: true,
 	},
 	&cli.BoolFlag{
 		Name:  "apply",
