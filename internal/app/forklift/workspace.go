@@ -224,7 +224,7 @@ func (w *FSWorkspace) GetCurrentPalletUpgrades() (GitRepoQuery, error) {
 	return loadGitRepoQuery(fsys, configCurrentPalletUpgradesFile)
 }
 
-// CommitCurrentPalletUpgrades atomoically updates the current pallet upgrades file.
+// CommitCurrentPalletUpgrades atomically updates the current pallet upgrades file.
 // Warning: on non-Unix platforms, the update is not entirely atomic!
 func (w *FSWorkspace) CommitCurrentPalletUpgrades(query GitRepoQuery) error {
 	// TODO: we might want to be less sloppy about read locks vs. write locks in the future. After

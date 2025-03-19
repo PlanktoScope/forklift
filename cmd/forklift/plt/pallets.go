@@ -117,7 +117,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		query, err := handlePalletQuery(workspace, c.Args().First())
+		query, err := handlePalletQuery(workspace, c.Args().First(), c.Bool("set-upgrade-query"))
 		if err != nil {
 			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
@@ -168,7 +168,7 @@ func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
 }
 
 func handlePalletQuery(
-	workspace *forklift.FSWorkspace, providedQuery string,
+	workspace *forklift.FSWorkspace, providedQuery string, commitPalletQuery bool,
 ) (forklift.GitRepoQuery, error) {
 	query, loaded, provided, err := completePalletQuery(workspace, providedQuery)
 	if err != nil {
@@ -181,7 +181,8 @@ func handlePalletQuery(
 	if !provided.Complete() {
 		fmt.Fprintf(
 			os.Stderr,
-			"Provided query %s was completed with stored query %s as %s!\n", provided, loaded, query,
+			"Provided query %s was completed (based on stored query %s) as %s!\n",
+			provided, loaded, query,
 		)
 		printed = true
 	}
@@ -189,6 +190,14 @@ func handlePalletQuery(
 		if printed {
 			fmt.Fprintln(os.Stderr)
 		}
+		return query, nil
+	}
+
+	if !commitPalletQuery {
+		fmt.Fprintf(
+			os.Stderr,
+			"Using (but not saving) the path & version query: %s\n", query,
+		)
 		return query, nil
 	}
 
@@ -427,7 +436,7 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		query, err := handlePalletQuery(workspace, c.Args().First())
+		query, err := handlePalletQuery(workspace, c.Args().First(), c.Bool("set-upgrade-query"))
 		if err != nil {
 			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
@@ -656,7 +665,7 @@ func setUpgradeQueryAction(c *cli.Context) error {
 		return err
 	}
 
-	_, err = handlePalletQuery(workspace, c.Args().First())
+	_, err = handlePalletQuery(workspace, c.Args().First(), true)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 	}
@@ -673,7 +682,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		query, err := handlePalletQuery(workspace, c.Args().First())
+		query, err := handlePalletQuery(workspace, c.Args().First(), c.Bool("set-upgrade-query"))
 		if err != nil {
 			return errors.Wrapf(err, "couldn't handle provided version query %s", c.Args().First())
 		}
