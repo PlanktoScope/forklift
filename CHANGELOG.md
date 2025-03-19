@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- (cli) In certain cases where trying to run `plt upgrade` without the `--force` flag to upgrade from a commit which was only ancestral to the origin repo's references failed, now that operation should work.
+- (cli) In cases where trying to run `plt upgrade` without the `--force` flag (in order to upgrade from a commit which was only ancestral to the origin repo's references) incorrectly failed, now that operation should work.
 
 ## 0.8.0-alpha.7 - 2024-03-05
 
