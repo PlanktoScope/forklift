@@ -390,7 +390,7 @@ func (r *Repo) RefsHaveAncestor(refs []*plumbing.Reference, commit string) (bool
 
 		visited.Add(next.commit.Hash)
 		for _, hash := range next.commit.ParentHashes {
-			if visited.Has(next.commit.Hash) {
+			if visited.Has(hash) {
 				continue
 			}
 
