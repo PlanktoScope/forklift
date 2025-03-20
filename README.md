@@ -143,9 +143,9 @@ you to set up Forklift on your own system to Docker Compose apps on your system:
 First, you will need to download the `forklift` tool, which is available as a single self-contained
 executable file. You should visit this repository's
 [releases page](https://github.com/PlanktoScope/forklift/releases/latest) and download an archive
-file for your platform and CPU architecture; for example, on a Raspberry Pi 4, you should download
-the archive named `forklift_{version number}_linux_arm.tar.gz` (where the version number should be
-substituted). You can extract the `forklift` binary from the archive using a command like:
+file for your platform and CPU architecture; for example, on a Raspberry Pi 4, you should probably
+download the archive named `forklift_{version number}_linux_arm64.tar.gz` (where the version number
+should be substituted). You can extract the `forklift` binary from the archive using a command like:
 ```
 tar -xzf forklift_{version number}_{os}_{cpu architecture}.tar.gz forklift
 ```
@@ -382,7 +382,7 @@ Except where otherwise indicated, source code provided here is covered by the fo
 
 **Copyright Ethan Li and Forklift project contributors**
 
-SPDX-License-Identifier: Apache-2.0 OR BlueOak-1.0.0
+SPDX-License-Identifier: `Apache-2.0 OR BlueOak-1.0.0`
 
 Software files in this repository are released under the
 [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0) and the
