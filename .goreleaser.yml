@@ -14,8 +14,8 @@ builds:
   mod_timestamp: "{{ .CommitTimestamp }}"
   flags:
     - -trimpath
+    - -buildmode=pie
   ldflags:
-    - -s
     - -w
     - -X main.buildSummary={{ .Summary }}
     - -X main.buildVersion={{ .Version }}
