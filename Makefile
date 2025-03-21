@@ -91,20 +91,6 @@ release: install
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
 		release --clean
 
-.PHONY: release-draft
-release-draft: ## Use goreleaser-cross (due to macOS CGo requirement) to run goreleaser --clean-draft
-release-draft: install
-	$(call print-target)
-	# go tool goreleaser --clean
-	docker run \
-		--rm \
-		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		release --clean --draft
-
 .PHONY: run
 run: ## go run
 	@go run -race ./cmd/forklift
