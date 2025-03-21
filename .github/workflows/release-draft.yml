@@ -41,6 +41,8 @@ jobs:
 
       - name: Update Draft Tag
         run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           if ! git tag -d edge/draft; then
             echo "No draft tag to delete!"
           fi
@@ -50,9 +52,9 @@ jobs:
         uses: ad-m/github-push-action@v0.8.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          push_only_tags: true
           tags: true
           force: true
-          ssh: true
 
       - name: Release Draft
         run: make release-draft
