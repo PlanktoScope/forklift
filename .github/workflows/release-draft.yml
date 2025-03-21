@@ -40,24 +40,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Draft Tag
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          if ! git tag -d edge/draft; then
-            echo "No draft tag to delete!"
-          fi
-          git tag edge/draft
-
-      - name: Update Draft Tag
-        # Note: we need a newer commit than the latest tagged release in order to use
-        # push_only_tags, which we need to prevent the action from trying to push to protected
-        # branches:
-        uses: ad-m/github-push-action@77c5b412c50b723d2a4fbc6d71fb5723bcd439aa
+        uses: actions-ecosystem/action-push-tag@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          push_only_tags: true
-          tags: true
-          force: true
+          tag: edge/draft
 
       - name: Release Draft
         run: make release-draft
