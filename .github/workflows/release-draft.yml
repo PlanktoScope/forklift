@@ -40,9 +40,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Draft Tag
-        uses: actions-ecosystem/action-push-tag@v1
+        uses: thejeff77/action-push-tag@v1.0.0
         with:
           tag: edge/draft
+          force: true
 
       - name: Release Draft
         run: make release-draft
