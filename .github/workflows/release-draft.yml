@@ -1,9 +1,12 @@
-name: release
+name: release-draft
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  pull_request:
+    branches: [ main ]
+    #TODO: delete this section
 
 jobs:
   goreleaser:
@@ -37,8 +40,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Release
-        run: make release
-        if: github.ref_type == 'tag'
+      - name: Update Draft Tag
+        run: |
+          git tag -d edge/draft
+          git tag edge/draft
+
+      - name: Update Draft Tag
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          tags: true
+          force: true
+          ssh: true
+
+      - name: Release Draft
+        run: make release-draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
