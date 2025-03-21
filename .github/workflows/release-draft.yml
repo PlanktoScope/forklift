@@ -6,7 +6,6 @@ on:
       - main
   pull_request:
     branches: [ main ]
-    #TODO: delete this section
 
 jobs:
   goreleaser:
@@ -42,7 +41,9 @@ jobs:
 
       - name: Update Draft Tag
         run: |
-          git tag -d edge/draft
+          if ! git tag -d edge/draft; then
+            echo "No draft tag to delete!"
+          fi
           git tag edge/draft
 
       - name: Update Draft Tag
