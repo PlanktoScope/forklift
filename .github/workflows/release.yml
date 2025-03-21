@@ -2,6 +2,8 @@ name: release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   pull_request:
@@ -39,12 +41,12 @@ jobs:
 
       - name: Release
         run: make release
-        if: github.ref_type == tag
+        if: github.ref_type == 'tag'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release Draft
         run: make release-draft
-        if: github.ref_type != tag
+        if: github.ref_type != 'tag'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
