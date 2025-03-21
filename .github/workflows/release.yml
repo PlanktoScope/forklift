@@ -39,6 +39,5 @@ jobs:
 
       - name: Release
         run: make release
-        if: github.ref_type == 'tag'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
