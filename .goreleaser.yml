@@ -97,9 +97,9 @@ release:
     **Full hand-crafted changelog**: [`CHANGELOG.md`]({{ .GitURL }}/blob/main/CHANGELOG.md)
 
     {{ if and .Tag .PreviousTag }}
-      **Commit History**: [{{ .Tag }}...{{ .PreviousTag }}]({{ .GitURL }}/compare/{{ .Tag }}...{{ .PreviousTag }})
+      **Commit history**: [{{ .PreviousTag }}...{{ .Tag }}]({{ .GitURL }}/compare/{{ .Tag }}...{{ .PreviousTag }})
     {{ else if .PreviousTag }}
-      **Commit History**: [{{ .ShortCommit }}...{{ .PreviousTag }}]({{ .GitURL }}/compare/{{ .Commit }}...{{ .PreviousTag }})
+      **Commit history**: [{{ .PreviousTag }}...{{ .ShortCommit }}]({{ .GitURL }}/compare/{{ .Commit }}...{{ .PreviousTag }})
     {{ end }}
 
 dockers:
