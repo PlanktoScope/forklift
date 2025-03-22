@@ -94,7 +94,7 @@ changelog:
 release:
   prerelease: auto
   footer: |
-    **Full human-written changelog**: [`CHANGELOG.md`]({{ .GitURL }}/blob/main/CHANGELOG.md)
+    **Full hand-crafted changelog**: [`CHANGELOG.md`]({{ .GitURL }}/blob/main/CHANGELOG.md)
 
     {{ if and .Tag .PreviousTag }}
       **Commit History**: [{{ .Tag }}...{{ .PreviousTag }}]({{ .GitURL }}/compare/{{ .Tag }}...{{ .PreviousTag }})
