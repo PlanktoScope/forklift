@@ -1,5 +1,8 @@
 version: 2
 
+gomod:
+  proxy: true
+
 before:
   hooks:
     - go mod download
@@ -8,8 +11,20 @@ builds:
 - id: forklift
   main: ./cmd/forklift
   binary: forklift
+  mod_timestamp: "{{ .CommitTimestamp }}"
+  flags:
+    - -trimpath
   ldflags:
-    - -s -w -X main.buildVersion={{.Version}} -X main.buildCommit={{.Commit}} -X main.buildCommitTimestamp={{.CommitTimestamp}} -X main.buildSummary={{.Summary}} -X main.builtBy=goreleaser
+    - -w
+    - -X main.buildSummary={{ .Summary }}
+    - -X main.buildVersion={{ .Version }}
+    - -X main.buildCommitFull={{ .FullCommit }}
+    - -X main.buildCommitShort={{ .ShortCommit }}
+    - -X main.buildCommitDate={{ .CommitDate }}
+    - -X main.buildCommitTimestamp={{ .CommitTimestamp }}
+    - -X main.buildReleaseURL={{ .ReleaseURL }}
+    - -X main.buildRepo={{ .GitURL }}
+    - -X main.buildSystem=goreleaser
   env:
     - CGO_ENABLED=0
   targets:
@@ -23,6 +38,9 @@ builds:
     - goos: darwin
       goarch: amd64
       goamd64: v1
+      flags:
+        - -trimpath
+        - -buildmode=pie
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
         # Compose CLI
@@ -32,6 +50,9 @@ builds:
         - CXX=o64-clang++
     - goos: darwin
       goarch: arm64
+      flags:
+        - -trimpath
+        - -buildmode=pie
       env:
         # CGo is needed for github.com/fsnotify/fsevents, which is needed by (probably) the Docker
         # Compose CLI
@@ -49,9 +70,37 @@ archives:
       formats:
         - zip
 
+changelog:
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 10
+    - title: Builds
+      regexp: '^.*?build(\([[:word:]]+\))??!?:.+$'
+      order: 20
+    - title: etc
+      order: 30
+  filters:
+    exclude:
+      - '^.*?chore(\([[:word:]]+\))??!?:.+$'
+      - '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      - '^.*?test(\([[:word:]]+\))??!?:.+$'
+      - '^.*?ci(\([[:word:]]+\))??!?:.+$'
+
 release:
-  github:
   prerelease: auto
+  footer: |
+    **Full human-written changelog**: [`CHANGELOG.md`]({{ .GitURL }}/blob/main/CHANGELOG.md)
+
+    {{ if and .Tag .PreviousTag }}
+      **Commit History**: [{{ .Tag }}...{{ .PreviousTag }}]({{ .GitURL }}/compare/{{ .Tag }}...{{ .PreviousTag }})
+    {{ else if .PreviousTag }}
+      **Commit History**: [{{ .ShortCommit }}...{{ .PreviousTag }}]({{ .GitURL }}/compare/{{ .Commit }}...{{ .PreviousTag }})
+    {{ end }}
 
 dockers:
   # forklift
