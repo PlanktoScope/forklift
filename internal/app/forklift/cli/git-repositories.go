@@ -246,17 +246,17 @@ func performOptionalLocalMirrorsUpdate(indent int, queries []string, mirrorsPath
 		indent, os.Stderr,
 		"Updating local mirrors of remote Git repos (even though it's not required)...",
 	)
+	indent++
 	if err := updateQueriedLocalGitRepoMirrors(indent+1, queries, mirrorsPath); err != nil {
-		IndentedFprintf(
-			indent+1, os.Stderr,
-			"Warning: couldn't update local mirrors (do you have internet access? does the "+
-				"remote repo actually exist?): %s\n", err,
+		IndentedFprintln(
+			indent, os.Stderr,
+			"Warning: couldn't update local mirrors (do you have internet access? does the remote repo "+
+				"actually exist?):",
 		)
-		IndentedFprintf(
-			indent+1, os.Stderr,
-			"We might not even need updates, so we'll continue anyways! It's safe for you to ignore the "+
-				"above warning message, unless you were expecting the result of the version query to have "+
-				"changed after an update.",
+		IndentedFprintln(indent+1, os.Stderr, err)
+		IndentedFprintln(
+			indent, os.Stderr,
+			"We might not even need updates of our local mirrors, so we'll continue anyways!",
 		)
 	}
 }
@@ -341,16 +341,7 @@ func DownloadLockedGitRepoUsingLocalMirror(
 	if !downloaded {
 		IndentedFprintf(indent, os.Stderr, "%s@%s was already downloaded!\n", gitRepoPath, lock.Version)
 	}
-	IndentedFprintln(
-		indent, os.Stderr, "Optionally updating local mirror from remote Git origin...",
-	)
-	indent++
-	if err = updateLocalGitRepoMirror(indent, gitRepoPath, mirrorPath); err != nil {
-		IndentedFprintf(
-			indent, os.Stderr,
-			"Couldn't update local mirror (do you have internet access?): %s\n", err.Error(),
-		)
-	}
+	performOptionalLocalMirrorsUpdate(indent, []string{gitRepoPath + "@" + lock.Version}, mirrorsPath)
 	return downloaded, nil
 }
 
