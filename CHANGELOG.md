@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - (cli) Improved warning messages printed when an optional background update of a local mirror of a Git repo fails (e.g. due to lack of internet access) to better reassure the user that it might not be a problem.
+- (cli) If `plt switch` is run without internet access, now instead of quitting immediately with an error (due to being unable to fetch changes from remotes) the subcommand will print a warning and continue until either the operation fails (because it couldn't determine that the current commit of the current pallet is in the cache's local mirror of the remote origin) or succeeds (because the commit is in the local mirror, or because `--force` was set).
 
 ## 0.8.0-beta.0 - 2025-03-19
 

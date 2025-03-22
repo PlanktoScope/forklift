@@ -296,7 +296,12 @@ func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 
 	fmt.Fprintln(os.Stderr, "Fetching changes from the remote...")
 	if err = gitRepo.FetchAll(1, os.Stdout); err != nil {
-		return errors.Wrap(err, "couldn't fetch changes from the remote Git repo")
+		fcli.IndentedFprintf(
+			1, os.Stderr,
+			"Warning: couldn't fetch changes (maybe you don't have internet, or maybe the repo doesn't "+
+				"exist?): %s\n", err,
+		)
+		fcli.IndentedFprintln(1, os.Stderr, "We may be able to continue anyways, so we'll keep going!")
 	}
 
 	fmt.Fprintf(
