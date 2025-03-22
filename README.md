@@ -327,8 +327,8 @@ legacy software):
   system with atomic updates, but it requires learning a bespoke functional programming language and
   is [rather complex](https://blog.wesleyac.com/posts/the-curse-of-nixos). Forklift is inspired by
   some of NixOS's design decisions, and it attempts to provide a few of NixOS's benefits but in a
-  much more approachable, simple, and backwards-compatible system design by sacrificing some
-  theoretical rigor for practical considerations.
+  much more approachable, simple, and backwards-compatible system design by aggressively sacrificing
+  almost all of NixOS's theoretical rigor in favor of practical considerations.
 - The [bootc](https://containers.github.io/bootc/) project enables the entire operating system to be
   delivered as a bootable OCI container image, but currently it relies on bootupd, which
   [currently only works on RPM-based distros](https://github.com/coreos/bootupd/issues/468).

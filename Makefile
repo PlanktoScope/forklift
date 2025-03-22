@@ -1,5 +1,5 @@
 PACKAGE_NAME := github.com/PlanktoScope/forklift
-GOLANG_CROSS_VERSION ?= v1.24.0
+GOLANG_CROSS_VERSION ?= v1.24.0-v2.7.0@sha256:8f84be41fd8a02ff2180c43a407c65f31d84fa3a8865ad9d5c5ff39d6c7babab
 
 .DEFAULT_GOAL := dev
 
