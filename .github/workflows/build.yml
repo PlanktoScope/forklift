@@ -40,7 +40,7 @@ jobs:
           path: coverage.*
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5.4.0
+        uses: codecov/codecov-action@v5.4.2
         with:
           file: ./coverage.out
           flags: ${{ runner.os }}
