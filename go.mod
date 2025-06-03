@@ -9,7 +9,7 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.6.4
 	github.com/containerd/platforms v1.0.0-rc.1
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v28.1.1+incompatible
+	github.com/docker/cli v28.2.2+incompatible
 	github.com/docker/compose/v2 v2.36.2
 	github.com/docker/docker v28.2.2+incompatible
 	github.com/docker/go-units v0.5.0
