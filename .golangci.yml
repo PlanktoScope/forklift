@@ -1,50 +1,22 @@
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/PlanktoScope/forklift)
-  goimports:
-    local-prefixes: github.com/PlanktoScope/forklift
-  gocyclo:
-    min-complexity: 15
-  govet:
-    shadow: true
-  misspell:
-    locale: US
-  nolintlint:
-    allow-leading-space: false # require machine-readable nolint directives (with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: true # require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-
+version: "2"
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
-  disable-all: true
+  default: none
   enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
     - bodyclose
-    # - depguard
-    - dupl
     - copyloopvar
+    - dupl
+    - errcheck
     - forcetypeassert
     - funlen
-    - gci
     - gocognit
     - goconst
     - gocritic
     - gocyclo
     - godot
-    - gofumpt
     - goprintffuncname
     - gosec
+    - govet
+    - ineffassign
     - lll
     - misspell
     - mnd
@@ -52,18 +24,44 @@ linters:
     - nolintlint
     - rowserrcheck
     - sqlclosecheck
-    - stylecheck
+    - staticcheck
     - thelper
     - tparallel
     - unconvert
     - unparam
+    - unused
     - whitespace
-    # - errorlint
-    # - goerr113
-    # - wrapcheck
-issues:
-  # enable issues excluded by default 
-  exclude-use-default: false
-
-run:
-  timeout: 2m
+  settings:
+    gocyclo:
+      min-complexity: 15
+    misspell:
+      locale: US
+    nolintlint:
+      require-explanation: true
+      require-specific: false
+      allow-unused: false
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/PlanktoScope/forklift)
+    goimports:
+      local-prefixes:
+        - github.com/PlanktoScope/forklift
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -40,7 +40,7 @@ type StagesSpec struct {
 	NextFailed bool `yaml:"next-failed,omitempty"`
 	// History is the stack of staged pallet bundles which have been applied successfully, with the
 	// most-recently-applied bundle last. The most-recently-applied bundle can be used as a fallback
-	// If the next staged pallet bundle (if it exists) is not applied successfully.
+	// if the next staged pallet bundle (if it exists) is not applied successfully.
 	History []int `yaml:"history,omitempty"`
 	// Names is a list of aliases for staged pallet bundles.
 	Names map[string]int `yaml:"names,omitempty"`
