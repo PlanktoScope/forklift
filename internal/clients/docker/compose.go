@@ -52,7 +52,7 @@ func WithOutputStream(w io.Writer) ClientOption {
 type Client struct {
 	options clientOptions
 	Client  *dc.Client
-	Compose api.Service
+	Compose api.Compose
 }
 
 func NewClient(opts ...ClientOption) (*Client, error) {
