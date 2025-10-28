@@ -63,7 +63,7 @@ builds:
 
 archives:
   - id: forklift
-    builds: ["forklift"]
+    ids: ["forklift"]
     name_template: "forklift_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
     - goos: windows
@@ -96,11 +96,11 @@ release:
   footer: |
     **Full hand-crafted changelog**: [`CHANGELOG.md`]({{ .GitURL }}/blob/main/CHANGELOG.md)
 
-    {{ if and .Tag .PreviousTag }}
+    {{ if and .Tag .PreviousTag -}}
       **Commit history**: [{{ .PreviousTag }}...{{ .Tag }}]({{ .GitURL }}/compare/{{ .Tag }}...{{ .PreviousTag }})
-    {{ else if .PreviousTag }}
+    {{- else if .PreviousTag -}}
       **Commit history**: [{{ .PreviousTag }}...{{ .ShortCommit }}]({{ .GitURL }}/compare/{{ .Commit }}...{{ .PreviousTag }})
-    {{ end }}
+    {{- end }}
 
 dockers:
   # forklift
@@ -111,9 +111,7 @@ dockers:
     use: buildx
     image_templates:
     - "ghcr.io/planktoscope/forklift:latest-amd64"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}-amd64"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-amd64"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+    - "ghcr.io/planktoscope/forklift:{{ .Version }}-amd64"
     build_flag_templates:
     - "--pull"
     - "--platform=linux/amd64"
@@ -131,9 +129,7 @@ dockers:
     goarch: arm64
     image_templates:
     - "ghcr.io/planktoscope/forklift:latest-arm64v8"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}-arm64v8"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-arm64v8"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64v8"
+    - "ghcr.io/planktoscope/forklift:{{ .Version }}-arm64v8"
     build_flag_templates:
     - "--pull"
     - "--platform=linux/arm64/v8"
@@ -152,9 +148,7 @@ dockers:
     goarm: 7
     image_templates:
     - "ghcr.io/planktoscope/forklift:latest-armv7"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}-armv7"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-armv7"
-    - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"
+    - "ghcr.io/planktoscope/forklift:{{ .Version }}-armv7"
     build_flag_templates:
     - "--pull"
     - "--platform=linux/arm/v7"
@@ -172,18 +166,8 @@ docker_manifests:
       - "ghcr.io/planktoscope/forklift:latest-amd64"
       - "ghcr.io/planktoscope/forklift:latest-arm64v8"
       - "ghcr.io/planktoscope/forklift:latest-armv7"
-  - name_template: "ghcr.io/planktoscope/forklift:{{ .Major }}"
-    image_templates:
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}-amd64"
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}-arm64v8"
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}-armv7"
-  - name_template: "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-amd64"
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-arm64v8"
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}-armv7"
   - name_template: "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
     image_templates:
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64v8"
-      - "ghcr.io/planktoscope/forklift:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"
+      - "ghcr.io/planktoscope/forklift:{{ .Version }}-amd64"
+      - "ghcr.io/planktoscope/forklift:{{ .Version }}-arm64v8"
+      - "ghcr.io/planktoscope/forklift:{{ .Version }}-armv7"
