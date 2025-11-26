@@ -910,7 +910,8 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		fmt.Fprintln(
 			os.Stderr,
-			"Done! To apply the staged pallet immediately, run `sudo -E forklift stage apply`.",
+			"Done! To apply the staged pallet immediately, run `forklift stage apply` (or "+
+				"`sudo -E forklift stage apply` if you need sudo for Docker).",
 		)
 		return nil
 	}
