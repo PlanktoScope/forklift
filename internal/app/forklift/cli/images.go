@@ -42,7 +42,7 @@ func DownloadImagesForStoreApply(
 			"Downloading Docker container images specified by the last successfully-applied staged "+
 				"pallet bundle, in case the next to be applied fails to be applied...",
 		)
-		if err := DownloadImages(indent, bundle, bundle, platform, false, parallel); err != nil {
+		if err := DownloadImages(indent+1, bundle, bundle, platform, false, parallel); err != nil {
 			return err
 		}
 	}
@@ -61,7 +61,7 @@ func DownloadImagesForStoreApply(
 			"Downloading Docker container images specified by the next staged pallet bundle to be "+
 				"applied...",
 		)
-		if err := DownloadImages(indent, bundle, bundle, platform, false, parallel); err != nil {
+		if err := DownloadImages(indent+1, bundle, bundle, platform, false, parallel); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stderr)

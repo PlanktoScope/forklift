@@ -262,7 +262,7 @@ repositories already required by your development pallet.
 You can also run commands like `forklift dev plt cache-all` and
 `forklift dev plt stage --cache-img=false` (with appropriate values in the `--cwd` flag if
 necessary) to download the Forklift repositories specified by your development pallet into your
-local cache and stage your development pallet to be applied with `sudo -E forklift stage apply`.
+local cache and stage your development pallet to be applied with `forklift stage apply`.
 This is useful if, for example, you want to make some experimental changes to your development
 pallet and test them on your local machine before committing and pushing those changes onto GitHub.
 
