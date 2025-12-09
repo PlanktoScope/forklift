@@ -258,7 +258,7 @@ func completePalletQuery(
 const (
 	notGitSnippet       = "is not a valid Git repo"
 	noBackupSnippet     = "(i.e. not yet backed up)"
-	uncommittedSnippet  = "has changes which not yet saved in a Git commit " + noBackupSnippet
+	uncommittedSnippet  = "has changes which are not yet saved in a Git commit " + noBackupSnippet
 	unpushedSnippet     = "is on a commit which might not be in a remote Git repo " + noBackupSnippet
 	existsSnippet       = "the local pallet already exists"
 	forceEnabledSnippet = "we can only delete and replace such pallets if the --force flag is enabled"
