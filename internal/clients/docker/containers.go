@@ -4,36 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/compose/v2/pkg/api"
-	dtc "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/compose/v5/pkg/api"
+	"github.com/moby/moby/client"
 )
 
 // docker container ls
 
-func (c *Client) ListContainers(ctx context.Context, appName string) ([]dtc.Summary, error) {
-	f := filters.NewArgs(appFilter(appName), oneOffFilter(false))
-	if appName == "" {
-		f = filters.NewArgs(oneOffFilter(false))
+func (c *Client) ListContainers(
+	ctx context.Context, appName string,
+) (client.ContainerListResult, error) {
+	f := make(client.Filters).Add("label", fmt.Sprintf("%s=%s", api.OneoffLabel, "False"))
+	if appName != "" {
+		f = f.Add("label", fmt.Sprintf("%s=%s", api.ProjectLabel, appName))
 	}
-	return c.Client.ContainerList(ctx, dtc.ListOptions{
+	return c.Client.ContainerList(ctx, client.ContainerListOptions{
 		Filters: f,
 		All:     true,
 	})
-}
-
-func appFilter(appName string) filters.KeyValuePair {
-	// This function is copied from the github.com/compose-spec/compose-go/pkg/compose package's
-	// projectFilter function, which is licensed under Apache-2.0.
-	return filters.Arg("label", fmt.Sprintf("%s=%s", api.ProjectLabel, appName))
-}
-
-func oneOffFilter(b bool) filters.KeyValuePair {
-	// This function is copied from the github.com/compose-spec/compose-go/pkg/compose package's
-	// oneOffFilter function, which is licensed under Apache-2.0.
-	v := "False"
-	if b {
-		v = "True"
-	}
-	return filters.Arg("label", fmt.Sprintf("%s=%s", api.OneoffLabel, v))
 }
