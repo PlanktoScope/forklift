@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/internal/app/forklift"
 )
 
 // Pallets

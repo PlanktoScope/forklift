@@ -6,7 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
+	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
 // ls-dl

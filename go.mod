@@ -1,4 +1,4 @@
-module github.com/PlanktoScope/forklift
+module github.com/forklift-run/forklift
 
 go 1.25.5
 

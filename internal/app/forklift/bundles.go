@@ -21,8 +21,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/pkg/core"
-	"github.com/PlanktoScope/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // FSBundle
@@ -170,7 +170,7 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string, destPerms fs.Fi
 	if destPerms == 0 {
 		destPerms = sourceInfo.Mode().Perm()
 	}
-	destFile, err := os.OpenFile( //nolint:gosec // dest path is set by config files which we trust
+	destFile, err := os.OpenFile(
 		destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, destPerms,
 	)
 	if err != nil {
@@ -696,7 +696,7 @@ func extractRegularFile(
 	}
 	// FIXME: we suppress gosec G304 below, but for security we should check targetPath to ensure it's
 	// a valid path (i.e. within the Forklift workspace)!
-	targetFile, err := os.OpenFile( //nolint:gosec // (G304) the point is to write to arbitrary paths
+	targetFile, err := os.OpenFile(
 		filepath.Clean(filepath.FromSlash(targetPath)), os.O_RDWR|os.O_CREATE|os.O_TRUNC, destPerms,
 	)
 	if err != nil {

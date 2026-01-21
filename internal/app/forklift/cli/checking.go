@@ -11,8 +11,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/core"
 )
 
 type ResolvedDeplsLoader interface {

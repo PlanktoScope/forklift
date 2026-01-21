@@ -2,7 +2,7 @@
 package forklift
 
 import (
-	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/core"
 )
 
 // A FSPallet is a Forklift pallet stored at the root of a [fs.FS] filesystem.

@@ -4,7 +4,7 @@ package forklift
 // refs (branches & tags) in its origin.
 type GitRepoQuery struct {
 	// Path is the path of the pallet or Forklift repo being queried
-	// (e.g. github.com/PlanktoScope/pallet-standard)
+	// (e.g. github.com/openUC2/rpi-imswitch-os)
 	Path string `yaml:"path"`
 	// VersionQuery is the version query of the pallet or Forklift repo being queried
 	// (e.g. edge or stable or v2024.0.0-beta.0)
