@@ -20,7 +20,7 @@ A configurable bill-of-materials (CBOM) system for declaratively composing and u
 your hardware-specific embedded Linux operating systems.
 
 Note: while Forklift's architectural design and configuration schema have mostly stabilized,
-Forklift's API and command-line interface will undergo some backwards-incompatible simplifications.
+Forklift's Go packages and command-line interface will undergo some backwards-incompatible changes.
 Forklift is already used in production as lower-level infrastructure in the
 [rpi-imswitch-os](https://github.com/openUC2/rpi-imswitch-os) operating system for openUC2 devices,
 but other possible ways of using Forklift are not yet officially documented or supported for
@@ -49,7 +49,8 @@ infrastructure for software releases, deployment, and extensibility in openUC2's
 [rpi-imswitch-os](https://github.com/openUC2/rpi-imswitch-os), a
 hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
 specifically to solve the unique combination of OS/software maintenance, customization, and
-operations challenges specific to projects like openUC2.
+operations challenges specific to open-source instrumentation projects like openUC2 and
+[PlanktoScope](https://github.com/PlanktoScope/PlanktoScope).
 
 For end-users operating open-source instruments with application services (e.g. network APIs or
 browser-based interfaces) and/or system services (for e.g. data backups/transfer, hardware support,

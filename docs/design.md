@@ -1,15 +1,28 @@
 # Forklift design
 
-Forklift was created to enable the [PlanktoScope](https://www.planktoscope.org/) project's operating system (based on the Raspberry Pi OS) to gain various benefits of atomic operating systems - traditionally referred to as [immutable operating systems](https://ceur-ws.org/Vol-3386/paper9.pdf) - without requiring the PlanktoScope project to migrate all its legacy software (which, unfortunately, is quite closely-coupled to the Raspberry Pi OS) to an immutable Linux distro. Our resulting approach to modular composition and decentralized distribution is heavily inspired by the simple, transparent, and powerful [design of the Go programming language](https://cacm.acm.org/magazines/2022/5/260357-the-go-programming-language-and-environment/fulltext) and [Go’s Modules system](https://go.dev/doc/modules/developing).
+Forklift was originally created to enable the
+[PlanktoScope](https://www.planktoscope.org/) project's operating system (based on the Raspberry Pi
+OS) to gain various benefits of atomic operating systems - traditionally referred to as
+[immutable operating systems](https://ceur-ws.org/Vol-3386/paper9.pdf) - without requiring the
+PlanktoScope project to migrate all its legacy software (which is/was quite closely-coupled to the
+Raspberry Pi OS) to an immutable Linux distro. Our resulting approach to modular composition and
+decentralized distribution is heavily inspired by the simple, transparent, and powerful
+[design of the Go programming language](https://cacm.acm.org/magazines/2022/5/260357-the-go-programming-language-and-environment/fulltext)
+and [Go’s Modules system](https://go.dev/doc/modules/developing).
+
+Forklift is no longer used in the PlanktoScope project, because the goals of the two projects
+diverged towards different trade-offs; currently, Forklift is used primarily by the
+[openUC2 project](https://openuc2.com/).
 
 ## Values
 
-Forklift's design is guided by the following values for infrastructural software in the PlanktoScope software:
+Forklift's design is guided by the following values for infrastructural software in open-source
+science instruments like PlanktoScopes and openUC2 microscopes:
 
-- Autonomy: It must empower people to make their own decisions specific to their needs and contexts, and to exercise full control over their operations of the PlanktoScope, independent of the PlanktoScope project’s longevity.
-- Compatibility: It must work well together with legacy systems such as the [PlanktoScope OS](https://docs-edge.planktoscope.community/reference/software/architecture/os/), with the diverse programs which might be managed by it, and with the variety of operational contexts for PlanktoScope deployment. When compatibility is infeasible, incremental migration must be feasible.
+- Autonomy: It must empower people to make their own decisions specific to their needs and contexts, and to exercise full control over their operations of the science instrument, independent of the longevity of the project which designed the instrument.
+- Compatibility: It must work well together with operating systems not explicitly designed around Forklift, with the diverse programs which might be managed by it, and with the variety of operational contexts in which the science instrument might be used. When compatibility is infeasible, incremental migration must be feasible.
 - Integrity: It must be trustworthy and reliable in its behavior. It must not corrupt the state of systems built around it. It must be honest to users about what it is doing.
-- Productivity: It must help people, teams, and communities to efficiently develop, operate, and maintain their projects; including both the PlanktoScope project and novel extensions and uses for the PlanktoScope. It must be easy to learn, fast enough to use in iterative prototyping, and reliable enough to use in production. It must minimize any complexity and novelty which would distract people from their higher-level goals.
+- Productivity: It must help people, teams, and communities to efficiently develop, operate, and maintain their projects; including both the openUC2 project and novel extensions and uses for openUC2 modules. It must be easy to learn, fast enough to use in iterative prototyping, and reliable enough to use in production. It must minimize any complexity and novelty which would distract people from their higher-level goals.
 - Thoughtfulness: Its design must be rigorous, deliberate, and considerate of how it will impact people. We must not commit to new features or changes in system behavior until we thoroughly understand their consequences.
 - Transparency: Its architecture and behavior must be sufficiently simple and easy to observe, fully explain, fully understand, troubleshoot, and learn from.
 
