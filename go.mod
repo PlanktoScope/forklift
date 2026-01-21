@@ -1,4 +1,4 @@
-module github.com/openUC2/forklift
+module github.com/forklift-run/forklift
 
 go 1.24.9
 
