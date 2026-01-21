@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/core"
 )
 
 func FileExists(filePath string) bool {

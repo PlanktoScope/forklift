@@ -6,7 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/cmd/forklift/dev/plt"
+	"github.com/forklift-run/forklift/cmd/forklift/dev/plt"
 )
 
 var defaultWorkingDir, _ = os.Getwd()

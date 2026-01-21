@@ -13,8 +13,8 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/pkg/core"
-	"github.com/PlanktoScope/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // MergeFSPallet creates a new FSPallet with a virtual (read-only) filesystem created by evaluating

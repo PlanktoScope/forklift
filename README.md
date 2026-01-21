@@ -1,14 +1,14 @@
 <picture>
   <source
     media="(prefers-color-scheme: dark)"
-    srcset="https://github.com/PlanktoScope/forklift/assets/180370/a4317864-a75e-4717-99e5-402d07e109fb"
+    srcset="https://github.com/forklift-run/forklift/assets/180370/a4317864-a75e-4717-99e5-402d07e109fb"
   >
   <source
     media="(prefers-color-scheme: light)"
-    srcset="https://github.com/PlanktoScope/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004"
+    srcset="https://github.com/forklift-run/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004"
   >
   <img
-    src="https://github.com/PlanktoScope/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004"
+    src="https://github.com/forklift-run/forklift/assets/180370/c915ca65-aabf-4721-894e-81f002100004"
     alt="Forklift logo"
     height="60"
   >
@@ -19,12 +19,12 @@
 A configurable bill-of-materials (CBOM) system for declaratively composing and upgrading/downgrading
 your hardware-specific embedded Linux operating systems.
 
-Note: this is still an experimental prototype in the sense that Forklift's architectural design and
-command-line interface may undergo significant backwards-incompatible simplifications. While
-Forklift is already used in production as a lower-level implementation detail of the
-[PlanktoScope OS](https://docs.planktoscope.community/reference/software/architecture/os/)
-and is exposed to advanced users with a command-line interface for customization of PlanktoScope OS,
-any other use of Forklift is not yet officially documented or supported.
+Note: while Forklift's architectural design and configuration schema have mostly stabilized,
+Forklift's API and command-line interface will undergo some backwards-incompatible simplifications.
+Forklift is already used in production as lower-level infrastructure in the
+[rpi-imswitch-os](https://github.com/openUC2/rpi-imswitch-os) operating system for openUC2 devices,
+but other possible ways of using Forklift are not yet officially documented or supported for
+production operations.
 
 ## Introduction
 
@@ -42,13 +42,14 @@ For open-hardware project developers, Forklift enables Linux-based devices and
 Raspberry Pi) to have the "interesting" parts of their software programs and configurations to be
 specified, composed, deployed, and reversibly upgraded/downgraded as version-controlled changes to a
 [configurable bill-of-materials (CBOM)](https://en.wikipedia.org/wiki/Bill_of_materials#CBOM) of
-software modules. The [PlanktoScope](https://www.planktoscope.org/), an open-source microscope for
-quantitative imaging of plankton, uses Forklift as low-level infrastructure for software
-releases, deployment, and extensibility in the
-[PlanktoScope OS](https://docs.planktoscope.community/reference/software/architecture/os/), a
+software modules.
+[openUC2 GmbH](https://openuc2.com/), which develops and sells an open-source modular microscopy and
+modular optics platform, uses (and funds the development and maintenance of) Forklift as low-level
+infrastructure for software releases, deployment, and extensibility in openUC2's
+[rpi-imswitch-os](https://github.com/openUC2/rpi-imswitch-os), a
 hardware-specific operating system based on the Raspberry Pi OS; and Forklift was designed
-specifically to solve the OS/software maintenance, customization, and operations challenges
-experienced in the PlanktoScope project.
+specifically to solve the unique combination of OS/software maintenance, customization, and
+operations challenges specific to projects like openUC2.
 
 For end-users operating open-source instruments with application services (e.g. network APIs or
 browser-based interfaces) and/or system services (for e.g. data backups/transfer, hardware support,
@@ -92,30 +93,27 @@ To learn more about the design of Forklift, please refer to
 
 ### Project Governance
 
-Currently, design and development of Forklift prioritizes the needs of the PlanktoScope community
-and the PlanktoScope project's [values for its infrastructural software](./docs/design.md#values).
-Thus, for now decisions will be made by the PlanktoScope software's lead maintainer (currently
-[@ethanjli](https://github.com/ethanjli)) as a "benevolent dictator"/"mad scientist" in consultation
-with the PlanktoScope community in online meetings and discussion channels open to the entire
-community. This will remain the governance model of Forklift while it's still an experimental tool
-and still only used for the standard/default version of the PlanktoScope's operating system, in
+Currently, design and development of Forklift prioritizes the needs of openUC2 together with the
+Forklift project's [values for Forklift as infrastructural software](./docs/design.md#values).
+Thus, for now decisions will be made by the Forklift project's maintainer (currently
+[@ethanjli](https://github.com/ethanjli)) as a "benevolent dictator"/"mad scientist" employed by
+openUC2. This will remain the governance model of Forklift while it's still only used for openUC2's
+[rpi-imswitch-os](https://github.com/openUC2/rpi-imswitch-os) operating system, in
 order to ensure that Forklift develops in a cohesive way consistent with the values mentioned above
-and with intended use of Forklift for the PlanktoScope community. Once Forklift starts being used
-for delivering/maintaining variants of the PlanktoScope's operating system, for integration of
-third-party apps from the PlanktoScope community, or for software configuration by ordinary users,
-then governance of the [github.com/PlanktoScope/forklift](https://github.com/PlanktoScope/forklift)
-repository will transition from benevolent dictatorship into the PlanktoScope project's
-[consensus-based proposals process](https://github.com/PlanktoScope/proposals). In the meantime, we
-encourage anyone who is interested in using/adapting Forklift to fork this repository for
-experimentation and/or to
-[create new discussion posts in this repository](https://github.com/PlanktoScope/forklift/discussions/new/choose),
+and with intended use of Forklift for openUC2 devices. If/when Forklift starts being used for
+delivering/maintaining variants of rpi-imswitch-os, for integration of third-party apps by users
+of openUC2 devices, or for software configuration by ordinary users,
+then governance of the [github.com/forklift-run/forklift](https://github.com/forklift-run/forklift)
+repository will transition from benevolent dictatorship into a consensus-based proposals process.
+In the meantime, we encourage anyone who is interested in using/adapting Forklift to fork this
+repository for experimentation and/or to
+[create new discussion posts in this repository](https://github.com/forklift-run/forklift/discussions/new/choose),
 though we can't make any guarantees about the stability of any APIs or about our capacity to address
 any external code contributions or feature requests.
 
-If other projects beyond the PlanktoScope community decide to use Forklift as part of their software
-delivery/deployment infrastructure, we can talk about expanding governance of Forklift beyond the
-PlanktoScope community - feel free to start a discussion in this repository's GitHub Discussions
-forum.
+If other projects beyond openUC2 decide to use Forklift as part of their software
+delivery/deployment infrastructure, we can talk about expanding governance of Forklift beyond
+openUC2 - feel free to start a discussion in this repository's GitHub Discussions forum.
 
 ## Usage
 
@@ -142,7 +140,7 @@ you to set up Forklift on your own system to Docker Compose apps on your system:
 
 First, you will need to download the `forklift` tool, which is available as a single self-contained
 executable file. You should visit this repository's
-[releases page](https://github.com/PlanktoScope/forklift/releases/latest) and download an archive
+[releases page](https://github.com/forklift-run/forklift/releases/latest) and download an archive
 file for your platform and CPU architecture; for example, on a Raspberry Pi 4, you should probably
 download the archive named `forklift_{version number}_linux_arm64.tar.gz` (where the version number
 should be substituted). You can extract the `forklift` binary from the archive using a command like:
@@ -303,21 +301,22 @@ make different trade-offs compared to Forklift:
   Kubernetes.
 
 The following projects solve related problems in composing and updating the base OS, though they
-make different trade-offs compared to Forklift (especially because of the PlanktoScope project's
-legacy software):
+make different trade-offs compared to Forklift:
 
 - [Rugix](https://github.com/silitics/rugix) is a suite of low-level tools for building and updating
   OS images, including support for the Raspberry Pi's official A/B-style `tryboot` mechanism for
   OS updates.
 - [systemd-sysext and systemd-confext](https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html)
-  provide a more structured/opinionated way (compared to Forklift) to atomically overlay system
-  files onto the base OS, but they not opinionated about (i.e. don't specify a way for)
-  distributing/provisioning published sysext/confext images, and they are not available on Raspberry
-  Pi OS 11 (bullseye), which until recently was a legacy-systems burden for the PlanktoScope OS.
+  provide a more opinionated way (compared to Forklift) to atomically overlay system files onto the
+  base OS, but they not opinionated about (i.e. don't specify a way for) distributing/provisioning
+  published sysext/confext images.
   Forklift can be used together with systemd-sysext/confext, as a way to download sysext/confext
   images, constrain which images can be deployed together/separately, and manage which extension
   images are available to systemd - see
   [this demo](https://github.com/ethanjli/ublue-forklift-sysext-demo?tab=readme-ov-file#explanation).
+  Now that important systemd-sysext functionalities are generally available in Raspberry Pi OS
+  12 (bookworm) & 13 (trixie), Forklift will be developed as a tool to complement systemd-sysext
+  and systemd-confext.
 - systemd's [Portable Services](https://systemd.io/PORTABLE_SERVICES/) pattern and `portablectl`
   tool provide a more structured/constrained/sandboxed way (compared to Forklift) to atomically add
   system services, but they are only designed for self-contained system services. Forklift can
@@ -339,7 +338,7 @@ legacy software):
 
 The following projects solve related problems in updating (but not in composing) the base OS, making
 different trade-offs (especially in their need for OS maintainers or device operators to pay for or
-self-host a centralized management server - which is a non-starter for the PlanktoScope project)
+self-host a centralized management server - which is a non-starter for users of openUC2 devices)
 compared to Forklift:
 
 - [OSTree](https://ostreedev.github.io/ostree/) enables atomic updates of the base OS, but

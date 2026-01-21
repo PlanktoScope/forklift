@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/core"
 )
 
 // GitRepoQuery

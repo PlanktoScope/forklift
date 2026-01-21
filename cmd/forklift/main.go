@@ -8,14 +8,14 @@ import (
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/cmd/forklift/cache"
-	"github.com/PlanktoScope/forklift/cmd/forklift/dev"
-	"github.com/PlanktoScope/forklift/cmd/forklift/host"
-	"github.com/PlanktoScope/forklift/cmd/forklift/inspector"
-	"github.com/PlanktoScope/forklift/cmd/forklift/plt"
-	"github.com/PlanktoScope/forklift/cmd/forklift/stage"
-	fcli "github.com/PlanktoScope/forklift/internal/app/forklift/cli"
-	"github.com/PlanktoScope/forklift/internal/clients/crane"
+	"github.com/forklift-run/forklift/cmd/forklift/cache"
+	"github.com/forklift-run/forklift/cmd/forklift/dev"
+	"github.com/forklift-run/forklift/cmd/forklift/host"
+	"github.com/forklift-run/forklift/cmd/forklift/inspector"
+	"github.com/forklift-run/forklift/cmd/forklift/plt"
+	"github.com/forklift-run/forklift/cmd/forklift/stage"
+	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
+	"github.com/forklift-run/forklift/internal/clients/crane"
 )
 
 func main() {

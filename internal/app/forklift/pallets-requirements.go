@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/core"
 )
 
 // GitRepoReq
@@ -20,7 +20,7 @@ func (r GitRepoReq) Path() string {
 }
 
 // GetQueryPath returns the path of the Git repo in version queries, which is of form
-// gitRepoPath@version (e.g. github.com/PlanktoScope/pallets/core@v0.1.0).
+// gitRepoPath@version (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0).
 func (r GitRepoReq) GetQueryPath() string {
 	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
 }
@@ -136,13 +136,13 @@ func LoadRequiredFSPallet(
 }
 
 // GetCachePath returns the path of the pallet in caches, which is of form
-// palletPath@version (e.g. github.com/PlanktoScope/pallets@v0.1.0/core).
+// palletPath@version (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0).
 func (r PalletReq) GetCachePath() string {
 	return r.GetQueryPath()
 }
 
 // GetQueryPath returns the path of the pallet in version queries, which is of form
-// palletPath@version (e.g. github.com/PlanktoScope/pallets/core@v0.1.0).
+// palletPath@version (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0).
 func (r PalletReq) GetQueryPath() string {
 	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
 }
@@ -223,7 +223,7 @@ func (r RepoReq) GetPkgSubdir(pkgPath string) string {
 }
 
 // GetCachePath returns the path of the repo in caches, which is of form
-// repoPath@version (e.g. github.com/PlanktoScope/pallets@v0.1.0/core).
+// repoPath@version (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0).
 func (r RepoReq) GetCachePath() string {
 	return r.GetQueryPath()
 }
@@ -251,14 +251,14 @@ func LoadRequiredFSPkg(
 
 // GetCachePath returns the path of the package in caches, which is of form
 // repoPath@version/pkgSubdir
-// (e.g. github.com/PlanktoScope/pallets@v0.1.0/core/infrastructure/caddy-ingress).
+// (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0/packages/core/infra/caddy-ingress).
 func (r PkgReq) GetCachePath() string {
 	return path.Join(r.Repo.GetCachePath(), r.PkgSubdir)
 }
 
 // GetQueryPath returns the path of the package in version queries, which is of form
 // repoPath/pkgSubdir@version
-// (e.g. github.com/PlanktoScope/pallets/core/infrastructure/caddy-ingress@v0.1.0).
+// (e.g. github.com/PlanktoScope/pallet-standard/packages/core/infra/caddy-ingress@v2024.0.0).
 func (r PkgReq) GetQueryPath() string {
 	return fmt.Sprintf("%s@%s", r.Path(), r.Repo.VersionLock.Version)
 }

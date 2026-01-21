@@ -55,10 +55,10 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/PlanktoScope/forklift)
+        - prefix(github.com/forklift-run/forklift)
     goimports:
       local-prefixes:
-        - github.com/PlanktoScope/forklift
+        - github.com/forklift-run/forklift
   exclusions:
     generated: lax
     paths:
