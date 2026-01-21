@@ -11,8 +11,9 @@ decentralized distribution is heavily inspired by the simple, transparent, and p
 and [Go’s Modules system](https://go.dev/doc/modules/developing).
 
 Forklift is no longer used in the PlanktoScope project, because the goals of the two projects
-diverged towards different trade-offs; currently, Forklift is used primarily by the
-[openUC2 project](https://openuc2.com/).
+diverged towards different trade-offs regarding modular recomposition and user customization;
+currently, Forklift is used primarily by the [openUC2 project](https://openuc2.com/) due to the
+close alignment in the visions of both projects.
 
 ## Values
 
