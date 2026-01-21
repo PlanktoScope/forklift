@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // ProvidedRes

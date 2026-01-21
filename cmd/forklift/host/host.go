@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/internal/clients/docker"
+	"github.com/forklift-run/forklift/internal/clients/docker"
 )
 
 // ls-app

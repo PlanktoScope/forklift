@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/internal/clients/docker"
-	"github.com/PlanktoScope/forklift/pkg/core"
-	"github.com/PlanktoScope/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/internal/clients/docker"
+	"github.com/forklift-run/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // ResolvedDepl

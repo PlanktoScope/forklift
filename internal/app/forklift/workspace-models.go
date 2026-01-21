@@ -1,7 +1,7 @@
 package forklift
 
 import (
-	"github.com/PlanktoScope/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/core"
 )
 
 type FSWorkspace struct {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/internal/app/forklift"
 )
 
 func FprintPalletImports(indent int, out io.Writer, pallet *forklift.FSPallet) error {

@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/internal/clients/crane"
-	"github.com/PlanktoScope/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/internal/clients/crane"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 func GetDownloadCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache, error) {

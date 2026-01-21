@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/internal/app/forklift"
 )
 
 // ls-dl

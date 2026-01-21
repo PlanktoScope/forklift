@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
-	"github.com/PlanktoScope/forklift/pkg/core"
-	"github.com/PlanktoScope/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/core"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 func GetRepoCache(

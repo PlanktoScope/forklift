@@ -14,7 +14,7 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 
-	"github.com/PlanktoScope/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/internal/app/forklift"
 )
 
 func ListPalletFiles(pallet *forklift.FSPallet, pattern string) ([]string, error) {
