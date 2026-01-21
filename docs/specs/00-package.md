@@ -1,54 +1,50 @@
 # Forklift package specification
 
-This specification defines Forklift packages and repositories.
+This specification defines Forklift packages.
 
 ## Introduction
 
 This specification's design is heavily inspired by the design of the Go programming language and its module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of packages are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
 
-## Repositories, packages, and versions
+## Pallets, packages, and deployments
 
-A Forklift *repository* is a collection of software configuration packages which are tested, released, distributed, and upgraded together. Packages are how Forklift makes apps recomposable. A Forklift repository is just a Git repository hosted at a stable location on the internet (e.g. on GitHub), with a special configuration file declaring the repository. A repository is identified by a [*repository path*](#repository-paths), which is declared in a `forklift-repository.yml` file at the root of the repository.
+A Forklift *pallet* is a collection of software packages which are tested, released, distributed, deployed, and upgraded together. A pallet can be *applied* to a host operating system, which means that the operating system is modified according to the contents of the pallet. A pallet is just a Git repository which meets some special requirements described in the [Forklift pallet specification](./01-pallet.md). The root directory of the pallet (the *pallet root directory*) is exactly the root directory of the Git repository. A pallet may be shared by being hosted at a stable location on the internet (e.g. on GitHub); each such pallet should be identified by a [*pallet path*](./01-pallet.md#pallet-paths) unique to it (e.g. `github.com/openUC2/rpi-imswitch-os`).
 
-A Forklift *package* is a configuration of a software application which can be deployed on a Docker host. Each package within a repository specifies the prerequisites and consequences of its deployment on the host. Typically, a package declares some or all of the following:
+Pallets contain one or more *packages*; packages are Forklift's basic unit of modularity and composition. Each Forklift package declares a single software application (or a single set of operating system configurations) which can be instantiated as one or more [*package deployments*](#package-deployments) on the host operating system. Each package declares the possible prerequisites and results of its deployment on the host. Typically, a package declares the following information for any package deployments instantiated from the package:
 
-- A Docker Compose application which will be deployed on the Docker host.
-- A set of optional [*features*](#package-features) which may be enabled for the deployment. Features control the functionalities or behavior of the *package deployment*, which is fully and uniquely specified by declaring the name of the deployment, the package to deploy, and the features to enable in the deployment. Thus, a single package may be instantiated in multiple distinct deployments (each with different configurations) on a Docker host. Features work by modifying the specification of the Docker Compose file.
-- A set of [*constraints*](#package-deployments-and-constraints) for determining whether the package deployment is allowed on the Docker host, including a list of any host [*resources*](#package-resource-constraints) which are required by the package deployment or provided by the package deployment. Features may also declare their own constraints, which are only evaluated when those features are enabled.
+- a set of files which will be *exported* into a Forklift-managed file tree on the host operating system; and/or
+- a Docker Compose application which will be deployed on the host operating system; and/or
+- a set of [*constraints*](#package-deployment-constraints) for determining whether the package deployment is sufficiently valid to be allowed on the operating system, including a list of any operating system [*resources*](#resource-constraints) which are required by the package deployment or provided by the package deployment; and/or
+- a set of optional [*features*](#package-features) which may be enabled in a package deployment through feature flags; when enabled, features modify the functionality of the package deployment, for example by:
+  - declaring additional files to be exported into the Forklift-managed file tree; and/or
+  - modifying the Docker Compose application with additional Compose file snippets to be merged into the declaration of the Compose application; and/or
+  - modifying the set of constraints.
 
-All of this information is declared in a `forklift-package.yml` file. The *package root directory* is the directory that contains the package's `forklift-package.yml` file.
-
-### Repository paths
-
-A *repository path* is the canonical name for a Forklift repository, declared with the `path` field in the repository's `forklift-repository.yml` file. A repository's path is the prefix for the package paths of packages provided by the repository.
-
-A repository path should communicate both what the repository does and where to find it. A Forklift repository path is just the path of the Git repository which contains the Forklift repository. `github.com/PlanktoScope/device-pkgs` is an example of a repository path.
-
-### Versions
-
-A *version* is a Git tag which identifies an immutable snapshot of a repository and all packages in the repository; thus, all packages in any single commit of a repository will have always have identical versions, and all packages in a repository will always have the same version for a given Git commit. A version may be either a release or a pre-release. Once a Git tag is created, it should not be deleted or changed to a different revision. Versions should be authenticated to ensure safe, repeatable deployments. If a tag is modified, clients may see a security error when downloading it.
-
-Each version starts with the letter `v`, followed by either a semantic version or a calendar version. The [Semantic Versioning 2.0.0 specification](https://semver.org/spec/v2.0.0.html) expains how semantic versions should be formatted, interpreted, and compared; the [Calendar Versioning reference](https://calver.org/) describes a variety of ways that calendar versions may be constructed, but any calendar versioning scheme used must meet the following requirements:
-
-- The calendar version must have three parts (major, minor, and micro), and it may have additional labels for pre-release and build metadata following the semantic versioning specification.
-- No version part may be zero-padded (so e.g. `2022.4.0` and `22.4.0` are allowed, while `2022.04.0` and `22.04.0` are not allowed).
-- The calendar version must conform to the semantic versioning specifications for precedence, so that versions can be compared and sequentially ordered.
+All of this information for a package is declared in that package's `forklift-package.yml` file. The root directory of the package (the *package root directory*) is exactly the directory that contains the package's `forklift-package.yml` file.
 
 ### Package paths
+The path of a package (the *package path*) is the pallet path joined with the subdirectory (relative to the pallet root) which is the package root directory. For example, the root directory of the pallet `github.com/openUC2/rpi-imswitch-os` contains a subdirectory `/deployments/infra/caddy-ingress.pkg` which is a pallet package because that subdirectory contains a `forklift-package.yml` file; then the path of the package is `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg`. Note that the package path is not necessarily resolveable as a web page URL (so for example <https://github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg> gives a HTTP 404 Not Found error), because that package is only resolvable in the context of a specific GitHub repository version. Note also that, if a package is in a pallet with an empty path, then the package path will merely be the path of the package relative to the pallet's root directory (e.g. `/deployments/infra/caddy-ingress.pkg`), and the package will not be identifiable or locatable from outside its pallet.
 
-The path of a package is the repository path joined with the subdirectory (relative to the repository root) which contains the package's `forklift-package.yml` file. That subdirectory is the *package root directory*. For example, the repository `github.com/PlanktoScope/device-pkgs` contains a Forklift package in the subdirectory `core/infra/caddy-ingress`. The `core/infra/caddy-ingress` directory contains a `forklift-package.yml` file and thus is the root directory of a package which has a package path of `github.com/PlanktoScope/device-pkgs/core/infra/caddy-ingress`. Note that the package path is not necessarily resolveable as a web page URL (so for example <https://github.com/PlanktoScope/device-pkgs/core/infra/caddy-ingress> gives a HTTP 404 Not Found error), because the package path is only resolvable in the context of a specific GitHub repository version.
+By convention, package paths should end in the suffix `.pkg`, e.g. `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg` instead of `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress`. This convention makes it easy to determine that, for example, `github.com/openUC2/rpi-imswitch-os/deployments/infra` isn't a package, but rather a directory which contains packages.
 
-## Package deployments and constraints
+### Package deployments
+A package deployment is an instantiation of a specific package with a specific set of feature flags. Thus, while a package declares a possibility (or a set of possibilities) for something to exist in the operating system, a package deployment declares a concrete intention for making the operating system include one specific possibility represented by the package. If a pallet has no enabled package deployments for a package, then that the package will never have any effect on the operating system.
 
-Usually, multiple package deployments are simultaneously active on a Docker host, and multiple package deployments may be modified by a package manager operation, for example:
+Each package deployment is declared as a YAML file which has the file extension `.deploy.yml` and which is in the `deployments` subdirectory of the pallet root directory. Thus, each package deployment also has a unique name corresponding to its path within the pallet; for example, in the pallet `github.com/openUC2/rpi-imswitch-os`, the package deployment declared by the file `/deployments/infra/caddy-ingress.deploy.yml` can be unambiguously identified with the name `infra/caddy-ingress` in user interfaces.
+
+By convention, each package deployment file should usually be placed in the same directory as the package which it deploys. For example, the pallet `github.com/openUC2/rpi-imswitch-os` contains a package deployment for `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg` at `/deployments/infra/caddy-ingress.deploy.yml`.
+
+A package deployment specifies the package it will deploy by referring to the package's path, either including the pallet path of the package's pallet (if the package to be deployed is defined in a different pallet) or without any pallet path (if the package to be deployed is defined in the same pallet as the deployment). For example, in the pallet `github.com/openUC2/rpi-imswitch-os`, the package deployment declaration at `/deployments/infra/caddy-ingress.deploy.yml` specifies the path `/deployments/infra/caddy-ingress.pkg` to deploy that package from the same pallet. By contrast, a package deployment declaration in some other pallet would have to specify the path `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg` in order to deploy that same package (the details for how that path is resolved are discussed in TODO).
+
+## Package deployment constraints
+
+Usually, multiple package deployments are simultaneously active on an operating system; and multiple package deployments may be modified by a package manager operation, for example:
 
 - Adding new package deployments
 - Removing existing package deployments
 - Modifying the enabled features of existing package deployments
-- Upgrading the versions of the repositories providing deployed packages
-- Downgrading the versions of the repositories providing deployed packages
 
-Each such operation will modify the set of all active package deployments on the Docker host, and it will succeed if (and only if) all of the following constraints will be satisfied by the resulting set of all package deployments:
+Each such operation will modify the set of all active package deployments on the operating system, and it will succeed if (and only if) all of the following constraints will be satisfied by the resulting set of all package deployments:
 
 - Package deployment name constraints:
    - Uniqueness constraint: no package deployment will attempt to use the same name as another distinct package deployment; package deployments are distinct if they have different package paths and/or if they declare different sets of enabled features.
@@ -56,7 +52,7 @@ Each such operation will modify the set of all active package deployments on the
    - Dependency constraint (*resource requirements*): all of the resources required by all of the active package deployments will also be resources provided by some subset of the active package deployments.
    - Uniqueness constraint (*provided resources*): none of the resources provided by any of the active package deployments will conflict with resources provided by any other active package deployments.
 
-### Package resource constraints
+### Resource constraints
 
 The resource requirements and provided resources associated with a package deployment are its *resource interface* and are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users correct resource conflicts and unresolved resource dependencies between package deployments. The resource interface of a package deployment is determined from the package deployment's configuration and information specified by the package. The design of the resource interface system for determining the validity of a combination of package deployments is inspired by design of implicit interfaces in the Go programming language.
 
@@ -72,138 +68,12 @@ Resource requirements and provided resources are specified as a set of *identifi
 
 Because some Docker hosts may already have ambiently-available resources not provided by applications running in Docker (for example, an SSH server on port 22 installed using `apt-get`), a Forklift package may also include a list of resources already ambiently provided by the host; if such a resource is declared, it should be provided by the Docker host regardless of whether the package is deployed. Adding or removing a deployment of such a package will not affect the actual existence of such resources; it will only change a package manager's assumptions about what resources are ambiently provided by the host.
 
-### Package features
-
+## Package features
 Forklift package *features* provide a mechanism to express optional resource constraints (both required resources and provided resources) and functionalities of a package. Each feature is identified by a name unique within the package. The design of Forklift package features is inspired by the design of the [features system](https://doc.rust-lang.org/cargo/reference/features.html) in the Rust Cargo package management system.
 
+Features control the functionalities or behavior of the package deployment, which is fully specified by declaring the name of the deployment, the package to deploy, and the features to enable in the deployment. Thus, a single package may be instantiated as multiple distinct deployments (each with different configurations) within the same pallet which gets applied to the operating system; or a package may not be instantiated by any deployment within the pallet, so that it will not have any effect on the operating system. 
+
 A package defines a set of named features in its `forklift-package.yml` metadata file, and each feature can be either enabled or disabled by a package manager. Each package feature specifies any resources it requires from the Docker host, as well as any resources it provides on the Docker host, and the names of any additional Docker Compose files which should be merged together into the Docker Compose application defined by the package when the feature is enabled.
-
-### Versioning with constraints and features
-
-Usually, the following changes to a package are backwards-incompatible, in which case they will require incrementing the major component of the semantic version of the repository providing that package, if the repository follows semantic versioning and the major component of the semantic version was already nonzero:
-
-- Changing the name to use for deploying the package
-- Making changes which may introduce conflicts between provided resources, for certain combinations of package deployments:
-   - In the host specification or the deployment specification:
-      - Adding a provided resource
-      - Modifying the identification criteria of a provided resource
-   - In any optional feature:
-      - Adding a new provided resource
-      - Modifying the identification criteria of a provided resource
-- Making changes which may make dependencies between provided and required resources unresolvable, for certain combinations of package deployments:
-   - In the host specification or the deployment specification:
-      - Removing a provided resource
-      - Modifying the identification criteria of a provided resource
-   - In the deployment specification:
-      - Adding a resource requirement
-      - Modifying the identification criteria of a resource requirement
-   - In any optional feature:
-      - Adding a new resource requirement
-      - Removing a provided resource
-      - Modifying the identification criteria of a provided resource
-      - Modifying the identification criteria of a resource requirement
-- Making changes which may make a package deployment declaration invalid:
-   - In the list of optional features offered by the package:
-      - Removing any feature
-      - Renaming any feature
-- Making a backwards-incompatible change to any external technical interfaces (protocols, APIs, schemas, data formats, etc.) provided or required by that package: this may break compatibility with other deployed packages which interact with those interfaces. Backwards-incompatible changes include:
-   - Adding a new requirement as part of the interface
-   - Removing a previously-provided functionality from the interface
-- Making a change to any user interfaces provided or by that package which would probably break users' existing mental models of how to use the interface.
-
-The following changes to a package are usually backwards-compatible, in which case they would only require incrementing the minor component of the semantic version of the repository providing that package, if the repository follows semantic versioning:
-
-- Adding a new optional feature
-- Removing a resource requirement from any optional feature
-- Making a backwards-compatible change to any external technical or user interfaces provided or required by that package. Backwards-compatible changes in an interface include:
-   - Removing a requirement from the interface
-   - Adding new optional functionality to the interface
-
-It is the reponsibility of the package maintainer to document the package's external interfaces, to increment the relevant components of a repository's semantic or calendar version as needed, and to help users migrate smoothly across version upgrades and downgrades.
-
-## Repository definition
-
-The definition of a repository is stored in a YAML file named `forklift-repository.yml` in the repository's root directory. Here is an example of a `forklift-repository.yml` file:
-
-```yaml
-forklift-version: v0.4.0
-
-repository:
-  path: github.com/PlanktoScope/device-pkgs
-  description: Packages for the PlanktoScope software distribution
-  readme-file: README.md
-```
-
-### `forklift-version` field
-
-This field of the `forklift-repository.yml` file declares that the repository was written assuming the semantics of a given version of Forklift.
-
-- This field is required.
-
-- The version must be a valid version of the Forklift tool or the Forklift specification.
-
-- The version sets the minimum version of the Forklift tool required to use the repository. The Forklift tool refuses to use repositories declaring newer Forklift versions (or excessively old Forklift versions) for any operations beyond printing information.
-
-- Example:
-  
-  ```yaml
-  forklift-version: v0.4.0
-  ```
-
-All other fields in the repository metadata file are under a `repository` section.
-
-### `repository` section
-
-This section of the `forklift-repository.yml` file contains some basic metadata to help describe and identify the repository. Here is an example of a `repository` section:
-
-```yaml
-repository:
-  path: github.com/PlanktoScope/device-pkgs
-  description: Packages for the PlanktoScope software distribution
-  readme-file: README.md
-```
-
-#### `path` field
-
-This field of the `repository` section is the repository path.
-
-- This field is required.
-
-- Example:
-  
-  ```yaml
-  path: github.com/PlanktoScope/device-pkgs
-  ```
-
-#### `description` field
-
-This field of the `repository` section is a short (one-sentence) description of the repository to be shown to users.
-
-- This field is required.
-
-- Example:
-  
-  ```yaml
-  description: Packages for the PlanktoScope software distribution
-  ```
-
-#### `readme-file` field
-
-This field of the `repository` section is the filename of a readme file to be shown to users.
-
-- This field is required.
-
-- The file must be located in the same directory as the `forklift-repository.yml` file.
-
-- The file must be a text file.
-
-- It is recommended for this file to be named `README.md` and to be formatted in [GitHub-flavored Markdown](https://github.github.com/gfm/).
-
-- Example:
-  
-  ```yaml
-  readme-file: README.md
-  ```
 
 ## Package definition
 
@@ -1540,3 +1410,5 @@ A feature specification object consists of the following fields:
              - /admin/portainer
              - /admin/portainer/*
      ```
+
+## Package deployment definition
