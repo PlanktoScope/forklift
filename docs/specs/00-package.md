@@ -1,44 +1,30 @@
 # Forklift package specification
 
-This specification defines Forklift packages.
-
 ## Introduction
 
-This specification's design is heavily inspired by the design of the Go programming language and its module system, and this reference document tries to echo the [reference document for Go modules](https://go.dev/ref/mod) for familiarity; certain aspects of packages are also inspired by the Rust programming language's [Cargo](https://doc.rust-lang.org/cargo/) package management system.
+Packages are how Forklift modularizes software. This document is a detailed reference manual for Forklift packages.
 
-## Pallets, packages, and deployments
+## Packages and deployments
 
-A Forklift *pallet* is a collection of software packages which are tested, released, distributed, deployed, and upgraded together. A pallet can be *applied* to a host operating system, which means that the operating system is modified according to the contents of the pallet. A pallet is just a Git repository which meets some special requirements described in the [Forklift pallet specification](./01-pallet.md). The root directory of the pallet (the *pallet root directory*) is exactly the root directory of the Git repository. A pallet may be shared by being hosted at a stable location on the internet (e.g. on GitHub); each such pallet should be identified by a [*pallet path*](./01-pallet.md#pallet-paths) unique to it (e.g. `github.com/openUC2/rpi-imswitch-os`).
+A *package* is a small collection of operating system configurations (and/or software applications) which are stored within the same directory and which should be deployed together. Each package declares the possible prerequisites and results of its deployment on the host operating system, and each package can be instantiated as one or more package deployments.
 
-Pallets contain one or more *packages*; packages are Forklift's basic unit of modularity and composition. Each Forklift package declares a single software application (or a single set of operating system configurations) which can be instantiated as one or more [*package deployments*](#package-deployments) on the host operating system. Each package declares the possible prerequisites and results of its deployment on the host. Typically, a package declares the following information for any package deployments instantiated from the package:
+A *package deployment* is an instantiation of a specific package together with a specific set of [*feature flags*](https://en.wikipedia.org/wiki/Feature_toggle). While a package declares a possibility (or a set of possibilities) for something to exist in the operating system, a package deployment declares a concrete intention for making the operating system reflect one specific possibility (via one specific set of feature flags) represented by the package. A package will only have an effect on the operating system if it is instantiated as a package deployment.
 
-- a set of files which will be *exported* into a Forklift-managed file tree on the host operating system; and/or
-- a Docker Compose application which will be deployed on the host operating system; and/or
-- a set of [*constraints*](#package-deployment-constraints) for determining whether the package deployment is sufficiently valid to be allowed on the operating system, including a list of any operating system [*resources*](#resource-constraints) which are required by the package deployment or provided by the package deployment; and/or
-- a set of optional [*features*](#package-features) which may be enabled in a package deployment through feature flags; when enabled, features modify the functionality of the package deployment, for example by:
+Typically, a package declares some or all of the following information for instantiation in one or more package deployments:
+
+- a set of files which will be *exported* into a Forklift-managed file tree on the host operating system
+- a Docker Compose application which will be deployed on the host operating system
+- a set of [*constraints*](#package-deployment-constraints) for determining whether the package deployment is sufficiently valid to be allowed on the operating system, including a list of any operating system [*resources*](#resources) which are required by the package deployment or provided by the package deployment
+- a set of optional [*features*](#package-features) which may be enabled in a package deployment through feature flags; when enabled, features modify the functionality of the package deployment by:
   - declaring additional files to be exported into the Forklift-managed file tree; and/or
   - modifying the Docker Compose application with additional Compose file snippets to be merged into the declaration of the Compose application; and/or
   - modifying the set of constraints.
 
-All of this information for a package is declared in that package's `forklift-package.yml` file. The root directory of the package (the *package root directory*) is exactly the directory that contains the package's `forklift-package.yml` file.
-
-### Package paths
-The path of a package (the *package path*) is the pallet path joined with the subdirectory (relative to the pallet root) which is the package root directory. For example, the root directory of the pallet `github.com/openUC2/rpi-imswitch-os` contains a subdirectory `/deployments/infra/caddy-ingress.pkg` which is a pallet package because that subdirectory contains a `forklift-package.yml` file; then the path of the package is `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg`. Note that the package path is not necessarily resolveable as a web page URL (so for example <https://github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg> gives a HTTP 404 Not Found error), because that package is only resolvable in the context of a specific GitHub repository version. Note also that, if a package is in a pallet with an empty path, then the package path will merely be the path of the package relative to the pallet's root directory (e.g. `/deployments/infra/caddy-ingress.pkg`), and the package will not be identifiable or locatable from outside its pallet.
-
-By convention, package paths should end in the suffix `.pkg`, e.g. `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg` instead of `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress`. This convention makes it easy to determine that, for example, `github.com/openUC2/rpi-imswitch-os/deployments/infra` isn't a package, but rather a directory which contains packages.
-
-### Package deployments
-A package deployment is an instantiation of a specific package with a specific set of feature flags. Thus, while a package declares a possibility (or a set of possibilities) for something to exist in the operating system, a package deployment declares a concrete intention for making the operating system include one specific possibility represented by the package. If a pallet has no enabled package deployments for a package, then that the package will never have any effect on the operating system.
-
-Each package deployment is declared as a YAML file which has the file extension `.deploy.yml` and which is in the `deployments` subdirectory of the pallet root directory. Thus, each package deployment also has a unique name corresponding to its path within the pallet; for example, in the pallet `github.com/openUC2/rpi-imswitch-os`, the package deployment declared by the file `/deployments/infra/caddy-ingress.deploy.yml` can be unambiguously identified with the name `infra/caddy-ingress` in user interfaces.
-
-By convention, each package deployment file should usually be placed in the same directory as the package which it deploys. For example, the pallet `github.com/openUC2/rpi-imswitch-os` contains a package deployment for `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg` at `/deployments/infra/caddy-ingress.deploy.yml`.
-
-A package deployment specifies the package it will deploy by referring to the package's path, either including the pallet path of the package's pallet (if the package to be deployed is defined in a different pallet) or without any pallet path (if the package to be deployed is defined in the same pallet as the deployment). For example, in the pallet `github.com/openUC2/rpi-imswitch-os`, the package deployment declaration at `/deployments/infra/caddy-ingress.deploy.yml` specifies the path `/deployments/infra/caddy-ingress.pkg` to deploy that package from the same pallet. By contrast, a package deployment declaration in some other pallet would have to specify the path `github.com/openUC2/rpi-imswitch-os/deployments/infra/caddy-ingress.pkg` in order to deploy that same package (the details for how that path is resolved are discussed in TODO).
+All of this information for a package is declared in that package's `forklift-package.yml` file, along with (TODO) zero or more files with file extension `.feature.yml`. The *package root directory* is the directory which contains the package's `forklift-package.yml` file.
 
 ## Package deployment constraints
 
-Usually, multiple package deployments are simultaneously active on an operating system; and multiple package deployments may be modified by a package manager operation, for example:
+Usually, multiple package deployments are simultaneously active on an operating system; and multiple package deployments may be modified together, for example:
 
 - Adding new package deployments
 - Removing existing package deployments
@@ -46,34 +32,39 @@ Usually, multiple package deployments are simultaneously active on an operating 
 
 Each such operation will modify the set of all active package deployments on the operating system, and it will succeed if (and only if) all of the following constraints will be satisfied by the resulting set of all package deployments:
 
-- Package deployment name constraints:
-   - Uniqueness constraint: no package deployment will attempt to use the same name as another distinct package deployment; package deployments are distinct if they have different package paths and/or if they declare different sets of enabled features.
-- Resource constraints:
-   - Dependency constraint (*resource requirements*): all of the resources required by all of the active package deployments will also be resources provided by some subset of the active package deployments.
-   - Uniqueness constraint (*provided resources*): none of the resources provided by any of the active package deployments will conflict with resources provided by any other active package deployments.
+- [Resource](#resources) constraints:
+  - Dependency constraint (*resource requirements*): all of the resources required by all of the active package deployments will also be resources provided by some subset of the active package deployments.
+  - Uniqueness constraint (*provided resources*): none of the resources provided by any of the active package deployments will conflict with resources provided by any other active package deployments.
 
-### Resource constraints
+Package deployment constraints are analogous to [design rules](https://en.wikipedia.org/wiki/Design_rule_checking) in electronic design automation (EDA) or electronic computer-aided design (ECAD) systems.
 
-The resource requirements and provided resources associated with a package deployment are its *resource interface* and are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users correct resource conflicts and unresolved resource dependencies between package deployments. The resource interface of a package deployment is determined from the package deployment's configuration and information specified by the package. The design of the resource interface system for determining the validity of a combination of package deployments is inspired by design of implicit interfaces in the Go programming language.
+## Resources
 
-A package deployment's declaration of resource requirements and provided resources is also a declaration of its external interface on the Docker host. Currently, resources can be:
+The resource requirements and provided resources associated with a package deployment are its *resource interface* and are part of the set of constraints which determine whether a set of package deployments is allowed. When a set of package deployments is not allowed, information about unsatisfied resource constraints should be used by the package manager to help users with fixing resource conflicts and unresolved resource dependencies between package deployments. The resource interface of a package deployment is determined from information declared by the package as well as the package deployment's enabled feature flags.
 
-1. Docker networks
-2. Host port listeners bound to network ports on the host
-3. Network services mapped to the host
-4. Files on the host (which may be dynamically generated by software deployed by the package deployment, and are specified relative to the filesystem root)
-5. Files exported to the host (which are statically specified by the package deployment, and are specified relative to an export path defined by each implementation of the Forklift packaging specification)
+The design of the resource interface system for determining the validity of a combination of package deployments is inspired by design of implicit interfaces in the Go programming language.
 
-Resource requirements and provided resources are specified as a set of *identification criteria* for determining whether two provided resources have conflicting identities or whether the identity of a package deployment's required resource matches the identity of a resource provided by another package.
+A package deployment's declaration of resource requirements and provided resources is also a declaration of its external interface on the host operating system. Resources can be:
 
-Because some Docker hosts may already have ambiently-available resources not provided by applications running in Docker (for example, an SSH server on port 22 installed using `apt-get`), a Forklift package may also include a list of resources already ambiently provided by the host; if such a resource is declared, it should be provided by the Docker host regardless of whether the package is deployed. Adding or removing a deployment of such a package will not affect the actual existence of such resources; it will only change a package manager's assumptions about what resources are ambiently provided by the host.
+1. Files exported to the host (which are statically declared by the package deployment, and are declared relative to an export path defined by the [Forklift pallet bundle specifications](./02-bundle.md))
+2. Files on the host (which may be dynamically generated by software deployed by the package deployment, and are declared relative to the filesystem root)
+3. Docker networks
+4. Host port listeners bound to network ports on the host
+5. Network services mapped to the host
+
+Resource requirements and provided resources are declared as a set of *identification criteria* for determining whether two provided resources have conflicting identities or whether the identity of a package deployment's required resource matches the identity of a resource provided by another package.
+
+### Host resources
+Because operating systems usually already have ambiently-available resources not provided by Forklift-managed applications (for example, an SSH server on port 22 installed using `apt-get`), a Forklift package may also include a list of resources already ambiently provided by the host; if such a resource is declared, the host operating system is assumed to provide it regardless of whether the package is deployed using Forklift. Declaring the existence of such resources will not affect the actual existence of those resources; it will only change a package manager's assumptions about what resources are ambiently provided by the host.
 
 ## Package features
-Forklift package *features* provide a mechanism to express optional resource constraints (both required resources and provided resources) and functionalities of a package. Each feature is identified by a name unique within the package. The design of Forklift package features is inspired by the design of the [features system](https://doc.rust-lang.org/cargo/reference/features.html) in the Rust Cargo package management system.
+Forklift package *features* provide a mechanism to express optional functionalities and resource constraints (both required resources and provided resources) of a package. Each feature is identified by *feature flag*, which is a name unique within the package. The design of Forklift package features is inspired by the design of the ["features" system](https://doc.rust-lang.org/cargo/reference/features.html) in the Rust Cargo package management system.
 
-Features control the functionalities or behavior of the package deployment, which is fully specified by declaring the name of the deployment, the package to deploy, and the features to enable in the deployment. Thus, a single package may be instantiated as multiple distinct deployments (each with different configurations) within the same pallet which gets applied to the operating system; or a package may not be instantiated by any deployment within the pallet, so that it will not have any effect on the operating system. 
+A package defines a set of named features in its `forklift-package.yml` metadata file, along with (TODO) zero or more files with file extension `.feature.yml`; and each feature can be either enabled or disabled by a particular package deployment for that package.
 
-A package defines a set of named features in its `forklift-package.yml` metadata file, and each feature can be either enabled or disabled by a package manager. Each package feature specifies any resources it requires from the Docker host, as well as any resources it provides on the Docker host, and the names of any additional Docker Compose files which should be merged together into the Docker Compose application defined by the package when the feature is enabled.
+Each package feature declares:
+- any resources it requires, as well as any resources it provides (such as additional file exports)
+- the names of any additional Docker Compose files which should be merged together into the Docker Compose application defined by the package
 
 ## Package definition
 
@@ -1410,5 +1401,3 @@ A feature specification object consists of the following fields:
              - /admin/portainer
              - /admin/portainer/*
      ```
-
-## Package deployment definition
