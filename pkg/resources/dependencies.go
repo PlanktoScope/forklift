@@ -10,7 +10,7 @@ func CheckDeps[Res DepChecker[Res, Origin], Origin any](
 	for _, r := range required {
 		bestErrsCount := -1
 		bestCandidates := make([]DepCandidate[Res, Origin], 0, len(provided))
-		for i, p := range provided {
+		for _, p := range provided {
 			errs := r.Res.CheckDep(p.Res)
 			if bestErrsCount != -1 && len(errs) > bestErrsCount {
 				continue
@@ -18,7 +18,7 @@ func CheckDeps[Res DepChecker[Res, Origin], Origin any](
 			if bestErrsCount == -1 || len(errs) < bestErrsCount {
 				// we've found a provided resource which is strictly better than all previous candidates
 				bestErrsCount = len(errs)
-				bestCandidates = make([]DepCandidate[Res, Origin], 0, len(provided)-i)
+				bestCandidates = bestCandidates[:0]
 			}
 			bestCandidates = append(bestCandidates, DepCandidate[Res, Origin]{
 				Provided: p,
@@ -32,6 +32,7 @@ func CheckDeps[Res DepChecker[Res, Origin], Origin any](
 			})
 			continue
 		}
+		// only return the first satisfactory resource even if multiple candidates are satisfactory:
 		satisfied = append(satisfied, SatisfiedDep[Res, Origin]{
 			Required: r,
 			Provided: bestCandidates[0].Provided,

@@ -8,7 +8,7 @@ func CheckConflicts[Res ConflictChecker[Res], Origin any](
 ) (conflicts []Conflict[Res, Origin]) {
 	for _, f := range first {
 		for _, s := range second {
-			if errs := f.Res.CheckConflict(s.Res); errs != nil {
+			if errs := f.Res.CheckConflict(s.Res); len(errs) > 0 {
 				conflicts = append(conflicts, Conflict[Res, Origin]{
 					First:  f,
 					Second: s,
