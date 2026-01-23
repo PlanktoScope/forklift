@@ -17,6 +17,7 @@ import (
 	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 func GetRepoCache(
@@ -190,7 +191,7 @@ func AddRepoReqs(
 		if err != nil {
 			return err
 		}
-		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDeclFile)
+		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), versioning.LockDeclFile)
 		if err = writeVersionLock(req.VersionLock, repoReqPath); err != nil {
 			return errors.Wrapf(err, "couldn't write version lock for repo requirement")
 		}
@@ -198,7 +199,7 @@ func AddRepoReqs(
 	return nil
 }
 
-func writeVersionLock(lock forklift.VersionLock, writePath string) error {
+func writeVersionLock(lock versioning.Lock, writePath string) error {
 	marshaled, err := yaml.Marshal(lock.Decl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't marshal version lock")
@@ -252,7 +253,7 @@ func RemoveRepoReqs(
 			)
 		}
 		if err = os.RemoveAll(filepath.FromSlash(path.Join(
-			repoReqPath, forklift.VersionLockDeclFile,
+			repoReqPath, versioning.LockDeclFile,
 		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for repo %s, at %s", repoPath, repoReqPath,

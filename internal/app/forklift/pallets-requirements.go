@@ -11,6 +11,7 @@ import (
 
 	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // GitRepoReq
@@ -55,7 +56,7 @@ func loadFSPalletReq(fsys ffs.PathedFS, palletPath string) (r *FSPalletReq, err 
 		)
 	}
 	r.RequiredPath = palletPath
-	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDeclFile)
+	r.VersionLock, err = versioning.LoadLock(r.FS, versioning.LockDeclFile)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load version lock declaration of requirement for pallet %s", palletPath,
@@ -69,7 +70,7 @@ func loadFSPalletReq(fsys ffs.PathedFS, palletPath string) (r *FSPalletReq, err 
 // required pallets. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // pallet paths to search for.
 func loadFSPalletReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
-	searchPattern = path.Join(searchPattern, VersionLockDeclFile)
+	searchPattern = path.Join(searchPattern, versioning.LockDeclFile)
 	palletReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -80,7 +81,7 @@ func loadFSPalletReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSPalletReq, 
 
 	reqs := make([]*FSPalletReq, 0, len(palletReqFiles))
 	for _, palletReqDeclFilePath := range palletReqFiles {
-		if path.Base(palletReqDeclFilePath) != VersionLockDeclFile {
+		if path.Base(palletReqDeclFilePath) != versioning.LockDeclFile {
 			continue
 		}
 
@@ -160,7 +161,7 @@ func loadFSRepoReq(fsys ffs.PathedFS, repoPath string) (r *FSRepoReq, err error)
 		)
 	}
 	r.RequiredPath = repoPath
-	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDeclFile)
+	r.VersionLock, err = versioning.LoadLock(r.FS, versioning.LockDeclFile)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load version lock declaration of requirement for repo %s", repoPath,
@@ -194,7 +195,7 @@ func LoadFSRepoReqContaining(fsys ffs.PathedFS, subdirPath string) (*FSRepoReq, 
 // required repos. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // repo paths to search for.
 func loadFSRepoReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
-	searchPattern = path.Join(searchPattern, VersionLockDeclFile)
+	searchPattern = path.Join(searchPattern, versioning.LockDeclFile)
 	repoReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -204,7 +205,7 @@ func loadFSRepoReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSRepoReq, erro
 
 	reqs := make([]*FSRepoReq, 0, len(repoReqFiles))
 	for _, repoReqDeclFilePath := range repoReqFiles {
-		if path.Base(repoReqDeclFilePath) != VersionLockDeclFile {
+		if path.Base(repoReqDeclFilePath) != versioning.LockDeclFile {
 			continue
 		}
 

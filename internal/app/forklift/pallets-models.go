@@ -4,6 +4,7 @@ package forklift
 import (
 	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // A FSPallet is a Forklift pallet stored at the root of a [fs.FS] filesystem.
@@ -64,7 +65,7 @@ type GitRepoReq struct {
 	// GitRepoPath is the path of the required Git repository.
 	RequiredPath string `yaml:"-"`
 	// VersionLock specifies the version of the required Git repository.
-	VersionLock VersionLock `yaml:"version-lock"`
+	VersionLock versioning.Lock `yaml:"version-lock"`
 }
 
 const (

@@ -7,6 +7,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // Bundles
@@ -110,7 +111,7 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 
 func fprintBundleInclusion(
 	indent int, out io.Writer, path string,
-	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock forklift.VersionLock,
+	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock versioning.Lock,
 ) {
 	IndentedFprintf(indent, out, "%s:\n", path)
 	indent++

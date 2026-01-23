@@ -15,6 +15,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 func GetPalletCache(
@@ -162,7 +163,7 @@ func AddPalletReqs(
 		if err != nil {
 			return err
 		}
-		palletReqPath := path.Join(reqsPalletsFS.Path(), req.Path(), forklift.VersionLockDeclFile)
+		palletReqPath := path.Join(reqsPalletsFS.Path(), req.Path(), versioning.LockDeclFile)
 		if err = writeVersionLock(req.VersionLock, palletReqPath); err != nil {
 			return errors.Wrapf(err, "couldn't write version lock for pallet requirement")
 		}
@@ -207,7 +208,7 @@ func RemovePalletReqs(
 			)
 		}
 		if err = os.RemoveAll(filepath.FromSlash(path.Join(
-			palletReqPath, forklift.VersionLockDeclFile,
+			palletReqPath, versioning.LockDeclFile,
 		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for pallet %s, at %s", palletPath, palletReqPath,
