@@ -62,12 +62,12 @@ func makeRepoOverrideCacheFromPallet(
 		palletAsRepo = &core.FSRepo{
 			Repo: core.Repo{
 				Version: pallet.Version,
-				Def: core.RepoDef{
-					ForkliftVersion: pallet.Def.ForkliftVersion,
+				Decl: core.RepoDecl{
+					ForkliftVersion: pallet.Decl.ForkliftVersion,
 					Repo: core.RepoSpec{
-						Path:        pallet.Def.Pallet.Path,
-						Description: pallet.Def.Pallet.Description,
-						ReadmeFile:  pallet.Def.Pallet.ReadmeFile,
+						Path:        pallet.Decl.Pallet.Path,
+						Description: pallet.Decl.Pallet.Description,
+						ReadmeFile:  pallet.Decl.Pallet.ReadmeFile,
 					},
 				},
 			},
@@ -190,7 +190,7 @@ func AddRepoReqs(
 		if err != nil {
 			return err
 		}
-		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDefFile)
+		repoReqPath := path.Join(reqsReposFS.Path(), req.Path(), forklift.VersionLockDeclFile)
 		if err = writeVersionLock(req.VersionLock, repoReqPath); err != nil {
 			return errors.Wrapf(err, "couldn't write version lock for repo requirement")
 		}
@@ -199,7 +199,7 @@ func AddRepoReqs(
 }
 
 func writeVersionLock(lock forklift.VersionLock, writePath string) error {
-	marshaled, err := yaml.Marshal(lock.Def)
+	marshaled, err := yaml.Marshal(lock.Decl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't marshal version lock")
 	}
@@ -252,7 +252,7 @@ func RemoveRepoReqs(
 			)
 		}
 		if err = os.RemoveAll(filepath.FromSlash(path.Join(
-			repoReqPath, forklift.VersionLockDefFile,
+			repoReqPath, forklift.VersionLockDeclFile,
 		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for repo %s, at %s", repoPath, repoReqPath,
@@ -285,7 +285,7 @@ func determineUsedRepoReqs(
 		return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
 	}
 	for _, depl := range depls {
-		pkgPath := depl.Def.Package
+		pkgPath := depl.Decl.Package
 		if path.IsAbs(pkgPath) { // special case: package is provided by the pallet itself
 			continue
 		}
@@ -342,7 +342,7 @@ func downloadRequiredRepos(
 		changed = changed || downloaded
 		if err != nil {
 			return changed, errors.Wrapf(
-				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+				err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Decl.ShortCommit(),
 			)
 		}
 		if !changed {
@@ -412,17 +412,17 @@ func cacheRepoFromCachedPallet(
 	}
 	if _, err = repoCache.LoadFSRepo(repoPath, repoVersion); err != nil {
 		IndentedFprintln(indent, os.Stderr, "Writing repo declaration implied by pallet declaration...")
-		if err = core.WriteRepoDef(
-			core.RepoDef{
-				ForkliftVersion: merged.Def.ForkliftVersion,
+		if err = core.WriteRepoDecl(
+			core.RepoDecl{
+				ForkliftVersion: merged.Decl.ForkliftVersion,
 				Repo: core.RepoSpec{
-					Path:        merged.Def.Pallet.Path,
-					Description: merged.Def.Pallet.Description,
-					ReadmeFile:  merged.Def.Pallet.ReadmeFile,
+					Path:        merged.Decl.Pallet.Path,
+					Description: merged.Decl.Pallet.Description,
+					ReadmeFile:  merged.Decl.Pallet.ReadmeFile,
 				},
 			},
 			filepath.FromSlash(path.Join(
-				repoCache.Path(), fmt.Sprintf("%s@%s", repoPath, repoVersion), core.RepoDefFile,
+				repoCache.Path(), fmt.Sprintf("%s@%s", repoPath, repoVersion), core.RepoDeclFile,
 			)),
 		); err != nil {
 			return errors.Wrap(err, "couldn't initialize repo declaration from pallet declaration")

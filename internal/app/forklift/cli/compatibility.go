@@ -31,7 +31,7 @@ func CheckPltCompat(
 	}
 
 	if err := CheckArtifactCompat(
-		pallet.Def.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
+		pallet.Decl.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
 		ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
@@ -88,7 +88,7 @@ func CheckDeepCompat(
 	// FIXME: merge the pallet with file imports from its required pallets
 
 	if err := CheckArtifactCompat(
-		pallet.Def.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
+		pallet.Decl.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
 		ignoreTool,
 	); err != nil {
 		return errors.Wrapf(
@@ -113,7 +113,7 @@ func checkReqPalletVersions(
 			err, "couldn't determine Forklift versions of pallet %s's pallet requirements", pallet.Path(),
 		)
 	}
-	if err = checkVersionConsistency(pallet.Def.ForkliftVersion, versions); err != nil {
+	if err = checkVersionConsistency(pallet.Decl.ForkliftVersion, versions); err != nil {
 		return errors.Wrapf(
 			err, "pallet %s has a version incompatibility with a required pallet", pallet.Path(),
 		)
@@ -155,7 +155,7 @@ func loadPalletReqForkliftVersions(
 		versions = append(versions, reqForkliftVersion{
 			reqPath:         req.Path(),
 			reqVersion:      req.VersionLock.Version,
-			forkliftVersion: fsPallet.Pallet.Def.ForkliftVersion,
+			forkliftVersion: fsPallet.Pallet.Decl.ForkliftVersion,
 		})
 	}
 	return versions, nil

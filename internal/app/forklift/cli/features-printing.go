@@ -66,7 +66,7 @@ func FprintFeature(
 		}
 	}
 
-	if err := fprintModifiers(indent, out, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
+	if err := fprintModifiers(indent, out, imp.Decl.Modifiers, imp.Pallet, loader); err != nil {
 		return err
 	}
 

@@ -45,10 +45,10 @@ func ResolveVersionQueryUsingRepo(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
-	if lock.Def, err = lockCommit(gitRepo, commit); err != nil {
+	if lock.Decl, err = lockCommit(gitRepo, commit); err != nil {
 		return forklift.VersionLock{}, err
 	}
-	if lock.Version, err = lock.Def.Version(); err != nil {
+	if lock.Version, err = lock.Decl.Version(); err != nil {
 		return forklift.VersionLock{}, err
 	}
 	return lock, nil
@@ -72,16 +72,16 @@ func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error
 	return "", nil
 }
 
-func lockCommit(gitRepo *git.Repo, commit string) (config forklift.VersionLockDef, err error) {
+func lockCommit(gitRepo *git.Repo, commit string) (config forklift.VersionLockDecl, err error) {
 	config.Commit = commit
 	if config.Timestamp, err = forklift.GetCommitTimestamp(gitRepo, config.Commit); err != nil {
-		return forklift.VersionLockDef{}, err
+		return forklift.VersionLockDecl{}, err
 	}
 
 	// Attempt to lock as a tagged version
 	tags, err := gitRepo.GetTagsAt(commit)
 	if err != nil {
-		return forklift.VersionLockDef{}, errors.Wrapf(err, "couldn't lookup tags matching %s", commit)
+		return forklift.VersionLockDecl{}, errors.Wrapf(err, "couldn't lookup tags matching %s", commit)
 	}
 	tags = filterTags(tags)
 	sort.Slice(tags, func(i, j int) bool {
@@ -97,7 +97,7 @@ func lockCommit(gitRepo *git.Repo, commit string) (config forklift.VersionLockDe
 	config.Type = forklift.LockTypePseudoversion
 	ancestralTags, err := gitRepo.GetAncestralTags(commit)
 	if err != nil {
-		return forklift.VersionLockDef{}, errors.Wrapf(
+		return forklift.VersionLockDecl{}, errors.Wrapf(
 			err, "couldn't determine tagged ancestors of %s", commit,
 		)
 	}
@@ -283,7 +283,7 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 		if err != nil {
 			return resolved, nil, errors.Wrapf(
 				err, "couldn't download %s@%s as commit %s",
-				req.Path(), req.VersionLock.Version, req.VersionLock.Def.ShortCommit(),
+				req.Path(), req.VersionLock.Version, req.VersionLock.Decl.ShortCommit(),
 			)
 		}
 		if !downloaded {
@@ -348,7 +348,7 @@ func DownloadLockedGitRepoUsingLocalMirror(
 func cloneLockedGitRepoFromLocalMirror(
 	indent int, cachePath, mirrorsPath, gitRepoPath string, lock forklift.VersionLock,
 ) (downloaded bool, err error) {
-	if !lock.Def.IsCommitLocked() {
+	if !lock.Decl.IsCommitLocked() {
 		return false, errors.Errorf(
 			"the version lock definition for Git repo %s has no commit lock", gitRepoPath,
 		)
@@ -375,7 +375,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	}
 
 	// Validate commit
-	shortCommit := lock.Def.ShortCommit()
+	shortCommit := lock.Decl.ShortCommit()
 	if err = validateCommit(lock, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
@@ -391,7 +391,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	}
 
 	// Checkout commit
-	if err = gitRepo.Checkout(lock.Def.Commit, ""); err != nil {
+	if err = gitRepo.Checkout(lock.Decl.Commit, ""); err != nil {
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
 			IndentedFprintf(
 				indent, os.Stderr, "Error: couldn't clean up %s! You'll need to delete it yourself.\n",
@@ -408,16 +408,16 @@ func cloneLockedGitRepoFromLocalMirror(
 
 func validateCommit(versionLock forklift.VersionLock, gitRepo *git.Repo) error {
 	// Check commit time
-	commitTimestamp, err := forklift.GetCommitTimestamp(gitRepo, versionLock.Def.Commit)
+	commitTimestamp, err := forklift.GetCommitTimestamp(gitRepo, versionLock.Decl.Commit)
 	if err != nil {
 		return err
 	}
-	versionedTimestamp := versionLock.Def.Timestamp
+	versionedTimestamp := versionLock.Decl.Timestamp
 	if commitTimestamp != versionedTimestamp {
 		return errors.Errorf(
 			"commit %s was made at %s, while the repo version lock definition expects it to have "+
 				"been made at %s",
-			versionLock.Def.ShortCommit(), commitTimestamp, versionedTimestamp,
+			versionLock.Decl.ShortCommit(), commitTimestamp, versionedTimestamp,
 		)
 	}
 

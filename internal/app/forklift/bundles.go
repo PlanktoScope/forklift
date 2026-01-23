@@ -46,7 +46,7 @@ func LoadFSBundle(fsys ffs.PathedFS, subdirPath string) (b *FSBundle, err error)
 		return nil, errors.Errorf("couldn't load bundle manifest")
 	}
 	for path, req := range b.Bundle.Manifest.Includes.Pallets {
-		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Def.Version(); err != nil {
+		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Decl.Version(); err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine requirement version of included pallet %s", path,
 			)
@@ -54,7 +54,7 @@ func LoadFSBundle(fsys ffs.PathedFS, subdirPath string) (b *FSBundle, err error)
 		b.Bundle.Manifest.Includes.Pallets[path] = req
 	}
 	for path, req := range b.Bundle.Manifest.Includes.Repos {
-		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Def.Version(); err != nil {
+		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Decl.Version(); err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine requirement version of included repo %s", path,
 			)
@@ -215,7 +215,7 @@ func (b *FSBundle) getBundledMergedPalletPath() string {
 // FSBundle: Deployments
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
-	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
+	b.Manifest.Deploys[depl.Name] = depl.Depl.Decl
 	downloads := BundleDeplDownloads{}
 	if downloads.HTTPFile, err = depl.GetHTTPFileDownloadURLs(); err != nil {
 		return errors.Wrapf(
@@ -230,7 +230,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Downloads[depl.Name] = downloads
 
 	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
-		path.Join(b.getPackagesPath(), depl.Def.Package),
+		path.Join(b.getPackagesPath(), depl.Decl.Package),
 	)); err != nil {
 		return errors.Wrapf(
 			err, "couldn't bundle files from package %s for deployment %s from %s",
@@ -274,7 +274,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 func makeComposeAppSummary(
 	depl *ResolvedDepl, bundleFS ffs.PathedFS,
 ) (BundleDeplComposeApp, error) {
-	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Def.Package))
+	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Decl.Package))
 	if err != nil {
 		return BundleDeplComposeApp{}, errors.Wrapf(
 			err, "couldn't load bundled package %s", depl.Pkg.Path(),
@@ -384,7 +384,7 @@ func (b *FSBundle) LoadDepl(name string) (Depl, error) {
 	}
 	return Depl{
 		Name: name,
-		Def:  depl,
+		Decl: depl,
 	}, nil
 }
 
@@ -418,7 +418,7 @@ func (b *FSBundle) LoadResolvedDepl(name string) (depl *ResolvedDepl, err error)
 	resolved := &ResolvedDepl{
 		Depl: Depl{
 			Name: name,
-			Def:  b.Manifest.Deploys[name],
+			Decl: b.Manifest.Deploys[name],
 		},
 	}
 	pkgPath := b.Manifest.Deploys[name].Package
@@ -443,17 +443,17 @@ func (b *FSBundle) getPackagesPath() string {
 	return path.Join(b.FS.Path(), packagesDirName)
 }
 
-// WriteRepoDefFile creates a repo definition file at the packages path, so that all loaded packages
+// WriteRepoDeclFile creates a repo definition file at the packages path, so that all loaded packages
 // are associated with a repo.
-func (b *FSBundle) WriteRepoDefFile() error {
+func (b *FSBundle) WriteRepoDeclFile() error {
 	if err := EnsureExists(b.getPackagesPath()); err != nil {
 		return err
 	}
-	return core.WriteRepoDef(
-		core.RepoDef{
+	return core.WriteRepoDecl(
+		core.RepoDecl{
 			ForkliftVersion: b.Manifest.ForkliftVersion,
 		},
-		filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile)),
+		filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDeclFile)),
 	)
 }
 

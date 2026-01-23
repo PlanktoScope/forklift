@@ -162,7 +162,7 @@ func AddPalletReqs(
 		if err != nil {
 			return err
 		}
-		palletReqPath := path.Join(reqsPalletsFS.Path(), req.Path(), forklift.VersionLockDefFile)
+		palletReqPath := path.Join(reqsPalletsFS.Path(), req.Path(), forklift.VersionLockDeclFile)
 		if err = writeVersionLock(req.VersionLock, palletReqPath); err != nil {
 			return errors.Wrapf(err, "couldn't write version lock for pallet requirement")
 		}
@@ -207,7 +207,7 @@ func RemovePalletReqs(
 			)
 		}
 		if err = os.RemoveAll(filepath.FromSlash(path.Join(
-			palletReqPath, forklift.VersionLockDefFile,
+			palletReqPath, forklift.VersionLockDeclFile,
 		))); err != nil {
 			return errors.Wrapf(
 				err, "couldn't remove requirement for pallet %s, at %s", palletPath, palletReqPath,
@@ -297,7 +297,7 @@ func downloadRequiredPallets(
 			}
 			if err != nil {
 				return downloadedPallets, errors.Wrapf(
-					err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+					err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Decl.ShortCommit(),
 				)
 			}
 		} else {

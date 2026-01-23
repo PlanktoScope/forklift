@@ -41,10 +41,10 @@ func GetCommitTimestamp(c CommitTimeGetter, hash string) (string, error) {
 // loadVersionLock loads a VersionLock from a specified file path in the provided base filesystem.
 // The loaded version lock is fully initialized, including the version field.
 func loadVersionLock(fsys ffs.PathedFS, filePath string) (lock VersionLock, err error) {
-	if lock.Def, err = loadVersionLockDef(fsys, filePath); err != nil {
+	if lock.Decl, err = loadVersionLockDecl(fsys, filePath); err != nil {
 		return VersionLock{}, errors.Wrapf(err, "couldn't load version lock config")
 	}
-	if lock.Version, err = lock.Def.Version(); err != nil {
+	if lock.Version, err = lock.Decl.Version(); err != nil {
 		return VersionLock{}, errors.Wrapf(
 			err, "couldn't determine version specified by version lock configuration",
 		)
@@ -54,7 +54,7 @@ func loadVersionLock(fsys ffs.PathedFS, filePath string) (lock VersionLock, err 
 
 // Check looks for errors in the construction of the version lock.
 func (l VersionLock) Check() (errs []error) {
-	configVersion, err := l.Def.Version()
+	configVersion, err := l.Decl.Version()
 	if err != nil {
 		errs = append(errs, errors.Wrap(
 			err, "couldn't determine version specified by version lock configuration",
@@ -70,33 +70,33 @@ func (l VersionLock) Check() (errs []error) {
 	return errs
 }
 
-// VersionLockDef
+// VersionLockDecl
 
-// loadVersionLockDef loads a VersionLockDef from a specified file path in the provided base
+// loadVersionLockDecl loads a VersionLockDecl from a specified file path in the provided base
 // filesystem.
-func loadVersionLockDef(fsys ffs.PathedFS, filePath string) (VersionLockDef, error) {
+func loadVersionLockDecl(fsys ffs.PathedFS, filePath string) (VersionLockDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return VersionLockDef{}, errors.Wrapf(
+		return VersionLockDecl{}, errors.Wrapf(
 			err, "couldn't read version lock definition file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := VersionLockDef{}
+	config := VersionLockDecl{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return VersionLockDef{}, errors.Wrap(err, "couldn't parse version lock definition")
+		return VersionLockDecl{}, errors.Wrap(err, "couldn't parse version lock definition")
 	}
 	return config, nil
 }
 
-func (l VersionLockDef) IsCommitLocked() bool {
+func (l VersionLockDecl) IsCommitLocked() bool {
 	return l.Commit != ""
 }
 
-func (l VersionLockDef) ShortCommit() string {
+func (l VersionLockDecl) ShortCommit() string {
 	return ShortCommit(l.Commit)
 }
 
-func (l VersionLockDef) ParseVersion() (semver.Version, error) {
+func (l VersionLockDecl) ParseVersion() (semver.Version, error) {
 	if !strings.HasPrefix(l.Tag, "v") {
 		return semver.Version{}, errors.Errorf("invalid tag `%s` doesn't start with `v`", l.Tag)
 	}
@@ -109,7 +109,7 @@ func (l VersionLockDef) ParseVersion() (semver.Version, error) {
 	return version, nil
 }
 
-func (l VersionLockDef) Pseudoversion() (string, error) {
+func (l VersionLockDecl) Pseudoversion() (string, error) {
 	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
 	if l.Commit == "" {
 		return "", errors.Errorf("pseudoversion missing commit hash")
@@ -139,7 +139,7 @@ const (
 	LockTypePseudoversion = "pseudoversion"
 )
 
-func (l VersionLockDef) Version() (string, error) {
+func (l VersionLockDecl) Version() (string, error) {
 	switch l.Type {
 	case LockTypeVersion:
 		version, err := l.ParseVersion()

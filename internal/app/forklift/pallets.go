@@ -27,7 +27,7 @@ func LoadFSPallet(fsys ffs.PathedFS, subdirPath string) (p *FSPallet, err error)
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if p.Pallet.Def, err = loadPalletDef(p.FS, PalletDefFile); err != nil {
+	if p.Pallet.Decl, err = loadPalletDecl(p.FS, PalletDeclFile); err != nil {
 		return nil, errors.Errorf("couldn't load pallet config")
 	}
 	if p.Repo, err = core.LoadFSRepo(fsys, subdirPath); err != nil {
@@ -35,12 +35,12 @@ func LoadFSPallet(fsys ffs.PathedFS, subdirPath string) (p *FSPallet, err error)
 		// pallet:
 		p.Repo = &core.FSRepo{
 			Repo: core.Repo{
-				Def: core.RepoDef{
-					ForkliftVersion: p.Pallet.Def.ForkliftVersion,
+				Decl: core.RepoDecl{
+					ForkliftVersion: p.Pallet.Decl.ForkliftVersion,
 					Repo: core.RepoSpec{
-						Path:        p.Pallet.Def.Pallet.Path,
-						Description: p.Pallet.Def.Pallet.Description,
-						ReadmeFile:  p.Pallet.Def.Pallet.ReadmeFile,
+						Path:        p.Pallet.Decl.Pallet.Path,
+						Description: p.Pallet.Decl.Pallet.Description,
+						ReadmeFile:  p.Pallet.Decl.Pallet.ReadmeFile,
 					},
 				},
 				Version: p.Pallet.Version,
@@ -78,24 +78,24 @@ func LoadFSPalletContaining(path string) (*FSPallet, error) {
 // directories to search for.
 // In the embedded [Pallet] of each loaded FSPallet, the version is *not* initialized.
 func LoadFSPallets(fsys ffs.PathedFS, searchPattern string) ([]*FSPallet, error) {
-	searchPattern = path.Join(searchPattern, PalletDefFile)
-	palletDefFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern = path.Join(searchPattern, PalletDeclFile)
+	palletDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for pallet config files matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
-	orderedPallets := make([]*FSPallet, 0, len(palletDefFiles))
+	orderedPallets := make([]*FSPallet, 0, len(palletDeclFiles))
 	pallets := make(map[string]*FSPallet)
-	for _, palletDefFilePath := range palletDefFiles {
-		if path.Base(palletDefFilePath) != PalletDefFile {
+	for _, palletDeclFilePath := range palletDeclFiles {
+		if path.Base(palletDeclFilePath) != PalletDeclFile {
 			continue
 		}
-		pallet, err := LoadFSPallet(fsys, path.Dir(palletDefFilePath))
+		pallet, err := LoadFSPallet(fsys, path.Dir(palletDeclFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load pallet from %s/%s", fsys.Path(), palletDefFilePath,
+				err, "couldn't load pallet from %s/%s", fsys.Path(), palletDeclFilePath,
 			)
 		}
 
@@ -118,7 +118,7 @@ func (p *FSPallet) Remove() error {
 
 // LoadReadme loads the readme file defined by the pallet.
 func (p *FSPallet) LoadReadme() ([]byte, error) {
-	readmePath := p.Def.Pallet.ReadmeFile
+	readmePath := p.Decl.Pallet.ReadmeFile
 	bytes, err := fs.ReadFile(p.FS, readmePath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't read pallet readme %s/%s", p.FS.Path(), readmePath)
@@ -128,10 +128,10 @@ func (p *FSPallet) LoadReadme() ([]byte, error) {
 
 // Path returns either the pallet's path (if specified) or its path on the filesystem.
 func (p *FSPallet) Path() string {
-	if p.Def.Pallet.Path == "" {
+	if p.Decl.Pallet.Path == "" {
 		return p.FS.Path()
 	}
-	return p.Def.Pallet.Path
+	return p.Decl.Pallet.Path
 }
 
 // FSPallet: Requirements
@@ -232,7 +232,7 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 		return PkgReq{
 			PkgSubdir: strings.TrimLeft(pkgPath, "/"),
 			Repo: RepoReq{
-				GitRepoReq{RequiredPath: p.Def.Pallet.Path},
+				GitRepoReq{RequiredPath: p.Decl.Pallet.Path},
 			},
 		}, nil
 	}
@@ -321,7 +321,7 @@ func (p *FSPallet) LoadImport(name string) (imp Import, err error) {
 	if err != nil {
 		return Import{}, errors.Wrap(err, "couldn't open directory for import groups from pallet")
 	}
-	if imp, err = loadImport(impsFS, name, ImportDefFileExt); err != nil {
+	if imp, err = loadImport(impsFS, name, ImportDeclFileExt); err != nil {
 		return Import{}, errors.Wrapf(err, "couldn't load import group for %s", name)
 	}
 	return imp, nil
@@ -335,7 +335,7 @@ func (p *FSPallet) LoadImports(searchPattern string) ([]Import, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for import groups from pallet")
 	}
-	return loadImports(fsys, searchPattern, ImportDefFileExt)
+	return loadImports(fsys, searchPattern, ImportDeclFileExt)
 }
 
 // FSPallet: Features
@@ -355,7 +355,7 @@ func (p *FSPallet) LoadFeature(name string, loader FSPalletLoader) (imp Import, 
 	if err != nil {
 		return Import{}, errors.Wrap(err, "couldn't open directory for feature declarations in pallet")
 	}
-	if imp, err = loadImport(featuresFS, name, FeatureDefFileExt); err != nil {
+	if imp, err = loadImport(featuresFS, name, FeatureDeclFileExt); err != nil {
 		reqsFS, err := p.GetPalletReqsFS()
 		if err != nil {
 			return Import{}, errors.Wrap(
@@ -394,14 +394,14 @@ func (p *FSPallet) LoadFeatures(searchPattern string) ([]Import, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't open directory for feature declarations in pallet")
 	}
-	return loadImports(featuresFS, searchPattern, FeatureDefFileExt)
+	return loadImports(featuresFS, searchPattern, FeatureDeclFileExt)
 }
 
 // Pallet
 
 // Path returns the repo path of the Pallet instance.
 func (p Pallet) Path() string {
-	return p.Def.Pallet.Path
+	return p.Decl.Pallet.Path
 }
 
 // VersionQuery represents the Pallet instance as a version query.
@@ -411,7 +411,7 @@ func (p Pallet) VersionQuery() string {
 
 // Check looks for errors in the construction of the repo.
 func (p Pallet) Check() (errs []error) {
-	errs = append(errs, core.ErrsWrap(p.Def.Check(), "invalid repo config")...)
+	errs = append(errs, core.ErrsWrap(p.Decl.Check(), "invalid repo config")...)
 	return errs
 }
 
@@ -430,25 +430,25 @@ func ComparePallets(r, s Pallet) int {
 	return core.CompareEQ
 }
 
-// PalletDef
+// PalletDecl
 
-// loadPalletDef loads a PalletDef from the specified file path in the provided base filesystem.
-func loadPalletDef(fsys ffs.PathedFS, filePath string) (PalletDef, error) {
+// loadPalletDecl loads a PalletDecl from the specified file path in the provided base filesystem.
+func loadPalletDecl(fsys ffs.PathedFS, filePath string) (PalletDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return PalletDef{}, errors.Wrapf(
+		return PalletDecl{}, errors.Wrapf(
 			err, "couldn't read pallet config file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	config := PalletDef{}
+	config := PalletDecl{}
 	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return PalletDef{}, errors.Wrap(err, "couldn't parse pallet config")
+		return PalletDecl{}, errors.Wrap(err, "couldn't parse pallet config")
 	}
 	return config, nil
 }
 
 // Check looks for errors in the construction of the pallet configuration.
-func (d PalletDef) Check() (errs []error) {
+func (d PalletDecl) Check() (errs []error) {
 	return core.ErrsWrap(d.Pallet.Check(), "invalid pallet spec")
 }
 

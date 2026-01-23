@@ -24,7 +24,7 @@ func FprintCachedPallet(
 		indent++
 	}
 
-	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Decl.ForkliftVersion)
 	_, _ = fmt.Fprintln(out)
 
 	IndentedFprintf(indent, out, "Version: %s\n", pallet.Version)
@@ -36,7 +36,7 @@ func FprintCachedPallet(
 			indent, out, "Absolute path (replacing any cached copy): %s\n", pallet.FS.Path(),
 		)
 	}
-	IndentedFprintf(indent, out, "Description: %s\n", pallet.Def.Pallet.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pallet.Decl.Pallet.Description)
 
 	if err := fprintReadme(indent, out, pallet); err != nil {
 		return errors.Wrapf(
@@ -78,12 +78,12 @@ func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) err
 	_, _ = fmt.Fprintln(out)
 	indent += 1
 	for _, depl := range depls {
-		BulletedFprintf(indent, out, "%s: %s", depl.Name, depl.Def.Package)
-		slices.Sort(depl.Def.Features)
-		if len(depl.Def.Features) > 0 {
-			_, _ = fmt.Fprintf(out, " +[%s]", strings.Join(depl.Def.Features, ", "))
+		BulletedFprintf(indent, out, "%s: %s", depl.Name, depl.Decl.Package)
+		slices.Sort(depl.Decl.Features)
+		if len(depl.Decl.Features) > 0 {
+			_, _ = fmt.Fprintf(out, " +[%s]", strings.Join(depl.Decl.Features, ", "))
 		}
-		if depl.Def.Disabled {
+		if depl.Decl.Disabled {
 			_, _ = fmt.Fprint(out, " (disabled)")
 		}
 		_, _ = fmt.Fprintln(out)
@@ -112,14 +112,14 @@ func FprintPalletInfo(indent int, out io.Writer, pallet *forklift.FSPallet) erro
 	IndentedFprintf(indent, out, "Pallet: %s\n", pallet.Path())
 	indent++
 
-	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Decl.ForkliftVersion)
 	_, _ = fmt.Fprintln(out)
 
-	if pallet.Def.Pallet.Path != "" {
+	if pallet.Decl.Pallet.Path != "" {
 		IndentedFprintf(indent, out, "Path in filesystem: %s\n", pallet.FS.Path())
 	}
-	IndentedFprintf(indent, out, "Description: %s\n", pallet.Def.Pallet.Description)
-	if pallet.Def.Pallet.ReadmeFile == "" {
+	IndentedFprintf(indent, out, "Description: %s\n", pallet.Decl.Pallet.Description)
+	if pallet.Decl.Pallet.ReadmeFile == "" {
 		_, _ = fmt.Fprintln(out)
 	} else if err := fprintReadme(indent, out, pallet); err != nil {
 		return errors.Wrapf(err, "couldn't preview readme file for pallet %s", pallet.FS.Path())

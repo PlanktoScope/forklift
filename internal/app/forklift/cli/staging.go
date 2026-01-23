@@ -147,9 +147,9 @@ func buildBundle(
 	}
 
 	if err := outputBundle.SetBundledPallet(merged); err != nil {
-		return errors.Wrapf(err, "couldn't write pallet %s into bundle", merged.Def.Pallet.Path)
+		return errors.Wrapf(err, "couldn't write pallet %s into bundle", merged.Decl.Pallet.Path)
 	}
-	if err = outputBundle.WriteRepoDefFile(); err != nil {
+	if err = outputBundle.WriteRepoDeclFile(); err != nil {
 		return errors.Wrap(err, "couldn't write repo declaration into bundle")
 	}
 	if err = outputBundle.WriteFileExports(dlCache); err != nil {
@@ -170,13 +170,13 @@ func newBundleManifest(
 		ForkliftVersion: forkliftVersion,
 		Pallet: forklift.BundlePallet{
 			Path:        merged.Path(),
-			Description: merged.Def.Pallet.Description,
+			Description: merged.Decl.Pallet.Description,
 		},
 		Includes: forklift.BundleInclusions{
 			Pallets: make(map[string]forklift.BundlePalletInclusion),
 			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},
-		Deploys:   make(map[string]forklift.DeplDef),
+		Deploys:   make(map[string]forklift.DeplDecl),
 		Downloads: make(map[string]forklift.BundleDeplDownloads),
 		Exports:   make(map[string]forklift.BundleDeplExports),
 	}

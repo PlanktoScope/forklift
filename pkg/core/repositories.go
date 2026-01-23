@@ -24,7 +24,7 @@ func LoadFSRepo(fsys ffs.PathedFS, subdirPath string) (r *FSRepo, err error) {
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if r.Repo.Def, err = LoadRepoDef(r.FS, RepoDefFile); err != nil {
+	if r.Repo.Decl, err = LoadRepoDecl(r.FS, RepoDeclFile); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load repo declaration")
 	}
 	return r, nil
@@ -55,23 +55,23 @@ func LoadFSRepoContaining(fsys ffs.PathedFS, subdirPath string) (*FSRepo, error)
 // directories to search for.
 // In the embedded [Repo] of each loaded FSRepo, the version is *not* initialized.
 func LoadFSRepos(fsys ffs.PathedFS, searchPattern string) ([]*FSRepo, error) {
-	searchPattern = path.Join(searchPattern, RepoDefFile)
-	repoDefFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern = path.Join(searchPattern, RepoDeclFile)
+	repoDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for repo declaration files matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
-	orderedRepos := make([]*FSRepo, 0, len(repoDefFiles))
+	orderedRepos := make([]*FSRepo, 0, len(repoDeclFiles))
 	repos := make(map[string]*FSRepo)
-	for _, repoDefFilePath := range repoDefFiles {
-		if path.Base(repoDefFilePath) != RepoDefFile {
+	for _, repoDeclFilePath := range repoDeclFiles {
+		if path.Base(repoDeclFilePath) != RepoDeclFile {
 			continue
 		}
-		repo, err := LoadFSRepo(fsys, path.Dir(repoDefFilePath))
+		repo, err := LoadFSRepo(fsys, path.Dir(repoDeclFilePath))
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load repo from %s/%s", fsys.Path(), repoDefFilePath)
+			return nil, errors.Wrapf(err, "couldn't load repo from %s/%s", fsys.Path(), repoDeclFilePath)
 		}
 
 		orderedRepos = append(orderedRepos, repo)
@@ -110,7 +110,7 @@ func (r *FSRepo) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
 
 // LoadReadme loads the readme file defined by the repo.
 func (r *FSRepo) LoadReadme() ([]byte, error) {
-	readmePath := r.Def.Repo.ReadmeFile
+	readmePath := r.Decl.Repo.ReadmeFile
 	bytes, err := fs.ReadFile(r.FS, readmePath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't read repo readme %s/%s", r.FS.Path(), readmePath)
@@ -122,7 +122,7 @@ func (r *FSRepo) LoadReadme() ([]byte, error) {
 
 // Path returns the repo path of the Repo instance.
 func (r Repo) Path() string {
-	return r.Def.Repo.Path
+	return r.Decl.Repo.Path
 }
 
 // VersionQuery represents the Repo instance as a version query.
@@ -132,7 +132,7 @@ func (r Repo) VersionQuery() string {
 
 // Check looks for errors in the construction of the repo.
 func (r Repo) Check() (errs []error) {
-	errs = append(errs, ErrsWrap(r.Def.Check(), "invalid repo declaration")...)
+	errs = append(errs, ErrsWrap(r.Decl.Check(), "invalid repo declaration")...)
 	return errs
 }
 
@@ -170,31 +170,31 @@ func ComparePaths(r, s string) int {
 	return CompareEQ
 }
 
-// RepoDef
+// RepoDecl
 
-// LoadRepoDef loads a RepoDef from the specified file path in the provided base filesystem.
-func LoadRepoDef(fsys ffs.PathedFS, filePath string) (RepoDef, error) {
+// LoadRepoDecl loads a RepoDecl from the specified file path in the provided base filesystem.
+func LoadRepoDecl(fsys ffs.PathedFS, filePath string) (RepoDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return RepoDef{}, errors.Wrapf(
+		return RepoDecl{}, errors.Wrapf(
 			err, "couldn't read repo declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	declaration := RepoDef{}
+	declaration := RepoDecl{}
 	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return RepoDef{}, errors.Wrap(err, "couldn't parse repo declaration")
+		return RepoDecl{}, errors.Wrap(err, "couldn't parse repo declaration")
 	}
 	return declaration, nil
 }
 
 // Check looks for errors in the construction of the repo declaration.
-func (d RepoDef) Check() (errs []error) {
+func (d RepoDecl) Check() (errs []error) {
 	return ErrsWrap(d.Repo.Check(), "invalid repo spec")
 }
 
-// WriteRepoDef creates a repo definition file at the specified path.
-func WriteRepoDef(repoDef RepoDef, outputPath string) error {
-	marshaled, err := yaml.Marshal(repoDef)
+// WriteRepoDecl creates a repo definition file at the specified path.
+func WriteRepoDecl(repoDecl RepoDecl, outputPath string) error {
+	marshaled, err := yaml.Marshal(repoDecl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't marshal bundled repo declaration")
 	}

@@ -519,12 +519,12 @@ func resolveCurrentPalletVersion(
 		)
 	}
 	currentQuery := forklift.GitRepoQuery{
-		Path:         plt.Def.Pallet.Path,
+		Path:         plt.Decl.Pallet.Path,
 		VersionQuery: ref.Hash().String(),
 	}
 	fcli.IndentedFprintf(
 		indent, os.Stderr,
-		"Local pallet currently is %s at %s\n", plt.Def.Pallet.Path, git.StringifyRef(ref),
+		"Local pallet currently is %s at %s\n", plt.Decl.Pallet.Path, git.StringifyRef(ref),
 	)
 	indent++
 	fcli.IndentedFprintln(indent, os.Stderr, "Resolving current version query...")
@@ -553,10 +553,10 @@ func resolveCurrentPalletVersion(
 
 		fcli.IndentedFprintf(
 			indent, os.Stderr, "Resolved %s as %s@%s",
-			currentQuery.String(), plt.Def.Pallet.Path, resolvedVersionLock.Version,
+			currentQuery.String(), plt.Decl.Pallet.Path, resolvedVersionLock.Version,
 		)
 		return forklift.GitRepoReq{
-			RequiredPath: plt.Def.Pallet.Path,
+			RequiredPath: plt.Decl.Pallet.Path,
 			VersionLock:  resolvedVersionLock,
 		}, nil
 	}

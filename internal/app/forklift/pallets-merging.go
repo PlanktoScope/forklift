@@ -31,7 +31,7 @@ func MergeFSPallet(
 	}
 	hasEnabledImports := false
 	for _, imp := range imports {
-		if !imp.Def.Disabled {
+		if !imp.Decl.Disabled {
 			hasEnabledImports = true
 			break
 		}

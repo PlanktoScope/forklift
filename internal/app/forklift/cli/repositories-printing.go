@@ -20,7 +20,7 @@ func FprintCachedRepo(
 		indent++
 	}
 
-	IndentedFprintf(indent, out, "Forklift version: %s\n", repo.Def.ForkliftVersion)
+	IndentedFprintf(indent, out, "Forklift version: %s\n", repo.Decl.ForkliftVersion)
 	_, _ = fmt.Fprintln(out)
 
 	IndentedFprintf(indent, out, "Version: %s\n", repo.Version)
@@ -30,7 +30,7 @@ func FprintCachedRepo(
 		// Note: this is used when the repo is replaced by an overlay from outside the cache
 		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", repo.FS.Path())
 	}
-	IndentedFprintf(indent, out, "Description: %s\n", repo.Def.Repo.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", repo.Decl.Repo.Description)
 
 	if err := fprintReadme(indent, out, repo); err != nil {
 		return errors.Wrapf(
@@ -80,8 +80,8 @@ func fprintRepoPkgs(indent int, out io.Writer, repo *core.FSRepo) error {
 	for _, pkg := range pkgs {
 		IndentedFprintf(indent, out, "...%s: ", strings.TrimPrefix(pkg.Path(), repo.Path()))
 
-		names := make([]string, 0, len(pkg.Def.Features))
-		for name := range pkg.Def.Features {
+		names := make([]string, 0, len(pkg.Decl.Features))
+		for name := range pkg.Decl.Features {
 			names = append(names, name)
 		}
 		slices.Sort(names)

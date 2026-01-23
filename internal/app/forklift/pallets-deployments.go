@@ -29,7 +29,7 @@ func ResolveDepl(
 	resolved = &ResolvedDepl{
 		Depl: depl,
 	}
-	pkgPath := resolved.Def.Package
+	pkgPath := resolved.Decl.Package
 	if resolved.Pkg, resolved.PkgReq, err = LoadRequiredFSPkg(
 		pkgReqLoader, pkgLoader, pkgPath,
 	); err != nil {
@@ -58,10 +58,10 @@ func ResolveDepls(
 }
 
 func (d *ResolvedDepl) Check() (errs []error) {
-	if d.PkgReq.Path() != d.Def.Package {
+	if d.PkgReq.Path() != d.Decl.Package {
 		errs = append(errs, errors.Errorf(
 			"required package %s does not match required package %s in deployment declaration",
-			d.PkgReq.Path(), d.Def.Package,
+			d.PkgReq.Path(), d.Decl.Package,
 		))
 	}
 	if d.PkgReq.Path() != d.Pkg.Path() {
@@ -83,10 +83,10 @@ func (d *ResolvedDepl) Check() (errs []error) {
 // EnabledFeatures returns a map of the package features enabled by the deployment's declaration,
 // with feature names as the keys of the map.
 func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec, err error) {
-	all := d.Pkg.Def.Features
+	all := d.Pkg.Decl.Features
 	enabled = make(map[string]core.PkgFeatureSpec)
-	unrecognized := make([]string, 0, len(d.Def.Features))
-	for _, name := range d.Def.Features {
+	unrecognized := make([]string, 0, len(d.Decl.Features))
+	for _, name := range d.Decl.Features {
 		featureSpec, ok := all[name]
 		if !ok {
 			unrecognized = append(unrecognized, name)
@@ -103,9 +103,9 @@ func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec
 // DisabledFeatures returns a map of the package features not enabled by the deployment's
 // declaration, with feature names as the keys of the map.
 func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
-	all := d.Pkg.Def.Features
+	all := d.Pkg.Decl.Features
 	enabled := make(structures.Set[string])
-	for _, name := range d.Def.Features {
+	for _, name := range d.Decl.Features {
 		enabled.Add(name)
 	}
 	disabled := make(map[string]core.PkgFeatureSpec)
@@ -124,7 +124,7 @@ func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
 // the Compose app, with feature-flagged Compose files ordered based on the alphabetical order of
 // enabled feature flags.
 func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
-	composeFiles := append([]string{}, d.Pkg.Def.Deployment.ComposeFiles...)
+	composeFiles := append([]string{}, d.Pkg.Decl.Deployment.ComposeFiles...)
 
 	// Add compose files from features
 	enabledFeatures, err := d.EnabledFeatures()
@@ -185,8 +185,8 @@ func GetComposeAppName(deplName string) string {
 // GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export
 // by the package deployment, with all URLs sorted alphabetically.
 func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
-	downloadURLs := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
-	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+	downloadURLs := make([]string, 0, len(d.Pkg.Decl.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Decl.Deployment.Provides.FileExports {
 		switch export.SourceType {
 		default:
 			continue
@@ -217,8 +217,8 @@ func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 // GetOCIImageDownloadNames returns a list of the image names of OCI container images to be
 // downloaded for export by the package deployment, with all names sorted alphabetically.
 func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
-	imageNames := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
-	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+	imageNames := make([]string, 0, len(d.Pkg.Decl.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Decl.Deployment.Provides.FileExports {
 		if export.SourceType != core.FileExportSourceTypeOCIImage {
 			continue
 		}
@@ -247,8 +247,8 @@ func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
 // GetFileExportTargets returns a list of the target paths of the files to be exported by the
 // package deployment, with all target file paths sorted alphabetically.
 func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
-	exportTargets := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
-	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+	exportTargets := make([]string, 0, len(d.Pkg.Decl.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Decl.Deployment.Provides.FileExports {
 		exportTargets = append(exportTargets, export.Target)
 	}
 	enabledFeatures, err := d.EnabledFeatures()
@@ -272,7 +272,7 @@ func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
 // deployment section, and preserving precedence among feature flags by alphabetical ordering of
 // feature flags.
 func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
-	exports := append([]core.FileExportRes{}, d.Pkg.Def.Deployment.Provides.FileExports...)
+	exports := append([]core.FileExportRes{}, d.Pkg.Decl.Deployment.Provides.FileExports...)
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
 		return exports, errors.Wrapf(
@@ -549,7 +549,7 @@ func ResolveDeps(
 func FilterDeplsForEnabled(depls []Depl) []Depl {
 	filtered := make([]Depl, 0, len(depls))
 	for _, depl := range depls {
-		if depl.Def.Disabled {
+		if depl.Decl.Disabled {
 			continue
 		}
 		filtered = append(filtered, depl)
@@ -561,7 +561,7 @@ func FilterDeplsForEnabled(depls []Depl) []Depl {
 // is the specified name of the deployment followed by the deployment declaration file extension.
 func loadDepl(fsys ffs.PathedFS, name string) (depl Depl, err error) {
 	depl.Name = name
-	if depl.Def, err = loadDeplDef(fsys, name+DeplDefFileExt); err != nil {
+	if depl.Decl, err = loadDeplDecl(fsys, name+DeplDeclFileExt); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load deployment declaration")
 	}
 	return depl, nil
@@ -572,8 +572,8 @@ func loadDepl(fsys ffs.PathedFS, name string) (depl Depl, err error) {
 // The search pattern should not include the file extension for deployment declaration files - the
 // file extension will be appended to the search pattern by LoadDepls.
 func loadDepls(fsys ffs.PathedFS, searchPattern string) ([]Depl, error) {
-	searchPattern += DeplDefFileExt
-	deplDefFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern += DeplDeclFileExt
+	deplDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for package deployment declarations matching %s/%s",
@@ -581,17 +581,17 @@ func loadDepls(fsys ffs.PathedFS, searchPattern string) ([]Depl, error) {
 		)
 	}
 
-	depls := make([]Depl, 0, len(deplDefFiles))
-	for _, deplDefFilePath := range deplDefFiles {
-		if !strings.HasSuffix(deplDefFilePath, DeplDefFileExt) {
+	depls := make([]Depl, 0, len(deplDeclFiles))
+	for _, deplDeclFilePath := range deplDeclFiles {
+		if !strings.HasSuffix(deplDeclFilePath, DeplDeclFileExt) {
 			continue
 		}
 
-		deplName := strings.TrimSuffix(deplDefFilePath, DeplDefFileExt)
+		deplName := strings.TrimSuffix(deplDeclFilePath, DeplDeclFileExt)
 		depl, err := loadDepl(fsys, deplName)
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load package deployment declaration from %s", deplDefFilePath,
+				err, "couldn't load package deployment declaration from %s", deplDeclFilePath,
 			)
 		}
 		depls = append(depls, depl)
@@ -607,19 +607,19 @@ func (d *Depl) ResAttachmentSource() []string {
 	}
 }
 
-// DeplDef
+// DeplDecl
 
-// loadDeplDef loads a DeplDef from the specified file path in the provided base filesystem.
-func loadDeplDef(fsys ffs.PathedFS, filePath string) (DeplDef, error) {
+// loadDeplDecl loads a DeplDecl from the specified file path in the provided base filesystem.
+func loadDeplDecl(fsys ffs.PathedFS, filePath string) (DeplDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return DeplDef{}, errors.Wrapf(
+		return DeplDecl{}, errors.Wrapf(
 			err, "couldn't read deployment declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	declaration := DeplDef{}
+	declaration := DeplDecl{}
 	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return DeplDef{}, errors.Wrap(err, "couldn't parse deployment declaration")
+		return DeplDecl{}, errors.Wrap(err, "couldn't parse deployment declaration")
 	}
 	return declaration, nil
 }

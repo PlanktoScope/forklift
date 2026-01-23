@@ -20,17 +20,17 @@ type FSPallet struct {
 // A Pallet is a Forklift pallet, a complete specification of all package deployments which should
 // be active on a Docker host.
 type Pallet struct {
-	// Def is the Forklift pallet definition for the pallet.
-	Def PalletDef
+	// Decl is the Forklift pallet definition for the pallet.
+	Decl PalletDecl
 	// Version is the version or pseudoversion of the pallet.
 	Version string
 }
 
-// PalletDefFile is the name of the file defining each Forklift pallet.
-const PalletDefFile = "forklift-pallet.yml"
+// PalletDeclFile is the name of the file defining each Forklift pallet.
+const PalletDeclFile = "forklift-pallet.yml"
 
-// A PalletDef defines a Forklift pallet.
-type PalletDef struct {
+// A PalletDecl defines a Forklift pallet.
+type PalletDecl struct {
 	// ForkliftVersion indicates that the pallet was written assuming the semantics of a given version
 	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
 	// Forklift required to use the pallet. The Forklift tool refuses to use pallets declaring newer
@@ -129,7 +129,7 @@ const (
 	// DeplsDirName is the directory in a pallet which contains deployment declarations.
 	DeplsDirName = "deployments"
 	// DeplsFileExt is the file extension for deployment declaration files.
-	DeplDefFileExt = ".deploy.yml"
+	DeplDeclFileExt = ".deploy.yml"
 )
 
 // A ResolvedDepl is a deployment with a loaded package.
@@ -147,12 +147,12 @@ type ResolvedDepl struct {
 type Depl struct {
 	// Name is the name of the package deployment.
 	Name string
-	// Def is the Forklift package deployment definition for the deployment.
-	Def DeplDef
+	// Decl is the Forklift package deployment definition for the deployment.
+	Decl DeplDecl
 }
 
-// A DeplDef defines a package deployment.
-type DeplDef struct {
+// A DeplDecl defines a package deployment.
+type DeplDecl struct {
 	// Package is the package path of the package to deploy.
 	Package string `yaml:"package"`
 	// Features is a list of features from the package which should be enabled in the deployment.
@@ -164,8 +164,8 @@ type DeplDef struct {
 // Imports
 
 const (
-	// ImportDefFileExt is the file extension for import group files.
-	ImportDefFileExt = ".imports.yml"
+	// ImportDeclFileExt is the file extension for import group files.
+	ImportDeclFileExt = ".imports.yml"
 )
 
 // A ResolvedImport is a file import group with a loaded pallet.
@@ -180,12 +180,12 @@ type ResolvedImport struct {
 type Import struct {
 	// Name is the name of the file import group.
 	Name string
-	// Def is the file import definition for the file import group.
-	Def ImportDef
+	// Decl is the file import definition for the file import group.
+	Decl ImportDecl
 }
 
-// A ImportDef defines a file import group.
-type ImportDef struct {
+// A ImportDecl defines a file import group.
+type ImportDecl struct {
 	// Description is a short description of the import group to be shown to users.
 	Description string `yaml:"description,omitempty"`
 	// Modifiers is a list of modifiers evaluated in the provided order to build up a set of files to
@@ -236,6 +236,6 @@ const (
 	// FeaturesDirName is the directory in a pallet containing declarations of file import groups
 	// which can be referenced by name in file import groups.
 	FeaturesDirName = "features"
-	// FeatureDefFileExt is the file extension for import group files.
-	FeatureDefFileExt = ".feature.yml"
+	// FeatureDeclFileExt is the file extension for import group files.
+	FeatureDeclFileExt = ".feature.yml"
 )

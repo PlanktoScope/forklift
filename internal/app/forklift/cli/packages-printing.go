@@ -24,11 +24,11 @@ func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *c
 		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
 	}
 
-	FprintPkgSpec(indent, out, pkg.Def.Package)
+	FprintPkgSpec(indent, out, pkg.Decl.Package)
 	_, _ = fmt.Fprintln(out)
-	FprintDeplSpec(indent, out, pkg.Def.Deployment)
+	FprintDeplSpec(indent, out, pkg.Decl.Deployment)
 	_, _ = fmt.Fprintln(out)
-	FprintFeatureSpecs(indent, out, pkg.Def.Features)
+	FprintFeatureSpecs(indent, out, pkg.Decl.Features)
 }
 
 func fprintPkgRepo(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
@@ -43,7 +43,7 @@ func fprintPkgRepo(indent int, out io.Writer, cache forklift.PathedRepoCache, pk
 		)
 	}
 
-	IndentedFprintf(indent, out, "Description: %s\n", pkg.Repo.Def.Repo.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pkg.Repo.Decl.Repo.Description)
 }
 
 func FprintPkgSpec(indent int, out io.Writer, spec core.PkgSpec) {
@@ -242,7 +242,7 @@ func FprintPalletPkgs(
 		return errors.Wrapf(err, "couldn't load local packages defined by pallet at %s", pallet.Path())
 	}
 	for _, pkg := range loaded {
-		pkg.Repo.Def.Repo.Path = "/"
+		pkg.Repo.Decl.Repo.Path = "/"
 		pkg.RepoPath = "/"
 	}
 	pkgs = append(pkgs, loaded...)

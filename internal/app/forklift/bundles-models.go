@@ -57,7 +57,7 @@ type BundleManifest struct {
 	// the deepest ancestor at the end of each list).
 	Imports map[string][]string `yaml:"imports,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
-	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
+	Deploys map[string]DeplDecl `yaml:"deploys,omitempty"`
 	// Downloads lists the downloadable paths of resources downloaded for creation and/or use of the
 	// bundle. Keys are the names of the bundle's deployments which include downloads.
 	Downloads map[string]BundleDeplDownloads `yaml:"downloads,omitempty"`

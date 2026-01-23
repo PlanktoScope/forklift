@@ -23,17 +23,17 @@ type Pkg struct {
 	RepoPath string
 	// Subdir is the path of the package within the repository which provides the package.
 	Subdir string
-	// Def is the definition of the package.
-	Def PkgDef
+	// Decl is the definition of the package.
+	Decl PkgDecl
 	// Repo is a pointer to the [Repo] which provides the package.
 	Repo *Repo
 }
 
-// PkgDefFile is the name of the file defining each package.
-const PkgDefFile = "forklift-package.yml"
+// PkgDeclFile is the name of the file defining each package.
+const PkgDeclFile = "forklift-package.yml"
 
-// A PkgDef defines a package.
-type PkgDef struct {
+// A PkgDecl defines a package.
+type PkgDecl struct {
 	// Package defines the basic metadata for the package.
 	Package PkgSpec `yaml:"package,omitempty"`
 	// Host contains information about the Docker host independent of any deployment of the package.

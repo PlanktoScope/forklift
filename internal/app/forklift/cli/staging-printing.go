@@ -138,7 +138,7 @@ func fprintBundleInclusion(
 	_, _ = fmt.Fprintln(out)
 }
 
-func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]forklift.DeplDef) {
+func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]forklift.DeplDecl) {
 	sortedDeplNames := make([]string, 0, len(deployments))
 	for deplName := range deployments {
 		sortedDeplNames = append(sortedDeplNames, deplName)

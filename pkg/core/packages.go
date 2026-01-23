@@ -27,7 +27,7 @@ func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if p.Pkg.Def, err = LoadPkgDef(p.FS, PkgDefFile); err != nil {
+	if p.Pkg.Decl, err = LoadPkgDecl(p.FS, PkgDeclFile); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load package declaration")
 	}
 	return p, nil
@@ -39,23 +39,23 @@ func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
 // The repo path, and the package subdirectory, and the pointer to the repo are all left
 // uninitialized.
 func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
-	searchPattern = path.Join(searchPattern, PkgDefFile)
-	pkgDefFiles, err := doublestar.Glob(fsys, searchPattern)
+	searchPattern = path.Join(searchPattern, PkgDeclFile)
+	pkgDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for package declarations matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
-	pkgs := make([]*FSPkg, 0, len(pkgDefFiles))
-	for _, pkgDefFilePath := range pkgDefFiles {
-		if path.Base(pkgDefFilePath) != PkgDefFile {
+	pkgs := make([]*FSPkg, 0, len(pkgDeclFiles))
+	for _, pkgDeclFilePath := range pkgDeclFiles {
+		if path.Base(pkgDeclFilePath) != PkgDeclFile {
 			continue
 		}
 
-		pkg, err := LoadFSPkg(fsys, path.Dir(pkgDefFilePath))
+		pkg, err := LoadFSPkg(fsys, path.Dir(pkgDeclFilePath))
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgDefFilePath)
+			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgDeclFilePath)
 		}
 		pkgs = append(pkgs, pkg)
 	}
@@ -65,7 +65,7 @@ func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 // AttachFSRepo updates the FSPkg instance's RepoPath, Subdir, Pkg.Repo, and Repo fields
 // based on the provided repo.
 func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
-	p.RepoPath = repo.Def.Repo.Path
+	p.RepoPath = repo.Decl.Repo.Path
 	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
 		return errors.Errorf(
 			"package at %s is not within the scope of repo %s at %s",
@@ -115,8 +115,8 @@ func (p Pkg) Path() string {
 
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
-	// TODO: implement a check method on PkgDef
-	// errs = append(errs, ErrsWrap(p.Def.Check(), "invalid package declaration")...)
+	// TODO: implement a check method on PkgDecl
+	// errs = append(errs, ErrsWrap(p.Decl.Check(), "invalid package declaration")...)
 	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
 		errs = append(errs, errors.Errorf(
 			"repo path %s of package is inconsistent with path %s of attached repo",
@@ -153,15 +153,15 @@ func providedResources[Resource any](
 	p Pkg, parentSource []string, enabledFeatures []string, getter providedResGetter[Resource],
 ) (provided []res.Attached[Resource, []string]) {
 	parentSource = p.ResAttachmentSource(parentSource)
-	provided = append(provided, getter(p.Def.Host.Provides)(
-		p.Def.Host.ResAttachmentSource(parentSource),
+	provided = append(provided, getter(p.Decl.Host.Provides)(
+		p.Decl.Host.ResAttachmentSource(parentSource),
 	)...)
-	provided = append(provided, getter(p.Def.Deployment.Provides)(
-		p.Def.Deployment.ResAttachmentSource(parentSource),
+	provided = append(provided, getter(p.Decl.Deployment.Provides)(
+		p.Decl.Deployment.ResAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Def.Features[featureName]
+		feature := p.Decl.Features[featureName]
 		provided = append(provided, getter(feature.Provides)(
 			feature.ResAttachmentSource(parentSource, featureName),
 		)...)
@@ -187,12 +187,12 @@ func requiredResources[Resource any](
 	p Pkg, parentSource []string, enabledFeatures []string, getter requiredResGetter[Resource],
 ) (required []res.Attached[Resource, []string]) {
 	parentSource = p.ResAttachmentSource(parentSource)
-	required = append(required, getter(p.Def.Deployment.Requires)(
-		p.Def.Deployment.ResAttachmentSource(parentSource),
+	required = append(required, getter(p.Decl.Deployment.Requires)(
+		p.Decl.Deployment.ResAttachmentSource(parentSource),
 	)...)
 
 	for _, featureName := range enabledFeatures {
-		feature := p.Def.Features[featureName]
+		feature := p.Decl.Features[featureName]
 		required = append(required, getter(feature.Requires)(
 			feature.ResAttachmentSource(parentSource, featureName),
 		)...)
@@ -272,26 +272,26 @@ func (p Pkg) ProvidedFileExports(
 	)
 }
 
-// PkgDef
+// PkgDecl
 
-// LoadPkgDef loads a PkgDef from the specified file path in the provided base filesystem.
-func LoadPkgDef(fsys ffs.PathedFS, filePath string) (PkgDef, error) {
+// LoadPkgDecl loads a PkgDecl from the specified file path in the provided base filesystem.
+func LoadPkgDecl(fsys ffs.PathedFS, filePath string) (PkgDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return PkgDef{}, errors.Wrapf(
+		return PkgDecl{}, errors.Wrapf(
 			err, "couldn't read package declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	declaration := PkgDef{}
+	declaration := PkgDecl{}
 	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return PkgDef{}, errors.Wrap(err, "couldn't parse package declaration")
+		return PkgDecl{}, errors.Wrap(err, "couldn't parse package declaration")
 	}
 
 	return declaration.AddDefaults(), nil
 }
 
 // AddDefaults makes a copy with empty values replaced by default values.
-func (d PkgDef) AddDefaults() PkgDef {
+func (d PkgDecl) AddDefaults() PkgDecl {
 	d.Host = d.Host.AddDefaults()
 	d.Deployment = d.Deployment.AddDefaults()
 	updatedFeatures := make(map[string]PkgFeatureSpec)

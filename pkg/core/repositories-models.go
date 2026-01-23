@@ -15,17 +15,17 @@ type FSRepo struct {
 // A Repo is a collection of Forklift packages which are tested, released, distributed, and
 // upgraded together.
 type Repo struct {
-	// Def is the definition of the repository.
-	Def RepoDef
+	// Decl is the definition of the repository.
+	Decl RepoDecl
 	// Version is the version or pseudoversion of the repository.
 	Version string
 }
 
-// RepoDefFile is the name of the file defining each repository.
-const RepoDefFile = "forklift-repository.yml"
+// RepoDeclFile is the name of the file defining each repository.
+const RepoDeclFile = "forklift-repository.yml"
 
-// A RepoDef defines a repository.
-type RepoDef struct {
+// A RepoDecl defines a repository.
+type RepoDecl struct {
 	// ForkliftVersion indicates that the repo was written assuming the semantics of a given version
 	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
 	// Forklift required to use the repository. The Forklift tool refuses to use repositories

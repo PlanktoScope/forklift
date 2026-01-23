@@ -2,18 +2,18 @@ package forklift
 
 // A VersionLock is a specification of a particular version of a repo or package.
 type VersionLock struct {
-	// Def is the version lock definition.
-	Def VersionLockDef `yaml:",inline"`
+	// Decl is the version lock definition.
+	Decl VersionLockDecl `yaml:",inline"`
 	// Version is the version string corresponding to the configured version.
 	Version string `yaml:"-"`
 }
 
-// VersionLockDefFile is the name of the file defining each version lock of a repo.
-const VersionLockDefFile = "forklift-version-lock.yml"
+// VersionLockDeclFile is the name of the file defining each version lock of a repo.
+const VersionLockDeclFile = "forklift-version-lock.yml"
 
-// A VersionLockDef defines a requirement for a repo or package at a specific
+// A VersionLockDecl defines a requirement for a repo or package at a specific
 // version.
-type VersionLockDef struct {
+type VersionLockDecl struct {
 	// Type specifies the type of version lock (either "version" or "pseudoversion")
 	Type string `yaml:"type"`
 	// Tag specifies the VCS repository tag associated with the version or pseudoversion, if it

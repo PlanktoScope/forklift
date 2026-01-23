@@ -173,10 +173,10 @@ func parsePathsWithPrefixes(paths []string) (exact, prefixes structures.Set[stri
 	prefixes = make(structures.Set[string])
 	for _, path := range paths {
 		exact.Add(path) // even prefix paths are stored here, for fast exact matching
-		if strings.HasSuffix(path, "*") {
-			prefix := strings.TrimSuffix(path, "*")
-			prefixes.Add(prefix)
+		if !strings.HasSuffix(path, "*") {
+			continue
 		}
+		prefixes.Add(strings.TrimSuffix(path, "*"))
 	}
 	return exact, prefixes
 }
