@@ -1,34 +1,44 @@
 package resources
 
-// An Attached is a binding between a resource and the origin of that resource.
-type Attached[Res any, Origin any] struct {
-	// Res is a resource subject to various possible constraints.
-	Res Res
-	// Origin is describes how to locate the resource in a package spec, e.g. so that it can be shown
-	// to users when a resource constraint is not met or when a resource conflict exists.
-	Origin Origin
+// CheckDeps identifies all unsatisfied resource dependencies between the provided
+// list of resource requirements and the provided list of resources.
+func CheckDeps[Res DepChecker[Res, Origin], Origin any](
+	required []Attached[Res, Origin], provided []Attached[Res, Origin],
+) (
+	satisfied []SatisfiedDep[Res, Origin], missing []MissingDep[Res, Origin],
+) {
+	for _, r := range required {
+		bestErrsCount := -1
+		bestCandidates := make([]DepCandidate[Res, Origin], 0, len(provided))
+		for i, p := range provided {
+			errs := r.Res.CheckDep(p.Res)
+			if bestErrsCount != -1 && len(errs) > bestErrsCount {
+				continue
+			}
+			if bestErrsCount == -1 || len(errs) < bestErrsCount {
+				// we've found a provided resource which is strictly better than all previous candidates
+				bestErrsCount = len(errs)
+				bestCandidates = make([]DepCandidate[Res, Origin], 0, len(provided)-i)
+			}
+			bestCandidates = append(bestCandidates, DepCandidate[Res, Origin]{
+				Provided: p,
+				Errs:     errs,
+			})
+		}
+		if bestErrsCount != 0 {
+			missing = append(missing, MissingDep[Res, Origin]{
+				Required:       r,
+				BestCandidates: bestCandidates,
+			})
+			continue
+		}
+		satisfied = append(satisfied, SatisfiedDep[Res, Origin]{
+			Required: r,
+			Provided: bestCandidates[0].Provided,
+		})
+	}
+	return satisfied, missing
 }
-
-// Resource conflicts
-
-// A ConflictChecker is something which may conflict with a resource, and which can determine
-// whether it conflicts with another resource. Typically, resource types will implement this
-// interface.
-type ConflictChecker[Res any] interface {
-	CheckConflict(candidate Res) []error
-}
-
-// A Conflict is a report of a conflict between two resources.
-type Conflict[Res any, Origin any] struct {
-	// First is one of the two conflicting resources.
-	First Attached[Res, Origin]
-	// Second is the other of the two conflicting resources.
-	Second Attached[Res, Origin]
-	// Errs is a list of errors describing how the two resources conflict with each other.
-	Errs []error
-}
-
-// Resource dependencies
 
 // A DepChecker is something which may depend on a resource, and which can determine whether
 // its dependency is satisfied by a resource. Typically, resource requirement types will implement
