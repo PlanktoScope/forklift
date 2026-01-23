@@ -11,6 +11,7 @@ import (
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
@@ -19,7 +20,7 @@ import (
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
 // In the loaded FSPkg's embedded [Pkg], the repo path is not initialized, nor is the repo
 // subdirectory initialized, nor is the pointer to the repo initialized.
-func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
+func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
 	p = &FSPkg{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -37,7 +38,7 @@ func LoadFSPkg(fsys PathedFS, subdirPath string) (p *FSPkg, err error) {
 // directories to search for.
 // The repo path, and the package subdirectory, and the pointer to the repo are all left
 // uninitialized.
-func LoadFSPkgs(fsys PathedFS, searchPattern string) ([]*FSPkg, error) {
+func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 	searchPattern = path.Join(searchPattern, PkgDefFile)
 	pkgDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -274,7 +275,7 @@ func (p Pkg) ProvidedFileExports(
 // PkgDef
 
 // LoadPkgDef loads a PkgDef from the specified file path in the provided base filesystem.
-func LoadPkgDef(fsys PathedFS, filePath string) (PkgDef, error) {
+func LoadPkgDef(fsys ffs.PathedFS, filePath string) (PkgDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return PkgDef{}, errors.Wrapf(

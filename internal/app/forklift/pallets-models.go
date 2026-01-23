@@ -3,6 +3,7 @@ package forklift
 
 import (
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // A FSPallet is a Forklift pallet stored at the root of a [fs.FS] filesystem.
@@ -13,7 +14,7 @@ type FSPallet struct {
 	// explicitly or implicitly.
 	Repo *core.FSRepo
 	// FS is a filesystem which contains the pallet's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A Pallet is a Forklift pallet, a complete specification of all package deployments which should
@@ -77,7 +78,7 @@ type FSPalletReq struct {
 	// PalletReq is the pallet requirement at the root of the filesystem.
 	PalletReq
 	// FS is a filesystem which contains the pallet requirement's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A PalletReq is a requirement for a specific pallet at a specific version.
@@ -101,7 +102,7 @@ type FSRepoReq struct {
 	// RepoReq is the repo requirement at the root of the filesystem.
 	RepoReq
 	// FS is a filesystem which contains the repo requirement's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A RepoReq is a requirement for a specific repo at a specific version.
@@ -144,7 +145,7 @@ type ResolvedDepl struct {
 // A Depl is a package deployment, a complete declaration of how a package is to be deployed on a
 // Docker host.
 type Depl struct {
-	// Name is the name of the package depoyment.
+	// Name is the name of the package deployment.
 	Name string
 	// Def is the Forklift package deployment definition for the deployment.
 	Def DeplDef

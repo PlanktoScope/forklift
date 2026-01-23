@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -67,7 +68,7 @@ func (c *FSRepoCache) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) 
 	for _, repo := range repos {
 		var repoPath string
 		var ok bool
-		if repoPath, repo.Version, ok = strings.Cut(core.GetSubdirPath(c, repo.FS.Path()), "@"); !ok {
+		if repoPath, repo.Version, ok = strings.Cut(ffs.GetSubdirPath(c, repo.FS.Path()), "@"); !ok {
 			return nil, errors.Wrapf(
 				err, "couldn't parse path of cached repo configured at %s as repo_path@version",
 				repo.FS.Path(),
@@ -132,7 +133,7 @@ func (c *FSRepoCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 	}
 
 	for _, pkg := range pkgs {
-		repo, err := c.loadFSRepoContaining(core.GetSubdirPath(c, pkg.FS.Path()))
+		repo, err := c.loadFSRepoContaining(ffs.GetSubdirPath(c, pkg.FS.Path()))
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't find the cached repo providing the cached package at %s", pkg.FS.Path(),
@@ -159,7 +160,7 @@ func (c *FSRepoCache) loadFSRepoContaining(
 	}
 	var repoPath string
 	var ok bool
-	if repoPath, repo.Version, ok = strings.Cut(core.GetSubdirPath(c, repo.FS.Path()), "@"); !ok {
+	if repoPath, repo.Version, ok = strings.Cut(ffs.GetSubdirPath(c, repo.FS.Path()), "@"); !ok {
 		return nil, errors.Wrapf(
 			err, "couldn't parse path of cached repo configured at %s as repo_path@version",
 			repo.FS.Path(),
@@ -419,7 +420,7 @@ func (c *RepoOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
 	for _, repo := range c.repos {
-		if !core.CoversPath(repo, pkgPath) {
+		if !ffs.CoversPath(repo, pkgPath) {
 			continue
 		}
 		return c.repoVersionSets[repo.Path()].Has(version)
@@ -438,7 +439,7 @@ func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSP
 	// Beyond a certain number of repos, it's probably faster to just recurse down via the subdirs.
 	// But we probably don't need to worry about this for now.
 	for _, repo := range c.repos {
-		if !core.CoversPath(repo, pkgPath) {
+		if !ffs.CoversPath(repo, pkgPath) {
 			continue
 		}
 		if !c.repoVersionSets[repo.Path()].Has(version) {
@@ -446,7 +447,7 @@ func (c *RepoOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSP
 				"found repo %s providing package %s, but not at version %s", repo.Path(), pkgPath, version,
 			)
 		}
-		return repo.LoadFSPkg(core.GetSubdirPath(repo, pkgPath))
+		return repo.LoadFSPkg(ffs.GetSubdirPath(repo, pkgPath))
 	}
 	return nil, errors.Errorf("couldn't find a repo providing package %s", pkgPath)
 }

@@ -6,11 +6,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func CacheAllReqs(
-	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
+	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
 	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
@@ -36,7 +36,7 @@ func CacheAllReqs(
 }
 
 func CacheStagingReqs(
-	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
+	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
 	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,

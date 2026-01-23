@@ -15,6 +15,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -307,7 +308,7 @@ func determineUsedRepoReqs(
 // Download
 
 func DownloadAllRequiredRepos(
-	indent int, pallet *forklift.FSPallet, mirrorsCache core.Pather,
+	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
 	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
 	skipPalletQueries structures.Set[string],
 ) (changed bool, err error) {
@@ -326,7 +327,7 @@ func DownloadAllRequiredRepos(
 }
 
 func downloadRequiredRepos(
-	indent int, reqs []*forklift.FSRepoReq, mirrorsCache core.Pather,
+	indent int, reqs []*forklift.FSRepoReq, mirrorsCache ffs.Pather,
 	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
 	skipPalletQueries structures.Set[string],
 ) (changed bool, err error) {
@@ -348,7 +349,7 @@ func downloadRequiredRepos(
 			continue
 		}
 		if _, err := forklift.LoadFSPallet(
-			core.AttachPath(os.DirFS(repoCache.Path()), repoCache.Path()), req.GetQueryPath(),
+			ffs.AttachPath(os.DirFS(repoCache.Path()), repoCache.Path()), req.GetQueryPath(),
 		); err != nil {
 			// the repo is not a pallet, so we can use it directly as a repo
 			continue

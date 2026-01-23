@@ -12,7 +12,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // ls-*
@@ -43,10 +43,10 @@ func lsGitRepo[GitRepo versionQuerier](
 
 func showGitRepo[GitRepo any](
 	out io.Writer,
-	cache core.Pather, versionQuery string,
+	cache ffs.Pather, versionQuery string,
 	loader func(path, version string) (GitRepo, error),
 	fprinter func(
-		indent int, out io.Writer, cache core.Pather, gitRepo GitRepo, printHeader bool,
+		indent int, out io.Writer, cache ffs.Pather, gitRepo GitRepo, printHeader bool,
 	) error,
 	printHeader bool,
 ) error {
@@ -65,7 +65,7 @@ func showGitRepo[GitRepo any](
 
 // add-*
 
-func addGitRepoAction[Cache core.Pather](
+func addGitRepoAction[Cache ffs.Pather](
 	cacheGetter func(wpath string, ensureWorkspace bool) (Cache, error),
 ) func(c *cli.Context) error {
 	return func(c *cli.Context) error {

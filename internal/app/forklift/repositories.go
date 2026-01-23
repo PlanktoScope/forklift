@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // LoadFSRepos loads all FSRepos from the provided base filesystem matching the specified search
@@ -14,7 +15,7 @@ import (
 // directories to search for.
 // In the embedded [Repo] of each loaded FSRepo, the version is *not* initialized.
 func LoadFSRepos(
-	fsys core.PathedFS, searchPattern string, palletLoader FSPalletLoader,
+	fsys ffs.PathedFS, searchPattern string, palletLoader FSPalletLoader,
 ) ([]*core.FSRepo, error) {
 	allRepos := make(map[string]*core.FSRepo) // repo FS path -> repo
 	pallets, err := LoadFSPallets(fsys, searchPattern)

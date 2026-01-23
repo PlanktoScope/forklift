@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // Pseudo-versions
@@ -40,7 +40,7 @@ func GetCommitTimestamp(c CommitTimeGetter, hash string) (string, error) {
 
 // loadVersionLock loads a VersionLock from a specified file path in the provided base filesystem.
 // The loaded version lock is fully initialized, including the version field.
-func loadVersionLock(fsys core.PathedFS, filePath string) (lock VersionLock, err error) {
+func loadVersionLock(fsys ffs.PathedFS, filePath string) (lock VersionLock, err error) {
 	if lock.Def, err = loadVersionLockDef(fsys, filePath); err != nil {
 		return VersionLock{}, errors.Wrapf(err, "couldn't load version lock config")
 	}
@@ -74,7 +74,7 @@ func (l VersionLock) Check() (errs []error) {
 
 // loadVersionLockDef loads a VersionLockDef from a specified file path in the provided base
 // filesystem.
-func loadVersionLockDef(fsys core.PathedFS, filePath string) (VersionLockDef, error) {
+func loadVersionLockDef(fsys ffs.PathedFS, filePath string) (VersionLockDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return VersionLockDef{}, errors.Wrapf(

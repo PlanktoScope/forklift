@@ -2,6 +2,7 @@ package forklift
 
 import (
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -11,7 +12,7 @@ import (
 // stored in a [core.PathedFS] filesystem.
 type FSMirrorCache struct {
 	// FS is the filesystem which corresponds to the cache of pallets.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // Pallet
@@ -32,14 +33,14 @@ type PalletCache interface {
 // PathedPalletCache is a PalletCache rooted at a single path.
 type PathedPalletCache interface {
 	PalletCache
-	core.Pather
+	ffs.Pather
 }
 
 // FSPalletCache is a [PathedPalletCache] implementation with copies of pallets
 // stored in a [core.PathedFS] filesystem.
 type FSPalletCache struct {
 	// FS is the filesystem which corresponds to the cache of pallets.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // LayeredPalletCache is a [PathedPalletCache] implementation where selected pallets can be
@@ -106,14 +107,14 @@ type RepoCache interface {
 // PathedRepoCache is a RepoCache rooted at a single path.
 type PathedRepoCache interface {
 	RepoCache
-	core.Pather
+	ffs.Pather
 }
 
 // FSRepoCache is a [PathedRepoCache] implementation with copies of repos (and thus of packages too)
 // stored in a [core.PathedFS] filesystem.
 type FSRepoCache struct {
 	// FS is the filesystem which corresponds to the cache of repos.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // LayeredRepoCache is a [PathedRepoCache] implementation where selected repos can be overridden by
@@ -162,5 +163,5 @@ type RepoOverrideCache struct {
 // FSDownloadCache is a source of downloaded files saved on the filesystem.
 type FSDownloadCache struct {
 	// FS is the filesystem which corresponds to the cache of downloads.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }

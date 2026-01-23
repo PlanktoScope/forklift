@@ -14,12 +14,13 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // FSPallet
 
 // LoadFSPallet loads a FSPallet from the specified directory path in the provided base filesystem.
-func LoadFSPallet(fsys core.PathedFS, subdirPath string) (p *FSPallet, err error) {
+func LoadFSPallet(fsys ffs.PathedFS, subdirPath string) (p *FSPallet, err error) {
 	p = &FSPallet{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -60,7 +61,7 @@ func LoadFSPalletContaining(path string) (*FSPallet, error) {
 		return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
 	}
 	for {
-		if fsPallet, err := LoadFSPallet(DirFS(palletCandidatePath), "."); err == nil {
+		if fsPallet, err := LoadFSPallet(ffs.DirFS(palletCandidatePath), "."); err == nil {
 			return fsPallet, nil
 		}
 
@@ -76,7 +77,7 @@ func LoadFSPalletContaining(path string) (*FSPallet, error) {
 // pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching pallet
 // directories to search for.
 // In the embedded [Pallet] of each loaded FSPallet, the version is *not* initialized.
-func LoadFSPallets(fsys core.PathedFS, searchPattern string) ([]*FSPallet, error) {
+func LoadFSPallets(fsys ffs.PathedFS, searchPattern string) ([]*FSPallet, error) {
 	searchPattern = path.Join(searchPattern, PalletDefFile)
 	palletDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -136,7 +137,7 @@ func (p *FSPallet) Path() string {
 // FSPallet: Requirements
 
 // getReqsFS returns the [fs.FS] in the pallet which contains requirement definitions.
-func (p *FSPallet) getReqsFS() (core.PathedFS, error) {
+func (p *FSPallet) getReqsFS() (ffs.PathedFS, error) {
 	return p.FS.Sub(ReqsDirName)
 }
 
@@ -144,7 +145,7 @@ func (p *FSPallet) getReqsFS() (core.PathedFS, error) {
 
 // GetPalletReqsFS returns the [fs.FS] in the pallet which contains pallet requirement
 // definitions.
-func (p *FSPallet) GetPalletReqsFS() (core.PathedFS, error) {
+func (p *FSPallet) GetPalletReqsFS() (ffs.PathedFS, error) {
 	fsys, err := p.getReqsFS()
 	if err != nil {
 		return nil, err
@@ -190,7 +191,7 @@ func (p *FSPallet) LoadPalletReq(palletPath string) (r PalletReq, err error) {
 
 // GetRepoReqsFS returns the [fs.FS] in the pallet which contains repo requirement
 // definitions.
-func (p *FSPallet) GetRepoReqsFS() (core.PathedFS, error) {
+func (p *FSPallet) GetRepoReqsFS() (ffs.PathedFS, error) {
 	fsys, err := p.getReqsFS()
 	if err != nil {
 		return nil, err
@@ -252,7 +253,7 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 // FSPallet: Deployments
 
 // GetDeplsFS returns the [fs.FS] in the pallet which contains package deployment declarations.
-func (p *FSPallet) GetDeplsFS() (core.PathedFS, error) {
+func (p *FSPallet) GetDeplsFS() (ffs.PathedFS, error) {
 	return p.FS.Sub(DeplsDirName)
 }
 
@@ -340,7 +341,7 @@ func (p *FSPallet) LoadImports(searchPattern string) ([]Import, error) {
 // FSPallet: Features
 
 // GetFeaturesFS returns the [fs.FS] in the pallet which contains pallet feature flag declarations.
-func (p *FSPallet) GetFeaturesFS() (core.PathedFS, error) {
+func (p *FSPallet) GetFeaturesFS() (ffs.PathedFS, error) {
 	return p.FS.Sub(FeaturesDirName)
 }
 
@@ -432,7 +433,7 @@ func ComparePallets(r, s Pallet) int {
 // PalletDef
 
 // loadPalletDef loads a PalletDef from the specified file path in the provided base filesystem.
-func loadPalletDef(fsys core.PathedFS, filePath string) (PalletDef, error) {
+func loadPalletDef(fsys ffs.PathedFS, filePath string) (PalletDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return PalletDef{}, errors.Wrapf(

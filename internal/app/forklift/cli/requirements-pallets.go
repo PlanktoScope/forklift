@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -260,7 +260,7 @@ func determineUsedPalletReqs(
 
 func DownloadAllRequiredPallets(
 	indent int, pallet *forklift.FSPallet,
-	mirrorsCache core.Pather, palletsCache forklift.PathedPalletCache,
+	mirrorsCache ffs.Pather, palletsCache forklift.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
@@ -279,7 +279,7 @@ func DownloadAllRequiredPallets(
 
 func downloadRequiredPallets(
 	indent int, reqs []*forklift.FSPalletReq,
-	mirrorsCache core.Pather, palletsCache forklift.PathedPalletCache,
+	mirrorsCache ffs.Pather, palletsCache forklift.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	allSkip := make(structures.Set[string])

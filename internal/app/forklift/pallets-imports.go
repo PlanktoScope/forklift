@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // ResolvedImport
@@ -123,7 +123,7 @@ func applyAddModifier(
 }
 
 func globWithChildren(
-	fsys core.PathedFS, pattern string, opts ...doublestar.GlobOption,
+	fsys ffs.PathedFS, pattern string, opts ...doublestar.GlobOption,
 ) ([]string, error) {
 	fileMatches, err := doublestar.Glob(fsys, pattern, opts...)
 	if err != nil {
@@ -271,7 +271,7 @@ func FilterImportsForEnabled(imps []Import) []Import {
 
 // loadImport loads the Import from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the import followed by the import group file extension.
-func loadImport(fsys core.PathedFS, name, fileExt string) (imp Import, err error) {
+func loadImport(fsys ffs.PathedFS, name, fileExt string) (imp Import, err error) {
 	imp.Name = name
 	if imp.Def, err = loadImportDef(fsys, name+fileExt); err != nil {
 		return Import{}, errors.Wrapf(err, "couldn't load import group")
@@ -284,7 +284,7 @@ func loadImport(fsys core.PathedFS, name, fileExt string) (imp Import, err error
 // the specified search pattern.
 // The search pattern should not include the file extension for import group files - the
 // file extension will be appended to the search pattern by LoadImports.
-func loadImports(fsys core.PathedFS, searchPattern, fileExt string) ([]Import, error) {
+func loadImports(fsys ffs.PathedFS, searchPattern, fileExt string) ([]Import, error) {
 	searchPattern += fileExt
 	impDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -312,7 +312,7 @@ func loadImports(fsys core.PathedFS, searchPattern, fileExt string) ([]Import, e
 // ImportDef
 
 // loadImportDef loads an ImportDef from the specified file path in the provided base filesystem.
-func loadImportDef(fsys core.PathedFS, filePath string) (ImportDef, error) {
+func loadImportDef(fsys ffs.PathedFS, filePath string) (ImportDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return ImportDef{}, errors.Wrapf(

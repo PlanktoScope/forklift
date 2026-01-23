@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/bmatcuk/doublestar/v4"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
@@ -16,7 +17,7 @@ import (
 
 // LoadFSRepo loads a FSRepo from the specified directory path in the provided base filesystem.
 // In the loaded FSRepo's embedded [Repo], the version is *not* initialized.
-func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
+func LoadFSRepo(fsys ffs.PathedFS, subdirPath string) (r *FSRepo, err error) {
 	r = &FSRepo{}
 	if r.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -33,7 +34,7 @@ func LoadFSRepo(fsys PathedFS, subdirPath string) (r *FSRepo, err error) {
 // provided base filesystem.
 // The sub-directory path does not have to actually exist.
 // In the loaded FSRepo's embedded [Repo], the version is *not* initialized.
-func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
+func LoadFSRepoContaining(fsys ffs.PathedFS, subdirPath string) (*FSRepo, error) {
 	repoCandidatePath := subdirPath
 	for {
 		if repo, err := LoadFSRepo(fsys, repoCandidatePath); err == nil {
@@ -53,7 +54,7 @@ func LoadFSRepoContaining(fsys PathedFS, subdirPath string) (*FSRepo, error) {
 // pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching repo
 // directories to search for.
 // In the embedded [Repo] of each loaded FSRepo, the version is *not* initialized.
-func LoadFSRepos(fsys PathedFS, searchPattern string) ([]*FSRepo, error) {
+func LoadFSRepos(fsys ffs.PathedFS, searchPattern string) ([]*FSRepo, error) {
 	searchPattern = path.Join(searchPattern, RepoDefFile)
 	repoDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -172,7 +173,7 @@ func ComparePaths(r, s string) int {
 // RepoDef
 
 // LoadRepoDef loads a RepoDef from the specified file path in the provided base filesystem.
-func LoadRepoDef(fsys PathedFS, filePath string) (RepoDef, error) {
+func LoadRepoDef(fsys ffs.PathedFS, filePath string) (RepoDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return RepoDef{}, errors.Wrapf(

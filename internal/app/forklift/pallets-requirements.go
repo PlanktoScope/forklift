@@ -10,6 +10,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // GitRepoReq
@@ -46,7 +47,7 @@ func CompareGitRepoReqs(r, s GitRepoReq) int {
 
 // LoadFSPallet loads a FSPalletReq from the specified directory path in the provided base
 // filesystem, assuming the directory path is also the path of the required pallet.
-func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err error) {
+func loadFSPalletReq(fsys ffs.PathedFS, palletPath string) (r *FSPalletReq, err error) {
 	r = &FSPalletReq{}
 	if r.FS, err = fsys.Sub(palletPath); err != nil {
 		return nil, errors.Wrapf(
@@ -67,7 +68,7 @@ func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err
 // search pattern, assuming the directory paths in the base filesystem are also the paths of the
 // required pallets. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // pallet paths to search for.
-func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
+func loadFSPalletReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
 	searchPattern = path.Join(searchPattern, VersionLockDefFile)
 	palletReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -98,7 +99,7 @@ func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq,
 // the provided base filesystem.
 // The sub-directory path does not have to actually exist; however, it would usually be provided
 // as a package path.
-func LoadFSPalletReqContaining(fsys core.PathedFS, subdirPath string) (*FSPalletReq, error) {
+func LoadFSPalletReqContaining(fsys ffs.PathedFS, subdirPath string) (*FSPalletReq, error) {
 	repoCandidatePath := subdirPath
 	for {
 		if repo, err := loadFSPalletReq(fsys, repoCandidatePath); err == nil {
@@ -151,7 +152,7 @@ func (r PalletReq) GetQueryPath() string {
 
 // LoadFSRepo loads a FSRepoReq from the specified directory path in the provided base
 // filesystem, assuming the directory path is also the path of the required repo.
-func loadFSRepoReq(fsys core.PathedFS, repoPath string) (r *FSRepoReq, err error) {
+func loadFSRepoReq(fsys ffs.PathedFS, repoPath string) (r *FSRepoReq, err error) {
 	r = &FSRepoReq{}
 	if r.FS, err = fsys.Sub(repoPath); err != nil {
 		return nil, errors.Wrapf(
@@ -172,7 +173,7 @@ func loadFSRepoReq(fsys core.PathedFS, repoPath string) (r *FSRepoReq, err error
 // the provided base filesystem.
 // The sub-directory path does not have to actually exist; however, it would usually be provided
 // as a package path.
-func LoadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq, error) {
+func LoadFSRepoReqContaining(fsys ffs.PathedFS, subdirPath string) (*FSRepoReq, error) {
 	repoCandidatePath := subdirPath
 	for {
 		if repo, err := loadFSRepoReq(fsys, repoCandidatePath); err == nil {
@@ -192,7 +193,7 @@ func LoadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq,
 // search pattern, assuming the directory paths in the base filesystem are also the paths of the
 // required repos. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // repo paths to search for.
-func loadFSRepoReqs(fsys core.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
+func loadFSRepoReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
 	searchPattern = path.Join(searchPattern, VersionLockDefFile)
 	repoReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {

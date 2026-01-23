@@ -11,6 +11,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -127,7 +128,7 @@ func loadReplacementPallets(fsPaths []string) (replacements []*forklift.FSPallet
 		if !forklift.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find pallet replacement path %s", replacementPath)
 		}
-		externalPallets, err := forklift.LoadFSPallets(forklift.DirFS(replacementPath), "**")
+		externalPallets, err := forklift.LoadFSPallets(ffs.DirFS(replacementPath), "**")
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement pallets in path %s", replacementPath)
 		}
@@ -203,7 +204,7 @@ func loadReplacementRepos(
 		if !forklift.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find repo replacement path %s", replacementPath)
 		}
-		externalRepos, err := forklift.LoadFSRepos(forklift.DirFS(replacementPath), "**", palletLoader)
+		externalRepos, err := forklift.LoadFSRepos(ffs.DirFS(replacementPath), "**", palletLoader)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)
 		}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	res "github.com/forklift-run/forklift/pkg/resources"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
@@ -558,7 +559,7 @@ func FilterDeplsForEnabled(depls []Depl) []Depl {
 
 // loadDepl loads the Depl from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the deployment followed by the deployment declaration file extension.
-func loadDepl(fsys core.PathedFS, name string) (depl Depl, err error) {
+func loadDepl(fsys ffs.PathedFS, name string) (depl Depl, err error) {
 	depl.Name = name
 	if depl.Def, err = loadDeplDef(fsys, name+DeplDefFileExt); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load deployment declaration")
@@ -570,7 +571,7 @@ func loadDepl(fsys core.PathedFS, name string) (depl Depl, err error) {
 // the specified search pattern.
 // The search pattern should not include the file extension for deployment declaration files - the
 // file extension will be appended to the search pattern by LoadDepls.
-func loadDepls(fsys core.PathedFS, searchPattern string) ([]Depl, error) {
+func loadDepls(fsys ffs.PathedFS, searchPattern string) ([]Depl, error) {
 	searchPattern += DeplDefFileExt
 	deplDefFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -609,7 +610,7 @@ func (d *Depl) ResAttachmentSource() []string {
 // DeplDef
 
 // loadDeplDef loads a DeplDef from the specified file path in the provided base filesystem.
-func loadDeplDef(fsys core.PathedFS, filePath string) (DeplDef, error) {
+func loadDeplDef(fsys ffs.PathedFS, filePath string) (DeplDef, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return DeplDef{}, errors.Wrapf(

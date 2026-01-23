@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -66,7 +67,7 @@ func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error)
 	for _, plt := range plts {
 		var pltPath string
 		var ok bool
-		if pltPath, plt.Version, ok = strings.Cut(core.GetSubdirPath(c, plt.FS.Path()), "@"); !ok {
+		if pltPath, plt.Version, ok = strings.Cut(ffs.GetSubdirPath(c, plt.FS.Path()), "@"); !ok {
 			return nil, errors.Wrapf(
 				err, "couldn't parse path of cached pallet configured at %s as pallet_path@version",
 				plt.FS.Path(),

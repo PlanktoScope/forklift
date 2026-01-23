@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func FileExists(filePath string) bool {
@@ -43,7 +43,7 @@ func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
 		return nil, errors.Errorf("couldn't find workspace at %s", dirPath)
 	}
 	return &FSWorkspace{
-		FS: DirFS(dirPath),
+		FS: ffs.DirFS(dirPath),
 	}, nil
 }
 
@@ -53,7 +53,7 @@ func (w *FSWorkspace) GetDataPath() string {
 	return path.Join(w.FS.Path(), dataDirPath)
 }
 
-func (w *FSWorkspace) getDataFS() (core.PathedFS, error) {
+func (w *FSWorkspace) getDataFS() (ffs.PathedFS, error) {
 	if err := EnsureExists(w.GetDataPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.GetDataPath())
 	}
@@ -106,7 +106,7 @@ func (w *FSWorkspace) getCachePath() string {
 	return path.Join(w.FS.Path(), cacheDirPath)
 }
 
-func (w *FSWorkspace) getCacheFS() (core.PathedFS, error) {
+func (w *FSWorkspace) getCacheFS() (ffs.PathedFS, error) {
 	if err := EnsureExists(w.getCachePath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getCachePath())
 	}
@@ -204,7 +204,7 @@ func (w *FSWorkspace) getConfigPath() string {
 	return path.Join(w.FS.Path(), configDirPath)
 }
 
-func (w *FSWorkspace) getConfigFS() (core.PathedFS, error) {
+func (w *FSWorkspace) getConfigFS() (ffs.PathedFS, error) {
 	if err := EnsureExists(w.getConfigPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getConfigPath())
 	}

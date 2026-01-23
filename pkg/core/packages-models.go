@@ -1,13 +1,17 @@
 package core
 
-import "io/fs"
+import (
+	"io/fs"
+
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+)
 
 // A FSPkg is a Forklift package stored at the root of a [fs.FS] filesystem.
 type FSPkg struct {
 	// Pkg is the Forklift package at the root of the filesystem.
 	Pkg
 	// FS is a filesystem which contains the package's contents.
-	FS PathedFS
+	FS ffs.PathedFS
 	// Repo is a pointer to the [FSRepo] instance which provides the package.
 	Repo *FSRepo
 }

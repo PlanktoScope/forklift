@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func ListPalletFiles(pallet *forklift.FSPallet, pattern string) ([]string, error) {
@@ -46,7 +47,7 @@ func ListPalletFiles(pallet *forklift.FSPallet, pattern string) ([]string, error
 }
 
 func GetFileLocation(pallet *forklift.FSPallet, filePath string) (string, error) {
-	fsys, ok := pallet.FS.(*forklift.MergeFS)
+	fsys, ok := pallet.FS.(*ffs.MergeFS)
 	if !ok {
 		return path.Join(pallet.FS.Path(), filePath), nil
 	}
@@ -71,7 +72,7 @@ func FprintFile(out io.Writer, pallet *forklift.FSPallet, filePath string) error
 }
 
 func EditFileWithCOW(pallet *forklift.FSPallet, filePath, editor string) error {
-	fsys, ok := pallet.FS.(*forklift.MergeFS)
+	fsys, ok := pallet.FS.(*ffs.MergeFS)
 	if !ok {
 		fullPath := path.Join(pallet.FS.Path(), filePath)
 		return editFile(editor, fullPath, path.Dir(fullPath))

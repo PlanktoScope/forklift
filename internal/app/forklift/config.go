@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // GitRepoQuery
 
 // loadGitRepoQuery loads a GitRepoQuery from the specified file path in the
 // provided base filesystem.
-func loadGitRepoQuery(fsys core.PathedFS, filePath string) (GitRepoQuery, error) {
+func loadGitRepoQuery(fsys ffs.PathedFS, filePath string) (GitRepoQuery, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return GitRepoQuery{}, errors.Wrapf(

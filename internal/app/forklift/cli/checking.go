@@ -13,6 +13,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
@@ -112,7 +113,7 @@ func printInvalidDeplFileExports(
 	}
 }
 
-func checkFileOrSymlink(fsys core.PathedFS, file string) error {
+func checkFileOrSymlink(fsys ffs.PathedFS, file string) error {
 	if _, err := fs.Stat(fsys, file); err == nil {
 		return nil
 	}

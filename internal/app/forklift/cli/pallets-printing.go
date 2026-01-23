@@ -13,11 +13,11 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func FprintCachedPallet(
-	indent int, out io.Writer, cache core.Pather, pallet *forklift.FSPallet, printHeader bool,
+	indent int, out io.Writer, cache ffs.Pather, pallet *forklift.FSPallet, printHeader bool,
 ) error {
 	if printHeader {
 		IndentedFprintf(indent, out, "Cached pallet: %s\n", pallet.Path())
@@ -28,8 +28,8 @@ func FprintCachedPallet(
 	_, _ = fmt.Fprintln(out)
 
 	IndentedFprintf(indent, out, "Version: %s\n", pallet.Version)
-	if core.CoversPath(cache, pallet.FS.Path()) {
-		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	if ffs.CoversPath(cache, pallet.FS.Path()) {
+		IndentedFprintf(indent, out, "Path in cache: %s\n", ffs.GetSubdirPath(cache, pallet.FS.Path()))
 	} else {
 		// Note: this is used when the pallet is replaced by an overlay from outside the cache
 		IndentedFprintf(

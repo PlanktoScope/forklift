@@ -9,10 +9,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func FprintCachedRepo(
-	indent int, out io.Writer, cache core.Pather, repo *core.FSRepo, printHeader bool,
+	indent int, out io.Writer, cache ffs.Pather, repo *core.FSRepo, printHeader bool,
 ) error {
 	if printHeader {
 		IndentedFprintf(indent, out, "Cached repo: %s\n", repo.Path())
@@ -23,8 +24,8 @@ func FprintCachedRepo(
 	_, _ = fmt.Fprintln(out)
 
 	IndentedFprintf(indent, out, "Version: %s\n", repo.Version)
-	if core.CoversPath(cache, repo.FS.Path()) {
-		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, repo.FS.Path()))
+	if ffs.CoversPath(cache, repo.FS.Path()) {
+		IndentedFprintf(indent, out, "Path in cache: %s\n", ffs.GetSubdirPath(cache, repo.FS.Path()))
 	} else {
 		// Note: this is used when the repo is replaced by an overlay from outside the cache
 		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", repo.FS.Path())

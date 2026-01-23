@@ -16,7 +16,7 @@ import (
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -27,7 +27,7 @@ func GetStageStore(
 		return workspace.GetStageStore(newStageStoreVersion)
 	}
 
-	fsys := forklift.DirFS(stageStorePath)
+	fsys := ffs.DirFS(stageStorePath)
 	if err := forklift.EnsureFSStageStore(fsys, ".", newStageStoreVersion); err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ type StagingVersions struct {
 }
 
 type StagingCaches struct {
-	Mirrors   core.Pather
+	Mirrors   ffs.Pather
 	Pallets   forklift.PathedPalletCache
 	Repos     forklift.PathedRepoCache
 	Downloads *forklift.FSDownloadCache
@@ -80,7 +80,7 @@ func StagePallet(
 	exportPath string, versions StagingVersions,
 	skipImageCaching bool, platform string, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
-	if _, isMerged := merged.FS.(*forklift.MergeFS); isMerged {
+	if _, isMerged := merged.FS.(*ffs.MergeFS); isMerged {
 		return 0, errors.Errorf("the pallet provided for staging should not be a merged pallet!")
 	}
 
@@ -203,7 +203,7 @@ func newBundleManifest(
 	for _, req := range repoReqs {
 		desc.Includes.Repos[req.RequiredPath] = newBundleRepoInclusion(req, repoCache)
 	}
-	if mergeFS, ok := merged.FS.(*forklift.MergeFS); ok {
+	if mergeFS, ok := merged.FS.(*ffs.MergeFS); ok {
 		imports, err := mergeFS.ListImports()
 		if err != nil {
 			return desc, errors.Wrapf(err, "couldn't list pallet file import groups")

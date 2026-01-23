@@ -2,12 +2,14 @@
 // management system.
 package core
 
+import ffs "github.com/forklift-run/forklift/pkg/fs"
+
 // A FSRepo is a Forklift repository stored at the root of a [fs.FS] filesystem.
 type FSRepo struct {
 	// Repo is the Forklift repository at the root of the filesystem.
 	Repo
 	// FS is a filesystem which contains the repository's contents.
-	FS PathedFS
+	FS ffs.PathedFS
 }
 
 // A Repo is a collection of Forklift packages which are tested, released, distributed, and

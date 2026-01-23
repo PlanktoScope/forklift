@@ -1,7 +1,7 @@
 package forklift
 
 import (
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // Bundle
@@ -24,7 +24,7 @@ type FSBundle struct {
 	// Bundle is the pallet bundle at the root of the filesystem.
 	Bundle
 	// FS is a filesystem which contains the bundle's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A Bundle is a Forklift pallet bundle, a complete compilation of all files (except container

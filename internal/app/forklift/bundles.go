@@ -22,6 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -29,12 +30,12 @@ import (
 
 func NewFSBundle(path string) *FSBundle {
 	return &FSBundle{
-		FS: DirFS(path),
+		FS: ffs.DirFS(path),
 	}
 }
 
 // LoadFSBundle loads a FSBundle from a specified directory path in the provided base filesystem.
-func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error) {
+func LoadFSBundle(fsys ffs.PathedFS, subdirPath string) (b *FSBundle, err error) {
 	b = &FSBundle{}
 	if b.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -88,7 +89,7 @@ func (b *FSBundle) Path() string {
 func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 	shallow := pallet.FS
 	for {
-		merged, ok := shallow.(*MergeFS)
+		merged, ok := shallow.(*ffs.MergeFS)
 		if !ok {
 			break
 		}
@@ -112,7 +113,7 @@ func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 	return nil
 }
 
-func CopyFS(fsys core.PathedFS, dest string) error {
+func CopyFS(fsys ffs.PathedFS, dest string) error {
 	return fs.WalkDir(fsys, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -129,8 +130,8 @@ func CopyFS(fsys core.PathedFS, dest string) error {
 	})
 }
 
-func copyFSFile(fsys core.PathedFS, sourcePath, destPath string, destPerms fs.FileMode) error {
-	if readLinkFS, ok := fsys.(ReadLinkFS); ok {
+func copyFSFile(fsys ffs.PathedFS, sourcePath, destPath string, destPerms fs.FileMode) error {
+	if readLinkFS, ok := fsys.(ffs.ReadLinkFS); ok {
 		sourceInfo, err := readLinkFS.StatLink(sourcePath)
 		if err != nil {
 			return errors.Wrapf(
@@ -190,8 +191,8 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string, destPerms fs.Fi
 	return nil
 }
 
-func copyFSSymlink(fsys core.PathedFS, sourcePath, destPath string) error {
-	readLinkFS, ok := fsys.(ReadLinkFS)
+func copyFSSymlink(fsys ffs.PathedFS, sourcePath, destPath string) error {
+	readLinkFS, ok := fsys.(ffs.ReadLinkFS)
 	if !ok {
 		return errors.Errorf("%s is not a ReadLinkFS!", fsys.Path())
 	}
@@ -271,7 +272,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 }
 
 func makeComposeAppSummary(
-	depl *ResolvedDepl, bundleFS core.PathedFS,
+	depl *ResolvedDepl, bundleFS ffs.PathedFS,
 ) (BundleDeplComposeApp, error) {
 	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Def.Package))
 	if err != nil {
@@ -765,7 +766,7 @@ func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 
 // loadBundleManifest loads a BundleManifest from the specified file path in the provided base
 // filesystem.
-func loadBundleManifest(fsys core.PathedFS, filePath string) (BundleManifest, error) {
+func loadBundleManifest(fsys ffs.PathedFS, filePath string) (BundleManifest, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return BundleManifest{}, errors.Wrapf(

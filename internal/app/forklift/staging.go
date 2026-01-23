@@ -12,14 +12,14 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // FSStageStore
 
 // EnsureFSStageStore initializes a FSStageStore at the specified directory path in the provided
 // base filesystem, if a stage store is not already initialized there.
-func EnsureFSStageStore(fsys core.PathedFS, subdirPath, newStateStoreVersion string) error {
+func EnsureFSStageStore(fsys ffs.PathedFS, subdirPath, newStateStoreVersion string) error {
 	storePath := path.Join(fsys.Path(), subdirPath)
 	if err := EnsureExists(filepath.FromSlash(storePath)); err != nil {
 		return errors.Wrapf(
@@ -42,7 +42,7 @@ func EnsureFSStageStore(fsys core.PathedFS, subdirPath, newStateStoreVersion str
 
 // LoadFSStageStore loads a FSStageStore from the specified directory path in the provided base
 // filesystem.
-func LoadFSStageStore(fsys core.PathedFS, subdirPath string) (s *FSStageStore, err error) {
+func LoadFSStageStore(fsys ffs.PathedFS, subdirPath string) (s *FSStageStore, err error) {
 	s = &FSStageStore{}
 	if s.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -261,7 +261,7 @@ func (s *FSStageStore) CommitState() error {
 
 // loadStageStoreManifest loads a StageStoreManifest from the specified file path in the provided
 // base filesystem.
-func loadStageStoreManifest(fsys core.PathedFS, filePath string) (StageStoreManifest, error) {
+func loadStageStoreManifest(fsys ffs.PathedFS, filePath string) (StageStoreManifest, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return StageStoreManifest{}, errors.Wrapf(

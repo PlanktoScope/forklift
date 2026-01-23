@@ -10,6 +10,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
@@ -17,8 +18,8 @@ func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *c
 	indent++
 
 	fprintPkgRepo(indent, out, cache, pkg)
-	if core.CoversPath(cache, pkg.FS.Path()) {
-		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, pkg.FS.Path()))
+	if ffs.CoversPath(cache, pkg.FS.Path()) {
+		IndentedFprintf(indent, out, "Path in cache: %s\n", ffs.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
 		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
 	}
@@ -34,7 +35,7 @@ func fprintPkgRepo(indent int, out io.Writer, cache forklift.PathedRepoCache, pk
 	IndentedFprintf(indent, out, "Provided by repo: %s\n", pkg.Repo.Path())
 	indent++
 
-	if core.CoversPath(cache, pkg.FS.Path()) {
+	if ffs.CoversPath(cache, pkg.FS.Path()) {
 		IndentedFprintf(indent, out, "Version: %s\n", pkg.Repo.Version)
 	} else {
 		IndentedFprintf(
@@ -264,7 +265,7 @@ func FprintPkgLocation(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
 		)
 	}
-	fsys, ok := pkg.FS.(*forklift.MergeFS)
+	fsys, ok := pkg.FS.(*ffs.MergeFS)
 	if !ok {
 		_, _ = fmt.Fprintln(out, pkg.FS.Path())
 		return nil
