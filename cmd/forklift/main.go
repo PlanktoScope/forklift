@@ -32,7 +32,6 @@ var (
 var fcliVersions fcli.StagingVersions = fcli.StagingVersions{
 	Core: fcli.Versions{
 		Tool:               toolVersion,
-		MinSupportedRepo:   repoMinVersion,
 		MinSupportedPallet: palletMinVersion,
 	},
 	MinSupportedBundle: bundleMinVersion,
@@ -102,12 +101,9 @@ var app = &cli.App{
 // Versioning
 
 const (
-	// repoMinVersion is the minimum supported Forklift version among repos. A repo with a lower
-	// Forklift version cannot be used.
-	repoMinVersion = "v0.4.0"
 	// palletMinVersion is the minimum supported Forklift version among pallets. A pallet with a
 	// lower Forklift version cannot be used.
-	palletMinVersion = "v0.4.0"
+	palletMinVersion = "v0.9.0"
 	// bundleMinVersion is the minimum supported Forklift version among staged pallet bundles. A
 	// bundle with a lower Forklift version cannot be used.
 	bundleMinVersion = "v0.7.0"
@@ -119,7 +115,7 @@ const (
 	newStageStoreVersion = "v0.7.0"
 	// fallbackVersion is the version reported which the Forklift tool reports itself as if its actual
 	// version is unknown.
-	fallbackVersion = "v0.8.0-dev"
+	fallbackVersion = "v0.9.0-dev"
 )
 
 var (

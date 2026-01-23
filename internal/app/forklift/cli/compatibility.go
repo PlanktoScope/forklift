@@ -14,7 +14,6 @@ import (
 
 type Versions struct {
 	Tool               string
-	MinSupportedRepo   string
 	MinSupportedPallet string
 }
 
@@ -100,11 +99,6 @@ func CheckDeepCompat(
 	if err := checkReqPalletVersions(pallet, palletLoader, toolVersions, ignoreTool); err != nil {
 		return err
 	}
-	if err := checkReqRepoVersions(
-		pallet, repoLoader, toolVersions, ignoreTool,
-	); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -162,56 +156,6 @@ func loadPalletReqForkliftVersions(
 			reqPath:         req.Path(),
 			reqVersion:      req.VersionLock.Version,
 			forkliftVersion: fsPallet.Pallet.Def.ForkliftVersion,
-		})
-	}
-	return versions, nil
-}
-
-func checkReqRepoVersions(
-	pallet *forklift.FSPallet, repoLoader forklift.FSRepoLoader,
-	toolVersions Versions, ignoreTool bool,
-) error {
-	versions, err := loadRepoReqForkliftVersions(pallet, repoLoader)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't determine Forklift versions of pallet %s's repo requirements", pallet.Path(),
-		)
-	}
-	if err = checkVersionConsistency(pallet.Def.ForkliftVersion, versions); err != nil {
-		return errors.Wrapf(
-			err, "pallet %s has a version incompatibility with a required repo", pallet.Path(),
-		)
-	}
-	for _, v := range versions {
-		if err := CheckArtifactCompat(
-			v.forkliftVersion, toolVersions.Tool, toolVersions.MinSupportedRepo,
-			v.reqPath+"@"+v.reqVersion, ignoreTool,
-		); err != nil {
-			return errors.Wrapf(
-				err, "forklift tool has a version incompatibility with required repo %s", v.reqPath,
-			)
-		}
-	}
-	return nil
-}
-
-func loadRepoReqForkliftVersions(
-	pallet *forklift.FSPallet, repoLoader forklift.FSRepoLoader,
-) ([]reqForkliftVersion, error) {
-	repoReqs, err := pallet.LoadFSRepoReqs("**")
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't load repo requirements")
-	}
-	versions := make([]reqForkliftVersion, 0, len(repoReqs))
-	for _, req := range repoReqs {
-		fsRepo, err := repoLoader.LoadFSRepo(req.Path(), req.VersionLock.Version)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load repo %s@%s", req.Path(), req.VersionLock.Version)
-		}
-		versions = append(versions, reqForkliftVersion{
-			reqPath:         req.Path(),
-			reqVersion:      req.VersionLock.Version,
-			forkliftVersion: fsRepo.Repo.Def.ForkliftVersion,
 		})
 	}
 	return versions, nil

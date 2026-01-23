@@ -382,6 +382,6 @@ require (
 tool (
 	github.com/client9/misspell/cmd/misspell
 	github.com/golangci/golangci-lint/cmd/golangci-lint
-	// github.com/goreleaser/goreleaser // not needed because we use goreleaser-cross as a Docker image
+	// github.com/goreleaser/goreleaser/v2 // not needed because we use goreleaser-cross as a Docker image
 	mvdan.cc/gofumpt
 )
