@@ -135,7 +135,11 @@ func Plan(
 	return changeDeps, serialization, nil
 }
 
-func printDigraph[Node comparable, Digraph structures.MapDigraph[Node]](
+type MapDigraph[Node comparable] interface {
+	~map[Node]structures.Set[Node]
+}
+
+func printDigraph[Node comparable, Digraph MapDigraph[Node]](
 	indent int, digraph Digraph, edgeType string,
 ) {
 	sortedNodes := make([]Node, 0, len(digraph))
@@ -150,7 +154,7 @@ func printDigraph[Node comparable, Digraph structures.MapDigraph[Node]](
 	}
 }
 
-func printNodeOutboundEdges[Node comparable, Digraph structures.MapDigraph[Node]](
+func printNodeOutboundEdges[Node comparable, Digraph MapDigraph[Node]](
 	indent int, digraph Digraph, node Node, edgeType string,
 ) {
 	upstreamNodes := make([]Node, 0, len(digraph[node]))

@@ -1,15 +1,10 @@
 package structures
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 )
-
-// MapDigraph
-
-type MapDigraph[Node comparable] interface {
-	~map[Node]Set[Node]
-}
 
 // Digraph
 
@@ -40,6 +35,23 @@ func (g Digraph[Node]) HasEdge(from, to Node) bool {
 	return targetNodes.Has(to)
 }
 
+// Invert converts a digraph of children pointing to parents into a new digraph of parents pointing
+// to children.
+func (g Digraph[Node]) Invert() Digraph[Node] {
+	inverted := make(Digraph[Node])
+	for node := range g {
+		inverted.AddNode(node)
+	}
+	for child, parents := range g {
+		for parent := range parents {
+			inverted.AddNode(parent)
+			inverted[parent].Add(child)
+			inverted.AddNode(child)
+		}
+	}
+	return inverted
+}
+
 // ComputeTransitiveClosure adds edges between every pair of nodes which are transitively connected
 // by some path of directed edges. This is just the transitive closure of the relation expressed by
 // the digraph. Iff the digraph isn't a DAG (i.e. iff it has cycles), then each node in the cycle
@@ -49,10 +61,10 @@ func (g Digraph[Node]) ComputeTransitiveClosure() TransitiveClosure[Node] {
 	closure := make(TransitiveClosure[Node])
 	prevChangedNodes := make(map[Node]bool)
 	changedNodes := make(map[Node]bool)
-	for node, upstreamNodes := range g {
-		closure[node] = make(Set[Node])
-		for upstreamNode := range upstreamNodes {
-			closure[node].Add(upstreamNode)
+	for node, parents := range g {
+		closure.addNode(node)
+		for parent := range parents {
+			closure.addEdge(node, parent)
 		}
 		prevChangedNodes[node] = true
 		changedNodes[node] = true
@@ -62,44 +74,31 @@ func (g Digraph[Node]) ComputeTransitiveClosure() TransitiveClosure[Node] {
 	// resolution where dependency trees should be kept relatively shallow.
 	for {
 		converged := true
-		for node, upstreamNodes := range closure {
-			initial := len(upstreamNodes)
-			for upstreamNode := range upstreamNodes {
-				if !prevChangedNodes[upstreamNode] { // this is just a performance optimization
+		for node, ancestors := range closure {
+			initial := len(ancestors)
+			for ancestor := range ancestors {
+				if !prevChangedNodes[ancestor] {
+					// this is just a performance optimization: the ancestor didn't gain any new ancestors
+					// in the previous iteration, so we don't need to review it again
 					continue
 				}
-				// Add the dependency's own dependencies to the set of dependencies
-				transitiveNodes := closure[upstreamNode]
-				for transitiveNode := range transitiveNodes {
-					upstreamNodes.Add(transitiveNode)
+				// Add the ancestor's own ancestors to the child's set of ancestors
+				for transitiveAncestor := range closure[ancestor] {
+					ancestors.Add(transitiveAncestor)
 				}
 			}
-			final := len(upstreamNodes)
-			changedNodes[node] = initial != final
-			if changedNodes[node] {
+			final := len(ancestors)
+			if changedNodes[node] = initial != final; changedNodes[node] {
 				converged = false
 			}
 		}
 		if converged {
 			return closure
 		}
+
 		prevChangedNodes = changedNodes
 		changedNodes = make(map[Node]bool)
 	}
-}
-
-// Invert converts a digraph of children pointing to parents into a new digraph of parents pointing
-// to children.
-func (g Digraph[Node]) Invert() Digraph[Node] {
-	inverted := make(Digraph[Node])
-	for child, parents := range g {
-		for parent := range parents {
-			inverted.AddNode(parent)
-			inverted[parent].Add(child)
-			inverted.AddNode(child)
-		}
-	}
-	return inverted
 }
 
 // Transitive closure
@@ -116,6 +115,14 @@ func (g TransitiveClosure[Node]) addNode(n Node) {
 	g[n] = make(Set[Node])
 }
 
+// addEdge adds an edge from the first node to the second node. If the edge was already in the
+// graph, nothing changes.
+func (g TransitiveClosure[Node]) addEdge(from, to Node) {
+	g.addNode(from)
+	g.addNode(to)
+	g[from].Add(to)
+}
+
 // HasEdge checks whether an edge exists from the first node to the second node.
 func (g TransitiveClosure[Node]) HasEdge(from, to Node) bool {
 	targetNodes, ok := g[from]
@@ -126,28 +133,34 @@ func (g TransitiveClosure[Node]) HasEdge(from, to Node) bool {
 }
 
 // IdentifyCycles builds a sorted list of cycles in the transitive closure, where each cycle is a
-// list of nodes sorted lexigoraphically by the node's string representation.
+// list of nodes sorted lexigoraphically by the node's string representation. Sub-cycles of larger
+// cycles are simply merged into the larger cycle instead of being listed separately.
 func (g TransitiveClosure[Node]) IdentifyCycles() [][]Node {
 	cycles := make(map[string][]Node)
 	for node, parents := range g {
-		if parents.Has(node) { // this node is part of a cycle
-			cycle := make([]Node, 0, len(parents))
-			for parent := range parents {
-				cycle = append(cycle, parent)
-			}
-			sort.Slice(cycle, func(i, j int) bool {
-				return fmt.Sprintf("%v", cycle[i]) < fmt.Sprintf("%v", cycle[j])
-			})
-			cycles[fmt.Sprintf("%+v", cycle)] = cycle
+		if !parents.Has(node) { // this node is not part of a cycle
+			continue
 		}
+
+		cycle := make([]Node, 0, len(parents))
+		for parent := range parents {
+			if grandparents := g[parent]; !grandparents.Has(node) { // this parent isn't in the cycle
+				continue
+			}
+			cycle = append(cycle, parent)
+		}
+		slices.SortFunc(cycle, func(a, b Node) int {
+			return cmp.Compare(fmt.Sprintf("%+v", a), fmt.Sprintf("%+v", b))
+		})
+		cycles[fmt.Sprintf("%+v", cycle)] = cycle
 	}
-	// TODO: sort the cycle
+
 	orderedCycles := make([][]Node, 0, len(cycles))
 	for _, cycle := range cycles {
 		orderedCycles = append(orderedCycles, cycle)
 	}
-	sort.Slice(orderedCycles, func(i, j int) bool {
-		return fmt.Sprintf("%+v", orderedCycles[i]) < fmt.Sprintf("%+v", orderedCycles[j])
+	slices.SortFunc(orderedCycles, func(a, b []Node) int {
+		return cmp.Compare(fmt.Sprintf("%+v", a), fmt.Sprintf("%+v", b))
 	})
 	return orderedCycles
 }
@@ -156,6 +169,9 @@ func (g TransitiveClosure[Node]) IdentifyCycles() [][]Node {
 // to children.
 func (g TransitiveClosure[Node]) Invert() TransitiveClosure[Node] {
 	inverted := make(TransitiveClosure[Node])
+	for node := range g {
+		inverted.addNode(node)
+	}
 	for child, parents := range g {
 		for parent := range parents {
 			inverted.addNode(parent)
