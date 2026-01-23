@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
+
+	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
 // FSPkg
@@ -124,7 +126,7 @@ func (p Pkg) Check() (errs []error) {
 }
 
 // ResAttachmentSource returns the source path for resources under the Pkg instance.
-// The resulting slice is useful for constructing [AttachedRes] instances.
+// The resulting slice is useful for constructing [res.Attached] instances.
 func (p Pkg) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, fmt.Sprintf("package %s", p.Path()))
 }
@@ -133,7 +135,7 @@ func (p Pkg) ResAttachmentSource(parentSource []string) []string {
 // package with the specified features enabled.
 func (p Pkg) ProvidedListeners(
 	parentSource []string, enabledFeatures []string,
-) (provided []AttachedRes[ListenerRes]) {
+) (provided []res.Attached[ListenerRes, []string]) {
 	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ListenerRes] {
 			return res.AttachedListeners
@@ -142,13 +144,13 @@ func (p Pkg) ProvidedListeners(
 }
 
 type (
-	attachedResGetter[Resource any] func(source []string) []AttachedRes[Resource]
+	attachedResGetter[Resource any] func(source []string) []res.Attached[Resource, []string]
 	providedResGetter[Resource any] func(res ProvidedRes) attachedResGetter[Resource]
 )
 
 func providedResources[Resource any](
 	p Pkg, parentSource []string, enabledFeatures []string, getter providedResGetter[Resource],
-) (provided []AttachedRes[Resource]) {
+) (provided []res.Attached[Resource, []string]) {
 	parentSource = p.ResAttachmentSource(parentSource)
 	provided = append(provided, getter(p.Def.Host.Provides)(
 		p.Def.Host.ResAttachmentSource(parentSource),
@@ -170,7 +172,7 @@ func providedResources[Resource any](
 // with the specified features enabled.
 func (p Pkg) RequiredNetworks(
 	parentSource []string, enabledFeatures []string,
-) (required []AttachedRes[NetworkRes]) {
+) (required []res.Attached[NetworkRes, []string]) {
 	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[NetworkRes] {
 			return res.AttachedNetworks
@@ -182,7 +184,7 @@ type requiredResGetter[Resource any] func(res RequiredRes) attachedResGetter[Res
 
 func requiredResources[Resource any](
 	p Pkg, parentSource []string, enabledFeatures []string, getter requiredResGetter[Resource],
-) (required []AttachedRes[Resource]) {
+) (required []res.Attached[Resource, []string]) {
 	parentSource = p.ResAttachmentSource(parentSource)
 	required = append(required, getter(p.Def.Deployment.Requires)(
 		p.Def.Deployment.ResAttachmentSource(parentSource),
@@ -201,7 +203,7 @@ func requiredResources[Resource any](
 // with the specified features enabled.
 func (p Pkg) ProvidedNetworks(
 	parentSource []string, enabledFeatures []string,
-) (provided []AttachedRes[NetworkRes]) {
+) (provided []res.Attached[NetworkRes, []string]) {
 	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[NetworkRes] {
 			return res.AttachedNetworks
@@ -213,7 +215,7 @@ func (p Pkg) ProvidedNetworks(
 // with the specified features enabled.
 func (p Pkg) RequiredServices(
 	parentSource []string, enabledFeatures []string,
-) (required []AttachedRes[ServiceRes]) {
+) (required []res.Attached[ServiceRes, []string]) {
 	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[ServiceRes] {
 			return res.AttachedServices
@@ -225,7 +227,7 @@ func (p Pkg) RequiredServices(
 // with the specified features enabled.
 func (p Pkg) ProvidedServices(
 	parentSource []string, enabledFeatures []string,
-) (provided []AttachedRes[ServiceRes]) {
+) (provided []res.Attached[ServiceRes, []string]) {
 	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[ServiceRes] {
 			return res.AttachedServices
@@ -237,7 +239,7 @@ func (p Pkg) ProvidedServices(
 // with the specified features enabled.
 func (p Pkg) RequiredFilesets(
 	parentSource []string, enabledFeatures []string,
-) (required []AttachedRes[FilesetRes]) {
+) (required []res.Attached[FilesetRes, []string]) {
 	return requiredResources(
 		p, parentSource, enabledFeatures, func(res RequiredRes) attachedResGetter[FilesetRes] {
 			return res.AttachedFilesets
@@ -249,7 +251,7 @@ func (p Pkg) RequiredFilesets(
 // with the specified features enabled.
 func (p Pkg) ProvidedFilesets(
 	parentSource []string, enabledFeatures []string,
-) (provided []AttachedRes[FilesetRes]) {
+) (provided []res.Attached[FilesetRes, []string]) {
 	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FilesetRes] {
 			return res.AttachedFilesets
@@ -261,7 +263,7 @@ func (p Pkg) ProvidedFilesets(
 // with the specified features enabled.
 func (p Pkg) ProvidedFileExports(
 	parentSource []string, enabledFeatures []string,
-) (provided []AttachedRes[FileExportRes]) {
+) (provided []res.Attached[FileExportRes, []string]) {
 	return providedResources(
 		p, parentSource, enabledFeatures, func(res ProvidedRes) attachedResGetter[FileExportRes] {
 			return res.AttachedFileExports
@@ -304,7 +306,7 @@ func (d PkgDef) AddDefaults() PkgDef {
 // ResAttachmentSource returns the source path for resources under the PkgHostSpec instance,
 // adding a string to the provided list of source elements which describes the source of the
 // PkgHostSpec instance.
-// The resulting slice is useful for constructing [AttachedRes] instances.
+// The resulting slice is useful for constructing [res.Attached] instances.
 func (s PkgHostSpec) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "host specification")
 }
@@ -320,7 +322,7 @@ func (s PkgHostSpec) AddDefaults() PkgHostSpec {
 // ResAttachmentSource returns the source path for resources under the PkgDeplSpec instance,
 // adding a string to the provided list of source elements which describes the source of the
 // PkgDeplSpec instance.
-// The resulting slice is useful for constructing [AttachedRes] instances.
+// The resulting slice is useful for constructing [res.Attached] instances.
 func (s PkgDeplSpec) ResAttachmentSource(parentSource []string) []string {
 	return append(parentSource, "deployment specification")
 }
@@ -336,7 +338,7 @@ func (s PkgDeplSpec) AddDefaults() PkgDeplSpec {
 // ResAttachmentSource returns the source path for resources under the PkgFeatureSpec instance,
 // adding a string to the provided list of source elements which describes the source of the
 // PkgFeatureSpec instance.
-// The resulting slice is useful for constructing [AttachedRes] instances.
+// The resulting slice is useful for constructing [res.Attached] instances.
 func (s PkgFeatureSpec) ResAttachmentSource(parentSource []string, featureName string) []string {
 	return append(parentSource, fmt.Sprintf("feature %s", featureName))
 }

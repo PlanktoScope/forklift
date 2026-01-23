@@ -14,6 +14,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/pkg/core"
+	res "github.com/forklift-run/forklift/pkg/resources"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -307,19 +308,19 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		First:  d,
 		Second: candidate,
 		Name:   d.Name == candidate.Name,
-		Listeners: core.CheckResConflicts(
+		Listeners: res.CheckConflicts(
 			d.providedListeners(enabledFeatures), candidate.providedListeners(candidateEnabledFeatures),
 		),
-		Networks: core.CheckResConflicts(
+		Networks: res.CheckConflicts(
 			d.providedNetworks(enabledFeatures), candidate.providedNetworks(candidateEnabledFeatures),
 		),
-		Services: core.CheckResConflicts(
+		Services: res.CheckConflicts(
 			d.providedServices(enabledFeatures), candidate.providedServices(candidateEnabledFeatures),
 		),
-		Filesets: core.CheckResConflicts(
+		Filesets: res.CheckConflicts(
 			d.providedFilesets(enabledFeatures), candidate.providedFilesets(candidateEnabledFeatures),
 		),
-		FileExports: core.CheckResConflicts(
+		FileExports: res.CheckConflicts(
 			d.providedFileExports(enabledFeatures),
 			candidate.providedFileExports(candidateEnabledFeatures),
 		),
@@ -330,7 +331,7 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedListeners(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.ListenerRes]) {
+) (provided []res.Attached[core.ListenerRes, []string]) {
 	return d.Pkg.ProvidedListeners(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -348,7 +349,7 @@ func sortKeys[Value any](m map[string]Value) (sorted []string) {
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredNetworks(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (required []core.AttachedRes[core.NetworkRes]) {
+) (required []res.Attached[core.NetworkRes, []string]) {
 	return d.Pkg.RequiredNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -356,7 +357,7 @@ func (d *ResolvedDepl) requiredNetworks(
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedNetworks(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.NetworkRes]) {
+) (provided []res.Attached[core.NetworkRes, []string]) {
 	return d.Pkg.ProvidedNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -364,7 +365,7 @@ func (d *ResolvedDepl) providedNetworks(
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredServices(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (required []core.AttachedRes[core.ServiceRes]) {
+) (required []res.Attached[core.ServiceRes, []string]) {
 	return d.Pkg.RequiredServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -372,7 +373,7 @@ func (d *ResolvedDepl) requiredServices(
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedServices(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.ServiceRes]) {
+) (provided []res.Attached[core.ServiceRes, []string]) {
 	return d.Pkg.ProvidedServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -380,7 +381,7 @@ func (d *ResolvedDepl) providedServices(
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredFilesets(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (required []core.AttachedRes[core.FilesetRes]) {
+) (required []res.Attached[core.FilesetRes, []string]) {
 	return d.Pkg.RequiredFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -388,7 +389,7 @@ func (d *ResolvedDepl) requiredFilesets(
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedFilesets(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.FilesetRes]) {
+) (provided []res.Attached[core.FilesetRes, []string]) {
 	return d.Pkg.ProvidedFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -396,7 +397,7 @@ func (d *ResolvedDepl) providedFilesets(
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedFileExports(
 	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.FileExportRes]) {
+) (provided []res.Attached[core.FileExportRes, []string]) {
 	return d.Pkg.ProvidedFileExports(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -441,9 +442,9 @@ func (d *ResolvedDepl) CheckDeps(
 	}
 
 	var (
-		allProvidedNetworks []core.AttachedRes[core.NetworkRes]
-		allProvidedServices []core.AttachedRes[core.ServiceRes]
-		allProvidedFilesets []core.AttachedRes[core.FilesetRes]
+		allProvidedNetworks []res.Attached[core.NetworkRes, []string]
+		allProvidedServices []res.Attached[core.ServiceRes, []string]
+		allProvidedFilesets []res.Attached[core.FilesetRes, []string]
 	)
 	for i, candidate := range candidates {
 		enabled := candidateEnabledFeatures[i]
@@ -454,13 +455,13 @@ func (d *ResolvedDepl) CheckDeps(
 
 	satisfied.Depl = d
 	missing.Depl = d
-	satisfied.Networks, missing.Networks = core.CheckResDeps(
+	satisfied.Networks, missing.Networks = res.CheckDeps(
 		d.requiredNetworks(enabledFeatures), allProvidedNetworks,
 	)
-	satisfied.Services, missing.Services = core.CheckResDeps(
+	satisfied.Services, missing.Services = res.CheckDeps(
 		core.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
 	)
-	satisfied.Filesets, missing.Filesets = core.CheckResDeps(
+	satisfied.Filesets, missing.Filesets = res.CheckDeps(
 		core.SplitFilesetsByPath(d.requiredFilesets(enabledFeatures)), allProvidedFilesets,
 	)
 	return satisfied, missing, nil
@@ -509,14 +510,14 @@ func ResolveDeps(
 	deps := make(structures.Digraph[string])
 	for _, satisfied := range satisfiedDeps {
 		for _, network := range satisfied.Networks {
-			provider := strings.TrimPrefix(network.Provided.Source[0], "deployment ")
+			provider := strings.TrimPrefix(network.Provided.Origin[0], "deployment ")
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
 				continue
 			}
 			deps.AddEdge(satisfied.Depl.Name, provider)
 		}
 		for _, service := range satisfied.Services {
-			provider := strings.TrimPrefix(service.Provided.Source[0], "deployment ")
+			provider := strings.TrimPrefix(service.Provided.Origin[0], "deployment ")
 			deps.AddNode(provider)
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
 				continue
@@ -527,7 +528,7 @@ func ResolveDeps(
 			deps.AddEdge(satisfied.Depl.Name, provider)
 		}
 		for _, fileset := range satisfied.Filesets {
-			provider := strings.TrimPrefix(fileset.Provided.Source[0], "deployment ")
+			provider := strings.TrimPrefix(fileset.Provided.Origin[0], "deployment ")
 			deps.AddNode(provider)
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
 				continue
@@ -598,7 +599,7 @@ func loadDepls(fsys core.PathedFS, searchPattern string) ([]Depl, error) {
 }
 
 // ResAttachmentSource returns the source path for resources under the Depl instance.
-// The resulting slice is useful for constructing [core.AttachedRes] instances.
+// The resulting slice is useful for constructing [res.Attached] instances.
 func (d *Depl) ResAttachmentSource() []string {
 	return []string{
 		fmt.Sprintf("deployment %s", d.Name),

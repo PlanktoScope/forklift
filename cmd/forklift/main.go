@@ -103,7 +103,7 @@ var app = &cli.App{
 const (
 	// palletMinVersion is the minimum supported Forklift version among pallets. A pallet with a
 	// lower Forklift version cannot be used.
-	palletMinVersion = "v0.9.0"
+	palletMinVersion = "v0.4.0"
 	// bundleMinVersion is the minimum supported Forklift version among staged pallet bundles. A
 	// bundle with a lower Forklift version cannot be used.
 	bundleMinVersion = "v0.7.0"

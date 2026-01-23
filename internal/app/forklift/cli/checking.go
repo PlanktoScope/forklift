@@ -13,6 +13,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/core"
+	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
 type ResolvedDeplsLoader interface {
@@ -217,7 +218,7 @@ func printDeplConflict(indent int, out io.Writer, conflict forklift.DeplConflict
 }
 
 func printResConflicts[Res any](
-	indent int, out io.Writer, conflicts []core.ResConflict[Res],
+	indent int, out io.Writer, conflicts []res.Conflict[Res, []string],
 ) error {
 	for _, resourceConflict := range conflicts {
 		if err := printResConflict(indent, out, resourceConflict); err != nil {
@@ -228,16 +229,16 @@ func printResConflicts[Res any](
 }
 
 func printResConflict[Res any](
-	indent int, out io.Writer, conflict core.ResConflict[Res],
+	indent int, out io.Writer, conflict res.Conflict[Res, []string],
 ) error {
-	BulletedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.First.Source[0])
+	BulletedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.First.Origin[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResSource(indent+1, out, conflict.First.Source[1:])
+	resourceIndent := printResOrigin(indent+1, out, conflict.First.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, conflict.First.Res); err != nil {
 		return errors.Wrap(err, "couldn't print first resource")
 	}
-	IndentedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.Second.Source[0])
-	resourceIndent = printResSource(indent+1, out, conflict.Second.Source[1:])
+	IndentedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.Second.Origin[0])
+	resourceIndent = printResOrigin(indent+1, out, conflict.Second.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, conflict.Second.Res); err != nil {
 		return errors.Wrap(err, "couldn't print second resource")
 	}
@@ -253,8 +254,8 @@ func printResConflict[Res any](
 	return nil
 }
 
-func printResSource(indent int, out io.Writer, source []string) (finalIndent int) {
-	for i, line := range source {
+func printResOrigin(indent int, out io.Writer, origin []string) (finalIndent int) {
+	for i, line := range origin {
 		finalIndent = indent + i
 		IndentedFprintf(finalIndent, out, "%s:", line)
 		_, _ = fmt.Fprintln(out)
@@ -311,7 +312,7 @@ func printMissingDeplDep(indent int, out io.Writer, deps forklift.MissingDeplDep
 }
 
 func printMissingDeps[Res any](
-	indent int, out io.Writer, missingDeps []core.MissingResDep[Res],
+	indent int, out io.Writer, missingDeps []res.MissingDep[Res, []string],
 ) error {
 	for _, missingDep := range missingDeps {
 		if err := printMissingDep(indent, out, missingDep); err != nil {
@@ -321,10 +322,14 @@ func printMissingDeps[Res any](
 	return nil
 }
 
-func printMissingDep[Res any](indent int, out io.Writer, missingDep core.MissingResDep[Res]) error {
-	BulletedFprintf(indent, out, "Resource required by %s:\n", missingDep.Required.Source[0])
+func printMissingDep[Res any](
+	indent int,
+	out io.Writer,
+	missingDep res.MissingDep[Res, []string],
+) error {
+	BulletedFprintf(indent, out, "Resource required by %s:\n", missingDep.Required.Origin[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResSource(indent+1, out, missingDep.Required.Source[1:])
+	resourceIndent := printResOrigin(indent+1, out, missingDep.Required.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, missingDep.Required.Res); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}
@@ -347,9 +352,9 @@ func printMissingDep[Res any](indent int, out io.Writer, missingDep core.Missing
 func printDepCandidate[Res any](
 	indent int, out io.Writer, candidate core.ResDepCandidate[Res],
 ) error {
-	BulletedFprintf(indent, out, "Candidate resource from %s:\n", candidate.Provided.Source[0])
+	BulletedFprintf(indent, out, "Candidate resource from %s:\n", candidate.Provided.Origin[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResSource(indent+1, out, candidate.Provided.Source[1:])
+	resourceIndent := printResOrigin(indent+1, out, candidate.Provided.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, candidate.Provided.Res); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}

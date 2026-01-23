@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	res "github.com/forklift-run/forklift/pkg/resources"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -16,39 +17,39 @@ const (
 	requiresSourcePart = "requires resource"
 )
 
-// AttachedListeners returns a list of [AttachedRes] instances for each respective host port
-// listener in the ProvidedRes instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedRes instance.
-func (r ProvidedRes) AttachedListeners(source []string) []AttachedRes[ListenerRes] {
-	return attachRes(r.Listeners, append(source, providesSourcePart))
+// AttachedListeners returns a list of [res.Attached] instances for each respective host port
+// listener in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedListeners(origin []string) []res.Attached[ListenerRes, []string] {
+	return res.Attach(r.Listeners, append(origin, providesSourcePart))
 }
 
-// AttachedNetworks returns a list of [AttachedRes] instances for each respective Docker
-// network in the ProvidedRes instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedRes instance.
-func (r ProvidedRes) AttachedNetworks(source []string) []AttachedRes[NetworkRes] {
-	return attachRes(r.Networks, append(source, providesSourcePart))
+// AttachedNetworks returns a list of [res.Attached] instances for each respective Docker
+// network in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedNetworks(origin []string) []res.Attached[NetworkRes, []string] {
+	return res.Attach(r.Networks, append(origin, providesSourcePart))
 }
 
-// AttachedServices returns a list of [AttachedRes] instances for each respective network
-// service in the ProvidedRes instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedRes instance.
-func (r ProvidedRes) AttachedServices(source []string) []AttachedRes[ServiceRes] {
-	return attachRes(r.Services, append(source, providesSourcePart))
+// AttachedServices returns a list of [res.Attached] instances for each respective network
+// service in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedServices(origin []string) []res.Attached[ServiceRes, []string] {
+	return res.Attach(r.Services, append(origin, providesSourcePart))
 }
 
-// AttachedFilesets returns a list of [AttachedRes] instances for each respective fileset
-// in the ProvidedRes instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedRes instance.
-func (r ProvidedRes) AttachedFilesets(source []string) []AttachedRes[FilesetRes] {
-	return attachRes(r.Filesets, append(source, providesSourcePart))
+// AttachedFilesets returns a list of [res.Attached] instances for each respective fileset
+// in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedFilesets(origin []string) []res.Attached[FilesetRes, []string] {
+	return res.Attach(r.Filesets, append(origin, providesSourcePart))
 }
 
-// AttachedFileExports returns a list of [AttachedRes] instances for each respective file export
-// in the ProvidedRes instance, adding a string to the provided list of source
-// elements which describes the source of the ProvidedRes instance.
-func (r ProvidedRes) AttachedFileExports(source []string) []AttachedRes[FileExportRes] {
-	return attachRes(r.FileExports, append(source, providesSourcePart))
+// AttachedFileExports returns a list of [res.Attached] instances for each respective file export
+// in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedFileExports(origin []string) []res.Attached[FileExportRes, []string] {
+	return res.Attach(r.FileExports, append(origin, providesSourcePart))
 }
 
 // AddDefaults makes a copy with empty values replaced by default values.
@@ -63,25 +64,25 @@ func (r ProvidedRes) AddDefaults() ProvidedRes {
 
 // RequiredRes
 
-// AttachedNetworks returns a list of [AttachedRes] instances for each respective Docker
+// AttachedNetworks returns a list of [res.Attached] instances for each respective Docker
 // network resource requirement in the RequiredRes instance, adding a string to the provided
-// list of source elements which describes the source of the RequiredRes instance.
-func (r RequiredRes) AttachedNetworks(source []string) []AttachedRes[NetworkRes] {
-	return attachRes(r.Networks, append(source, requiresSourcePart))
+// list of origin elements which describes the origin of the RequiredRes instance.
+func (r RequiredRes) AttachedNetworks(origin []string) []res.Attached[NetworkRes, []string] {
+	return res.Attach(r.Networks, append(origin, requiresSourcePart))
 }
 
-// AttachedServices returns a list of [AttachedRes] instances for each respective network
+// AttachedServices returns a list of [res.Attached] instances for each respective network
 // service resource requirement in the RequiredRes instance, adding a string to the provided
-// list of source elements which describes the source of the RequiredRes instance.
-func (r RequiredRes) AttachedServices(source []string) []AttachedRes[ServiceRes] {
-	return attachRes(r.Services, append(source, requiresSourcePart))
+// list of origin elements which describes the origin of the RequiredRes instance.
+func (r RequiredRes) AttachedServices(origin []string) []res.Attached[ServiceRes, []string] {
+	return res.Attach(r.Services, append(origin, requiresSourcePart))
 }
 
-// AttachedFilesets returns a list of [AttachedRes] instances for each respective fileset
+// AttachedFilesets returns a list of [res.Attached] instances for each respective fileset
 // resource requirement in the RequiredRes instance, adding a string to the provided
-// list of source elements which describes the source of the RequiredRes instance.
-func (r RequiredRes) AttachedFilesets(source []string) []AttachedRes[FilesetRes] {
-	return attachRes(r.Filesets, append(source, requiresSourcePart))
+// list of origin elements which describes the origin of the RequiredRes instance.
+func (r RequiredRes) AttachedFilesets(origin []string) []res.Attached[FilesetRes, []string] {
+	return res.Attach(r.Filesets, append(origin, requiresSourcePart))
 }
 
 // ListenerRes
@@ -262,11 +263,13 @@ func checkConflictingPathsWithPrefixes(provided, candidate []string) (errs []err
 	return errs
 }
 
-// SplitServicesByPath produces a slice of network service resources from the input slice, where
+// SplitServicesByPath produces a slice of network service res from the input slice, where
 // each network service resource in the input slice with multiple paths results in multiple
-// corresponding network service resources with one path each.
-func SplitServicesByPath(serviceRes []AttachedRes[ServiceRes]) (split []AttachedRes[ServiceRes]) {
-	split = make([]AttachedRes[ServiceRes], 0, len(serviceRes))
+// corresponding network service res with one path each.
+func SplitServicesByPath(
+	serviceRes []res.Attached[ServiceRes, []string],
+) (split []res.Attached[ServiceRes, []string]) {
+	split = make([]res.Attached[ServiceRes, []string], 0, len(serviceRes))
 	for _, service := range serviceRes {
 		if len(service.Res.Paths) == 0 {
 			split = append(split, service)
@@ -274,9 +277,9 @@ func SplitServicesByPath(serviceRes []AttachedRes[ServiceRes]) (split []Attached
 		for _, path := range service.Res.Paths {
 			pathService := service.Res
 			pathService.Paths = []string{path}
-			split = append(split, AttachedRes[ServiceRes]{
+			split = append(split, res.Attached[ServiceRes, []string]{
 				Res:    pathService,
-				Source: service.Source,
+				Origin: service.Origin,
 			})
 		}
 	}
@@ -328,11 +331,13 @@ func (r FilesetRes) CheckConflict(candidate FilesetRes) (errs []error) {
 	return errs
 }
 
-// SplitFilesetsByPath produces a slice of fileset resources from the input slice, where
+// SplitFilesetsByPath produces a slice of fileset res from the input slice, where
 // each fileset resource in the input slice with multiple paths results in multiple
-// corresponding fileset resources with one path each.
-func SplitFilesetsByPath(filesetRes []AttachedRes[FilesetRes]) (split []AttachedRes[FilesetRes]) {
-	split = make([]AttachedRes[FilesetRes], 0, len(filesetRes))
+// corresponding fileset res with one path each.
+func SplitFilesetsByPath(
+	filesetRes []res.Attached[FilesetRes, []string],
+) (split []res.Attached[FilesetRes, []string]) {
+	split = make([]res.Attached[FilesetRes, []string], 0, len(filesetRes))
 	for _, fileset := range filesetRes {
 		if len(fileset.Res.Paths) == 0 {
 			split = append(split, fileset)
@@ -340,9 +345,9 @@ func SplitFilesetsByPath(filesetRes []AttachedRes[FilesetRes]) (split []Attached
 		for _, path := range fileset.Res.Paths {
 			pathFileset := fileset.Res
 			pathFileset.Paths = []string{path}
-			split = append(split, AttachedRes[FilesetRes]{
+			split = append(split, res.Attached[FilesetRes, []string]{
 				Res:    pathFileset,
-				Source: fileset.Source,
+				Origin: fileset.Origin,
 			})
 		}
 	}
