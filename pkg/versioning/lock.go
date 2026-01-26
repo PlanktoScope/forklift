@@ -98,17 +98,14 @@ func (l LockDecl) ShortCommit() string {
 	return ShortCommit(l.Commit)
 }
 
-func (l LockDecl) ParseVersion() (semver.Version, error) {
+func (l LockDecl) ParseVersion() (v semver.Version, err error) {
 	if !strings.HasPrefix(l.Tag, "v") {
-		return semver.Version{}, errors.Errorf("invalid tag `%s` doesn't start with `v`", l.Tag)
+		return v, errors.Errorf("invalid tag `%s` doesn't start with `v`", l.Tag)
 	}
-	version, err := semver.Parse(strings.TrimPrefix(l.Tag, "v"))
-	if err != nil {
-		return semver.Version{}, errors.Errorf(
-			"tag `%s` couldn't be parsed as a semantic version", l.Tag,
-		)
+	if v, err = semver.Parse(strings.TrimPrefix(l.Tag, "v")); err != nil {
+		return v, errors.Errorf("tag `%s` couldn't be parsed as a semantic version", l.Tag)
 	}
-	return version, nil
+	return v, nil
 }
 
 func (l LockDecl) Pseudoversion() (string, error) {

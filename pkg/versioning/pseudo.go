@@ -6,9 +6,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-const Timestamp = "20060102150405"
-
 func ToTimestamp(t time.Time) string {
+	const Timestamp = "20060102150405"
 	return t.UTC().Format(Timestamp)
 }
 
