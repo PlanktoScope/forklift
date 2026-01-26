@@ -109,7 +109,7 @@ const (
 	bundleMinVersion = "v0.7.0"
 	// newBundleVersion is the Forklift version reported in new staged pallet bundles made by Forklift.
 	// Older versions of the Forklift tool cannot use such bundles.
-	newBundleVersion = "v0.8.0-alpha.6"
+	newBundleVersion = "v0.9.0-alpha.0"
 	// newStageStoreVersion is the Forklift version reported in a stage store initialized by Forklift.
 	// Older versions of the Forklift tool cannot use the stage store.
 	newStageStoreVersion = "v0.7.0"

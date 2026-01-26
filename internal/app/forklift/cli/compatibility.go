@@ -76,7 +76,7 @@ func CheckArtifactCompat(
 // Forklift tool (as specified by toolVersions). Note that minimum versions are still enforced even
 // if the ignoreTool flag is set.
 func CheckDeepCompat(
-	pallet *forklift.FSPallet, palletLoader forklift.FSPalletLoader, repoLoader forklift.FSRepoLoader,
+	pallet *forklift.FSPallet, palletLoader forklift.FSPalletLoader,
 	toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {

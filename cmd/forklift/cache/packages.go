@@ -16,7 +16,7 @@ import (
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"), false)
+	cache, err := getPalletCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func lsPkgAction(c *cli.Context) error {
 		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
 	})
 	for _, pkg := range pkgs {
-		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)
+		fmt.Printf("%s@%s\n", pkg.Path(), pkg.PkgTree.Version)
 	}
 	return nil
 }
@@ -41,7 +41,7 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"), false)
+	cache, err := getPalletCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}

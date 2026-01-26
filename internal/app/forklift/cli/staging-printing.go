@@ -92,21 +92,6 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
 		}
 	}
-	IndentedFprint(indent, out, "Repos:")
-	if len(inclusions.Repos) == 0 {
-		_, _ = fmt.Fprintln(out, " (none)")
-	} else {
-		_, _ = fmt.Fprintln(out)
-		sortedPaths := make([]string, 0, len(inclusions.Repos))
-		for path := range inclusions.Repos {
-			sortedPaths = append(sortedPaths, path)
-		}
-		slices.Sort(sortedPaths)
-		for _, path := range sortedPaths {
-			inclusion := inclusions.Repos[path]
-			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
-		}
-	}
 }
 
 func fprintBundleInclusion(

@@ -28,6 +28,7 @@ type FSPalletLoader interface {
 // PalletCache is a source of pallets.
 type PalletCache interface {
 	FSPalletLoader
+	FSPkgLoader
 }
 
 // PathedPalletCache is a PalletCache rooted at a single path.
@@ -60,6 +61,9 @@ type OverlayPalletCache interface {
 	// IncludesFSPallet reports whether the cache expects to have the specified pallet.
 	// This result does not necessarily correspond to whether the cache actually has it.
 	IncludesFSPallet(palletPath string, version string) bool
+	// IncludesFSPkg reports whether the cache expects to have the specified package.
+	// This result does not necessarily correspond to whether the cache actually has it.
+	IncludesFSPkg(pkgPath string, version string) bool
 }
 
 // PalletOverrideCache is an [OverlayPalletCache] implementation containing a set of pallets which
@@ -80,14 +84,14 @@ type PalletOverrideCache struct {
 	palletVersionSets map[string]structures.Set[string]
 }
 
-// Repo
+// PkgTree
 
-// FSRepoLoader is a source of [core.FSRepo]s indexed by path and version.
-type FSRepoLoader interface {
-	// LoadFSRepo loads the FSRepo with the specified path and version.
-	LoadFSRepo(repoPath string, version string) (*core.FSRepo, error)
-	// LoadFSRepos loads all FSRepos matching the specified search pattern.
-	LoadFSRepos(searchPattern string) ([]*core.FSRepo, error)
+// FSPkgTreeLoader is a source of [core.FSPkgTree]s indexed by path and version.
+type FSPkgTreeLoader interface {
+	// LoadFSPkgTree loads the FSPkgTree with the specified path and version.
+	LoadFSPkgTree(repoPath string, version string) (*core.FSPkgTree, error)
+	// LoadFSPkgTrees loads all FSPkgTrees matching the specified search pattern.
+	LoadFSPkgTrees(searchPattern string) ([]*core.FSPkgTree, error)
 }
 
 // FSPkgLoader is a source of [core.FSPkg]s indexed by path and version.
@@ -98,64 +102,46 @@ type FSPkgLoader interface {
 	LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error)
 }
 
-// RepoCache is a source of repos and packages.
-type RepoCache interface {
-	FSRepoLoader
+// PkgTreeCache is a source of repos and packages.
+type PkgTreeCache interface {
+	FSPkgTreeLoader
 	FSPkgLoader
 }
 
-// PathedRepoCache is a RepoCache rooted at a single path.
-type PathedRepoCache interface {
-	RepoCache
+// PathedPkgTreeCache is a PkgTreeCache rooted at a single path.
+type PathedPkgTreeCache interface {
+	PkgTreeCache
 	ffs.Pather
 }
 
-// FSRepoCache is a [PathedRepoCache] implementation with copies of repos (and thus of packages too)
+// FSPkgTreeCache is a [PathedPkgTreeCache] implementation with copies of repos (and thus of packages too)
 // stored in a [core.PathedFS] filesystem.
-type FSRepoCache struct {
+type FSPkgTreeCache struct {
 	// FS is the filesystem which corresponds to the cache of repos.
 	FS ffs.PathedFS
 }
 
-// LayeredRepoCache is a [PathedRepoCache] implementation where selected repos can be overridden by
-// an [OverlayRepoCache], for loading repos and packages.
-// The path of the LayeredRepoCache instance is just the path of the underlying cache.
-type LayeredRepoCache struct {
+// LayeredPkgTreeCache is a [PathedPkgTreeCache] implementation where selected repos can be overridden by
+// an [OverlayPkgTreeCache], for loading repos and packages.
+// The path of the LayeredPkgTreeCache instance is just the path of the underlying cache.
+type LayeredPkgTreeCache struct {
 	// Underlay is the underlying cache.
-	Underlay PathedRepoCache
+	Underlay PathedPkgTreeCache
 	// Overlay is the overlying cache which is used instead of the underlying cache for repos and
 	// packages covered by the overlying cache.
-	Overlay OverlayRepoCache
+	Overlay OverlayPkgTreeCache
 }
 
-// OverlayRepoCache is a [RepoCache] which can report whether it includes any particular repo or
+// OverlayPkgTreeCache is a [PkgTreeCache] which can report whether it includes any particular repo or
 // package.
-type OverlayRepoCache interface {
-	RepoCache
-	// IncludesFSRepo reports whether the cache expects to have the specified repo.
+type OverlayPkgTreeCache interface {
+	PkgTreeCache
+	// IncludesFSPkgTree reports whether the cache expects to have the specified repo.
 	// This result does not necessarily correspond to whether the cache actually has it.
-	IncludesFSRepo(repoPath string, version string) bool
+	IncludesFSPkgTree(repoPath string, version string) bool
 	// IncludesFSPkg reports whether the cache expects to have the specified package.
 	// This result does not necessarily correspond to whether the cache actually has it.
 	IncludesFSPkg(pkgPath string, version string) bool
-}
-
-// RepoOverrideCache is an [OverlayRepoCache] implementation containing a set of repos which
-// can be retrieved from the root of the cache. A repo from the cache will be retrieved if it is
-// stored in the cache with a matching version, regardless of whether the repo's own version
-// actually matches - in other words, repos can be stored with fictional versions.
-type RepoOverrideCache struct {
-	// repos is a map associating repo paths to loaded repos.
-	// For each key-value pair, the key must be the path of the repo which is the value of that
-	// key-value pair.
-	repos map[string]*core.FSRepo
-	// repoPaths is an alphabetically ordered list of the keys of repos.
-	repoPaths []string
-	// repoVersions is a map associating repo paths to repo version strings.
-	repoVersions map[string][]string
-	// repoVersionSets is like repoVersions, but every value is a set of versions rather than a
-	// list of versions.
-	repoVersionSets map[string]structures.Set[string]
 }
 
 // Download

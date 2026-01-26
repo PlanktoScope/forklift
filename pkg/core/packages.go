@@ -62,10 +62,10 @@ func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 	return pkgs, nil
 }
 
-// AttachFSRepo updates the FSPkg instance's RepoPath, Subdir, Pkg.Repo, and Repo fields
+// AttachFSPkgTree updates the FSPkg instance's PkgTreePath, Subdir, Pkg.PkgTree, and PkgTree fields
 // based on the provided repo.
-func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
-	p.RepoPath = repo.Decl.Repo.Path
+func (p *FSPkg) AttachFSPkgTree(repo *FSPkgTree) error {
+	p.PkgTreePath = repo.Decl.PkgTree.Path
 	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
 		return errors.Errorf(
 			"package at %s is not within the scope of repo %s at %s",
@@ -73,15 +73,15 @@ func (p *FSPkg) AttachFSRepo(repo *FSRepo) error {
 		)
 	}
 	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
-	p.Pkg.Repo = &repo.Repo
-	p.Repo = repo
+	p.Pkg.PkgTree = &repo.PkgTree
+	p.PkgTree = repo
 	return nil
 }
 
 // Check looks for errors in the construction of the package.
 func (p *FSPkg) Check() (errs []error) {
-	if p.Repo != nil {
-		if p.Pkg.Repo != &p.Repo.Repo {
+	if p.PkgTree != nil {
+		if p.Pkg.PkgTree != &p.PkgTree.PkgTree {
 			errs = append(errs, errors.New(
 				"inconsistent pointers to the repo between the package as a FSPkg and the package as a Pkg",
 			))
@@ -100,7 +100,7 @@ func ComparePkgs(p, q Pkg) int {
 	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
 		return result
 	}
-	if result := semver.Compare(p.Repo.Version, q.Repo.Version); result != CompareEQ {
+	if result := semver.Compare(p.PkgTree.Version, q.PkgTree.Version); result != CompareEQ {
 		return result
 	}
 	return CompareEQ
@@ -110,17 +110,17 @@ func ComparePkgs(p, q Pkg) int {
 
 // Path returns the package path of the Pkg instance.
 func (p Pkg) Path() string {
-	return path.Join(p.RepoPath, p.Subdir)
+	return path.Join(p.PkgTreePath, p.Subdir)
 }
 
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
 	// TODO: implement a check method on PkgDecl
 	// errs = append(errs, ErrsWrap(p.Decl.Check(), "invalid package declaration")...)
-	if p.Repo != nil && p.RepoPath != p.Repo.Path() {
+	if p.PkgTree != nil && p.PkgTreePath != p.PkgTree.Path() {
 		errs = append(errs, errors.Errorf(
 			"repo path %s of package is inconsistent with path %s of attached repo",
-			p.RepoPath, p.Repo.Path(),
+			p.PkgTreePath, p.PkgTree.Path(),
 		))
 	}
 	return errs

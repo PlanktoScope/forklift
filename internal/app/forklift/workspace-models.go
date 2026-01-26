@@ -11,7 +11,7 @@ type FSWorkspace struct {
 const (
 	cacheDirPath          = ".cache/forklift"
 	cacheMirrorsDirName   = "mirrors"
-	cacheReposDirName     = "repositories"
+	cachePkgTreesDirName  = "packages"
 	cachePalletsDirName   = "pallets"
 	cacheDownloadsDirName = "downloads"
 )

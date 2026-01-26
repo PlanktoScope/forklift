@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
@@ -167,6 +168,22 @@ func AddPalletReqs(
 		if err = writeVersionLock(req.VersionLock, palletReqPath); err != nil {
 			return errors.Wrapf(err, "couldn't write version lock for pallet requirement")
 		}
+	}
+	return nil
+}
+
+func writeVersionLock(lock versioning.Lock, writePath string) error {
+	marshaled, err := yaml.Marshal(lock.Decl)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal version lock")
+	}
+	parentDir := filepath.FromSlash(path.Dir(writePath))
+	if err := forklift.EnsureExists(parentDir); err != nil {
+		return errors.Wrapf(err, "couldn't make directory %s", parentDir)
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(filepath.FromSlash(writePath), marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save version lock to %s", filepath.FromSlash(writePath))
 	}
 	return nil
 }

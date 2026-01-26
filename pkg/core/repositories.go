@@ -13,31 +13,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// FSRepo
+// FSPkgTree
 
-// LoadFSRepo loads a FSRepo from the specified directory path in the provided base filesystem.
-// In the loaded FSRepo's embedded [Repo], the version is *not* initialized.
-func LoadFSRepo(fsys ffs.PathedFS, subdirPath string) (r *FSRepo, err error) {
-	r = &FSRepo{}
+// LoadFSPkgTree loads a FSPkgTree from the specified directory path in the provided base filesystem.
+// In the loaded FSPkgTree's embedded [PkgTree], the version is *not* initialized.
+func LoadFSPkgTree(fsys ffs.PathedFS, subdirPath string) (r *FSPkgTree, err error) {
+	r = &FSPkgTree{}
 	if r.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
-	if r.Repo.Decl, err = LoadRepoDecl(r.FS, RepoDeclFile); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load repo declaration")
-	}
 	return r, nil
 }
 
-// LoadFSRepoContaining loads the FSRepo containing the specified sub-directory path in the
+// LoadFSPkgTreeContaining loads the FSPkgTree containing the specified sub-directory path in the
 // provided base filesystem.
 // The sub-directory path does not have to actually exist.
-// In the loaded FSRepo's embedded [Repo], the version is *not* initialized.
-func LoadFSRepoContaining(fsys ffs.PathedFS, subdirPath string) (*FSRepo, error) {
+// In the loaded FSPkgTree's embedded [PkgTree], the version is *not* initialized.
+func LoadFSPkgTreeContaining(fsys ffs.PathedFS, subdirPath string) (*FSPkgTree, error) {
 	repoCandidatePath := subdirPath
 	for {
-		if repo, err := LoadFSRepo(fsys, repoCandidatePath); err == nil {
+		if repo, err := LoadFSPkgTree(fsys, repoCandidatePath); err == nil {
 			return repo, nil
 		}
 		repoCandidatePath = path.Dir(repoCandidatePath)
@@ -50,12 +47,12 @@ func LoadFSRepoContaining(fsys ffs.PathedFS, subdirPath string) (*FSRepo, error)
 	}
 }
 
-// LoadFSRepos loads all FSRepos from the provided base filesystem matching the specified search
+// LoadFSPkgTrees loads all FSPkgTrees from the provided base filesystem matching the specified search
 // pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching repo
 // directories to search for.
-// In the embedded [Repo] of each loaded FSRepo, the version is *not* initialized.
-func LoadFSRepos(fsys ffs.PathedFS, searchPattern string) ([]*FSRepo, error) {
-	searchPattern = path.Join(searchPattern, RepoDeclFile)
+// In the embedded [PkgTree] of each loaded FSPkgTree, the version is *not* initialized.
+func LoadFSPkgTrees(fsys ffs.PathedFS, searchPattern string) ([]*FSPkgTree, error) {
+	searchPattern = path.Join(searchPattern, PkgTreeDeclFile)
 	repoDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -63,45 +60,45 @@ func LoadFSRepos(fsys ffs.PathedFS, searchPattern string) ([]*FSRepo, error) {
 		)
 	}
 
-	orderedRepos := make([]*FSRepo, 0, len(repoDeclFiles))
-	repos := make(map[string]*FSRepo)
+	orderedPkgTrees := make([]*FSPkgTree, 0, len(repoDeclFiles))
+	repos := make(map[string]*FSPkgTree)
 	for _, repoDeclFilePath := range repoDeclFiles {
-		if path.Base(repoDeclFilePath) != RepoDeclFile {
+		if path.Base(repoDeclFilePath) != PkgTreeDeclFile {
 			continue
 		}
-		repo, err := LoadFSRepo(fsys, path.Dir(repoDeclFilePath))
+		repo, err := LoadFSPkgTree(fsys, path.Dir(repoDeclFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load repo from %s/%s", fsys.Path(), repoDeclFilePath)
 		}
 
-		orderedRepos = append(orderedRepos, repo)
+		orderedPkgTrees = append(orderedPkgTrees, repo)
 		repos[repo.Path()] = repo
 	}
 
-	return orderedRepos, nil
+	return orderedPkgTrees, nil
 }
 
-// LoadFSPkg loads a package at the specified filesystem path from the FSRepo instance
+// LoadFSPkg loads a package at the specified filesystem path from the FSPkgTree instance
 // The loaded package is fully initialized.
-func (r *FSRepo) LoadFSPkg(pkgSubdir string) (pkg *FSPkg, err error) {
+func (r *FSPkgTree) LoadFSPkg(pkgSubdir string) (pkg *FSPkg, err error) {
 	if pkg, err = LoadFSPkg(r.FS, pkgSubdir); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load package %s from repo %s", pkgSubdir, r.Path())
 	}
-	if err = pkg.AttachFSRepo(r); err != nil {
+	if err = pkg.AttachFSPkgTree(r); err != nil {
 		return nil, errors.Wrap(err, "couldn't attach repo to package")
 	}
 	return pkg, nil
 }
 
-// LoadFSPkgs loads all packages in the FSRepo instance.
+// LoadFSPkgs loads all packages in the FSPkgTree instance.
 // The loaded packages are fully initialized.
-func (r *FSRepo) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
+func (r *FSPkgTree) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
 	pkgs, err := LoadFSPkgs(r.FS, searchPattern)
 	if err != nil {
 		return nil, err
 	}
 	for _, pkg := range pkgs {
-		if err = pkg.AttachFSRepo(r); err != nil {
+		if err = pkg.AttachFSPkgTree(r); err != nil {
 			return nil, errors.Wrap(err, "couldn't attach repo to package")
 		}
 	}
@@ -109,8 +106,8 @@ func (r *FSRepo) LoadFSPkgs(searchPattern string) ([]*FSPkg, error) {
 }
 
 // LoadReadme loads the readme file defined by the repo.
-func (r *FSRepo) LoadReadme() ([]byte, error) {
-	readmePath := r.Decl.Repo.ReadmeFile
+func (r *FSPkgTree) LoadReadme() ([]byte, error) {
+	readmePath := r.Decl.PkgTree.ReadmeFile
 	bytes, err := fs.ReadFile(r.FS, readmePath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't read repo readme %s/%s", r.FS.Path(), readmePath)
@@ -118,20 +115,20 @@ func (r *FSRepo) LoadReadme() ([]byte, error) {
 	return bytes, nil
 }
 
-// Repo
+// PkgTree
 
-// Path returns the repo path of the Repo instance.
-func (r Repo) Path() string {
-	return r.Decl.Repo.Path
+// Path returns the repo path of the PkgTree instance.
+func (r PkgTree) Path() string {
+	return r.Decl.PkgTree.Path
 }
 
-// VersionQuery represents the Repo instance as a version query.
-func (r Repo) VersionQuery() string {
+// VersionQuery represents the PkgTree instance as a version query.
+func (r PkgTree) VersionQuery() string {
 	return fmt.Sprintf("%s@%s", r.Path(), r.Version)
 }
 
 // Check looks for errors in the construction of the repo.
-func (r Repo) Check() (errs []error) {
+func (r PkgTree) Check() (errs []error) {
 	errs = append(errs, ErrsWrap(r.Decl.Check(), "invalid repo declaration")...)
 	return errs
 }
@@ -143,12 +140,12 @@ const (
 	CompareGT = 1
 )
 
-// CompareRepos returns an integer comparing two [Repo] instances according to their paths and
+// ComparePkgTrees returns an integer comparing two [PkgTree] instances according to their paths and
 // versions. The result will be 0 if the r and s have the same paths and versions; -1 if r has a
 // path which alphabetically comes before the path of s or if the paths are the same but r has a
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
-func CompareRepos(r, s Repo) int {
+func ComparePkgTrees(r, s PkgTree) int {
 	if result := ComparePaths(r.Path(), s.Path()); result != CompareEQ {
 		return result
 	}
@@ -170,30 +167,30 @@ func ComparePaths(r, s string) int {
 	return CompareEQ
 }
 
-// RepoDecl
+// PkgTreeDecl
 
-// LoadRepoDecl loads a RepoDecl from the specified file path in the provided base filesystem.
-func LoadRepoDecl(fsys ffs.PathedFS, filePath string) (RepoDecl, error) {
+// LoadPkgTreeDecl loads a PkgTreeDecl from the specified file path in the provided base filesystem.
+func LoadPkgTreeDecl(fsys ffs.PathedFS, filePath string) (PkgTreeDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return RepoDecl{}, errors.Wrapf(
+		return PkgTreeDecl{}, errors.Wrapf(
 			err, "couldn't read repo declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	declaration := RepoDecl{}
+	declaration := PkgTreeDecl{}
 	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return RepoDecl{}, errors.Wrap(err, "couldn't parse repo declaration")
+		return PkgTreeDecl{}, errors.Wrap(err, "couldn't parse repo declaration")
 	}
 	return declaration, nil
 }
 
 // Check looks for errors in the construction of the repo declaration.
-func (d RepoDecl) Check() (errs []error) {
-	return ErrsWrap(d.Repo.Check(), "invalid repo spec")
+func (d PkgTreeDecl) Check() (errs []error) {
+	return ErrsWrap(d.PkgTree.Check(), "invalid repo spec")
 }
 
-// WriteRepoDecl creates a repo definition file at the specified path.
-func WriteRepoDecl(repoDecl RepoDecl, outputPath string) error {
+// WritePkgTreeDecl creates a repo definition file at the specified path.
+func WritePkgTreeDecl(repoDecl PkgTreeDecl, outputPath string) error {
 	marshaled, err := yaml.Marshal(repoDecl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't marshal bundled repo declaration")
@@ -205,10 +202,10 @@ func WriteRepoDecl(repoDecl RepoDecl, outputPath string) error {
 	return nil
 }
 
-// RepoSpec
+// PkgTreeSpec
 
 // Check looks for errors in the construction of the repo spec.
-func (s RepoSpec) Check() (errs []error) {
+func (s PkgTreeSpec) Check() (errs []error) {
 	if s.Path == "" {
 		errs = append(errs, errors.Errorf("repo spec is missing `path` parameter"))
 	}

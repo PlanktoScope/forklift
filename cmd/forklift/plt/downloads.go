@@ -20,7 +20,7 @@ func lsDlAction(c *cli.Context) error {
 		return err
 	}
 
-	http, oci, err := fcli.ListRequiredDownloads(plt, caches.r, c.Bool("include-disabled"))
+	http, oci, err := fcli.ListRequiredDownloads(plt, caches.p, c.Bool("include-disabled"))
 	if err != nil {
 		return err
 	}
@@ -46,13 +46,13 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
 		if err := fcli.DownloadExportFiles(
-			0, plt, caches.r, caches.d, c.String("platform"), false, c.Bool("parallel"),
+			0, plt, caches.p, caches.d, c.String("platform"), false, c.Bool("parallel"),
 		); err != nil {
 			return err
 		}

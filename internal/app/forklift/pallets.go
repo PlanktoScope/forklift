@@ -30,14 +30,14 @@ func LoadFSPallet(fsys ffs.PathedFS, subdirPath string) (p *FSPallet, err error)
 	if p.Pallet.Decl, err = loadPalletDecl(p.FS, PalletDeclFile); err != nil {
 		return nil, errors.Errorf("couldn't load pallet config")
 	}
-	if p.Repo, err = core.LoadFSRepo(fsys, subdirPath); err != nil {
-		// If we couldn't explicitly load the pallet as a repo, we infer an implicit repo from the
+	if p.PkgTree, err = core.LoadFSPkgTree(fsys, subdirPath); err != nil {
+		// If we couldn't explicitly load the pallet as a pkg tree, we infer an implicit pkg tree from the
 		// pallet:
-		p.Repo = &core.FSRepo{
-			Repo: core.Repo{
-				Decl: core.RepoDecl{
+		p.PkgTree = &core.FSPkgTree{
+			PkgTree: core.PkgTree{
+				Decl: core.PkgTreeDecl{
 					ForkliftVersion: p.Pallet.Decl.ForkliftVersion,
-					Repo: core.RepoSpec{
+					PkgTree: core.PkgTreeSpec{
 						Path:        p.Pallet.Decl.Pallet.Path,
 						Description: p.Pallet.Decl.Pallet.Description,
 						ReadmeFile:  p.Pallet.Decl.Pallet.ReadmeFile,
@@ -187,43 +187,6 @@ func (p *FSPallet) LoadPalletReq(palletPath string) (r PalletReq, err error) {
 	return fsPalletReq.PalletReq, nil
 }
 
-// FSPallet: Repo Requirements
-
-// GetRepoReqsFS returns the [fs.FS] in the pallet which contains repo requirement
-// definitions.
-func (p *FSPallet) GetRepoReqsFS() (ffs.PathedFS, error) {
-	fsys, err := p.getReqsFS()
-	if err != nil {
-		return nil, err
-	}
-	return fsys.Sub(ReqsReposDirName)
-}
-
-// LoadFSRepoReq loads the FSRepoReq from the pallet for the repo with the specified
-// path.
-func (p *FSPallet) LoadFSRepoReq(repoPath string) (r *FSRepoReq, err error) {
-	reposFS, err := p.GetRepoReqsFS()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
-	}
-	if r, err = loadFSRepoReq(reposFS, repoPath); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load repo %s", repoPath)
-	}
-	return r, nil
-}
-
-// LoadFSRepoReqs loads all FSRepoReqs from the pallet matching the specified search
-// pattern.
-// The search pattern should be a [doublestar] pattern, such as `**`, matching the repo paths to
-// search for.
-func (p *FSPallet) LoadFSRepoReqs(searchPattern string) ([]*FSRepoReq, error) {
-	repoReqsFS, err := p.GetRepoReqsFS()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't open directory for repos in pallet")
-	}
-	return loadFSRepoReqs(repoReqsFS, searchPattern)
-}
-
 // FSPallet: Package Requirements
 
 // LoadPkgReq loads the PkgReq from the pallet for the package with the specified package path.
@@ -231,22 +194,24 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 	if path.IsAbs(pkgPath) { // special case: package should be provided by the pallet itself
 		return PkgReq{
 			PkgSubdir: strings.TrimLeft(pkgPath, "/"),
-			Repo: RepoReq{
+			Pallet: PalletReq{
 				GitRepoReq{RequiredPath: p.Decl.Pallet.Path},
 			},
 		}, nil
 	}
 
-	reposFS, err := p.GetRepoReqsFS()
+	palletsFS, err := p.GetPalletReqsFS()
 	if err != nil {
-		return PkgReq{}, errors.Wrap(err, "couldn't open directory for repo requirements from pallet")
+		return PkgReq{}, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
 	}
-	fsRepoReq, err := LoadFSRepoReqContaining(reposFS, pkgPath)
+	fsPalletReq, err := LoadFSPalletReqContaining(palletsFS, pkgPath)
 	if err != nil {
-		return PkgReq{}, errors.Wrapf(err, "couldn't find repo providing package %s in pallet", pkgPath)
+		return PkgReq{}, errors.Wrapf(
+			err, "couldn't find pallet providing package %s in pallet", pkgPath,
+		)
 	}
-	r.Repo = fsRepoReq.RepoReq
-	r.PkgSubdir = fsRepoReq.GetPkgSubdir(pkgPath)
+	r.Pallet = fsPalletReq.PalletReq
+	r.PkgSubdir = fsPalletReq.GetPkgSubdir(pkgPath)
 	return r, nil
 }
 
@@ -290,10 +255,10 @@ func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 // The loaded package is fully initialized.
 func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *core.FSPkg, err error) {
 	if pkg, err = core.LoadFSPkg(p.FS, pkgSubdir); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package %s from repo %s", pkgSubdir, p.Path())
+		return nil, errors.Wrapf(err, "couldn't load package %s from pkg tree %s", pkgSubdir, p.Path())
 	}
-	if err = pkg.AttachFSRepo(p.Repo); err != nil {
-		return nil, errors.Wrap(err, "couldn't attach repo to package")
+	if err = pkg.AttachFSPkgTree(p.PkgTree); err != nil {
+		return nil, errors.Wrap(err, "couldn't attach pkg tree to package")
 	}
 	return pkg, nil
 }
@@ -306,8 +271,8 @@ func (p *FSPallet) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 		return nil, err
 	}
 	for _, pkg := range pkgs {
-		if err = pkg.AttachFSRepo(p.Repo); err != nil {
-			return nil, errors.Wrap(err, "couldn't attach repo to package")
+		if err = pkg.AttachFSPkgTree(p.PkgTree); err != nil {
+			return nil, errors.Wrap(err, "couldn't attach pkg tree to package")
 		}
 	}
 	return pkgs, nil
@@ -399,7 +364,7 @@ func (p *FSPallet) LoadFeatures(searchPattern string) ([]Import, error) {
 
 // Pallet
 
-// Path returns the repo path of the Pallet instance.
+// Path returns the pallet path of the Pallet instance.
 func (p Pallet) Path() string {
 	return p.Decl.Pallet.Path
 }
@@ -409,9 +374,9 @@ func (p Pallet) VersionQuery() string {
 	return fmt.Sprintf("%s@%s", p.Path(), p.Version)
 }
 
-// Check looks for errors in the construction of the repo.
+// Check looks for errors in the construction of the pallet.
 func (p Pallet) Check() (errs []error) {
-	errs = append(errs, core.ErrsWrap(p.Decl.Check(), "invalid repo config")...)
+	errs = append(errs, core.ErrsWrap(p.Decl.Check(), "invalid pallet config")...)
 	return errs
 }
 

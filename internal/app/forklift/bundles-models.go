@@ -85,8 +85,6 @@ type BundlePallet struct {
 type BundleInclusions struct {
 	// Pallets describes external pallets used to build the bundled pallet.
 	Pallets map[string]BundlePalletInclusion `yaml:"pallets,omitempty"`
-	// Repos describes package repositories used to build the bundled pallet.
-	Repos map[string]BundleRepoInclusion `yaml:"repositories,omitempty"`
 }
 
 // BundlePalletInclusion describes a pallet used to build the bundled pallet.
@@ -102,14 +100,6 @@ type BundlePalletInclusion struct {
 	// i.e. maps whose keys are target file paths (where the files are imported to) and whose values
 	// are source file paths (where the files are imported from).
 	Imports map[string]map[string]string `yaml:"imports,omitempty"`
-}
-
-// BundleRepoInclusion describes a package repository used to build the bundled pallet.
-type BundleRepoInclusion struct {
-	Req RepoReq `yaml:"requirement,inline"`
-	// Override describes the pallet used to override the required pallet, if an override was
-	// specified for the pallet when building the bundled pallet.
-	Override BundleInclusionOverride `yaml:"override,omitempty"`
 }
 
 // BundleInclusionOverride describes a pallet used to override a required pallet.

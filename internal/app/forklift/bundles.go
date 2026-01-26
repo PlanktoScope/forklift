@@ -53,14 +53,6 @@ func LoadFSBundle(fsys ffs.PathedFS, subdirPath string) (b *FSBundle, err error)
 		}
 		b.Bundle.Manifest.Includes.Pallets[path] = req
 	}
-	for path, req := range b.Bundle.Manifest.Includes.Repos {
-		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Decl.Version(); err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't determine requirement version of included repo %s", path,
-			)
-		}
-		b.Bundle.Manifest.Includes.Repos[path] = req
-	}
 	return b, nil
 }
 
@@ -443,17 +435,17 @@ func (b *FSBundle) getPackagesPath() string {
 	return path.Join(b.FS.Path(), packagesDirName)
 }
 
-// WriteRepoDeclFile creates a repo definition file at the packages path, so that all loaded packages
+// WritePkgTreeDeclFile creates a repo definition file at the packages path, so that all loaded packages
 // are associated with a repo.
-func (b *FSBundle) WriteRepoDeclFile() error {
+func (b *FSBundle) WritePkgTreeDeclFile() error {
 	if err := EnsureExists(b.getPackagesPath()); err != nil {
 		return err
 	}
-	return core.WriteRepoDecl(
-		core.RepoDecl{
+	return core.WritePkgTreeDecl(
+		core.PkgTreeDecl{
 			ForkliftVersion: b.Manifest.ForkliftVersion,
 		},
-		filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDeclFile)),
+		filepath.FromSlash(path.Join(b.getPackagesPath(), core.PkgTreeDeclFile)),
 	)
 }
 
@@ -718,22 +710,38 @@ func extractRegularFile(
 	return nil
 }
 
-// FSBundle: FSRepoLoader
+// FSBundle: FSPalletLoader
 
-func (b *FSBundle) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
+func (b *FSBundle) LoadFSPallet(palletPath string, version string) (*FSPallet, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return core.LoadFSRepo(b.FS, path.Join(packagesDirName, repoPath))
+	return LoadFSPallet(b.FS, path.Join(packagesDirName, palletPath))
 }
 
-func (b *FSBundle) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return core.LoadFSRepos(b.FS, path.Join(packagesDirName, searchPattern))
+	return LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
+}
+
+func (b *FSBundle) LoadFSPkgTree(pkgTreePath string, version string) (*core.FSPkgTree, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	return core.LoadFSPkgTree(b.FS, path.Join(packagesDirName, pkgTreePath))
+}
+
+func (b *FSBundle) LoadFSPkgTrees(searchPattern string) ([]*core.FSPkgTree, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	return core.LoadFSPkgTrees(b.FS, path.Join(packagesDirName, searchPattern))
 }
 
 // FSBundle: FSPkgLoader
@@ -743,11 +751,11 @@ func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error
 		return nil, errors.New("bundle is nil")
 	}
 
-	repo, err := b.LoadFSRepo(".", "")
+	pkgTree, err := b.LoadFSPkgTree(".", "")
 	if err != nil {
 		return nil, err
 	}
-	return repo.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
+	return pkgTree.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
 }
 
 func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
@@ -755,11 +763,11 @@ func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 		return nil, errors.New("bundle is nil")
 	}
 
-	repo, err := b.LoadFSRepo(".", "")
+	pkgTree, err := b.LoadFSPkgTree(".", "")
 	if err != nil {
 		return nil, err
 	}
-	return repo.LoadFSPkgs(searchPattern)
+	return pkgTree.LoadFSPkgs(searchPattern)
 }
 
 // BundleManifest
@@ -783,16 +791,11 @@ func loadBundleManifest(fsys ffs.PathedFS, filePath string) (BundleManifest, err
 // BundleInclusions
 
 func (i *BundleInclusions) HasInclusions() bool {
-	return len(i.Pallets)+len(i.Repos) > 0
+	return len(i.Pallets) > 0
 }
 
 func (i *BundleInclusions) HasOverrides() bool {
 	for _, inclusion := range i.Pallets {
-		if inclusion.Override != (BundleInclusionOverride{}) {
-			return true
-		}
-	}
-	for _, inclusion := range i.Repos {
 		if inclusion.Override != (BundleInclusionOverride{}) {
 			return true
 		}

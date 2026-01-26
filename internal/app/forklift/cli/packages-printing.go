@@ -13,11 +13,11 @@ import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
-func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
+func FprintPkg(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg *core.FSPkg) {
 	IndentedFprintf(indent, out, "Package: %s\n", pkg.Path())
 	indent++
 
-	fprintPkgRepo(indent, out, cache, pkg)
+	fprintPkgPallet(indent, out, cache, pkg)
 	if ffs.CoversPath(cache, pkg.FS.Path()) {
 		IndentedFprintf(indent, out, "Path in cache: %s\n", ffs.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
@@ -31,19 +31,19 @@ func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *c
 	FprintFeatureSpecs(indent, out, pkg.Decl.Features)
 }
 
-func fprintPkgRepo(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
-	IndentedFprintf(indent, out, "Provided by repo: %s\n", pkg.Repo.Path())
+func fprintPkgPallet(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg *core.FSPkg) {
+	IndentedFprintf(indent, out, "Provided by pallet: %s\n", pkg.PkgTree.Path())
 	indent++
 
 	if ffs.CoversPath(cache, pkg.FS.Path()) {
-		IndentedFprintf(indent, out, "Version: %s\n", pkg.Repo.Version)
+		IndentedFprintf(indent, out, "Version: %s\n", pkg.PkgTree.Version)
 	} else {
 		IndentedFprintf(
-			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.Repo.FS.Path(),
+			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.PkgTree.FS.Path(),
 		)
 	}
 
-	IndentedFprintf(indent, out, "Description: %s\n", pkg.Repo.Decl.Repo.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pkg.PkgTree.Decl.PkgTree.Description)
 }
 
 func FprintPkgSpec(indent int, out io.Writer, spec core.PkgSpec) {
@@ -220,18 +220,20 @@ func FprintFeatureSpec(indent int, out io.Writer, name string, spec core.PkgFeat
 func FprintPalletPkgs(
 	indent int, out io.Writer, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
 ) error {
-	reqs, err := pallet.LoadFSRepoReqs("**")
+	reqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify repos in pallet %s", pallet.FS.Path())
+		return errors.Wrapf(err, "couldn't identify pkg trees in pallet %s", pallet.FS.Path())
 	}
 
-	// List packages provided by required repos
+	// List packages provided by required pkg trees
 	pkgs := make([]*core.FSPkg, 0)
 	for _, req := range reqs {
-		repoCachePath := req.GetCachePath()
-		loaded, err := loader.LoadFSPkgs(path.Join(repoCachePath, "**"))
+		pkgTreeCachePath := req.GetCachePath()
+		loaded, err := loader.LoadFSPkgs(path.Join(pkgTreeCachePath, "**"))
 		if err != nil {
-			return errors.Wrapf(err, "couldn't load packages from repo cached at %s", repoCachePath)
+			return errors.Wrapf(
+				err, "couldn't load packages from pkg tree cached at %s", pkgTreeCachePath,
+			)
 		}
 		pkgs = append(pkgs, loaded...)
 	}
@@ -242,8 +244,8 @@ func FprintPalletPkgs(
 		return errors.Wrapf(err, "couldn't load local packages defined by pallet at %s", pallet.Path())
 	}
 	for _, pkg := range loaded {
-		pkg.Repo.Decl.Repo.Path = "/"
-		pkg.RepoPath = "/"
+		pkg.PkgTree.Decl.PkgTree.Path = "/"
+		pkg.PkgTreePath = "/"
 	}
 	pkgs = append(pkgs, loaded...)
 
@@ -257,7 +259,7 @@ func FprintPalletPkgs(
 }
 
 func FprintPkgLocation(
-	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
 	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
 	if err != nil {
@@ -281,7 +283,7 @@ func FprintPkgLocation(
 
 func FprintPkgInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
 	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
 	if err != nil {

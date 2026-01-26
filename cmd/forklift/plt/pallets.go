@@ -17,7 +17,6 @@ import (
 type workspaceCaches struct {
 	m *forklift.FSMirrorCache
 	p *forklift.FSPalletCache
-	r *forklift.LayeredRepoCache
 	d *forklift.FSDownloadCache
 }
 
@@ -25,7 +24,6 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 	return fcli.StagingCaches{
 		Mirrors:   c.m,
 		Pallets:   c.p,
-		Repos:     c.r,
 		Downloads: c.d,
 	}
 }
@@ -62,9 +60,6 @@ func processFullBaseArgs(
 			)
 		}
 	}
-	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, opts.requireRepoCache); err != nil {
-		return nil, workspaceCaches{}, err
-	}
 	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
@@ -98,7 +93,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.m, caches.p, caches.r, caches.d,
+			0, plt, caches.m, caches.p, caches.d,
 			c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
@@ -424,7 +419,7 @@ func preparePallet(
 	if cacheStagingReqs {
 		fmt.Fprintln(os.Stderr)
 		if _, _, err = fcli.CacheStagingReqs(
-			0, plt, caches.m, caches.p, caches.r, caches.d, platform, false, parallel,
+			0, plt, caches.m, caches.p, caches.d, platform, false, parallel,
 		); err != nil {
 			return err
 		}
@@ -781,7 +776,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 
 		if c.Bool("cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d,
+				0, plt, caches.m, caches.p, caches.d,
 				c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
@@ -838,12 +833,12 @@ func checkAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err := fcli.Check(0, plt, caches.r); err != nil {
+		if _, _, err := fcli.Check(0, plt, caches.p); err != nil {
 			return err
 		}
 		return nil
@@ -863,12 +858,12 @@ func planAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err = fcli.Plan(0, plt, caches.r, c.Bool("parallel")); err != nil {
+		if _, _, err = fcli.Plan(0, plt, caches.p, c.Bool("parallel")); err != nil {
 			return errors.Wrap(
 				err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
 			)
@@ -1066,8 +1061,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d,
-				c.String("platform"), false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.d, c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

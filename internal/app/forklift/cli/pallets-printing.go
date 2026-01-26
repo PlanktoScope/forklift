@@ -46,7 +46,7 @@ func FprintCachedPallet(
 	}
 
 	_, _ = fmt.Fprintln(out)
-	if err := fprintRepoPkgs(indent, out, pallet.Repo); err != nil {
+	if err := fprintPkgTreePkgs(indent, out, pallet.PkgTree); err != nil {
 		return errors.Wrapf(err, "couldn't list packages provided by pallet %s", pallet.Path())
 	}
 

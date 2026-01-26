@@ -22,8 +22,8 @@ func MergeFSPallet(
 	shallow *FSPallet, palletLoader FSPalletLoader, prohibitedPallets structures.Set[string],
 ) (merged *FSPallet, err error) {
 	merged = &FSPallet{
-		Pallet: shallow.Pallet,
-		Repo:   &core.FSRepo{Repo: shallow.Repo.Repo},
+		Pallet:  shallow.Pallet,
+		PkgTree: &core.FSPkgTree{PkgTree: shallow.PkgTree.PkgTree},
 	}
 	imports, err := shallow.LoadImports("**/*")
 	if err != nil {
@@ -68,7 +68,7 @@ func MergeFSPallet(
 	// }
 	// fmt.Println()
 	merged.FS = ffs.NewMergeFS(shallow.FS, underlayRefs)
-	merged.Repo.FS = merged.FS
+	merged.PkgTree.FS = merged.FS
 	// fmt.Printf("Merged pallet %s!\n", shallow.Path())
 	return merged, nil
 }

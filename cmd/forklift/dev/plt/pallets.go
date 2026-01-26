@@ -10,7 +10,6 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
@@ -18,7 +17,6 @@ import (
 type workspaceCaches struct {
 	m *forklift.FSMirrorCache
 	p *forklift.LayeredPalletCache
-	r *forklift.LayeredRepoCache
 	d *forklift.FSDownloadCache
 }
 
@@ -26,7 +24,6 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 	return fcli.StagingCaches{
 		Mirrors:   c.m,
 		Pallets:   c.p,
-		Repos:     c.r,
 		Downloads: c.d,
 	}
 }
@@ -71,16 +68,6 @@ func processFullBaseArgs(
 			return nil, workspaceCaches{}, errors.Wrap(
 				err, "couldn't merge development pallet with file imports from any pallets required by it",
 			)
-		}
-	}
-	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, opts.requireRepoCache); err != nil {
-		return nil, workspaceCaches{}, err
-	}
-	if opts.enableOverrides {
-		if caches.r, err = overlayRepoCacheOverrides(
-			caches.r, c.StringSlice("repo"), plt, caches.p,
-		); err != nil {
-			return nil, workspaceCaches{}, err
 		}
 	}
 	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
@@ -171,82 +158,6 @@ func setPalletOverrideCacheVersions(
 	return nil
 }
 
-func overlayRepoCacheOverrides(
-	underlay forklift.PathedRepoCache, repos []string,
-	plt *forklift.FSPallet, palletLoader forklift.FSPalletLoader,
-) (repoCache *forklift.LayeredRepoCache, err error) {
-	repoCache = &forklift.LayeredRepoCache{
-		Underlay: underlay,
-	}
-	replacementRepos, err := loadReplacementRepos(repos, palletLoader)
-	if err != nil {
-		return nil, err
-	}
-	override, err := forklift.NewRepoOverrideCache(replacementRepos, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err = setRepoOverrideCacheVersions(plt, override); err != nil {
-		return nil, err
-	}
-	repoCache.Overlay = override
-	return repoCache, nil
-}
-
-func loadReplacementRepos(
-	fsPaths []string, palletLoader forklift.FSPalletLoader,
-) (replacements []*core.FSRepo, err error) {
-	for _, path := range fsPaths {
-		replacementPath, err := filepath.Abs(path)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
-		}
-		if !forklift.DirExists(replacementPath) {
-			return nil, errors.Errorf("couldn't find repo replacement path %s", replacementPath)
-		}
-		externalRepos, err := forklift.LoadFSRepos(ffs.DirFS(replacementPath), "**", palletLoader)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't list replacement repos in path %s", replacementPath)
-		}
-		if len(externalRepos) == 0 {
-			return nil, errors.Errorf("no replacement repos found in path %s", replacementPath)
-		}
-		for _, repo := range externalRepos {
-			version, clean := fcli.CheckGitRepoVersion(repo.FS.Path())
-			if clean {
-				repo.Version = version
-			}
-		}
-		replacements = append(replacements, externalRepos...)
-	}
-	return replacements, nil
-}
-
-func setRepoOverrideCacheVersions(
-	plt *forklift.FSPallet, overrideCache *forklift.RepoOverrideCache,
-) error {
-	reqs, err := plt.LoadFSRepoReqs("**")
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't identify repo requirements specified by pallet %s", plt.FS.Path(),
-		)
-	}
-	repoVersions := make(map[string]structures.Set[string])
-	for _, req := range reqs {
-		repoPath := req.Path()
-		version := req.VersionLock.Version
-		if _, ok := repoVersions[repoPath]; !ok {
-			repoVersions[repoPath] = make(structures.Set[string])
-		}
-		repoVersions[repoPath].Add(version)
-	}
-
-	for repoPath, versions := range repoVersions {
-		overrideCache.SetVersions(repoPath, versions)
-	}
-	return nil
-}
-
 // cache-all
 
 func cacheAllAction(versions Versions) cli.ActionFunc {
@@ -262,7 +173,7 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.m, caches.p, caches.r, caches.d,
+			0, plt, caches.m, caches.p, caches.d,
 			c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
@@ -296,12 +207,12 @@ func checkAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err := fcli.Check(0, plt, caches.r); err != nil {
+		if _, _, err := fcli.Check(0, plt, caches.p); err != nil {
 			return err
 		}
 		return nil
@@ -322,12 +233,12 @@ func planAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err = fcli.Plan(0, plt, caches.r, c.Bool("parallel")); err != nil {
+		if _, _, err = fcli.Plan(0, plt, caches.p, c.Bool("parallel")); err != nil {
 			return err
 		}
 		return nil
@@ -530,8 +441,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d,
-				c.String("platform"), false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.d, c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}

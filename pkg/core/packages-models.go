@@ -12,21 +12,21 @@ type FSPkg struct {
 	Pkg
 	// FS is a filesystem which contains the package's contents.
 	FS ffs.PathedFS
-	// Repo is a pointer to the [FSRepo] instance which provides the package.
-	Repo *FSRepo
+	// PkgTree is a pointer to the [FSPkgTree] instance which provides the package.
+	PkgTree *FSPkgTree
 }
 
 // A Pkg is a Forklift package, a configuration of a software application which can be deployed on a
 // Docker host.
 type Pkg struct {
 	// Path is the path of the Forklift repository which provides the package.
-	RepoPath string
+	PkgTreePath string
 	// Subdir is the path of the package within the repository which provides the package.
 	Subdir string
 	// Decl is the definition of the package.
 	Decl PkgDecl
-	// Repo is a pointer to the [Repo] which provides the package.
-	Repo *Repo
+	// PkgTree is a pointer to the [PkgTree] which provides the package.
+	PkgTree *PkgTree
 }
 
 // PkgDeclFile is the name of the file defining each package.

@@ -11,12 +11,12 @@ import (
 
 func CacheAllReqs(
 	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
-	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	palletCache forklift.PathedPalletCache,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
 ) error {
-	pallet, repoCacheWithMerged, err := CacheStagingReqs(
-		indent, pallet, mirrorsCache, palletCache, repoCache, dlCache,
+	pallet, palletCacheWithMerged, err := CacheStagingReqs(
+		indent, pallet, mirrorsCache, palletCache, dlCache,
 		platform, includeDisabled, parallel,
 	)
 	if err != nil {
@@ -28,7 +28,7 @@ func CacheAllReqs(
 		"Downloading Docker container images to be deployed by the local pallet...",
 	)
 	if err := DownloadImages(
-		1, pallet, repoCacheWithMerged, platform, includeDisabled, parallel,
+		1, pallet, palletCacheWithMerged, platform, includeDisabled, parallel,
 	); err != nil {
 		return err
 	}
@@ -37,17 +37,16 @@ func CacheAllReqs(
 
 func CacheStagingReqs(
 	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
-	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	palletCache forklift.PathedPalletCache,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
-) (merged *forklift.FSPallet, repoCacheWithMerged *forklift.LayeredRepoCache, err error) {
+) (merged *forklift.FSPallet, palletCacheWithMerged *forklift.LayeredPalletCache, err error) {
 	IndentedFprintln(indent, os.Stderr, "Caching everything needed to stage the pallet...")
 	indent++
 
-	downloadedPallets, err := DownloadAllRequiredPallets(
+	if _, err = DownloadAllRequiredPallets(
 		indent, pallet, mirrorsCache, palletCache, nil,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, nil, err
 	}
 
@@ -57,29 +56,40 @@ func CacheStagingReqs(
 		)
 	}
 
-	repoCacheWithMerged = &forklift.LayeredRepoCache{
-		Underlay: repoCache,
+	palletCacheWithMerged = &forklift.LayeredPalletCache{
+		Underlay: palletCache,
 	}
-	if repoCacheWithMerged.Overlay, err = makeRepoOverrideCacheFromPallet(
+	if palletCacheWithMerged.Overlay, err = makePalletOverrideCacheFromPallet(
 		merged, true,
 	); err != nil {
 		return merged, nil, err
 	}
 
-	if _, err = DownloadAllRequiredRepos(
-		indent, merged, mirrorsCache, palletCache, repoCache, downloadedPallets,
-	); err != nil {
-		return merged, repoCacheWithMerged, err
-	}
-
 	if err = DownloadExportFiles(
-		indent, merged, repoCacheWithMerged, dlCache, platform, includeDisabled, parallel,
+		indent, merged, palletCacheWithMerged, dlCache, platform, includeDisabled, parallel,
 	); err != nil {
-		return merged, repoCacheWithMerged, err
+		return merged, palletCacheWithMerged, err
 	}
 
-	// TODO: warn if any downloaded repo doesn't appear to be an actual repo, or if any repo's
+	// TODO: warn if any downloaded pallet doesn't appear to be an actual pallet, or if any pallet's
 	// forklift version is incompatible or ahead of the pallet version
 
-	return merged, repoCacheWithMerged, nil
+	return merged, palletCacheWithMerged, nil
+}
+
+func makePalletOverrideCacheFromPallet(
+	pallet *forklift.FSPallet, generatePalletFromPallet bool,
+) (*forklift.PalletOverrideCache, error) {
+	palletAsPallet, err := forklift.LoadFSPallet(pallet.FS, ".")
+	if err != nil {
+		if !generatePalletFromPallet {
+			return nil, nil
+		}
+	}
+	return forklift.NewPalletOverrideCache(
+		[]*forklift.FSPallet{palletAsPallet}, map[string][]string{
+			// In a pallet which is a repo, the implicit repo requirement is for an empty version string
+			palletAsPallet.Path(): {""},
+		},
+	)
 }

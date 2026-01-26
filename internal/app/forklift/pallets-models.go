@@ -11,9 +11,9 @@ import (
 type FSPallet struct {
 	// Pallet is the pallet at the root of the filesystem.
 	Pallet
-	// Repo is the package repository at the root of the filesystem. It may be defined either
+	// PkgTree is the package repository at the root of the filesystem. It may be defined either
 	// explicitly or implicitly.
-	Repo *core.FSRepo
+	PkgTree *core.FSPkgTree
 	// FS is a filesystem which contains the pallet's contents.
 	FS ffs.PathedFS
 }
@@ -92,31 +92,12 @@ type PalletReqLoader interface {
 	LoadPalletReq(palletPath string) (PalletReq, error)
 }
 
-const (
-	// ReqsReposDirName is the subdirectory in the requirements directory of a Forklift pallet which
-	// contains repo requirement declarations.
-	ReqsReposDirName = "repositories"
-)
-
-// A FSRepoReq is a repo requirement stored at the root of a [fs.FS] filesystem.
-type FSRepoReq struct {
-	// RepoReq is the repo requirement at the root of the filesystem.
-	RepoReq
-	// FS is a filesystem which contains the repo requirement's contents.
-	FS ffs.PathedFS
-}
-
-// A RepoReq is a requirement for a specific repo at a specific version.
-type RepoReq struct {
-	GitRepoReq `yaml:",inline"`
-}
-
 // A PkgReq is a requirement for a package at a specific version.
 type PkgReq struct {
 	// PkgSubdir is the package subdirectory in the repo which should provide the required package.
 	PkgSubdir string
-	// Repo is the repo which should provide the required package.
-	Repo RepoReq
+	// Pallet is the pallet which should provide the required package.
+	Pallet PalletReq
 }
 
 // PkgReqLoader is a source of package requirements.
