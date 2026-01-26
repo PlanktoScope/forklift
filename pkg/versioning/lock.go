@@ -1,9 +1,7 @@
 package versioning
 
 import (
-	"fmt"
 	"io/fs"
-	"strings"
 
 	"github.com/blang/semver/v4"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
@@ -99,38 +97,11 @@ func (l LockDecl) ShortCommit() string {
 }
 
 func (l LockDecl) ParseVersion() (v semver.Version, err error) {
-	if !strings.HasPrefix(l.Tag, "v") {
-		return v, errors.Errorf("invalid tag `%s` doesn't start with `v`", l.Tag)
-	}
-	if v, err = semver.Parse(strings.TrimPrefix(l.Tag, "v")); err != nil {
-		return v, errors.Errorf("tag `%s` couldn't be parsed as a semantic version", l.Tag)
-	}
-	return v, nil
+	return parseTag(l.Tag)
 }
 
 func (l LockDecl) Pseudoversion() (string, error) {
-	// This implements the specification described at https://go.dev/ref/mod#pseudo-versions
-	if l.Commit == "" {
-		return "", errors.Errorf("pseudoversion missing commit hash")
-	}
-	if l.Timestamp == "" {
-		return "", errors.Errorf("pseudoversion missing commit timestamp")
-	}
-	revisionID := ShortCommit(l.Commit)
-	if l.Tag == "" {
-		return fmt.Sprintf("v0.0.0-%s-%s", l.Timestamp, revisionID), nil
-	}
-	parsed, err := l.ParseVersion()
-	if err != nil {
-		return "", err
-	}
-	parsed.Build = nil
-	if len(parsed.Pre) > 0 {
-		return fmt.Sprintf("v%s.0.%s-%s", parsed.String(), l.Timestamp, revisionID), nil
-	}
-	return fmt.Sprintf(
-		"v%d.%d.%d-0.%s-%s", parsed.Major, parsed.Minor, parsed.Patch+1, l.Timestamp, revisionID,
-	), nil
+	return Pseudoversion(l.Tag, l.Timestamp, l.Commit)
 }
 
 const (
