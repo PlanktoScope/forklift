@@ -44,6 +44,14 @@ type FSPalletCache struct {
 	FS ffs.PathedFS
 }
 
+// FSMergedPalletCache is a [PathedPalletCache] implementation with copies of merged pallets
+// stored in a [core.PathedFS] filesystem.
+// FIXME: implement this!
+type FSMergedPalletCache struct {
+	// FS is the filesystem which corresponds to the cache of pallets.
+	FS ffs.PathedFS
+}
+
 // LayeredPalletCache is a [PathedPalletCache] implementation where selected pallets can be
 // overridden by an [OverlayPalletCache], for loading pallets.
 // The path of the LayeredPalletCache instance is just the path of the underlying cache.

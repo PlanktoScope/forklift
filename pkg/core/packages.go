@@ -2,18 +2,37 @@ package core
 
 import (
 	"fmt"
-	"io/fs"
 	"path"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
-	"gopkg.in/yaml.v3"
 
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
+
+// A FSPkg is a Forklift package stored at the root of a [fs.FS] filesystem.
+type FSPkg struct {
+	// Pkg is the Forklift package at the root of the filesystem.
+	Pkg
+	// FS is a filesystem which contains the package's contents.
+	FS ffs.PathedFS
+	// FSPkgTree is a pointer to the [FSPkgTree] instance which provides the package.
+	FSPkgTree *FSPkgTree
+}
+
+// A Pkg is a Forklift package, a configuration of a software application which can be deployed on a
+// Docker host.
+type Pkg struct {
+	// ParentPath is the path of the package tree which provides the package.
+	ParentPath string
+	// Subdir is the path of the package within the package tree which provides the package.
+	Subdir string
+	// Decl is the definition of the package.
+	Decl PkgDecl
+}
 
 // The result of comparison functions is one of these values.
 const (
@@ -275,82 +294,4 @@ func (p Pkg) ProvidedFileExports(
 			return res.AttachedFileExports
 		},
 	)
-}
-
-// PkgDecl
-
-// LoadPkgDecl loads a PkgDecl from the specified file path in the provided base filesystem.
-func LoadPkgDecl(fsys ffs.PathedFS, filePath string) (PkgDecl, error) {
-	bytes, err := fs.ReadFile(fsys, filePath)
-	if err != nil {
-		return PkgDecl{}, errors.Wrapf(
-			err, "couldn't read package declaration file %s/%s", fsys.Path(), filePath,
-		)
-	}
-	declaration := PkgDecl{}
-	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return PkgDecl{}, errors.Wrap(err, "couldn't parse package declaration")
-	}
-
-	return declaration.AddDefaults(), nil
-}
-
-// AddDefaults makes a copy with empty values replaced by default values.
-func (d PkgDecl) AddDefaults() PkgDecl {
-	d.Host = d.Host.AddDefaults()
-	d.Deployment = d.Deployment.AddDefaults()
-	updatedFeatures := make(map[string]PkgFeatureSpec)
-	for name, feature := range d.Features {
-		updatedFeatures[name] = feature.AddDefaults()
-	}
-	d.Features = updatedFeatures
-	return d
-}
-
-// PkgHostSpec
-
-// ResAttachmentSource returns the source path for resources under the PkgHostSpec instance,
-// adding a string to the provided list of source elements which describes the source of the
-// PkgHostSpec instance.
-// The resulting slice is useful for constructing [res.Attached] instances.
-func (s PkgHostSpec) ResAttachmentSource(parentSource []string) []string {
-	return append(parentSource, "host specification")
-}
-
-// AddDefaults makes a copy with empty values replaced by default values.
-func (s PkgHostSpec) AddDefaults() PkgHostSpec {
-	s.Provides = s.Provides.AddDefaults()
-	return s
-}
-
-// PkgDeplSpec
-
-// ResAttachmentSource returns the source path for resources under the PkgDeplSpec instance,
-// adding a string to the provided list of source elements which describes the source of the
-// PkgDeplSpec instance.
-// The resulting slice is useful for constructing [res.Attached] instances.
-func (s PkgDeplSpec) ResAttachmentSource(parentSource []string) []string {
-	return append(parentSource, "deployment specification")
-}
-
-// AddDefaults makes a copy with empty values replaced by default values.
-func (s PkgDeplSpec) AddDefaults() PkgDeplSpec {
-	s.Provides = s.Provides.AddDefaults()
-	return s
-}
-
-// PkgFeatureSpec
-
-// ResAttachmentSource returns the source path for resources under the PkgFeatureSpec instance,
-// adding a string to the provided list of source elements which describes the source of the
-// PkgFeatureSpec instance.
-// The resulting slice is useful for constructing [res.Attached] instances.
-func (s PkgFeatureSpec) ResAttachmentSource(parentSource []string, featureName string) []string {
-	return append(parentSource, fmt.Sprintf("feature %s", featureName))
-}
-
-// AddDefaults makes a copy with empty values replaced by default values.
-func (s PkgFeatureSpec) AddDefaults() PkgFeatureSpec {
-	s.Provides = s.Provides.AddDefaults()
-	return s
 }
