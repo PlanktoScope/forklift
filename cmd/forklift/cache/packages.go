@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	"github.com/forklift-run/forklift/pkg/core"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 // ls-pkg
@@ -29,7 +29,7 @@ func lsPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify packages")
 	}
-	slices.SortFunc(pkgs, core.CompareFSPkgs)
+	slices.SortFunc(pkgs, fpkg.CompareFSPkgs)
 	for _, pkg := range pkgs {
 		fmt.Printf("%s@%s\n", pkg.Path(), pkg.FSPkgTree.Version)
 	}

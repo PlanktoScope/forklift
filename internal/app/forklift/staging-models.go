@@ -10,7 +10,7 @@ const (
 )
 
 // FSStageStore is a source of bundles rooted at a single path, with bundles stored as
-// incrementally-numbered directories within a [core.PathedFS] filesystem.
+// incrementally-numbered directories within a [fpkg.PathedFS] filesystem.
 type FSStageStore struct {
 	// Manifest is the Forklift stage store's manifest.
 	Manifest StageStoreManifest

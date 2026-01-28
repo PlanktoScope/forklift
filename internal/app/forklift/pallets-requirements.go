@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
@@ -33,15 +33,15 @@ func (r GitRepoReq) GetQueryPath() string {
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
 func CompareGitRepoReqs(r, s GitRepoReq) int {
-	if result := core.ComparePaths(r.Path(), s.Path()); result != core.CompareEQ {
+	if result := fpkg.ComparePaths(r.Path(), s.Path()); result != fpkg.CompareEQ {
 		return result
 	}
 	if result := semver.Compare(
 		r.VersionLock.Version, s.VersionLock.Version,
-	); result != core.CompareEQ {
+	); result != fpkg.CompareEQ {
 		return result
 	}
-	return core.CompareEQ
+	return fpkg.CompareEQ
 }
 
 // PalletReq
@@ -162,7 +162,7 @@ func (r PalletReq) GetPkgSubdir(pkgPath string) string {
 // path.
 func LoadRequiredFSPkg(
 	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, pkgPath string,
-) (*core.FSPkg, PkgReq, error) {
+) (*fpkg.FSPkg, PkgReq, error) {
 	req, err := pkgReqLoader.LoadPkgReq(pkgPath)
 	if err != nil {
 		return nil, PkgReq{}, errors.Wrapf(
@@ -178,14 +178,14 @@ func LoadRequiredFSPkg(
 
 // GetCachePath returns the path of the package in caches, which is of form
 // palletPath@version/pkgSubdir
-// (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0/packages/core/infra/caddy-ingress).
+// (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0/packages/fpkg/infra/caddy-ingress).
 func (r PkgReq) GetCachePath() string {
 	return path.Join(r.Pallet.GetCachePath(), r.PkgSubdir)
 }
 
 // GetQueryPath returns the path of the package in version queries, which is of form
 // palletPath/pkgSubdir@version
-// (e.g. github.com/PlanktoScope/pallet-standard/packages/core/infra/caddy-ingress@v2024.0.0).
+// (e.g. github.com/PlanktoScope/pallet-standard/packages/fpkg/infra/caddy-ingress@v2024.0.0).
 func (r PkgReq) GetQueryPath() string {
 	return fmt.Sprintf("%s@%s", r.Path(), r.Pallet.VersionLock.Version)
 }

@@ -1,15 +1,15 @@
 package forklift
 
 import (
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // Mirror
 
 // FSMirrorCache is a [PathedPalletCache] implementation with git repository mirrors
-// stored in a [core.PathedFS] filesystem.
+// stored in a [fpkg.PathedFS] filesystem.
 type FSMirrorCache struct {
 	// FS is the filesystem which corresponds to the cache of pallets.
 	FS ffs.PathedFS
@@ -38,14 +38,14 @@ type PathedPalletCache interface {
 }
 
 // FSPalletCache is a [PathedPalletCache] implementation with copies of unmerged pallets
-// stored in a [core.PathedFS] filesystem.
+// stored in a [fpkg.PathedFS] filesystem.
 type FSPalletCache struct {
 	// FS is the filesystem which corresponds to the cache of pallets.
 	FS ffs.PathedFS
 }
 
 // FSMergedPalletCache is a [PathedPalletCache] implementation with copies of merged pallets
-// stored in a [core.PathedFS] filesystem.
+// stored in a [fpkg.PathedFS] filesystem.
 // FIXME: implement this!
 type FSMergedPalletCache struct {
 	// FS is the filesystem which corresponds to the cache of pallets.
@@ -94,12 +94,12 @@ type PalletOverrideCache struct {
 
 // FSPkgTree
 
-// FSPkgLoader is a source of [core.FSPkg]s indexed by path and version.
+// FSPkgLoader is a source of [fpkg.FSPkg]s indexed by path and version.
 type FSPkgLoader interface {
 	// LoadFSPkg loads the FSPkg with the specified path and version.
-	LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error)
+	LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error)
 	// LoadFSPkgs loads all FSPkgs matching the specified search pattern.
-	LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error)
+	LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error)
 }
 
 // FSPkgTreeCache is a source of repos and packages.

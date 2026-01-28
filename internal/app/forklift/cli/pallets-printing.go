@@ -13,8 +13,8 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 func FprintCachedPallet(
@@ -83,14 +83,14 @@ func fprintReadme(indent int, out io.Writer, loader readmeLoader) error {
 	return nil
 }
 
-func fprintFSPkgTreePkgs(indent int, out io.Writer, pkgTree *core.FSPkgTree) error {
+func fprintFSPkgTreePkgs(indent int, out io.Writer, pkgTree *fpkg.FSPkgTree) error {
 	IndentedFprint(indent, out, "Packages:")
 
 	pkgs, err := pkgTree.LoadFSPkgs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load packages from pkg tree %s", pkgTree.FS.Path())
 	}
-	slices.SortFunc(pkgs, core.CompareFSPkgs)
+	slices.SortFunc(pkgs, fpkg.CompareFSPkgs)
 
 	if len(pkgs) == 0 {
 		_, _ = fmt.Fprint(out, " (none)")

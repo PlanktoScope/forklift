@@ -1,154 +1,36 @@
-package core
+package packaging
 
 import (
 	"fmt"
-	"path"
-	"strings"
 
-	"github.com/bmatcuk/doublestar/v4"
-	"github.com/pkg/errors"
-	"golang.org/x/mod/semver"
-
-	ffs "github.com/forklift-run/forklift/pkg/fs"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
-// A FSPkg is a Forklift package stored at the root of a [fs.FS] filesystem.
-type FSPkg struct {
-	// Pkg is the Forklift package at the root of the filesystem.
-	Pkg
-	// FS is a filesystem which contains the package's contents.
-	FS ffs.PathedFS
-	// FSPkgTree is a pointer to the [FSPkgTree] instance which provides the package.
-	FSPkgTree *FSPkgTree
+// RequiredRes describes a set of resource requirements for some aspect of a package.
+type RequiredRes struct {
+	// Networks is a list of requirements for Docker networks.
+	Networks []NetworkRes `yaml:"networks,omitempty"`
+	// Services is a list of requirements for network services.
+	Services []ServiceRes `yaml:"services,omitempty"`
+	// Filesets is a list of requirements for files/directories.
+	Filesets []FilesetRes `yaml:"filesets,omitempty"`
 }
 
-// A Pkg is a Forklift package, a configuration of a software application which can be deployed on a
-// Docker host.
-type Pkg struct {
-	// ParentPath is the path of the package tree which provides the package.
-	ParentPath string
-	// Subdir is the path of the package within the package tree which provides the package.
-	Subdir string
-	// Decl is the definition of the package.
-	Decl PkgDecl
-}
-
-// The result of comparison functions is one of these values.
-const (
-	CompareLT = -1
-	CompareEQ = 0
-	CompareGT = 1
-)
-
-// ComparePaths returns an integer comparing two paths. The result will be 0 if the r and s are
-// the same; -1 if r alphabetically comes before s; or +1 if r alphabetically comes after s.
-// TODO: if this is just the negation of the standard string comparison, we can simplify this.
-func ComparePaths(r, s string) int {
-	if r < s {
-		return CompareLT
-	}
-	if r > s {
-		return CompareGT
-	}
-	return CompareEQ
-}
-
-// FSPkg
-
-// LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
-// In the loaded FSPkg's embedded [Pkg], the repo path is not initialized, nor is the repo
-// subdirectory initialized, nor is the pointer to the repo initialized.
-func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
-	p = &FSPkg{}
-	if p.FS, err = fsys.Sub(subdirPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
-		)
-	}
-	if p.Pkg.Decl, err = LoadPkgDecl(p.FS, PkgDeclFile); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package declaration")
-	}
-	return p, nil
-}
-
-// LoadFSPkgs loads all FSPkgs from the provided base filesystem matching the specified search
-// pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching package
-// directories to search for.
-// The pkg tree path, and the package subdirectory, and the pointer to the pkg tree are all left
-// uninitialized.
-func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
-	searchPattern = path.Join(searchPattern, PkgDeclFile)
-	pkgDeclFiles, err := doublestar.Glob(fsys, searchPattern)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't search for package declarations matching %s/%s", fsys.Path(), searchPattern,
-		)
-	}
-
-	pkgs := make([]*FSPkg, 0, len(pkgDeclFiles))
-	for _, pkgDeclFilePath := range pkgDeclFiles {
-		if path.Base(pkgDeclFilePath) != PkgDeclFile {
-			continue
-		}
-
-		pkg, err := LoadFSPkg(fsys, path.Dir(pkgDeclFilePath))
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgDeclFilePath)
-		}
-		pkgs = append(pkgs, pkg)
-	}
-	return pkgs, nil
-}
-
-// AttachFSPkgTree updates the FSPkg instance's Subdir, Pkg.FSPkgTree, and FSPkgTree fields
-// based on the provided pkg tree.
-func (p *FSPkg) AttachFSPkgTree(pkgTree *FSPkgTree) error {
-	p.ParentPath = pkgTree.Path()
-	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", pkgTree.FS.Path())) {
-		return errors.Errorf(
-			"package at %s is not within the scope of pkg tree %s at %s",
-			p.FS.Path(), pkgTree.FS.Path(), pkgTree.FS.Path(),
-		)
-	}
-	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", pkgTree.FS.Path()))
-	p.FSPkgTree = pkgTree
-	return nil
-}
-
-// Check looks for errors in the construction of the package.
-func (p *FSPkg) Check() (errs []error) {
-	return p.Pkg.Check()
-}
-
-// CompareFSPkgs returns an integer comparing two [FSPkg] instances according to their paths, and their
-// respective [FSPkgTree]s' versions. The result will be 0 if the p and q have the same paths and
-// versions; -1 if r has a path which alphabetically comes before the path of s, or if the paths are
-// the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
-// the path of s, or if the paths are the same but r has a higher version than s.
-func CompareFSPkgs(p, q *FSPkg) int {
-	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
-		return result
-	}
-	if result := semver.Compare(p.FSPkgTree.Version, q.FSPkgTree.Version); result != CompareEQ {
-		return result
-	}
-	return CompareEQ
+// ProvidedRes describes a set of resources provided by some aspect of a package.
+type ProvidedRes struct {
+	// Listeners is a list of host port listeners.
+	Listeners []ListenerRes `yaml:"listeners,omitempty"`
+	// Networks is a list of Docker networks.
+	Networks []NetworkRes `yaml:"networks,omitempty"`
+	// Services is a list of network services.
+	Services []ServiceRes `yaml:"services,omitempty"`
+	// Filesets is a list of files/directories.
+	Filesets []FilesetRes `yaml:"filesets,omitempty"`
+	// FileExports is a list of files/directories.
+	FileExports []FileExportRes `yaml:"file-exports,omitempty"`
 }
 
 // Pkg
-
-// Path returns the package path of the Pkg instance.
-func (p Pkg) Path() string {
-	return path.Join(p.ParentPath, p.Subdir)
-}
-
-// Check looks for errors in the construction of the package.
-func (p Pkg) Check() (errs []error) {
-	// TODO: implement a check method on PkgDecl
-	// errs = append(errs, ErrsWrap(p.Decl.Check(), "invalid package declaration")...)
-	return errs
-}
 
 // ResAttachmentSource returns the source path for resources under the Pkg instance.
 // The resulting slice is useful for constructing [res.Attached] instances.
@@ -294,4 +176,79 @@ func (p Pkg) ProvidedFileExports(
 			return res.AttachedFileExports
 		},
 	)
+}
+
+// RequiredRes
+
+// AttachedNetworks returns a list of [res.Attached] instances for each respective Docker
+// network resource requirement in the RequiredRes instance, adding a string to the provided
+// list of origin elements which describes the origin of the RequiredRes instance.
+func (r RequiredRes) AttachedNetworks(origin []string) []res.Attached[NetworkRes, []string] {
+	return res.Attach(r.Networks, append(origin, requiresSourcePart))
+}
+
+// AttachedServices returns a list of [res.Attached] instances for each respective network
+// service resource requirement in the RequiredRes instance, adding a string to the provided
+// list of origin elements which describes the origin of the RequiredRes instance.
+func (r RequiredRes) AttachedServices(origin []string) []res.Attached[ServiceRes, []string] {
+	return res.Attach(r.Services, append(origin, requiresSourcePart))
+}
+
+// AttachedFilesets returns a list of [res.Attached] instances for each respective fileset
+// resource requirement in the RequiredRes instance, adding a string to the provided
+// list of origin elements which describes the origin of the RequiredRes instance.
+func (r RequiredRes) AttachedFilesets(origin []string) []res.Attached[FilesetRes, []string] {
+	return res.Attach(r.Filesets, append(origin, requiresSourcePart))
+}
+
+// ProvidedRes
+
+const (
+	providesSourcePart = "provides resource"
+	requiresSourcePart = "requires resource"
+)
+
+// AttachedListeners returns a list of [res.Attached] instances for each respective host port
+// listener in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedListeners(origin []string) []res.Attached[ListenerRes, []string] {
+	return res.Attach(r.Listeners, append(origin, providesSourcePart))
+}
+
+// AttachedNetworks returns a list of [res.Attached] instances for each respective Docker
+// network in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedNetworks(origin []string) []res.Attached[NetworkRes, []string] {
+	return res.Attach(r.Networks, append(origin, providesSourcePart))
+}
+
+// AttachedServices returns a list of [res.Attached] instances for each respective network
+// service in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedServices(origin []string) []res.Attached[ServiceRes, []string] {
+	return res.Attach(r.Services, append(origin, providesSourcePart))
+}
+
+// AttachedFilesets returns a list of [res.Attached] instances for each respective fileset
+// in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedFilesets(origin []string) []res.Attached[FilesetRes, []string] {
+	return res.Attach(r.Filesets, append(origin, providesSourcePart))
+}
+
+// AttachedFileExports returns a list of [res.Attached] instances for each respective file export
+// in the ProvidedRes instance, adding a string to the provided list of origin
+// elements which describes the origin of the ProvidedRes instance.
+func (r ProvidedRes) AttachedFileExports(origin []string) []res.Attached[FileExportRes, []string] {
+	return res.Attach(r.FileExports, append(origin, providesSourcePart))
+}
+
+// AddDefaults makes a copy with empty values replaced by default values.
+func (r ProvidedRes) AddDefaults() ProvidedRes {
+	updatedFileExports := make([]FileExportRes, 0, len(r.FileExports))
+	for _, fileExport := range r.FileExports {
+		updatedFileExports = append(updatedFileExports, fileExport.AddDefaults())
+	}
+	r.FileExports = updatedFileExports
+	return r
 }

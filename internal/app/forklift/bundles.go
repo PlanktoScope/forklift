@@ -21,8 +21,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -266,7 +266,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 func makeComposeAppSummary(
 	depl *ResolvedDepl, bundleFS ffs.PathedFS,
 ) (BundleDeplComposeApp, error) {
-	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Decl.Package))
+	bundlePkg, err := fpkg.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Decl.Package))
 	if err != nil {
 		return BundleDeplComposeApp{}, errors.Wrapf(
 			err, "couldn't load bundled package %s", depl.Pkg.Path(),
@@ -462,15 +462,15 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 				)
 			}
 			switch export.SourceType {
-			case core.FileExportSourceTypeLocal:
+			case fpkg.FileExportSourceTypeLocal:
 				if err := exportLocalFile(resolved, export, exportPath); err != nil {
 					return err
 				}
-			case core.FileExportSourceTypeHTTP:
+			case fpkg.FileExportSourceTypeHTTP:
 				if err := exportHTTPFile(export, exportPath, dlCache); err != nil {
 					return err
 				}
-			case core.FileExportSourceTypeHTTPArchive, core.FileExportSourceTypeOCIImage:
+			case fpkg.FileExportSourceTypeHTTPArchive, fpkg.FileExportSourceTypeOCIImage:
 				if err := exportArchiveFile(export, exportPath, dlCache); err != nil {
 					return err
 				}
@@ -482,7 +482,7 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 	return nil
 }
 
-func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
+func exportLocalFile(resolved *ResolvedDepl, export fpkg.FileExportRes, exportPath string) error {
 	if err := copyFSFile(
 		resolved.Pkg.FS, strings.TrimPrefix(export.Source, "/"), filepath.FromSlash(exportPath),
 		export.Permissions,
@@ -492,7 +492,7 @@ func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPa
 	return nil
 }
 
-func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDownloadCache) error {
+func exportHTTPFile(export fpkg.FileExportRes, exportPath string, dlCache *FSDownloadCache) error {
 	sourcePath, err := dlCache.GetFilePath(export.URL)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
@@ -508,7 +508,7 @@ func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDow
 }
 
 func exportArchiveFile(
-	export core.FileExportRes, exportPath string, dlCache *FSDownloadCache,
+	export fpkg.FileExportRes, exportPath string, dlCache *FSDownloadCache,
 ) error {
 	kind, err := determineFileType(export, dlCache)
 	if err != nil {
@@ -521,11 +521,11 @@ func exportArchiveFile(
 	switch export.SourceType {
 	default:
 		return errors.Errorf("couldn't open downloaded archive of type %s", export.SourceType)
-	case core.FileExportSourceTypeHTTPArchive:
+	case fpkg.FileExportSourceTypeHTTPArchive:
 		if archiveFile, err = dlCache.OpenFile(export.URL); err != nil {
 			return errors.Wrapf(err, "couldn't open cached http download archive %s", export.URL)
 		}
-	case core.FileExportSourceTypeOCIImage:
+	case fpkg.FileExportSourceTypeOCIImage:
 		if archiveFile, err = dlCache.OpenOCIImage(export.URL); err != nil {
 			return errors.Wrapf(err, "couldn't open cached oci image download tarball %s", export.URL)
 		}
@@ -568,7 +568,7 @@ func exportArchiveFile(
 }
 
 func determineFileType(
-	export core.FileExportRes, dlCache *FSDownloadCache,
+	export fpkg.FileExportRes, dlCache *FSDownloadCache,
 ) (ft ftt.Type, err error) {
 	var archiveFile fs.File
 	switch export.SourceType {
@@ -576,13 +576,13 @@ func determineFileType(
 		return filetype.Unknown, errors.Errorf(
 			"couldn't open downloaded archive of type %s", export.SourceType,
 		)
-	case core.FileExportSourceTypeHTTPArchive:
+	case fpkg.FileExportSourceTypeHTTPArchive:
 		if archiveFile, err = dlCache.OpenFile(export.URL); err != nil {
 			return filetype.Unknown, errors.Wrapf(
 				err, "couldn't open cached http download archive %s", export.URL,
 			)
 		}
-	case core.FileExportSourceTypeOCIImage:
+	case fpkg.FileExportSourceTypeOCIImage:
 		if archiveFile, err = dlCache.OpenOCIImage(export.URL); err != nil {
 			return filetype.Unknown, errors.Wrapf(
 				err, "couldn't open cached oci image download tarball %s", export.URL,
@@ -714,7 +714,7 @@ func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	return LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
 }
 
-func (b *FSBundle) LoadFSPkgTree() (*core.FSPkgTree, error) {
+func (b *FSBundle) LoadFSPkgTree() (*fpkg.FSPkgTree, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
@@ -723,14 +723,14 @@ func (b *FSBundle) LoadFSPkgTree() (*core.FSPkgTree, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't load package tree from bundle")
 	}
-	return &core.FSPkgTree{
+	return &fpkg.FSPkgTree{
 		FS: fsys,
 	}, nil
 }
 
 // FSBundle: FSPkgLoader
 
-func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
@@ -742,7 +742,7 @@ func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error
 	return pkgTree.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
 }
 
-func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}

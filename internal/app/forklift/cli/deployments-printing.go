@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 func FprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
@@ -138,7 +138,7 @@ func fprintDeplPkg(
 	fprintPkgPallet(indent, out, cache, depl.Pkg)
 }
 
-func fprintFeatures(indent int, out io.Writer, features map[string]core.PkgFeatureSpec) {
+func fprintFeatures(indent int, out io.Writer, features map[string]fpkg.PkgFeatureSpec) {
 	orderedNames := make([]string, 0, len(features))
 	for name := range features {
 		orderedNames = append(orderedNames, name)

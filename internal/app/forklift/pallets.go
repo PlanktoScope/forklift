@@ -13,8 +13,8 @@ import (
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 // FSPallet
@@ -30,7 +30,7 @@ func LoadFSPallet(fsys ffs.PathedFS, subdirPath string) (p *FSPallet, err error)
 	if p.Pallet.Decl, err = loadPalletDecl(p.FS, PalletDeclFile); err != nil {
 		return nil, errors.Errorf("couldn't load pallet config")
 	}
-	p.FSPkgTree = &core.FSPkgTree{
+	p.FSPkgTree = &fpkg.FSPkgTree{
 		FS:       p.FS,
 		RootPath: p.Path(),
 		Version:  p.Pallet.Version,
@@ -238,8 +238,8 @@ func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 
 // LoadFSPkg loads a package at the specified filesystem path from the FSPallet instance
 // The loaded package is fully initialized.
-func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *core.FSPkg, err error) {
-	if pkg, err = core.LoadFSPkg(p.FS, pkgSubdir); err != nil {
+func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *fpkg.FSPkg, err error) {
+	if pkg, err = fpkg.LoadFSPkg(p.FS, pkgSubdir); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load package %s from pkg tree %s", pkgSubdir, p.Path())
 	}
 	if err = pkg.AttachFSPkgTree(p.FSPkgTree); err != nil {
@@ -250,8 +250,8 @@ func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *core.FSPkg, err error) {
 
 // LoadFSPkgs loads all packages in the FSPallet instance.
 // The loaded packages are fully initialized.
-func (p *FSPallet) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
-	pkgs, err := core.LoadFSPkgs(p.FS, searchPattern)
+func (p *FSPallet) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
+	pkgs, err := fpkg.LoadFSPkgs(p.FS, searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -379,13 +379,13 @@ func ErrsWrap(errs []error, message string) []error {
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
 func ComparePallets(r, s Pallet) int {
-	if result := core.ComparePaths(r.Path(), s.Path()); result != core.CompareEQ {
+	if result := fpkg.ComparePaths(r.Path(), s.Path()); result != fpkg.CompareEQ {
 		return result
 	}
-	if result := semver.Compare(r.Version, s.Version); result != core.CompareEQ {
+	if result := semver.Compare(r.Version, s.Version); result != fpkg.CompareEQ {
 		return result
 	}
-	return core.CompareEQ
+	return fpkg.CompareEQ
 }
 
 // PalletDecl

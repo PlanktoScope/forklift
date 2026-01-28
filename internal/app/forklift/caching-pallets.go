@@ -11,8 +11,8 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -90,7 +90,7 @@ func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error)
 
 // LoadFSPkg loads the FSPkg with the specified path and version.
 // The loaded FSPkg instance is fully initialized.
-func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -122,12 +122,12 @@ func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, 
 // The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
 // to search for.
 // The loaded FSPkg instances are fully initialized.
-func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
 	if c == nil {
 		return nil, nil
 	}
 
-	pkgs, err := core.LoadFSPkgs(c.FS, searchPattern)
+	pkgs, err := fpkg.LoadFSPkgs(c.FS, searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, e
 	}
 
 	sort.Slice(loadedPallets, func(i, j int) bool {
-		return ComparePallets(loadedPallets[i].Pallet, loadedPallets[j].Pallet) == core.CompareLT
+		return ComparePallets(loadedPallets[i].Pallet, loadedPallets[j].Pallet) == fpkg.CompareLT
 	})
 	return loadedPallets, nil
 }
@@ -258,7 +258,7 @@ func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, e
 // The loaded FSPkg instance is fully initialized.
 // If the overlay cache expects to have the package, it will attempt to load the package; otherwise,
 // the underlay cache will attempt to load the package.
-func (c *LayeredPalletCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+func (c *LayeredPalletCache) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -279,7 +279,7 @@ func (c *LayeredPalletCache) LoadFSPkg(pkgPath string, version string) (*core.FS
 // All matching packages from the overlay cache will be included; all matching packages from the
 // underlay cache will also be included, except for those packages which the overlay cache expected
 // to have.
-func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
 	if c == nil {
 		return nil, nil
 	}
@@ -301,7 +301,7 @@ func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, er
 	}
 
 	sort.Slice(pkgs, func(i, j int) bool {
-		return core.CompareFSPkgs(pkgs[i], pkgs[j]) == core.CompareLT
+		return fpkg.CompareFSPkgs(pkgs[i], pkgs[j]) == fpkg.CompareLT
 	})
 	return pkgs, nil
 }
@@ -452,7 +452,7 @@ func (c *PalletOverrideCache) IncludesFSPkg(pkgPath string, version string) bool
 // LoadFSPkg loads the FSPkg with the specified path, if the version matches any of versions for
 // the package's pallet in the cache.
 // The loaded FSPkg instance is fully initialized.
-func (c *PalletOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+func (c *PalletOverrideCache) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -478,12 +478,12 @@ func (c *PalletOverrideCache) LoadFSPkg(pkgPath string, version string) (*core.F
 // The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
 // to search for.
 // The loaded FSPkg instances are fully initialized.
-func (c *PalletOverrideCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+func (c *PalletOverrideCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
 	if c == nil {
 		return nil, nil
 	}
 
-	pkgs := make(map[string]*core.FSPkg) // indexed by package cache path
+	pkgs := make(map[string]*fpkg.FSPkg) // indexed by package cache path
 	pkgCachePaths := make([]string, 0)
 	for _, palletPath := range c.palletPaths {
 		pallet := c.pallets[palletPath]
@@ -512,7 +512,7 @@ func (c *PalletOverrideCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, e
 	}
 	sort.Strings(matchingPkgCachePaths)
 
-	matchingPkgs := make([]*core.FSPkg, 0, len(matchingPkgCachePaths))
+	matchingPkgs := make([]*fpkg.FSPkg, 0, len(matchingPkgCachePaths))
 	for _, cachePath := range matchingPkgCachePaths {
 		matchingPkgs = append(matchingPkgs, pkgs[cachePath])
 	}

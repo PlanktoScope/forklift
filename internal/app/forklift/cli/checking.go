@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
@@ -67,7 +67,7 @@ func checkFileExports(indent int, out io.Writer, depls []*forklift.ResolvedDepl)
 			default:
 				// TODO: should we also check file exports from files in the cache of downloaded files?
 				continue
-			case core.FileExportSourceTypeLocal, "":
+			case fpkg.FileExportSourceTypeLocal, "":
 			}
 			sourcePath := cmp.Or(export.Source, export.Target)
 			if err = checkFileOrSymlink(depl.Pkg.FS, sourcePath); err != nil {
@@ -351,7 +351,7 @@ func printMissingDep[Res any](
 
 /*
 func printDepCandidate[Res any](
-	indent int, out io.Writer, candidate core.ResDepCandidate[Res],
+	indent int, out io.Writer, candidate fpkg.ResDepCandidate[Res],
 ) error {
 	BulletedFprintf(indent, out, "Candidate resource from %s:\n", candidate.Provided.Origin[0])
 	indent++ // because the bullet adds an indentation level

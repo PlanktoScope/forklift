@@ -2,8 +2,8 @@
 package forklift
 
 import (
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
@@ -13,7 +13,7 @@ type FSPallet struct {
 	Pallet
 	// FSPkgTree is the package repository at the root of the filesystem. It may be defined either
 	// explicitly or implicitly.
-	FSPkgTree *core.FSPkgTree
+	FSPkgTree *fpkg.FSPkgTree
 	// FS is a filesystem which contains the pallet's contents.
 	FS ffs.PathedFS
 }
@@ -121,7 +121,7 @@ type ResolvedDepl struct {
 	// PkgReq is the package requirement for the deployment.
 	PkgReq PkgReq
 	// Pkg is the package to be deployed.
-	Pkg *core.FSPkg
+	Pkg *fpkg.FSPkg
 }
 
 // A Depl is a package deployment, a complete declaration of how a package is to be deployed on a
