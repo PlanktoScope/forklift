@@ -7,6 +7,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/structures"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // Bundles
@@ -91,26 +92,11 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
 		}
 	}
-	IndentedFprint(indent, out, "Repos:")
-	if len(inclusions.Repos) == 0 {
-		_, _ = fmt.Fprintln(out, " (none)")
-	} else {
-		_, _ = fmt.Fprintln(out)
-		sortedPaths := make([]string, 0, len(inclusions.Repos))
-		for path := range inclusions.Repos {
-			sortedPaths = append(sortedPaths, path)
-		}
-		slices.Sort(sortedPaths)
-		for _, path := range sortedPaths {
-			inclusion := inclusions.Repos[path]
-			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
-		}
-	}
 }
 
 func fprintBundleInclusion(
 	indent int, out io.Writer, path string,
-	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock forklift.VersionLock,
+	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock versioning.Lock,
 ) {
 	IndentedFprintf(indent, out, "%s:\n", path)
 	indent++
@@ -138,7 +124,7 @@ func fprintBundleInclusion(
 	_, _ = fmt.Fprintln(out)
 }
 
-func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]forklift.DeplDef) {
+func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]forklift.DeplDecl) {
 	sortedDeplNames := make([]string, 0, len(deployments))
 	for deplName := range deployments {
 		sortedDeplNames = append(sortedDeplNames, deplName)

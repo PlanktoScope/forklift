@@ -1,4 +1,4 @@
-package core
+package fs
 
 import (
 	"fmt"
@@ -8,6 +8,12 @@ import (
 )
 
 // Pather
+
+// Pather is something with a path.
+type Pather interface {
+	// Path returns the path of the instance.
+	Path() string
+}
 
 // CoversPath checks whether the provided path would be within a child directory of the Pather if
 // the Pather were a filesystem.
@@ -32,6 +38,14 @@ func GetSubdirPath(pather Pather, path string) string {
 }
 
 // PathedFS
+
+// A PathedFS provides access to a hierarchical file system locatable at some path.
+type PathedFS interface {
+	fs.FS
+	Pather
+	// Sub returns a PathedFS corresponding to the subtree rooted at dir.
+	Sub(dir string) (PathedFS, error)
+}
 
 // AttachPath makes a [PathedFS] for fsys with the specified path.
 func AttachPath(fsys fs.FS, path string) PathedFS {

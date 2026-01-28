@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // ResolvedImport
@@ -41,7 +41,7 @@ func ResolveImport(
 	resolved = &ResolvedImport{
 		Import: imp,
 	}
-	if _, err = fs.Stat(pallet.FS, path.Join(FeaturesDirName, imp.Name+FeatureDefFileExt)); err == nil {
+	if _, err = fs.Stat(pallet.FS, path.Join(FeaturesDirName, imp.Name+FeatureDeclFileExt)); err == nil {
 		// Attach the import to the current pallet
 		resolved.Pallet = pallet
 		return resolved, nil
@@ -74,7 +74,7 @@ func ResolveImport(
 // mapping.
 func (i *ResolvedImport) Evaluate(loader FSPalletLoader) (map[string]string, error) {
 	pathMappings := make(map[string]string) // target -> source
-	for _, modifier := range i.Def.Modifiers {
+	for _, modifier := range i.Decl.Modifiers {
 		switch modifier.Type {
 		default:
 			return pathMappings, errors.Errorf("unknown modifier type: %s", modifier.Type)
@@ -123,7 +123,7 @@ func applyAddModifier(
 }
 
 func globWithChildren(
-	fsys core.PathedFS, pattern string, opts ...doublestar.GlobOption,
+	fsys ffs.PathedFS, pattern string, opts ...doublestar.GlobOption,
 ) ([]string, error) {
 	fileMatches, err := doublestar.Glob(fsys, pattern, opts...)
 	if err != nil {
@@ -233,11 +233,11 @@ func applyRemoveFeatureModifier(
 func (i *ResolvedImport) CheckDeprecations(
 	loader FSPalletLoader,
 ) (deprecations []error, err error) {
-	if i.Def.Deprecated != "" {
-		return []error{errors.New(i.Def.Deprecated)}, nil
+	if i.Decl.Deprecated != "" {
+		return []error{errors.New(i.Decl.Deprecated)}, nil
 	}
 
-	for _, modifier := range i.Def.Modifiers {
+	for _, modifier := range i.Decl.Modifiers {
 		switch modifier.Type {
 		default:
 			continue
@@ -261,7 +261,7 @@ func (i *ResolvedImport) CheckDeprecations(
 func FilterImportsForEnabled(imps []Import) []Import {
 	filtered := make([]Import, 0, len(imps))
 	for _, imp := range imps {
-		if imp.Def.Disabled {
+		if imp.Decl.Disabled {
 			continue
 		}
 		filtered = append(filtered, imp)
@@ -271,9 +271,9 @@ func FilterImportsForEnabled(imps []Import) []Import {
 
 // loadImport loads the Import from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the import followed by the import group file extension.
-func loadImport(fsys core.PathedFS, name, fileExt string) (imp Import, err error) {
+func loadImport(fsys ffs.PathedFS, name, fileExt string) (imp Import, err error) {
 	imp.Name = name
-	if imp.Def, err = loadImportDef(fsys, name+fileExt); err != nil {
+	if imp.Decl, err = loadImportDecl(fsys, name+fileExt); err != nil {
 		return Import{}, errors.Wrapf(err, "couldn't load import group")
 	}
 	// TODO: if the import is deprecated, print a warning with the deprecation message
@@ -284,50 +284,50 @@ func loadImport(fsys core.PathedFS, name, fileExt string) (imp Import, err error
 // the specified search pattern.
 // The search pattern should not include the file extension for import group files - the
 // file extension will be appended to the search pattern by LoadImports.
-func loadImports(fsys core.PathedFS, searchPattern, fileExt string) ([]Import, error) {
+func loadImports(fsys ffs.PathedFS, searchPattern, fileExt string) ([]Import, error) {
 	searchPattern += fileExt
-	impDefFiles, err := doublestar.Glob(fsys, searchPattern)
+	impDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for import groups matching %s/%s", fsys.Path(), searchPattern,
 		)
 	}
 
-	imps := make([]Import, 0, len(impDefFiles))
-	for _, impDefFilePath := range impDefFiles {
-		if !strings.HasSuffix(impDefFilePath, fileExt) {
+	imps := make([]Import, 0, len(impDeclFiles))
+	for _, impDeclFilePath := range impDeclFiles {
+		if !strings.HasSuffix(impDeclFilePath, fileExt) {
 			continue
 		}
 
-		impName := strings.TrimSuffix(impDefFilePath, fileExt)
+		impName := strings.TrimSuffix(impDeclFilePath, fileExt)
 		imp, err := loadImport(fsys, impName, fileExt)
 		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load import group from %s", impDefFilePath)
+			return nil, errors.Wrapf(err, "couldn't load import group from %s", impDeclFilePath)
 		}
 		imps = append(imps, imp)
 	}
 	return imps, nil
 }
 
-// ImportDef
+// ImportDecl
 
-// loadImportDef loads an ImportDef from the specified file path in the provided base filesystem.
-func loadImportDef(fsys core.PathedFS, filePath string) (ImportDef, error) {
+// loadImportDecl loads an ImportDecl from the specified file path in the provided base filesystem.
+func loadImportDecl(fsys ffs.PathedFS, filePath string) (ImportDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return ImportDef{}, errors.Wrapf(
+		return ImportDecl{}, errors.Wrapf(
 			err, "couldn't read import group file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	declaration := ImportDef{}
+	declaration := ImportDecl{}
 	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return ImportDef{}, errors.Wrap(err, "couldn't parse import group")
+		return ImportDecl{}, errors.Wrap(err, "couldn't parse import group")
 	}
 
 	return declaration.AddDefaults(), nil
 }
 
-func (d ImportDef) AddDefaults() ImportDef {
+func (d ImportDecl) AddDefaults() ImportDecl {
 	updatedModifiers := make([]ImportModifier, 0, len(d.Modifiers))
 	for _, modifier := range d.Modifiers {
 		if modifier.Type == "" {
@@ -348,7 +348,7 @@ func (d ImportDef) AddDefaults() ImportDef {
 	return d
 }
 
-func (d ImportDef) RemoveDefaults() ImportDef {
+func (d ImportDecl) RemoveDefaults() ImportDecl {
 	// TODO: use this method when saving import definitions!
 	updatedModifiers := make([]ImportModifier, 0, len(d.Modifiers))
 	for _, modifier := range d.Modifiers {
@@ -381,7 +381,7 @@ func (m ImportModifier) CheckDeprecations(
 	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't load referenced feature %s", m.Source)
 	}
-	if deprecation := feature.Def.Deprecated; deprecation != "" {
+	if deprecation := feature.Decl.Deprecated; deprecation != "" {
 		return []error{errors.Errorf("feature %s is deprecated: %s", feature.Name, deprecation)}, nil
 	}
 

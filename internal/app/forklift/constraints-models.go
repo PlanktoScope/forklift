@@ -1,7 +1,8 @@
 package forklift
 
 import (
-	"github.com/forklift-run/forklift/pkg/core"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
 type DeplConflict struct {
@@ -10,25 +11,25 @@ type DeplConflict struct {
 
 	// Possible conflicts
 	Name        bool
-	Listeners   []core.ResConflict[core.ListenerRes]
-	Networks    []core.ResConflict[core.NetworkRes]
-	Services    []core.ResConflict[core.ServiceRes]
-	Filesets    []core.ResConflict[core.FilesetRes]
-	FileExports []core.ResConflict[core.FileExportRes]
+	Listeners   []res.Conflict[fpkg.ListenerRes, []string]
+	Networks    []res.Conflict[fpkg.NetworkRes, []string]
+	Services    []res.Conflict[fpkg.ServiceRes, []string]
+	Filesets    []res.Conflict[fpkg.FilesetRes, []string]
+	FileExports []res.Conflict[fpkg.FileExportRes, []string]
 }
 
 type SatisfiedDeplDeps struct {
 	Depl *ResolvedDepl
 
-	Networks []core.SatisfiedResDep[core.NetworkRes]
-	Services []core.SatisfiedResDep[core.ServiceRes]
-	Filesets []core.SatisfiedResDep[core.FilesetRes]
+	Networks []res.SatisfiedDep[fpkg.NetworkRes, []string]
+	Services []res.SatisfiedDep[fpkg.ServiceRes, []string]
+	Filesets []res.SatisfiedDep[fpkg.FilesetRes, []string]
 }
 
 type MissingDeplDeps struct {
 	Depl *ResolvedDepl
 
-	Networks []core.MissingResDep[core.NetworkRes]
-	Services []core.MissingResDep[core.ServiceRes]
-	Filesets []core.MissingResDep[core.FilesetRes]
+	Networks []res.MissingDep[fpkg.NetworkRes, []string]
+	Services []res.MissingDep[fpkg.ServiceRes, []string]
+	Filesets []res.MissingDep[fpkg.FilesetRes, []string]
 }

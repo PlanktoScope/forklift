@@ -16,7 +16,7 @@ import (
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -27,7 +27,7 @@ func GetStageStore(
 		return workspace.GetStageStore(newStageStoreVersion)
 	}
 
-	fsys := forklift.DirFS(stageStorePath)
+	fsys := ffs.DirFS(stageStorePath)
 	if err := forklift.EnsureFSStageStore(fsys, ".", newStageStoreVersion); err != nil {
 		return nil, err
 	}
@@ -69,9 +69,8 @@ type StagingVersions struct {
 }
 
 type StagingCaches struct {
-	Mirrors   core.Pather
+	Mirrors   ffs.Pather
 	Pallets   forklift.PathedPalletCache
-	Repos     forklift.PathedRepoCache
 	Downloads *forklift.FSDownloadCache
 }
 
@@ -80,12 +79,12 @@ func StagePallet(
 	exportPath string, versions StagingVersions,
 	skipImageCaching bool, platform string, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
-	if _, isMerged := merged.FS.(*forklift.MergeFS); isMerged {
+	if _, isMerged := merged.FS.(*ffs.MergeFS); isMerged {
 		return 0, errors.Errorf("the pallet provided for staging should not be a merged pallet!")
 	}
 
-	merged, repoCacheWithMerged, err := CacheStagingReqs(
-		0, merged, caches.Mirrors, caches.Pallets, caches.Repos, caches.Downloads,
+	merged, palletCacheWithMerged, err := CacheStagingReqs(
+		0, merged, caches.Mirrors, caches.Pallets, caches.Downloads,
 		platform, false, parallel,
 	)
 	if err != nil {
@@ -93,9 +92,7 @@ func StagePallet(
 	}
 	// Note: we must have all requirements in the cache before we can check their compatibility with
 	// the Forklift tool version
-	if err = CheckDeepCompat(
-		merged, caches.Pallets, repoCacheWithMerged, versions.Core, ignoreToolVersion,
-	); err != nil {
+	if err = CheckDeepCompat(merged, caches.Pallets, versions.Core, ignoreToolVersion); err != nil {
 		return 0, err
 	}
 	fmt.Fprintln(os.Stderr)
@@ -108,7 +105,7 @@ func StagePallet(
 		indent, os.Stderr, "Bundling pallet as stage %d for staged application...\n", index,
 	)
 	if err = buildBundle(
-		merged, caches.Pallets, repoCacheWithMerged, caches.Downloads,
+		merged, palletCacheWithMerged, caches.Downloads,
 		versions.NewBundle, path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", merged.Path(), index)
@@ -126,17 +123,17 @@ func StagePallet(
 
 func buildBundle(
 	merged *forklift.FSPallet,
-	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
+	palletCache forklift.PathedPalletCache,
 	dlCache *forklift.FSDownloadCache,
 	forkliftVersion, outputPath string,
 ) (err error) {
 	outputBundle := forklift.NewFSBundle(outputPath)
-	outputBundle.Manifest, err = newBundleManifest(merged, palletCache, repoCache, forkliftVersion)
+	outputBundle.Manifest, err = newBundleManifest(merged, palletCache, forkliftVersion)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
 	}
 
-	depls, _, err := Check(0, merged, repoCache)
+	depls, _, err := Check(0, merged, palletCache)
 	if err != nil {
 		return errors.Wrap(err, "couldn't ensure pallet validity")
 	}
@@ -147,10 +144,7 @@ func buildBundle(
 	}
 
 	if err := outputBundle.SetBundledPallet(merged); err != nil {
-		return errors.Wrapf(err, "couldn't write pallet %s into bundle", merged.Def.Pallet.Path)
-	}
-	if err = outputBundle.WriteRepoDefFile(); err != nil {
-		return errors.Wrap(err, "couldn't write repo declaration into bundle")
+		return errors.Wrapf(err, "couldn't write pallet %s into bundle", merged.Decl.Pallet.Path)
 	}
 	if err = outputBundle.WriteFileExports(dlCache); err != nil {
 		return errors.Wrap(err, "couldn't write file exports into bundle")
@@ -162,21 +156,18 @@ func buildBundle(
 }
 
 func newBundleManifest(
-	merged *forklift.FSPallet,
-	palletCache forklift.PathedPalletCache, repoCache forklift.PathedRepoCache,
-	forkliftVersion string,
+	merged *forklift.FSPallet, palletCache forklift.PathedPalletCache, forkliftVersion string,
 ) (forklift.BundleManifest, error) {
 	desc := forklift.BundleManifest{
 		ForkliftVersion: forkliftVersion,
 		Pallet: forklift.BundlePallet{
 			Path:        merged.Path(),
-			Description: merged.Def.Pallet.Description,
+			Description: merged.Decl.Pallet.Description,
 		},
 		Includes: forklift.BundleInclusions{
 			Pallets: make(map[string]forklift.BundlePalletInclusion),
-			Repos:   make(map[string]forklift.BundleRepoInclusion),
 		},
-		Deploys:   make(map[string]forklift.DeplDef),
+		Deploys:   make(map[string]forklift.DeplDecl),
 		Downloads: make(map[string]forklift.BundleDeplDownloads),
 		Exports:   make(map[string]forklift.BundleDeplExports),
 	}
@@ -196,14 +187,7 @@ func newBundleManifest(
 			)
 		}
 	}
-	repoReqs, err := merged.LoadFSRepoReqs("**")
-	if err != nil {
-		return desc, errors.Wrapf(err, "couldn't determine repos required by pallet %s", merged.Path())
-	}
-	for _, req := range repoReqs {
-		desc.Includes.Repos[req.RequiredPath] = newBundleRepoInclusion(req, repoCache)
-	}
-	if mergeFS, ok := merged.FS.(*forklift.MergeFS); ok {
+	if mergeFS, ok := merged.FS.(*ffs.MergeFS); ok {
 		imports, err := mergeFS.ListImports()
 		if err != nil {
 			return desc, errors.Wrapf(err, "couldn't list pallet file import groups")
@@ -338,34 +322,6 @@ func describePalletImports(
 		}
 	}
 	return fileMappings, nil
-}
-
-func newBundleRepoInclusion(
-	req *forklift.FSRepoReq, repoCache forklift.PathedRepoCache,
-) forklift.BundleRepoInclusion {
-	inclusion := forklift.BundleRepoInclusion{Req: req.RepoReq}
-	for {
-		if repoCache == nil {
-			return inclusion
-		}
-		layeredCache, ok := repoCache.(*forklift.LayeredRepoCache)
-		if !ok {
-			return inclusion
-		}
-		overlay := layeredCache.Overlay
-		if overlay == nil {
-			repoCache = layeredCache.Underlay
-			continue
-		}
-
-		if loaded, err := overlay.LoadFSRepo(req.RequiredPath, req.VersionLock.Version); err == nil {
-			// i.e. the repo was overridden
-			inclusion.Override.Path = loaded.FS.Path()
-			inclusion.Override.Version, inclusion.Override.Clean = CheckGitRepoVersion(loaded.FS.Path())
-			return inclusion
-		}
-		repoCache = layeredCache.Underlay
-	}
 }
 
 // Apply

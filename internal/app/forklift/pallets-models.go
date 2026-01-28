@@ -2,34 +2,36 @@
 package forklift
 
 import (
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // A FSPallet is a Forklift pallet stored at the root of a [fs.FS] filesystem.
 type FSPallet struct {
 	// Pallet is the pallet at the root of the filesystem.
 	Pallet
-	// Repo is the package repository at the root of the filesystem. It may be defined either
+	// FSPkgTree is the package repository at the root of the filesystem. It may be defined either
 	// explicitly or implicitly.
-	Repo *core.FSRepo
+	FSPkgTree *fpkg.FSPkgTree
 	// FS is a filesystem which contains the pallet's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A Pallet is a Forklift pallet, a complete specification of all package deployments which should
 // be active on a Docker host.
 type Pallet struct {
-	// Def is the Forklift pallet definition for the pallet.
-	Def PalletDef
+	// Decl is the Forklift pallet definition for the pallet.
+	Decl PalletDecl
 	// Version is the version or pseudoversion of the pallet.
 	Version string
 }
 
-// PalletDefFile is the name of the file defining each Forklift pallet.
-const PalletDefFile = "forklift-pallet.yml"
+// PalletDeclFile is the name of the file defining each Forklift pallet.
+const PalletDeclFile = "forklift-pallet.yml"
 
-// A PalletDef defines a Forklift pallet.
-type PalletDef struct {
+// A PalletDecl defines a Forklift pallet.
+type PalletDecl struct {
 	// ForkliftVersion indicates that the pallet was written assuming the semantics of a given version
 	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
 	// Forklift required to use the pallet. The Forklift tool refuses to use pallets declaring newer
@@ -63,7 +65,7 @@ type GitRepoReq struct {
 	// GitRepoPath is the path of the required Git repository.
 	RequiredPath string `yaml:"-"`
 	// VersionLock specifies the version of the required Git repository.
-	VersionLock VersionLock `yaml:"version-lock"`
+	VersionLock versioning.Lock `yaml:"version-lock"`
 }
 
 const (
@@ -77,7 +79,7 @@ type FSPalletReq struct {
 	// PalletReq is the pallet requirement at the root of the filesystem.
 	PalletReq
 	// FS is a filesystem which contains the pallet requirement's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A PalletReq is a requirement for a specific pallet at a specific version.
@@ -90,31 +92,12 @@ type PalletReqLoader interface {
 	LoadPalletReq(palletPath string) (PalletReq, error)
 }
 
-const (
-	// ReqsReposDirName is the subdirectory in the requirements directory of a Forklift pallet which
-	// contains repo requirement declarations.
-	ReqsReposDirName = "repositories"
-)
-
-// A FSRepoReq is a repo requirement stored at the root of a [fs.FS] filesystem.
-type FSRepoReq struct {
-	// RepoReq is the repo requirement at the root of the filesystem.
-	RepoReq
-	// FS is a filesystem which contains the repo requirement's contents.
-	FS core.PathedFS
-}
-
-// A RepoReq is a requirement for a specific repo at a specific version.
-type RepoReq struct {
-	GitRepoReq `yaml:",inline"`
-}
-
 // A PkgReq is a requirement for a package at a specific version.
 type PkgReq struct {
 	// PkgSubdir is the package subdirectory in the repo which should provide the required package.
 	PkgSubdir string
-	// Repo is the repo which should provide the required package.
-	Repo RepoReq
+	// Pallet is the pallet which should provide the required package.
+	Pallet PalletReq
 }
 
 // PkgReqLoader is a source of package requirements.
@@ -128,7 +111,7 @@ const (
 	// DeplsDirName is the directory in a pallet which contains deployment declarations.
 	DeplsDirName = "deployments"
 	// DeplsFileExt is the file extension for deployment declaration files.
-	DeplDefFileExt = ".deploy.yml"
+	DeplDeclFileExt = ".deploy.yml"
 )
 
 // A ResolvedDepl is a deployment with a loaded package.
@@ -138,20 +121,20 @@ type ResolvedDepl struct {
 	// PkgReq is the package requirement for the deployment.
 	PkgReq PkgReq
 	// Pkg is the package to be deployed.
-	Pkg *core.FSPkg
+	Pkg *fpkg.FSPkg
 }
 
 // A Depl is a package deployment, a complete declaration of how a package is to be deployed on a
 // Docker host.
 type Depl struct {
-	// Name is the name of the package depoyment.
+	// Name is the name of the package deployment.
 	Name string
-	// Def is the Forklift package deployment definition for the deployment.
-	Def DeplDef
+	// Decl is the Forklift package deployment definition for the deployment.
+	Decl DeplDecl
 }
 
-// A DeplDef defines a package deployment.
-type DeplDef struct {
+// A DeplDecl defines a package deployment.
+type DeplDecl struct {
 	// Package is the package path of the package to deploy.
 	Package string `yaml:"package"`
 	// Features is a list of features from the package which should be enabled in the deployment.
@@ -163,8 +146,8 @@ type DeplDef struct {
 // Imports
 
 const (
-	// ImportDefFileExt is the file extension for import group files.
-	ImportDefFileExt = ".imports.yml"
+	// ImportDeclFileExt is the file extension for import group files.
+	ImportDeclFileExt = ".imports.yml"
 )
 
 // A ResolvedImport is a file import group with a loaded pallet.
@@ -179,12 +162,12 @@ type ResolvedImport struct {
 type Import struct {
 	// Name is the name of the file import group.
 	Name string
-	// Def is the file import definition for the file import group.
-	Def ImportDef
+	// Decl is the file import definition for the file import group.
+	Decl ImportDecl
 }
 
-// A ImportDef defines a file import group.
-type ImportDef struct {
+// A ImportDecl defines a file import group.
+type ImportDecl struct {
 	// Description is a short description of the import group to be shown to users.
 	Description string `yaml:"description,omitempty"`
 	// Modifiers is a list of modifiers evaluated in the provided order to build up a set of files to
@@ -235,6 +218,6 @@ const (
 	// FeaturesDirName is the directory in a pallet containing declarations of file import groups
 	// which can be referenced by name in file import groups.
 	FeaturesDirName = "features"
-	// FeatureDefFileExt is the file extension for import group files.
-	FeatureDefFileExt = ".feature.yml"
+	// FeatureDeclFileExt is the file extension for import group files.
+	FeatureDeclFileExt = ".feature.yml"
 )

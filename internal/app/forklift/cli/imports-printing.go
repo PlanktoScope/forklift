@@ -52,7 +52,7 @@ func FprintResolvedImport(
 	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
 ) error {
 	IndentedFprint(indent, out, "Import group")
-	if imp.Import.Def.Disabled {
+	if imp.Import.Decl.Disabled {
 		_, _ = fmt.Fprint(out, " (disabled!)")
 	}
 	_, _ = fmt.Fprintf(out, " %s:\n", imp.Name)
@@ -71,7 +71,7 @@ func FprintResolvedImport(
 
 	IndentedFprintf(indent, out, "Import source: %s\n", imp.Pallet.Path())
 
-	if err := fprintModifiers(indent, out, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
+	if err := fprintModifiers(indent, out, imp.Decl.Modifiers, imp.Pallet, loader); err != nil {
 		return err
 	}
 
@@ -175,8 +175,8 @@ func fprintReferencedFeature(
 		return errors.Wrapf(err, "couldn't load feature %s", name)
 	}
 
-	if feature.Def.Description != "" {
-		_, _ = fmt.Fprintf(out, ": %s\n", feature.Def.Description)
+	if feature.Decl.Description != "" {
+		_, _ = fmt.Fprintf(out, ": %s\n", feature.Decl.Description)
 	} else {
 		_, _ = fmt.Fprintln(out, " (no description)")
 	}

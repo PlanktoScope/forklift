@@ -13,7 +13,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/internal/clients/docker"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	res "github.com/forklift-run/forklift/pkg/resources"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -27,7 +29,7 @@ func ResolveDepl(
 	resolved = &ResolvedDepl{
 		Depl: depl,
 	}
-	pkgPath := resolved.Def.Package
+	pkgPath := resolved.Decl.Package
 	if resolved.Pkg, resolved.PkgReq, err = LoadRequiredFSPkg(
 		pkgReqLoader, pkgLoader, pkgPath,
 	); err != nil {
@@ -56,10 +58,10 @@ func ResolveDepls(
 }
 
 func (d *ResolvedDepl) Check() (errs []error) {
-	if d.PkgReq.Path() != d.Def.Package {
+	if d.PkgReq.Path() != d.Decl.Package {
 		errs = append(errs, errors.Errorf(
 			"required package %s does not match required package %s in deployment declaration",
-			d.PkgReq.Path(), d.Def.Package,
+			d.PkgReq.Path(), d.Decl.Package,
 		))
 	}
 	if d.PkgReq.Path() != d.Pkg.Path() {
@@ -68,11 +70,12 @@ func (d *ResolvedDepl) Check() (errs []error) {
 		))
 	}
 	// An empty version is treated as "any version" for this check, so that packages loaded from
-	// overriding repos (where versioning is ignored) will not fail this version check:
-	if d.Pkg.Repo.Version != "" && d.PkgReq.Repo.VersionLock.Version != d.Pkg.Repo.Version {
+	// overriding pkg trees (where versioning is ignored) will not fail this version check:
+	if d.Pkg.FSPkgTree.Version != "" &&
+		d.PkgReq.Pallet.VersionLock.Version != d.Pkg.FSPkgTree.Version {
 		errs = append(errs, errors.Errorf(
 			"resolved package version %s does not match required package version %s",
-			d.Pkg.Repo.Version, d.PkgReq.Repo.VersionLock.Version,
+			d.Pkg.FSPkgTree.Version, d.PkgReq.Pallet.VersionLock.Version,
 		))
 	}
 	return errs
@@ -80,11 +83,11 @@ func (d *ResolvedDepl) Check() (errs []error) {
 
 // EnabledFeatures returns a map of the package features enabled by the deployment's declaration,
 // with feature names as the keys of the map.
-func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec, err error) {
-	all := d.Pkg.Def.Features
-	enabled = make(map[string]core.PkgFeatureSpec)
-	unrecognized := make([]string, 0, len(d.Def.Features))
-	for _, name := range d.Def.Features {
+func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]fpkg.PkgFeatureSpec, err error) {
+	all := d.Pkg.Decl.Features
+	enabled = make(map[string]fpkg.PkgFeatureSpec)
+	unrecognized := make([]string, 0, len(d.Decl.Features))
+	for _, name := range d.Decl.Features {
 		featureSpec, ok := all[name]
 		if !ok {
 			unrecognized = append(unrecognized, name)
@@ -100,13 +103,13 @@ func (d *ResolvedDepl) EnabledFeatures() (enabled map[string]core.PkgFeatureSpec
 
 // DisabledFeatures returns a map of the package features not enabled by the deployment's
 // declaration, with feature names as the keys of the map.
-func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
-	all := d.Pkg.Def.Features
+func (d *ResolvedDepl) DisabledFeatures() map[string]fpkg.PkgFeatureSpec {
+	all := d.Pkg.Decl.Features
 	enabled := make(structures.Set[string])
-	for _, name := range d.Def.Features {
+	for _, name := range d.Decl.Features {
 		enabled.Add(name)
 	}
-	disabled := make(map[string]core.PkgFeatureSpec)
+	disabled := make(map[string]fpkg.PkgFeatureSpec)
 	for name := range all {
 		if enabled.Has(name) {
 			continue
@@ -122,7 +125,7 @@ func (d *ResolvedDepl) DisabledFeatures() map[string]core.PkgFeatureSpec {
 // the Compose app, with feature-flagged Compose files ordered based on the alphabetical order of
 // enabled feature flags.
 func (d *ResolvedDepl) GetComposeFilenames() ([]string, error) {
-	composeFiles := append([]string{}, d.Pkg.Def.Deployment.ComposeFiles...)
+	composeFiles := append([]string{}, d.Pkg.Decl.Deployment.ComposeFiles...)
 
 	// Add compose files from features
 	enabledFeatures, err := d.EnabledFeatures()
@@ -183,12 +186,12 @@ func GetComposeAppName(deplName string) string {
 // GetHTTPFileDownloadURLs returns a list of the HTTP(s) URLs of files to be downloaded for export
 // by the package deployment, with all URLs sorted alphabetically.
 func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
-	downloadURLs := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
-	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+	downloadURLs := make([]string, 0, len(d.Pkg.Decl.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Decl.Deployment.Provides.FileExports {
 		switch export.SourceType {
 		default:
 			continue
-		case core.FileExportSourceTypeHTTP, core.FileExportSourceTypeHTTPArchive:
+		case fpkg.FileExportSourceTypeHTTP, fpkg.FileExportSourceTypeHTTPArchive:
 		}
 		downloadURLs = append(downloadURLs, export.URL)
 	}
@@ -203,7 +206,7 @@ func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 			switch export.SourceType {
 			default:
 				continue
-			case core.FileExportSourceTypeHTTP, core.FileExportSourceTypeHTTPArchive:
+			case fpkg.FileExportSourceTypeHTTP, fpkg.FileExportSourceTypeHTTPArchive:
 			}
 			downloadURLs = append(downloadURLs, export.URL)
 		}
@@ -215,9 +218,9 @@ func (d *ResolvedDepl) GetHTTPFileDownloadURLs() ([]string, error) {
 // GetOCIImageDownloadNames returns a list of the image names of OCI container images to be
 // downloaded for export by the package deployment, with all names sorted alphabetically.
 func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
-	imageNames := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
-	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
-		if export.SourceType != core.FileExportSourceTypeOCIImage {
+	imageNames := make([]string, 0, len(d.Pkg.Decl.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Decl.Deployment.Provides.FileExports {
+		if export.SourceType != fpkg.FileExportSourceTypeOCIImage {
 			continue
 		}
 		imageNames = append(imageNames, export.URL)
@@ -230,7 +233,7 @@ func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
 	}
 	for _, name := range sortKeys(enabledFeatures) {
 		for _, export := range enabledFeatures[name].Provides.FileExports {
-			if export.SourceType != core.FileExportSourceTypeOCIImage {
+			if export.SourceType != fpkg.FileExportSourceTypeOCIImage {
 				continue
 			}
 			imageNames = append(imageNames, export.URL)
@@ -245,8 +248,8 @@ func (d *ResolvedDepl) GetOCIImageDownloadNames() ([]string, error) {
 // GetFileExportTargets returns a list of the target paths of the files to be exported by the
 // package deployment, with all target file paths sorted alphabetically.
 func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
-	exportTargets := make([]string, 0, len(d.Pkg.Def.Deployment.Provides.FileExports))
-	for _, export := range d.Pkg.Def.Deployment.Provides.FileExports {
+	exportTargets := make([]string, 0, len(d.Pkg.Decl.Deployment.Provides.FileExports))
+	for _, export := range d.Pkg.Decl.Deployment.Provides.FileExports {
 		exportTargets = append(exportTargets, export.Target)
 	}
 	enabledFeatures, err := d.EnabledFeatures()
@@ -269,8 +272,8 @@ func (d *ResolvedDepl) GetFileExportTargets() ([]string, error) {
 // files are specified for a target path) preserving precedence of feature flags over the
 // deployment section, and preserving precedence among feature flags by alphabetical ordering of
 // feature flags.
-func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
-	exports := append([]core.FileExportRes{}, d.Pkg.Def.Deployment.Provides.FileExports...)
+func (d *ResolvedDepl) GetFileExports() ([]fpkg.FileExportRes, error) {
+	exports := append([]fpkg.FileExportRes{}, d.Pkg.Decl.Deployment.Provides.FileExports...)
 	enabledFeatures, err := d.EnabledFeatures()
 	if err != nil {
 		return exports, errors.Wrapf(
@@ -280,7 +283,7 @@ func (d *ResolvedDepl) GetFileExports() ([]core.FileExportRes, error) {
 	for _, name := range sortKeys(enabledFeatures) {
 		exports = append(exports, enabledFeatures[name].Provides.FileExports...)
 	}
-	slices.SortStableFunc(exports, func(a, b core.FileExportRes) int {
+	slices.SortStableFunc(exports, func(a, b fpkg.FileExportRes) int {
 		return cmp.Compare(a.Target, b.Target)
 	})
 	return exports, nil
@@ -307,19 +310,19 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		First:  d,
 		Second: candidate,
 		Name:   d.Name == candidate.Name,
-		Listeners: core.CheckResConflicts(
+		Listeners: res.CheckConflicts(
 			d.providedListeners(enabledFeatures), candidate.providedListeners(candidateEnabledFeatures),
 		),
-		Networks: core.CheckResConflicts(
+		Networks: res.CheckConflicts(
 			d.providedNetworks(enabledFeatures), candidate.providedNetworks(candidateEnabledFeatures),
 		),
-		Services: core.CheckResConflicts(
+		Services: res.CheckConflicts(
 			d.providedServices(enabledFeatures), candidate.providedServices(candidateEnabledFeatures),
 		),
-		Filesets: core.CheckResConflicts(
+		Filesets: res.CheckConflicts(
 			d.providedFilesets(enabledFeatures), candidate.providedFilesets(candidateEnabledFeatures),
 		),
-		FileExports: core.CheckResConflicts(
+		FileExports: res.CheckConflicts(
 			d.providedFileExports(enabledFeatures),
 			candidate.providedFileExports(candidateEnabledFeatures),
 		),
@@ -329,8 +332,8 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 // providedListeners returns a slice of all host port listeners provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedListeners(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.ListenerRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (provided []res.Attached[fpkg.ListenerRes, []string]) {
 	return d.Pkg.ProvidedListeners(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -347,56 +350,56 @@ func sortKeys[Value any](m map[string]Value) (sorted []string) {
 // requiredNetworks returns a slice of all Docker networks required by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredNetworks(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (required []core.AttachedRes[core.NetworkRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (required []res.Attached[fpkg.NetworkRes, []string]) {
 	return d.Pkg.RequiredNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedNetworks returns a slice of all Docker networks provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedNetworks(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.NetworkRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (provided []res.Attached[fpkg.NetworkRes, []string]) {
 	return d.Pkg.ProvidedNetworks(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // requiredServices returns a slice of all network services required by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredServices(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (required []core.AttachedRes[core.ServiceRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (required []res.Attached[fpkg.ServiceRes, []string]) {
 	return d.Pkg.RequiredServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedServices returns a slice of all network services provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedServices(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.ServiceRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (provided []res.Attached[fpkg.ServiceRes, []string]) {
 	return d.Pkg.ProvidedServices(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // requiredFilesets returns a slice of all filesets required by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) requiredFilesets(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (required []core.AttachedRes[core.FilesetRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (required []res.Attached[fpkg.FilesetRes, []string]) {
 	return d.Pkg.RequiredFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedFilesets returns a slice of all filesets provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedFilesets(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.FilesetRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (provided []res.Attached[fpkg.FilesetRes, []string]) {
 	return d.Pkg.ProvidedFilesets(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
 // providedFileExports returns a slice of all file exports provided by the package deployment,
 // depending on the enabled features, with feature names as the keys of the map.
 func (d *ResolvedDepl) providedFileExports(
-	enabledFeatures map[string]core.PkgFeatureSpec,
-) (provided []core.AttachedRes[core.FileExportRes]) {
+	enabledFeatures map[string]fpkg.PkgFeatureSpec,
+) (provided []res.Attached[fpkg.FileExportRes, []string]) {
 	return d.Pkg.ProvidedFileExports(d.ResAttachmentSource(), sortKeys(enabledFeatures))
 }
 
@@ -429,7 +432,7 @@ func (d *ResolvedDepl) CheckDeps(
 			err, "couldn't determine enabled features of deployment %s", d.Name,
 		)
 	}
-	candidateEnabledFeatures := make([]map[string]core.PkgFeatureSpec, 0, len(candidates))
+	candidateEnabledFeatures := make([]map[string]fpkg.PkgFeatureSpec, 0, len(candidates))
 	for _, candidate := range candidates {
 		f, err := candidate.EnabledFeatures()
 		if err != nil {
@@ -441,9 +444,9 @@ func (d *ResolvedDepl) CheckDeps(
 	}
 
 	var (
-		allProvidedNetworks []core.AttachedRes[core.NetworkRes]
-		allProvidedServices []core.AttachedRes[core.ServiceRes]
-		allProvidedFilesets []core.AttachedRes[core.FilesetRes]
+		allProvidedNetworks []res.Attached[fpkg.NetworkRes, []string]
+		allProvidedServices []res.Attached[fpkg.ServiceRes, []string]
+		allProvidedFilesets []res.Attached[fpkg.FilesetRes, []string]
 	)
 	for i, candidate := range candidates {
 		enabled := candidateEnabledFeatures[i]
@@ -454,14 +457,14 @@ func (d *ResolvedDepl) CheckDeps(
 
 	satisfied.Depl = d
 	missing.Depl = d
-	satisfied.Networks, missing.Networks = core.CheckResDeps(
+	satisfied.Networks, missing.Networks = res.CheckDeps(
 		d.requiredNetworks(enabledFeatures), allProvidedNetworks,
 	)
-	satisfied.Services, missing.Services = core.CheckResDeps(
-		core.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
+	satisfied.Services, missing.Services = res.CheckDeps(
+		fpkg.SplitServicesByPath(d.requiredServices(enabledFeatures)), allProvidedServices,
 	)
-	satisfied.Filesets, missing.Filesets = core.CheckResDeps(
-		core.SplitFilesetsByPath(d.requiredFilesets(enabledFeatures)), allProvidedFilesets,
+	satisfied.Filesets, missing.Filesets = res.CheckDeps(
+		fpkg.SplitFilesetsByPath(d.requiredFilesets(enabledFeatures)), allProvidedFilesets,
 	)
 	return satisfied, missing, nil
 }
@@ -509,14 +512,14 @@ func ResolveDeps(
 	deps := make(structures.Digraph[string])
 	for _, satisfied := range satisfiedDeps {
 		for _, network := range satisfied.Networks {
-			provider := strings.TrimPrefix(network.Provided.Source[0], "deployment ")
+			provider := strings.TrimPrefix(network.Provided.Origin[0], "deployment ")
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
 				continue
 			}
 			deps.AddEdge(satisfied.Depl.Name, provider)
 		}
 		for _, service := range satisfied.Services {
-			provider := strings.TrimPrefix(service.Provided.Source[0], "deployment ")
+			provider := strings.TrimPrefix(service.Provided.Origin[0], "deployment ")
 			deps.AddNode(provider)
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
 				continue
@@ -527,7 +530,7 @@ func ResolveDeps(
 			deps.AddEdge(satisfied.Depl.Name, provider)
 		}
 		for _, fileset := range satisfied.Filesets {
-			provider := strings.TrimPrefix(fileset.Provided.Source[0], "deployment ")
+			provider := strings.TrimPrefix(fileset.Provided.Origin[0], "deployment ")
 			deps.AddNode(provider)
 			if provider == satisfied.Depl.Name { // i.e. the deployment requires a resource it provides
 				continue
@@ -547,7 +550,7 @@ func ResolveDeps(
 func FilterDeplsForEnabled(depls []Depl) []Depl {
 	filtered := make([]Depl, 0, len(depls))
 	for _, depl := range depls {
-		if depl.Def.Disabled {
+		if depl.Decl.Disabled {
 			continue
 		}
 		filtered = append(filtered, depl)
@@ -557,9 +560,9 @@ func FilterDeplsForEnabled(depls []Depl) []Depl {
 
 // loadDepl loads the Depl from a file path in the provided base filesystem, assuming the file path
 // is the specified name of the deployment followed by the deployment declaration file extension.
-func loadDepl(fsys core.PathedFS, name string) (depl Depl, err error) {
+func loadDepl(fsys ffs.PathedFS, name string) (depl Depl, err error) {
 	depl.Name = name
-	if depl.Def, err = loadDeplDef(fsys, name+DeplDefFileExt); err != nil {
+	if depl.Decl, err = loadDeplDecl(fsys, name+DeplDeclFileExt); err != nil {
 		return Depl{}, errors.Wrapf(err, "couldn't load deployment declaration")
 	}
 	return depl, nil
@@ -569,9 +572,9 @@ func loadDepl(fsys core.PathedFS, name string) (depl Depl, err error) {
 // the specified search pattern.
 // The search pattern should not include the file extension for deployment declaration files - the
 // file extension will be appended to the search pattern by LoadDepls.
-func loadDepls(fsys core.PathedFS, searchPattern string) ([]Depl, error) {
-	searchPattern += DeplDefFileExt
-	deplDefFiles, err := doublestar.Glob(fsys, searchPattern)
+func loadDepls(fsys ffs.PathedFS, searchPattern string) ([]Depl, error) {
+	searchPattern += DeplDeclFileExt
+	deplDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't search for package deployment declarations matching %s/%s",
@@ -579,17 +582,17 @@ func loadDepls(fsys core.PathedFS, searchPattern string) ([]Depl, error) {
 		)
 	}
 
-	depls := make([]Depl, 0, len(deplDefFiles))
-	for _, deplDefFilePath := range deplDefFiles {
-		if !strings.HasSuffix(deplDefFilePath, DeplDefFileExt) {
+	depls := make([]Depl, 0, len(deplDeclFiles))
+	for _, deplDeclFilePath := range deplDeclFiles {
+		if !strings.HasSuffix(deplDeclFilePath, DeplDeclFileExt) {
 			continue
 		}
 
-		deplName := strings.TrimSuffix(deplDefFilePath, DeplDefFileExt)
+		deplName := strings.TrimSuffix(deplDeclFilePath, DeplDeclFileExt)
 		depl, err := loadDepl(fsys, deplName)
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load package deployment declaration from %s", deplDefFilePath,
+				err, "couldn't load package deployment declaration from %s", deplDeclFilePath,
 			)
 		}
 		depls = append(depls, depl)
@@ -598,26 +601,26 @@ func loadDepls(fsys core.PathedFS, searchPattern string) ([]Depl, error) {
 }
 
 // ResAttachmentSource returns the source path for resources under the Depl instance.
-// The resulting slice is useful for constructing [core.AttachedRes] instances.
+// The resulting slice is useful for constructing [res.Attached] instances.
 func (d *Depl) ResAttachmentSource() []string {
 	return []string{
 		fmt.Sprintf("deployment %s", d.Name),
 	}
 }
 
-// DeplDef
+// DeplDecl
 
-// loadDeplDef loads a DeplDef from the specified file path in the provided base filesystem.
-func loadDeplDef(fsys core.PathedFS, filePath string) (DeplDef, error) {
+// loadDeplDecl loads a DeplDecl from the specified file path in the provided base filesystem.
+func loadDeplDecl(fsys ffs.PathedFS, filePath string) (DeplDecl, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
-		return DeplDef{}, errors.Wrapf(
+		return DeplDecl{}, errors.Wrapf(
 			err, "couldn't read deployment declaration file %s/%s", fsys.Path(), filePath,
 		)
 	}
-	declaration := DeplDef{}
+	declaration := DeplDecl{}
 	if err = yaml.Unmarshal(bytes, &declaration); err != nil {
-		return DeplDef{}, errors.Wrap(err, "couldn't parse deployment declaration")
+		return DeplDecl{}, errors.Wrap(err, "couldn't parse deployment declaration")
 	}
 	return declaration, nil
 }

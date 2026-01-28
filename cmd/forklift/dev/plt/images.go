@@ -21,7 +21,7 @@ func lsImgAction(c *cli.Context) error {
 		return err
 	}
 
-	images, err := fcli.ListRequiredImages(plt, caches.r, c.Bool("include-disabled"))
+	images, err := fcli.ListRequiredImages(plt, caches.p, c.Bool("include-disabled"))
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			os.Stderr, "Downloading Docker container images specified by the development pallet...",
 		)
 		if err := fcli.DownloadImages(
-			0, plt, caches.r, c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
+			0, plt, caches.p, c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}

@@ -12,7 +12,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
-	"github.com/forklift-run/forklift/pkg/core"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -135,7 +135,11 @@ func Plan(
 	return changeDeps, serialization, nil
 }
 
-func printDigraph[Node comparable, Digraph structures.MapDigraph[Node]](
+type MapDigraph[Node comparable] interface {
+	~map[Node]structures.Set[Node]
+}
+
+func printDigraph[Node comparable, Digraph MapDigraph[Node]](
 	indent int, digraph Digraph, edgeType string,
 ) {
 	sortedNodes := make([]Node, 0, len(digraph))
@@ -150,7 +154,7 @@ func printDigraph[Node comparable, Digraph structures.MapDigraph[Node]](
 	}
 }
 
-func printNodeOutboundEdges[Node comparable, Digraph structures.MapDigraph[Node]](
+func printNodeOutboundEdges[Node comparable, Digraph MapDigraph[Node]](
 	indent int, digraph Digraph, node Node, edgeType string,
 ) {
 	upstreamNodes := make([]Node, 0, len(digraph[node]))
@@ -318,12 +322,12 @@ func compareChangesTotal(
 	r, s *ReconciliationChange, deps, dependents structures.TransitiveClosure[*ReconciliationChange],
 ) int {
 	// Apply the partial ordering from dependencies
-	if result := compareReconciliationChangesByDeps(r, s, deps); result != core.CompareEQ {
+	if result := compareReconciliationChangesByDeps(r, s, deps); result != fpkg.CompareEQ {
 		return result
 	}
 
 	// Now r and s either are in a circular dependency or have no dependency relationships
-	if result := compareDeplsByDepCounts(r, s, deps, dependents); result != core.CompareEQ {
+	if result := compareDeplsByDepCounts(r, s, deps, dependents); result != fpkg.CompareEQ {
 		return result
 	}
 
@@ -340,12 +344,12 @@ func compareReconciliationChangesByDeps(
 	rDependsOnS := deps.HasEdge(r, s)
 	sDependsOnR := deps.HasEdge(s, r)
 	if rDependsOnS && !sDependsOnR {
-		return core.CompareGT
+		return fpkg.CompareGT
 	}
 	if !rDependsOnS && sDependsOnR {
-		return core.CompareLT
+		return fpkg.CompareLT
 	}
-	return core.CompareEQ
+	return fpkg.CompareEQ
 }
 
 func compareDeplsByDepCounts(
@@ -354,27 +358,27 @@ func compareDeplsByDepCounts(
 	// Deployments with greater numbers of dependents go first (needed for correct ordering among
 	// unrelated deployments sorted by slices.SortFunc).
 	if len(dependents[r]) > len(dependents[s]) {
-		return core.CompareLT
+		return fpkg.CompareLT
 	}
 	if len(dependents[r]) < len(dependents[s]) {
-		return core.CompareGT
+		return fpkg.CompareGT
 	}
 	// Deployments with greater numbers of dependencies go first (for aesthetic reasons)
 	if len(deps[r]) > len(deps[s]) {
-		return core.CompareLT
+		return fpkg.CompareLT
 	}
 	if len(deps[r]) < len(deps[s]) {
-		return core.CompareGT
+		return fpkg.CompareGT
 	}
-	return core.CompareEQ
+	return fpkg.CompareEQ
 }
 
 func compareDeplNames(r, s string) int {
 	if r < s {
-		return core.CompareLT
+		return fpkg.CompareLT
 	}
 	if r > s {
-		return core.CompareGT
+		return fpkg.CompareGT
 	}
-	return core.CompareEQ
+	return fpkg.CompareEQ
 }

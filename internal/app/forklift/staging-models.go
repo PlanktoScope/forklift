@@ -1,8 +1,6 @@
 package forklift
 
-import (
-	"github.com/forklift-run/forklift/pkg/core"
-)
+import ffs "github.com/forklift-run/forklift/pkg/fs"
 
 // Stage Store
 
@@ -12,12 +10,12 @@ const (
 )
 
 // FSStageStore is a source of bundles rooted at a single path, with bundles stored as
-// incrementally-numbered directories within a [core.PathedFS] filesystem.
+// incrementally-numbered directories within a [fpkg.PathedFS] filesystem.
 type FSStageStore struct {
 	// Manifest is the Forklift stage store's manifest.
 	Manifest StageStoreManifest
 	// FS is the filesystem which corresponds to the store of staged pallets.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A StageStoreManifest holds the state of the stage store.

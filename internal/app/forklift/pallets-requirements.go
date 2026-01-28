@@ -9,7 +9,9 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // GitRepoReq
@@ -31,22 +33,22 @@ func (r GitRepoReq) GetQueryPath() string {
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
 func CompareGitRepoReqs(r, s GitRepoReq) int {
-	if result := core.ComparePaths(r.Path(), s.Path()); result != core.CompareEQ {
+	if result := fpkg.ComparePaths(r.Path(), s.Path()); result != fpkg.CompareEQ {
 		return result
 	}
 	if result := semver.Compare(
 		r.VersionLock.Version, s.VersionLock.Version,
-	); result != core.CompareEQ {
+	); result != fpkg.CompareEQ {
 		return result
 	}
-	return core.CompareEQ
+	return fpkg.CompareEQ
 }
 
 // PalletReq
 
 // LoadFSPallet loads a FSPalletReq from the specified directory path in the provided base
 // filesystem, assuming the directory path is also the path of the required pallet.
-func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err error) {
+func loadFSPalletReq(fsys ffs.PathedFS, palletPath string) (r *FSPalletReq, err error) {
 	r = &FSPalletReq{}
 	if r.FS, err = fsys.Sub(palletPath); err != nil {
 		return nil, errors.Wrapf(
@@ -54,7 +56,7 @@ func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err
 		)
 	}
 	r.RequiredPath = palletPath
-	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
+	r.VersionLock, err = versioning.LoadLock(r.FS, versioning.LockDeclFile)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "couldn't load version lock declaration of requirement for pallet %s", palletPath,
@@ -67,8 +69,8 @@ func loadFSPalletReq(fsys core.PathedFS, palletPath string) (r *FSPalletReq, err
 // search pattern, assuming the directory paths in the base filesystem are also the paths of the
 // required pallets. The search pattern should be a [doublestar] pattern, such as `**`, matching the
 // pallet paths to search for.
-func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
-	searchPattern = path.Join(searchPattern, VersionLockDefFile)
+func loadFSPalletReqs(fsys ffs.PathedFS, searchPattern string) ([]*FSPalletReq, error) {
+	searchPattern = path.Join(searchPattern, versioning.LockDeclFile)
 	palletReqFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -78,15 +80,15 @@ func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq,
 	}
 
 	reqs := make([]*FSPalletReq, 0, len(palletReqFiles))
-	for _, palletReqDefFilePath := range palletReqFiles {
-		if path.Base(palletReqDefFilePath) != VersionLockDefFile {
+	for _, palletReqDeclFilePath := range palletReqFiles {
+		if path.Base(palletReqDeclFilePath) != versioning.LockDeclFile {
 			continue
 		}
 
-		req, err := loadFSPalletReq(fsys, path.Dir(palletReqDefFilePath))
+		req, err := loadFSPalletReq(fsys, path.Dir(palletReqDeclFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load pallet requirement from %s", palletReqDefFilePath,
+				err, "couldn't load pallet requirement from %s", palletReqDeclFilePath,
 			)
 		}
 		reqs = append(reqs, req)
@@ -98,7 +100,7 @@ func loadFSPalletReqs(fsys core.PathedFS, searchPattern string) ([]*FSPalletReq,
 // the provided base filesystem.
 // The sub-directory path does not have to actually exist; however, it would usually be provided
 // as a package path.
-func LoadFSPalletReqContaining(fsys core.PathedFS, subdirPath string) (*FSPalletReq, error) {
+func LoadFSPalletReqContaining(fsys ffs.PathedFS, subdirPath string) (*FSPalletReq, error) {
 	repoCandidatePath := subdirPath
 	for {
 		if repo, err := loadFSPalletReq(fsys, repoCandidatePath); err == nil {
@@ -147,85 +149,10 @@ func (r PalletReq) GetQueryPath() string {
 	return fmt.Sprintf("%s@%s", r.Path(), r.VersionLock.Version)
 }
 
-// RepoReq
-
-// LoadFSRepo loads a FSRepoReq from the specified directory path in the provided base
-// filesystem, assuming the directory path is also the path of the required repo.
-func loadFSRepoReq(fsys core.PathedFS, repoPath string) (r *FSRepoReq, err error) {
-	r = &FSRepoReq{}
-	if r.FS, err = fsys.Sub(repoPath); err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't enter directory %s from fs at %s", repoPath, fsys.Path(),
-		)
-	}
-	r.RequiredPath = repoPath
-	r.VersionLock, err = loadVersionLock(r.FS, VersionLockDefFile)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load version lock declaration of requirement for repo %s", repoPath,
-		)
-	}
-	return r, nil
-}
-
-// LoadFSRepoReqContaining loads the FSRepoReq containing the specified sub-directory path in
-// the provided base filesystem.
-// The sub-directory path does not have to actually exist; however, it would usually be provided
-// as a package path.
-func LoadFSRepoReqContaining(fsys core.PathedFS, subdirPath string) (*FSRepoReq, error) {
-	repoCandidatePath := subdirPath
-	for {
-		if repo, err := loadFSRepoReq(fsys, repoCandidatePath); err == nil {
-			return repo, nil
-		}
-		repoCandidatePath = path.Dir(repoCandidatePath)
-		if repoCandidatePath == "/" || repoCandidatePath == "." {
-			// we can't go up anymore!
-			return nil, errors.Errorf(
-				"no repo requirement declaration found in any parent directory of %s", subdirPath,
-			)
-		}
-	}
-}
-
-// loadFSRepoReqs loads all FSRepoReqs from the provided base filesystem matching the specified
-// search pattern, assuming the directory paths in the base filesystem are also the paths of the
-// required repos. The search pattern should be a [doublestar] pattern, such as `**`, matching the
-// repo paths to search for.
-func loadFSRepoReqs(fsys core.PathedFS, searchPattern string) ([]*FSRepoReq, error) {
-	searchPattern = path.Join(searchPattern, VersionLockDefFile)
-	repoReqFiles, err := doublestar.Glob(fsys, searchPattern)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't search for repo requirement files matching %s/%s", fsys.Path(), searchPattern,
-		)
-	}
-
-	reqs := make([]*FSRepoReq, 0, len(repoReqFiles))
-	for _, repoReqDefFilePath := range repoReqFiles {
-		if path.Base(repoReqDefFilePath) != VersionLockDefFile {
-			continue
-		}
-
-		req, err := loadFSRepoReq(fsys, path.Dir(repoReqDefFilePath))
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't load repo requirement from %s", repoReqDefFilePath)
-		}
-		reqs = append(reqs, req)
-	}
-	return reqs, nil
-}
-
 // GetPkgSubdir returns the package subdirectory within the required repo for the provided package
 // path.
-func (r RepoReq) GetPkgSubdir(pkgPath string) string {
+func (r PalletReq) GetPkgSubdir(pkgPath string) string {
 	return strings.TrimPrefix(pkgPath, fmt.Sprintf("%s/", r.Path()))
-}
-
-// GetCachePath returns the path of the repo in caches, which is of form
-// repoPath@version (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0).
-func (r RepoReq) GetCachePath() string {
-	return r.GetQueryPath()
 }
 
 // PkgReq
@@ -235,14 +162,14 @@ func (r RepoReq) GetCachePath() string {
 // path.
 func LoadRequiredFSPkg(
 	pkgReqLoader PkgReqLoader, pkgLoader FSPkgLoader, pkgPath string,
-) (*core.FSPkg, PkgReq, error) {
+) (*fpkg.FSPkg, PkgReq, error) {
 	req, err := pkgReqLoader.LoadPkgReq(pkgPath)
 	if err != nil {
 		return nil, PkgReq{}, errors.Wrapf(
 			err, "couldn't determine package requirement for package %s", pkgPath,
 		)
 	}
-	fsPkg, err := pkgLoader.LoadFSPkg(req.Path(), req.Repo.VersionLock.Version)
+	fsPkg, err := pkgLoader.LoadFSPkg(req.Path(), req.Pallet.VersionLock.Version)
 	if err != nil {
 		return nil, PkgReq{}, errors.Wrapf(err, "couldn't load required package %s", req.GetQueryPath())
 	}
@@ -250,20 +177,20 @@ func LoadRequiredFSPkg(
 }
 
 // GetCachePath returns the path of the package in caches, which is of form
-// repoPath@version/pkgSubdir
-// (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0/packages/core/infra/caddy-ingress).
+// palletPath@version/pkgSubdir
+// (e.g. github.com/PlanktoScope/pallet-standard@v2024.0.0/packages/fpkg/infra/caddy-ingress).
 func (r PkgReq) GetCachePath() string {
-	return path.Join(r.Repo.GetCachePath(), r.PkgSubdir)
+	return path.Join(r.Pallet.GetCachePath(), r.PkgSubdir)
 }
 
 // GetQueryPath returns the path of the package in version queries, which is of form
-// repoPath/pkgSubdir@version
-// (e.g. github.com/PlanktoScope/pallet-standard/packages/core/infra/caddy-ingress@v2024.0.0).
+// palletPath/pkgSubdir@version
+// (e.g. github.com/PlanktoScope/pallet-standard/packages/fpkg/infra/caddy-ingress@v2024.0.0).
 func (r PkgReq) GetQueryPath() string {
-	return fmt.Sprintf("%s@%s", r.Path(), r.Repo.VersionLock.Version)
+	return fmt.Sprintf("%s@%s", r.Path(), r.Pallet.VersionLock.Version)
 }
 
 // Path returns the package path of the required package.
 func (r PkgReq) Path() string {
-	return path.Join(r.Repo.Path(), r.PkgSubdir)
+	return path.Join(r.Pallet.Path(), r.PkgSubdir)
 }

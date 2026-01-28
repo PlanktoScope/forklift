@@ -9,43 +9,43 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
-func FprintPkg(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
+func FprintPkg(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg *fpkg.FSPkg) {
 	IndentedFprintf(indent, out, "Package: %s\n", pkg.Path())
 	indent++
 
-	fprintPkgRepo(indent, out, cache, pkg)
-	if core.CoversPath(cache, pkg.FS.Path()) {
-		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, pkg.FS.Path()))
+	fprintPkgPallet(indent, out, cache, pkg)
+	if ffs.CoversPath(cache, pkg.FS.Path()) {
+		IndentedFprintf(indent, out, "Path in cache: %s\n", ffs.GetSubdirPath(cache, pkg.FS.Path()))
 	} else {
 		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
 	}
 
-	FprintPkgSpec(indent, out, pkg.Def.Package)
+	fmt.Println()
+	FprintPkgSpec(indent, out, pkg.Decl.Package)
 	_, _ = fmt.Fprintln(out)
-	FprintDeplSpec(indent, out, pkg.Def.Deployment)
+	FprintDeplSpec(indent, out, pkg.Decl.Deployment)
 	_, _ = fmt.Fprintln(out)
-	FprintFeatureSpecs(indent, out, pkg.Def.Features)
+	FprintFeatureSpecs(indent, out, pkg.Decl.Features)
 }
 
-func fprintPkgRepo(indent int, out io.Writer, cache forklift.PathedRepoCache, pkg *core.FSPkg) {
-	IndentedFprintf(indent, out, "Provided by repo: %s\n", pkg.Repo.Path())
+func fprintPkgPallet(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg *fpkg.FSPkg) {
+	IndentedFprintf(indent, out, "Provided by pallet: %s\n", pkg.FSPkgTree.Path())
 	indent++
 
-	if core.CoversPath(cache, pkg.FS.Path()) {
-		IndentedFprintf(indent, out, "Version: %s\n", pkg.Repo.Version)
+	if ffs.CoversPath(cache, pkg.FS.Path()) {
+		IndentedFprintf(indent, out, "Version: %s\n", pkg.FSPkgTree.Version)
 	} else {
 		IndentedFprintf(
-			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.Repo.FS.Path(),
+			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FSPkgTree.FS.Path(),
 		)
 	}
-
-	IndentedFprintf(indent, out, "Description: %s\n", pkg.Repo.Def.Repo.Description)
 }
 
-func FprintPkgSpec(indent int, out io.Writer, spec core.PkgSpec) {
+func FprintPkgSpec(indent int, out io.Writer, spec fpkg.PkgSpec) {
 	IndentedFprintf(indent, out, "Description: %s\n", spec.Description)
 
 	IndentedFprint(indent, out, "Maintainers:")
@@ -73,7 +73,7 @@ func FprintPkgSpec(indent int, out io.Writer, spec core.PkgSpec) {
 	}
 }
 
-func fprintMaintainer(indent int, out io.Writer, maintainer core.PkgMaintainer) {
+func fprintMaintainer(indent int, out io.Writer, maintainer fpkg.PkgMaintainer) {
 	if maintainer.Email != "" {
 		BulletedFprintf(indent, out, "%s <%s>\n", maintainer.Name, maintainer.Email)
 	} else {
@@ -81,7 +81,7 @@ func fprintMaintainer(indent int, out io.Writer, maintainer core.PkgMaintainer) 
 	}
 }
 
-func FprintDeplSpec(indent int, out io.Writer, spec core.PkgDeplSpec) {
+func FprintDeplSpec(indent int, out io.Writer, spec fpkg.PkgDeplSpec) {
 	IndentedFprint(indent, out, "Deployment:\n")
 	indent++
 
@@ -97,7 +97,7 @@ func FprintDeplSpec(indent int, out io.Writer, spec core.PkgDeplSpec) {
 	fprintFileExports(indent, out, spec.Provides.FileExports)
 }
 
-func fprintFileExports(indent int, out io.Writer, fileExports []core.FileExportRes) {
+func fprintFileExports(indent int, out io.Writer, fileExports []fpkg.FileExportRes) {
 	IndentedFprint(indent, out, "File exports:")
 	if len(fileExports) == 0 {
 		_, _ = fmt.Fprint(out, " (none)")
@@ -106,13 +106,13 @@ func fprintFileExports(indent int, out io.Writer, fileExports []core.FileExportR
 	indent++
 	for _, fileExport := range fileExports {
 		switch fileExport.SourceType {
-		case core.FileExportSourceTypeLocal:
+		case fpkg.FileExportSourceTypeLocal:
 			fprintFileExportLocal(indent, out, fileExport)
-		case core.FileExportSourceTypeHTTP:
+		case fpkg.FileExportSourceTypeHTTP:
 			fprintFileExportHTTP(indent, out, fileExport)
-		case core.FileExportSourceTypeHTTPArchive:
+		case fpkg.FileExportSourceTypeHTTPArchive:
 			fprintFileExportHTTPArchive(indent, out, fileExport)
-		case core.FileExportSourceTypeOCIImage:
+		case fpkg.FileExportSourceTypeOCIImage:
 			fprintFileExportOCIImage(indent, out, fileExport)
 		default:
 			BulletedFprintf(
@@ -122,7 +122,7 @@ func fprintFileExports(indent int, out io.Writer, fileExports []core.FileExportR
 	}
 }
 
-func fprintFileExportLocal(indent int, out io.Writer, fileExport core.FileExportRes) {
+func fprintFileExportLocal(indent int, out io.Writer, fileExport fpkg.FileExportRes) {
 	BulletedFprint(indent, out, "Export from the package's local directory")
 	indent++
 	if fileExport.Description == "" {
@@ -139,7 +139,7 @@ func fprintFileExportLocal(indent int, out io.Writer, fileExport core.FileExport
 	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func fprintFileExportHTTP(indent int, out io.Writer, fileExport core.FileExportRes) {
+func fprintFileExportHTTP(indent int, out io.Writer, fileExport fpkg.FileExportRes) {
 	BulletedFprint(indent, out, "Export from an HTTP download")
 	indent++
 	if fileExport.Description == "" {
@@ -152,7 +152,7 @@ func fprintFileExportHTTP(indent int, out io.Writer, fileExport core.FileExportR
 	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func fprintFileExportHTTPArchive(indent int, out io.Writer, fileExport core.FileExportRes) {
+func fprintFileExportHTTPArchive(indent int, out io.Writer, fileExport fpkg.FileExportRes) {
 	BulletedFprint(indent, out, "Export from an HTTP archive download")
 	indent++
 	if fileExport.Description == "" {
@@ -165,7 +165,7 @@ func fprintFileExportHTTPArchive(indent int, out io.Writer, fileExport core.File
 	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func fprintFileExportOCIImage(indent int, out io.Writer, fileExport core.FileExportRes) {
+func fprintFileExportOCIImage(indent int, out io.Writer, fileExport fpkg.FileExportRes) {
 	BulletedFprint(indent, out, "Export from a Docker/OCI image")
 	indent++
 	if fileExport.Description == "" {
@@ -178,7 +178,7 @@ func fprintFileExportOCIImage(indent int, out io.Writer, fileExport core.FileExp
 	IndentedFprintf(indent, out, "Export as: %s\n", fileExport.Target)
 }
 
-func FprintFeatureSpecs(indent int, out io.Writer, features map[string]core.PkgFeatureSpec) {
+func FprintFeatureSpecs(indent int, out io.Writer, features map[string]fpkg.PkgFeatureSpec) {
 	IndentedFprint(indent, out, "Optional features:")
 	names := make([]string, 0, len(features))
 	for name := range features {
@@ -196,7 +196,7 @@ func FprintFeatureSpecs(indent int, out io.Writer, features map[string]core.PkgF
 	}
 }
 
-func FprintFeatureSpec(indent int, out io.Writer, name string, spec core.PkgFeatureSpec) {
+func FprintFeatureSpec(indent int, out io.Writer, name string, spec fpkg.PkgFeatureSpec) {
 	IndentedFprintf(indent, out, "%s:\n", name)
 	indent++
 
@@ -219,18 +219,20 @@ func FprintFeatureSpec(indent int, out io.Writer, name string, spec core.PkgFeat
 func FprintPalletPkgs(
 	indent int, out io.Writer, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
 ) error {
-	reqs, err := pallet.LoadFSRepoReqs("**")
+	reqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
-		return errors.Wrapf(err, "couldn't identify repos in pallet %s", pallet.FS.Path())
+		return errors.Wrapf(err, "couldn't identify pkg trees in pallet %s", pallet.FS.Path())
 	}
 
-	// List packages provided by required repos
-	pkgs := make([]*core.FSPkg, 0)
+	// List packages provided by required pkg trees
+	pkgs := make([]*fpkg.FSPkg, 0)
 	for _, req := range reqs {
-		repoCachePath := req.GetCachePath()
-		loaded, err := loader.LoadFSPkgs(path.Join(repoCachePath, "**"))
+		pkgTreeCachePath := req.GetCachePath()
+		loaded, err := loader.LoadFSPkgs(path.Join(pkgTreeCachePath, "**"))
 		if err != nil {
-			return errors.Wrapf(err, "couldn't load packages from repo cached at %s", repoCachePath)
+			return errors.Wrapf(
+				err, "couldn't load packages from pkg tree cached at %s", pkgTreeCachePath,
+			)
 		}
 		pkgs = append(pkgs, loaded...)
 	}
@@ -241,14 +243,11 @@ func FprintPalletPkgs(
 		return errors.Wrapf(err, "couldn't load local packages defined by pallet at %s", pallet.Path())
 	}
 	for _, pkg := range loaded {
-		pkg.Repo.Def.Repo.Path = "/"
-		pkg.RepoPath = "/"
+		pkg.ParentPath = "/"
 	}
 	pkgs = append(pkgs, loaded...)
 
-	slices.SortFunc(pkgs, func(a, b *core.FSPkg) int {
-		return core.ComparePkgs(a.Pkg, b.Pkg)
-	})
+	slices.SortFunc(pkgs, fpkg.CompareFSPkgs)
 	for _, pkg := range pkgs {
 		IndentedFprintf(indent, out, "%s\n", pkg.Path())
 	}
@@ -256,15 +255,19 @@ func FprintPalletPkgs(
 }
 
 func FprintPkgLocation(
-	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
+	overlayCache, err := makeOverlayCache(pallet, cache)
+	if err != nil {
+		return err
+	}
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
 		)
 	}
-	fsys, ok := pkg.FS.(*forklift.MergeFS)
+	fsys, ok := pkg.FS.(*ffs.MergeFS)
 	if !ok {
 		_, _ = fmt.Fprintln(out, pkg.FS.Path())
 		return nil
@@ -280,9 +283,13 @@ func FprintPkgLocation(
 
 func FprintPkgInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedRepoCache, pkgPath string,
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
+	overlayCache, err := makeOverlayCache(pallet, cache)
+	if err != nil {
+		return err
+	}
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
@@ -290,4 +297,22 @@ func FprintPkgInfo(
 	}
 	FprintPkg(indent, out, cache, pkg)
 	return nil
+}
+
+func makeOverlayCache(
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+) (*forklift.LayeredPalletCache, error) {
+	overrideCache, err := forklift.NewPalletOverrideCache(
+		[]*forklift.FSPallet{pallet},
+		map[string][]string{
+			pallet.Path(): {""},
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't make pallet override cache")
+	}
+	return &forklift.LayeredPalletCache{
+		Underlay: cache,
+		Overlay:  overrideCache,
+	}, nil
 }

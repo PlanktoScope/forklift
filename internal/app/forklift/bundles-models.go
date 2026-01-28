@@ -1,7 +1,7 @@
 package forklift
 
 import (
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // Bundle
@@ -24,7 +24,7 @@ type FSBundle struct {
 	// Bundle is the pallet bundle at the root of the filesystem.
 	Bundle
 	// FS is a filesystem which contains the bundle's contents.
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // A Bundle is a Forklift pallet bundle, a complete compilation of all files (except container
@@ -57,7 +57,7 @@ type BundleManifest struct {
 	// the deepest ancestor at the end of each list).
 	Imports map[string][]string `yaml:"imports,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
-	Deploys map[string]DeplDef `yaml:"deploys,omitempty"`
+	Deploys map[string]DeplDecl `yaml:"deploys,omitempty"`
 	// Downloads lists the downloadable paths of resources downloaded for creation and/or use of the
 	// bundle. Keys are the names of the bundle's deployments which include downloads.
 	Downloads map[string]BundleDeplDownloads `yaml:"downloads,omitempty"`
@@ -85,8 +85,6 @@ type BundlePallet struct {
 type BundleInclusions struct {
 	// Pallets describes external pallets used to build the bundled pallet.
 	Pallets map[string]BundlePalletInclusion `yaml:"pallets,omitempty"`
-	// Repos describes package repositories used to build the bundled pallet.
-	Repos map[string]BundleRepoInclusion `yaml:"repositories,omitempty"`
 }
 
 // BundlePalletInclusion describes a pallet used to build the bundled pallet.
@@ -102,14 +100,6 @@ type BundlePalletInclusion struct {
 	// i.e. maps whose keys are target file paths (where the files are imported to) and whose values
 	// are source file paths (where the files are imported from).
 	Imports map[string]map[string]string `yaml:"imports,omitempty"`
-}
-
-// BundleRepoInclusion describes a package repository used to build the bundled pallet.
-type BundleRepoInclusion struct {
-	Req RepoReq `yaml:"requirement,inline"`
-	// Override describes the pallet used to override the required pallet, if an override was
-	// specified for the pallet when building the bundled pallet.
-	Override BundleInclusionOverride `yaml:"override,omitempty"`
 }
 
 // BundleInclusionOverride describes a pallet used to override a required pallet.

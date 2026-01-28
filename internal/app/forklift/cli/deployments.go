@@ -34,7 +34,7 @@ func AddDepl(
 	)
 	depl := forklift.Depl{
 		Name: deplName,
-		Def: forklift.DeplDef{
+		Decl: forklift.DeplDecl{
 			Package:  pkgPath,
 			Features: features,
 			Disabled: disabled,
@@ -61,17 +61,17 @@ func AddDepl(
 func checkDepl(
 	pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader, depl forklift.Depl,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, pkgLoader, depl.Def.Package)
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, pkgLoader, depl.Decl.Package)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't resolve package path %s to a package using the pallet's repo requirements",
-			depl.Def.Package,
+			depl.Decl.Package,
 		)
 	}
 
-	allowedFeatures := pkg.Def.Features
-	unrecognizedFeatures := make([]string, 0, len(depl.Def.Features))
-	for _, name := range depl.Def.Features {
+	allowedFeatures := pkg.Decl.Features
+	unrecognizedFeatures := make([]string, 0, len(depl.Decl.Features))
+	for _, name := range depl.Decl.Features {
 		if _, ok := allowedFeatures[name]; !ok {
 			unrecognizedFeatures = append(unrecognizedFeatures, name)
 		}
@@ -92,7 +92,7 @@ func writeDepl(pallet *forklift.FSPallet, depl forklift.Depl) error {
 	encoder := yaml.NewEncoder(&buf)
 	const yamlIndent = 2
 	encoder.SetIndent(yamlIndent)
-	if err = encoder.Encode(depl.Def); err != nil {
+	if err = encoder.Encode(depl.Decl); err != nil {
 		return errors.Wrapf(err, "couldn't marshal package deployment for %s", deplPath)
 	}
 	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
@@ -147,7 +147,7 @@ func SetDeplPkg(
 		)
 	}
 
-	depl.Def.Package = pkgPath
+	depl.Decl.Package = pkgPath
 	// We want to check both the package path and the feature flags for validity, since changing the
 	// package path could change the allowed feature flags:
 	if err := checkDepl(pallet, pkgLoader, depl); err != nil {
@@ -189,10 +189,10 @@ func AddDeplFeat(
 	}
 
 	existingFeatures := make(structures.Set[string])
-	for _, name := range depl.Def.Features {
+	for _, name := range depl.Decl.Features {
 		existingFeatures.Add(name)
 	}
-	allowedFeatures := resolved.Pkg.Def.Features
+	allowedFeatures := resolved.Pkg.Decl.Features
 	unrecognizedFeatures := make([]string, 0, len(features))
 	newFeatures := make([]string, 0, len(features))
 	for _, name := range features {
@@ -208,7 +208,7 @@ func AddDeplFeat(
 	if len(unrecognizedFeatures) > 0 {
 		err := errors.Errorf(
 			"feature flags %+v are allowed by package %s; to skip this check, enable the --force flag",
-			unrecognizedFeatures, depl.Def.Package,
+			unrecognizedFeatures, depl.Decl.Package,
 		)
 		if !force {
 			return err
@@ -216,7 +216,7 @@ func AddDeplFeat(
 		IndentedFprintf(indent, os.Stderr, "Warning: %s", err.Error())
 	}
 
-	depl.Def.Features = append(depl.Def.Features, newFeatures...)
+	depl.Decl.Features = append(depl.Decl.Features, newFeatures...)
 	if err := writeDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
@@ -243,15 +243,15 @@ func RemoveDeplFeat(
 	for _, name := range features {
 		removedFeatures.Add(name)
 	}
-	newFeatures := make([]string, 0, len(depl.Def.Features))
-	for _, name := range depl.Def.Features {
+	newFeatures := make([]string, 0, len(depl.Decl.Features))
+	for _, name := range depl.Decl.Features {
 		if removedFeatures.Has(name) {
 			continue
 		}
 		newFeatures = append(newFeatures, name)
 	}
 
-	depl.Def.Features = newFeatures
+	depl.Decl.Features = newFeatures
 	if err := writeDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
@@ -274,7 +274,7 @@ func SetDeplDisabled(indent int, pallet *forklift.FSPallet, deplName string, dis
 		)
 	}
 
-	depl.Def.Disabled = disabled
+	depl.Decl.Disabled = disabled
 	if err := writeDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}

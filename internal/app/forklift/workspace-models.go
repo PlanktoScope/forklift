@@ -1,11 +1,9 @@
 package forklift
 
-import (
-	"github.com/forklift-run/forklift/pkg/core"
-)
+import ffs "github.com/forklift-run/forklift/pkg/fs"
 
 type FSWorkspace struct {
-	FS core.PathedFS
+	FS ffs.PathedFS
 }
 
 // in $HOME/.cache/forklift:
@@ -13,7 +11,6 @@ type FSWorkspace struct {
 const (
 	cacheDirPath          = ".cache/forklift"
 	cacheMirrorsDirName   = "mirrors"
-	cacheReposDirName     = "repositories"
 	cachePalletsDirName   = "pallets"
 	cacheDownloadsDirName = "downloads"
 )

@@ -21,7 +21,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/pkg/core"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -29,12 +30,12 @@ import (
 
 func NewFSBundle(path string) *FSBundle {
 	return &FSBundle{
-		FS: DirFS(path),
+		FS: ffs.DirFS(path),
 	}
 }
 
 // LoadFSBundle loads a FSBundle from a specified directory path in the provided base filesystem.
-func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error) {
+func LoadFSBundle(fsys ffs.PathedFS, subdirPath string) (b *FSBundle, err error) {
 	b = &FSBundle{}
 	if b.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -45,20 +46,12 @@ func LoadFSBundle(fsys core.PathedFS, subdirPath string) (b *FSBundle, err error
 		return nil, errors.Errorf("couldn't load bundle manifest")
 	}
 	for path, req := range b.Bundle.Manifest.Includes.Pallets {
-		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Def.Version(); err != nil {
+		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Decl.Version(); err != nil {
 			return nil, errors.Wrapf(
 				err, "couldn't determine requirement version of included pallet %s", path,
 			)
 		}
 		b.Bundle.Manifest.Includes.Pallets[path] = req
-	}
-	for path, req := range b.Bundle.Manifest.Includes.Repos {
-		if req.Req.VersionLock.Version, err = req.Req.VersionLock.Def.Version(); err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't determine requirement version of included repo %s", path,
-			)
-		}
-		b.Bundle.Manifest.Includes.Repos[path] = req
 	}
 	return b, nil
 }
@@ -88,7 +81,7 @@ func (b *FSBundle) Path() string {
 func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 	shallow := pallet.FS
 	for {
-		merged, ok := shallow.(*MergeFS)
+		merged, ok := shallow.(*ffs.MergeFS)
 		if !ok {
 			break
 		}
@@ -112,7 +105,7 @@ func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
 	return nil
 }
 
-func CopyFS(fsys core.PathedFS, dest string) error {
+func CopyFS(fsys ffs.PathedFS, dest string) error {
 	return fs.WalkDir(fsys, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -129,8 +122,8 @@ func CopyFS(fsys core.PathedFS, dest string) error {
 	})
 }
 
-func copyFSFile(fsys core.PathedFS, sourcePath, destPath string, destPerms fs.FileMode) error {
-	if readLinkFS, ok := fsys.(ReadLinkFS); ok {
+func copyFSFile(fsys ffs.PathedFS, sourcePath, destPath string, destPerms fs.FileMode) error {
+	if readLinkFS, ok := fsys.(ffs.ReadLinkFS); ok {
 		sourceInfo, err := readLinkFS.StatLink(sourcePath)
 		if err != nil {
 			return errors.Wrapf(
@@ -190,8 +183,8 @@ func copyFSFile(fsys core.PathedFS, sourcePath, destPath string, destPerms fs.Fi
 	return nil
 }
 
-func copyFSSymlink(fsys core.PathedFS, sourcePath, destPath string) error {
-	readLinkFS, ok := fsys.(ReadLinkFS)
+func copyFSSymlink(fsys ffs.PathedFS, sourcePath, destPath string) error {
+	readLinkFS, ok := fsys.(ffs.ReadLinkFS)
 	if !ok {
 		return errors.Errorf("%s is not a ReadLinkFS!", fsys.Path())
 	}
@@ -214,7 +207,7 @@ func (b *FSBundle) getBundledMergedPalletPath() string {
 // FSBundle: Deployments
 
 func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
-	b.Manifest.Deploys[depl.Name] = depl.Depl.Def
+	b.Manifest.Deploys[depl.Name] = depl.Depl.Decl
 	downloads := BundleDeplDownloads{}
 	if downloads.HTTPFile, err = depl.GetHTTPFileDownloadURLs(); err != nil {
 		return errors.Wrapf(
@@ -229,7 +222,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	b.Manifest.Downloads[depl.Name] = downloads
 
 	if err = CopyFS(depl.Pkg.FS, filepath.FromSlash(
-		path.Join(b.getPackagesPath(), depl.Def.Package),
+		path.Join(b.getPackagesPath(), depl.Decl.Package),
 	)); err != nil {
 		return errors.Wrapf(
 			err, "couldn't bundle files from package %s for deployment %s from %s",
@@ -271,9 +264,9 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 }
 
 func makeComposeAppSummary(
-	depl *ResolvedDepl, bundleFS core.PathedFS,
+	depl *ResolvedDepl, bundleFS ffs.PathedFS,
 ) (BundleDeplComposeApp, error) {
-	bundlePkg, err := core.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Def.Package))
+	bundlePkg, err := fpkg.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Decl.Package))
 	if err != nil {
 		return BundleDeplComposeApp{}, errors.Wrapf(
 			err, "couldn't load bundled package %s", depl.Pkg.Path(),
@@ -383,7 +376,7 @@ func (b *FSBundle) LoadDepl(name string) (Depl, error) {
 	}
 	return Depl{
 		Name: name,
-		Def:  depl,
+		Decl: depl,
 	}, nil
 }
 
@@ -417,7 +410,7 @@ func (b *FSBundle) LoadResolvedDepl(name string) (depl *ResolvedDepl, err error)
 	resolved := &ResolvedDepl{
 		Depl: Depl{
 			Name: name,
-			Def:  b.Manifest.Deploys[name],
+			Decl: b.Manifest.Deploys[name],
 		},
 	}
 	pkgPath := b.Manifest.Deploys[name].Package
@@ -440,20 +433,6 @@ func (b *FSBundle) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 
 func (b *FSBundle) getPackagesPath() string {
 	return path.Join(b.FS.Path(), packagesDirName)
-}
-
-// WriteRepoDefFile creates a repo definition file at the packages path, so that all loaded packages
-// are associated with a repo.
-func (b *FSBundle) WriteRepoDefFile() error {
-	if err := EnsureExists(b.getPackagesPath()); err != nil {
-		return err
-	}
-	return core.WriteRepoDef(
-		core.RepoDef{
-			ForkliftVersion: b.Manifest.ForkliftVersion,
-		},
-		filepath.FromSlash(path.Join(b.getPackagesPath(), core.RepoDefFile)),
-	)
 }
 
 // FSBundle: Exports
@@ -483,15 +462,15 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 				)
 			}
 			switch export.SourceType {
-			case core.FileExportSourceTypeLocal:
+			case fpkg.FileExportSourceTypeLocal:
 				if err := exportLocalFile(resolved, export, exportPath); err != nil {
 					return err
 				}
-			case core.FileExportSourceTypeHTTP:
+			case fpkg.FileExportSourceTypeHTTP:
 				if err := exportHTTPFile(export, exportPath, dlCache); err != nil {
 					return err
 				}
-			case core.FileExportSourceTypeHTTPArchive, core.FileExportSourceTypeOCIImage:
+			case fpkg.FileExportSourceTypeHTTPArchive, fpkg.FileExportSourceTypeOCIImage:
 				if err := exportArchiveFile(export, exportPath, dlCache); err != nil {
 					return err
 				}
@@ -503,7 +482,7 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 	return nil
 }
 
-func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPath string) error {
+func exportLocalFile(resolved *ResolvedDepl, export fpkg.FileExportRes, exportPath string) error {
 	if err := copyFSFile(
 		resolved.Pkg.FS, strings.TrimPrefix(export.Source, "/"), filepath.FromSlash(exportPath),
 		export.Permissions,
@@ -513,7 +492,7 @@ func exportLocalFile(resolved *ResolvedDepl, export core.FileExportRes, exportPa
 	return nil
 }
 
-func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDownloadCache) error {
+func exportHTTPFile(export fpkg.FileExportRes, exportPath string, dlCache *FSDownloadCache) error {
 	sourcePath, err := dlCache.GetFilePath(export.URL)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
@@ -529,7 +508,7 @@ func exportHTTPFile(export core.FileExportRes, exportPath string, dlCache *FSDow
 }
 
 func exportArchiveFile(
-	export core.FileExportRes, exportPath string, dlCache *FSDownloadCache,
+	export fpkg.FileExportRes, exportPath string, dlCache *FSDownloadCache,
 ) error {
 	kind, err := determineFileType(export, dlCache)
 	if err != nil {
@@ -542,11 +521,11 @@ func exportArchiveFile(
 	switch export.SourceType {
 	default:
 		return errors.Errorf("couldn't open downloaded archive of type %s", export.SourceType)
-	case core.FileExportSourceTypeHTTPArchive:
+	case fpkg.FileExportSourceTypeHTTPArchive:
 		if archiveFile, err = dlCache.OpenFile(export.URL); err != nil {
 			return errors.Wrapf(err, "couldn't open cached http download archive %s", export.URL)
 		}
-	case core.FileExportSourceTypeOCIImage:
+	case fpkg.FileExportSourceTypeOCIImage:
 		if archiveFile, err = dlCache.OpenOCIImage(export.URL); err != nil {
 			return errors.Wrapf(err, "couldn't open cached oci image download tarball %s", export.URL)
 		}
@@ -589,7 +568,7 @@ func exportArchiveFile(
 }
 
 func determineFileType(
-	export core.FileExportRes, dlCache *FSDownloadCache,
+	export fpkg.FileExportRes, dlCache *FSDownloadCache,
 ) (ft ftt.Type, err error) {
 	var archiveFile fs.File
 	switch export.SourceType {
@@ -597,13 +576,13 @@ func determineFileType(
 		return filetype.Unknown, errors.Errorf(
 			"couldn't open downloaded archive of type %s", export.SourceType,
 		)
-	case core.FileExportSourceTypeHTTPArchive:
+	case fpkg.FileExportSourceTypeHTTPArchive:
 		if archiveFile, err = dlCache.OpenFile(export.URL); err != nil {
 			return filetype.Unknown, errors.Wrapf(
 				err, "couldn't open cached http download archive %s", export.URL,
 			)
 		}
-	case core.FileExportSourceTypeOCIImage:
+	case fpkg.FileExportSourceTypeOCIImage:
 		if archiveFile, err = dlCache.OpenOCIImage(export.URL); err != nil {
 			return filetype.Unknown, errors.Wrapf(
 				err, "couldn't open cached oci image download tarball %s", export.URL,
@@ -717,55 +696,69 @@ func extractRegularFile(
 	return nil
 }
 
-// FSBundle: FSRepoLoader
+// FSBundle: FSPalletLoader
 
-func (b *FSBundle) LoadFSRepo(repoPath string, version string) (*core.FSRepo, error) {
+func (b *FSBundle) LoadFSPallet(palletPath string, version string) (*FSPallet, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return core.LoadFSRepo(b.FS, path.Join(packagesDirName, repoPath))
+	return LoadFSPallet(b.FS, path.Join(packagesDirName, palletPath))
 }
 
-func (b *FSBundle) LoadFSRepos(searchPattern string) ([]*core.FSRepo, error) {
+func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return core.LoadFSRepos(b.FS, path.Join(packagesDirName, searchPattern))
+	return LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
+}
+
+func (b *FSBundle) LoadFSPkgTree() (*fpkg.FSPkgTree, error) {
+	if b == nil {
+		return nil, errors.New("bundle is nil")
+	}
+
+	fsys, err := b.FS.Sub(packagesDirName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't load package tree from bundle")
+	}
+	return &fpkg.FSPkgTree{
+		FS: fsys,
+	}, nil
 }
 
 // FSBundle: FSPkgLoader
 
-func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error) {
+func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	repo, err := b.LoadFSRepo(".", "")
+	pkgTree, err := b.LoadFSPkgTree()
 	if err != nil {
 		return nil, err
 	}
-	return repo.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
+	return pkgTree.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
 }
 
-func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
+func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	repo, err := b.LoadFSRepo(".", "")
+	pkgTree, err := b.LoadFSPkgTree()
 	if err != nil {
 		return nil, err
 	}
-	return repo.LoadFSPkgs(searchPattern)
+	return pkgTree.LoadFSPkgs(searchPattern)
 }
 
 // BundleManifest
 
 // loadBundleManifest loads a BundleManifest from the specified file path in the provided base
 // filesystem.
-func loadBundleManifest(fsys core.PathedFS, filePath string) (BundleManifest, error) {
+func loadBundleManifest(fsys ffs.PathedFS, filePath string) (BundleManifest, error) {
 	bytes, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
 		return BundleManifest{}, errors.Wrapf(
@@ -782,16 +775,11 @@ func loadBundleManifest(fsys core.PathedFS, filePath string) (BundleManifest, er
 // BundleInclusions
 
 func (i *BundleInclusions) HasInclusions() bool {
-	return len(i.Pallets)+len(i.Repos) > 0
+	return len(i.Pallets) > 0
 }
 
 func (i *BundleInclusions) HasOverrides() bool {
 	for _, inclusion := range i.Pallets {
-		if inclusion.Override != (BundleInclusionOverride{}) {
-			return true
-		}
-	}
-	for _, inclusion := range i.Repos {
 		if inclusion.Override != (BundleInclusionOverride{}) {
 			return true
 		}
