@@ -71,10 +71,11 @@ func (d *ResolvedDepl) Check() (errs []error) {
 	}
 	// An empty version is treated as "any version" for this check, so that packages loaded from
 	// overriding pkg trees (where versioning is ignored) will not fail this version check:
-	if d.Pkg.PkgTree.Version != "" && d.PkgReq.Pallet.VersionLock.Version != d.Pkg.PkgTree.Version {
+	if d.Pkg.FSPkgTree.Version != "" &&
+		d.PkgReq.Pallet.VersionLock.Version != d.Pkg.FSPkgTree.Version {
 		errs = append(errs, errors.Errorf(
 			"resolved package version %s does not match required package version %s",
-			d.Pkg.PkgTree.Version, d.PkgReq.Pallet.VersionLock.Version,
+			d.Pkg.FSPkgTree.Version, d.PkgReq.Pallet.VersionLock.Version,
 		))
 	}
 	return errs

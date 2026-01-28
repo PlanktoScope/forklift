@@ -15,6 +15,26 @@ import (
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
+// The result of comparison functions is one of these values.
+const (
+	CompareLT = -1
+	CompareEQ = 0
+	CompareGT = 1
+)
+
+// ComparePaths returns an integer comparing two paths. The result will be 0 if the r and s are
+// the same; -1 if r alphabetically comes before s; or +1 if r alphabetically comes after s.
+// TODO: if this is just the negation of the standard string comparison, we can simplify this.
+func ComparePaths(r, s string) int {
+	if r < s {
+		return CompareLT
+	}
+	if r > s {
+		return CompareGT
+	}
+	return CompareEQ
+}
+
 // FSPkg
 
 // LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
@@ -36,7 +56,7 @@ func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
 // LoadFSPkgs loads all FSPkgs from the provided base filesystem matching the specified search
 // pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching package
 // directories to search for.
-// The repo path, and the package subdirectory, and the pointer to the repo are all left
+// The pkg tree path, and the package subdirectory, and the pointer to the pkg tree are all left
 // uninitialized.
 func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 	searchPattern = path.Join(searchPattern, PkgDeclFile)
@@ -62,45 +82,36 @@ func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 	return pkgs, nil
 }
 
-// AttachFSPkgTree updates the FSPkg instance's PkgTreePath, Subdir, Pkg.PkgTree, and PkgTree fields
-// based on the provided repo.
-func (p *FSPkg) AttachFSPkgTree(repo *FSPkgTree) error {
-	p.PkgTreePath = repo.Decl.PkgTree.Path
-	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path())) {
+// AttachFSPkgTree updates the FSPkg instance's Subdir, Pkg.FSPkgTree, and FSPkgTree fields
+// based on the provided pkg tree.
+func (p *FSPkg) AttachFSPkgTree(pkgTree *FSPkgTree) error {
+	p.ParentPath = pkgTree.Path()
+	if !strings.HasPrefix(p.FS.Path(), fmt.Sprintf("%s/", pkgTree.FS.Path())) {
 		return errors.Errorf(
-			"package at %s is not within the scope of repo %s at %s",
-			p.FS.Path(), repo.Path(), repo.FS.Path(),
+			"package at %s is not within the scope of pkg tree %s at %s",
+			p.FS.Path(), pkgTree.FS.Path(), pkgTree.FS.Path(),
 		)
 	}
-	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", repo.FS.Path()))
-	p.Pkg.PkgTree = &repo.PkgTree
-	p.PkgTree = repo
+	p.Subdir = strings.TrimPrefix(p.FS.Path(), fmt.Sprintf("%s/", pkgTree.FS.Path()))
+	p.FSPkgTree = pkgTree
 	return nil
 }
 
 // Check looks for errors in the construction of the package.
 func (p *FSPkg) Check() (errs []error) {
-	if p.PkgTree != nil {
-		if p.Pkg.PkgTree != &p.PkgTree.PkgTree {
-			errs = append(errs, errors.New(
-				"inconsistent pointers to the repo between the package as a FSPkg and the package as a Pkg",
-			))
-		}
-	}
-	errs = append(errs, p.Pkg.Check()...)
-	return errs
+	return p.Pkg.Check()
 }
 
-// ComparePkgs returns an integer comparing two [Pkg] instances according to their paths, and their
-// respective repos' versions. The result will be 0 if the p and q have the same paths and
+// CompareFSPkgs returns an integer comparing two [FSPkg] instances according to their paths, and their
+// respective [FSPkgTree]s' versions. The result will be 0 if the p and q have the same paths and
 // versions; -1 if r has a path which alphabetically comes before the path of s, or if the paths are
 // the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
 // the path of s, or if the paths are the same but r has a higher version than s.
-func ComparePkgs(p, q Pkg) int {
+func CompareFSPkgs(p, q *FSPkg) int {
 	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
 		return result
 	}
-	if result := semver.Compare(p.PkgTree.Version, q.PkgTree.Version); result != CompareEQ {
+	if result := semver.Compare(p.FSPkgTree.Version, q.FSPkgTree.Version); result != CompareEQ {
 		return result
 	}
 	return CompareEQ
@@ -110,19 +121,13 @@ func ComparePkgs(p, q Pkg) int {
 
 // Path returns the package path of the Pkg instance.
 func (p Pkg) Path() string {
-	return path.Join(p.PkgTreePath, p.Subdir)
+	return path.Join(p.ParentPath, p.Subdir)
 }
 
 // Check looks for errors in the construction of the package.
 func (p Pkg) Check() (errs []error) {
 	// TODO: implement a check method on PkgDecl
 	// errs = append(errs, ErrsWrap(p.Decl.Check(), "invalid package declaration")...)
-	if p.PkgTree != nil && p.PkgTreePath != p.PkgTree.Path() {
-		errs = append(errs, errors.Errorf(
-			"repo path %s of package is inconsistent with path %s of attached repo",
-			p.PkgTreePath, p.PkgTree.Path(),
-		))
-	}
 	return errs
 }
 

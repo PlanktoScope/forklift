@@ -35,7 +35,11 @@ func FprintDeplInfo(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	resolved, err := forklift.ResolveDepl(pallet, cache, depl)
+	overlayCache, err := makeOverlayCache(pallet, cache)
+	if err != nil {
+		return err
+	}
+	resolved, err := forklift.ResolveDepl(pallet, overlayCache, depl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
@@ -131,9 +135,7 @@ func fprintDeplPkg(
 	indent++
 
 	IndentedFprintf(indent, out, "Description: %s\n", depl.Pkg.Decl.Package.Description)
-	if depl.Pkg.PkgTree.Decl.PkgTree != (core.PkgTreeSpec{}) {
-		fprintPkgPallet(indent, out, cache, depl.Pkg)
-	}
+	fprintPkgPallet(indent, out, cache, depl.Pkg)
 }
 
 func fprintFeatures(indent int, out io.Writer, features map[string]core.PkgFeatureSpec) {
@@ -255,7 +257,11 @@ func FprintDeplPkgLocation(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	resolved, err := forklift.ResolveDepl(pallet, cache, depl)
+	overlayCache, err := makeOverlayCache(pallet, cache)
+	if err != nil {
+		return err
+	}
+	resolved, err := forklift.ResolveDepl(pallet, overlayCache, depl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}

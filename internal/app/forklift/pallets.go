@@ -30,23 +30,10 @@ func LoadFSPallet(fsys ffs.PathedFS, subdirPath string) (p *FSPallet, err error)
 	if p.Pallet.Decl, err = loadPalletDecl(p.FS, PalletDeclFile); err != nil {
 		return nil, errors.Errorf("couldn't load pallet config")
 	}
-	if p.PkgTree, err = core.LoadFSPkgTree(fsys, subdirPath); err != nil {
-		// If we couldn't explicitly load the pallet as a pkg tree, we infer an implicit pkg tree from the
-		// pallet:
-		p.PkgTree = &core.FSPkgTree{
-			PkgTree: core.PkgTree{
-				Decl: core.PkgTreeDecl{
-					ForkliftVersion: p.Pallet.Decl.ForkliftVersion,
-					PkgTree: core.PkgTreeSpec{
-						Path:        p.Pallet.Decl.Pallet.Path,
-						Description: p.Pallet.Decl.Pallet.Description,
-						ReadmeFile:  p.Pallet.Decl.Pallet.ReadmeFile,
-					},
-				},
-				Version: p.Pallet.Version,
-			},
-			FS: p.FS,
-		}
+	p.FSPkgTree = &core.FSPkgTree{
+		FS:       p.FS,
+		RootPath: p.Path(),
+		Version:  p.Pallet.Version,
 	}
 	return p, nil
 }
@@ -202,13 +189,11 @@ func (p *FSPallet) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
 
 	palletsFS, err := p.GetPalletReqsFS()
 	if err != nil {
-		return PkgReq{}, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
+		return r, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
 	}
 	fsPalletReq, err := LoadFSPalletReqContaining(palletsFS, pkgPath)
 	if err != nil {
-		return PkgReq{}, errors.Wrapf(
-			err, "couldn't find pallet providing package %s in pallet", pkgPath,
-		)
+		return r, errors.Wrapf(err, "couldn't find pallet providing package %s in pallet", pkgPath)
 	}
 	r.Pallet = fsPalletReq.PalletReq
 	r.PkgSubdir = fsPalletReq.GetPkgSubdir(pkgPath)
@@ -257,7 +242,7 @@ func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *core.FSPkg, err error) {
 	if pkg, err = core.LoadFSPkg(p.FS, pkgSubdir); err != nil {
 		return nil, errors.Wrapf(err, "couldn't load package %s from pkg tree %s", pkgSubdir, p.Path())
 	}
-	if err = pkg.AttachFSPkgTree(p.PkgTree); err != nil {
+	if err = pkg.AttachFSPkgTree(p.FSPkgTree); err != nil {
 		return nil, errors.Wrap(err, "couldn't attach pkg tree to package")
 	}
 	return pkg, nil
@@ -271,7 +256,7 @@ func (p *FSPallet) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 		return nil, err
 	}
 	for _, pkg := range pkgs {
-		if err = pkg.AttachFSPkgTree(p.PkgTree); err != nil {
+		if err = pkg.AttachFSPkgTree(p.FSPkgTree); err != nil {
 			return nil, errors.Wrap(err, "couldn't attach pkg tree to package")
 		}
 	}
@@ -376,8 +361,16 @@ func (p Pallet) VersionQuery() string {
 
 // Check looks for errors in the construction of the pallet.
 func (p Pallet) Check() (errs []error) {
-	errs = append(errs, core.ErrsWrap(p.Decl.Check(), "invalid pallet config")...)
+	errs = append(errs, ErrsWrap(p.Decl.Check(), "invalid pallet config")...)
 	return errs
+}
+
+func ErrsWrap(errs []error, message string) []error {
+	wrapped := make([]error, 0, len(errs))
+	for _, err := range errs {
+		wrapped = append(wrapped, errors.Wrap(err, message))
+	}
+	return wrapped
 }
 
 // ComparePallets returns an integer comparing two [Pallet] instances according to their paths and
@@ -414,7 +407,7 @@ func loadPalletDecl(fsys ffs.PathedFS, filePath string) (PalletDecl, error) {
 
 // Check looks for errors in the construction of the pallet configuration.
 func (d PalletDecl) Check() (errs []error) {
-	return core.ErrsWrap(d.Pallet.Check(), "invalid pallet spec")
+	return ErrsWrap(d.Pallet.Check(), "invalid pallet spec")
 }
 
 // PalletSpec

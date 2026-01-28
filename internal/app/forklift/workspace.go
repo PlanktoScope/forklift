@@ -138,26 +138,6 @@ func (w *FSWorkspace) GetMirrorCache() (*FSMirrorCache, error) {
 	}, nil
 }
 
-// Cache: PkgTrees
-
-func (w *FSWorkspace) GetPkgTreeCachePath() string {
-	return path.Join(w.getCachePath(), cachePkgTreesDirName)
-}
-
-func (w *FSWorkspace) GetPkgTreeCache() (*FSPkgTreeCache, error) {
-	fsys, err := w.getCacheFS()
-	if err != nil {
-		return nil, err
-	}
-	pathedFS, err := fsys.Sub(cachePkgTreesDirName)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get pkg trees cache from workspace")
-	}
-	return &FSPkgTreeCache{
-		FS: pathedFS,
-	}, nil
-}
-
 // Cache: Pallets
 
 func (w *FSWorkspace) GetPalletCachePath() string {

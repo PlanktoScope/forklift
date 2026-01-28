@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
@@ -22,8 +21,8 @@ func MergeFSPallet(
 	shallow *FSPallet, palletLoader FSPalletLoader, prohibitedPallets structures.Set[string],
 ) (merged *FSPallet, err error) {
 	merged = &FSPallet{
-		Pallet:  shallow.Pallet,
-		PkgTree: &core.FSPkgTree{PkgTree: shallow.PkgTree.PkgTree},
+		Pallet:    shallow.Pallet,
+		FSPkgTree: shallow.FSPkgTree,
 	}
 	imports, err := shallow.LoadImports("**/*")
 	if err != nil {
@@ -68,7 +67,7 @@ func MergeFSPallet(
 	// }
 	// fmt.Println()
 	merged.FS = ffs.NewMergeFS(shallow.FS, underlayRefs)
-	merged.PkgTree.FS = merged.FS
+	merged.FSPkgTree.FS = merged.FS
 	// fmt.Printf("Merged pallet %s!\n", shallow.Path())
 	return merged, nil
 }

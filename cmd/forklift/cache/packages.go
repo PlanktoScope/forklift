@@ -3,7 +3,7 @@ package cache
 import (
 	"fmt"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -29,11 +29,9 @@ func lsPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify packages")
 	}
-	sort.Slice(pkgs, func(i, j int) bool {
-		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
-	})
+	slices.SortFunc(pkgs, core.CompareFSPkgs)
 	for _, pkg := range pkgs {
-		fmt.Printf("%s@%s\n", pkg.Path(), pkg.PkgTree.Version)
+		fmt.Printf("%s@%s\n", pkg.Path(), pkg.FSPkgTree.Version)
 	}
 	return nil
 }

@@ -11,9 +11,9 @@ import (
 type FSPallet struct {
 	// Pallet is the pallet at the root of the filesystem.
 	Pallet
-	// PkgTree is the package repository at the root of the filesystem. It may be defined either
+	// FSPkgTree is the package repository at the root of the filesystem. It may be defined either
 	// explicitly or implicitly.
-	PkgTree *core.FSPkgTree
+	FSPkgTree *core.FSPkgTree
 	// FS is a filesystem which contains the pallet's contents.
 	FS ffs.PathedFS
 }

@@ -24,6 +24,7 @@ func FprintPkg(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg 
 		IndentedFprintf(indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FS.Path())
 	}
 
+	fmt.Println()
 	FprintPkgSpec(indent, out, pkg.Decl.Package)
 	_, _ = fmt.Fprintln(out)
 	FprintDeplSpec(indent, out, pkg.Decl.Deployment)
@@ -32,18 +33,16 @@ func FprintPkg(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg 
 }
 
 func fprintPkgPallet(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg *core.FSPkg) {
-	IndentedFprintf(indent, out, "Provided by pallet: %s\n", pkg.PkgTree.Path())
+	IndentedFprintf(indent, out, "Provided by pallet: %s\n", pkg.FSPkgTree.Path())
 	indent++
 
 	if ffs.CoversPath(cache, pkg.FS.Path()) {
-		IndentedFprintf(indent, out, "Version: %s\n", pkg.PkgTree.Version)
+		IndentedFprintf(indent, out, "Version: %s\n", pkg.FSPkgTree.Version)
 	} else {
 		IndentedFprintf(
-			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.PkgTree.FS.Path(),
+			indent, out, "Absolute path (replacing any cached copy): %s\n", pkg.FSPkgTree.FS.Path(),
 		)
 	}
-
-	IndentedFprintf(indent, out, "Description: %s\n", pkg.PkgTree.Decl.PkgTree.Description)
 }
 
 func FprintPkgSpec(indent int, out io.Writer, spec core.PkgSpec) {
@@ -244,14 +243,11 @@ func FprintPalletPkgs(
 		return errors.Wrapf(err, "couldn't load local packages defined by pallet at %s", pallet.Path())
 	}
 	for _, pkg := range loaded {
-		pkg.PkgTree.Decl.PkgTree.Path = "/"
-		pkg.PkgTreePath = "/"
+		pkg.ParentPath = "/"
 	}
 	pkgs = append(pkgs, loaded...)
 
-	slices.SortFunc(pkgs, func(a, b *core.FSPkg) int {
-		return core.ComparePkgs(a.Pkg, b.Pkg)
-	})
+	slices.SortFunc(pkgs, core.CompareFSPkgs)
 	for _, pkg := range pkgs {
 		IndentedFprintf(indent, out, "%s\n", pkg.Path())
 	}
@@ -261,7 +257,11 @@ func FprintPalletPkgs(
 func FprintPkgLocation(
 	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
+	overlayCache, err := makeOverlayCache(pallet, cache)
+	if err != nil {
+		return err
+	}
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
@@ -285,7 +285,11 @@ func FprintPkgInfo(
 	indent int, out io.Writer,
 	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, cache, pkgPath)
+	overlayCache, err := makeOverlayCache(pallet, cache)
+	if err != nil {
+		return err
+	}
+	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
@@ -293,4 +297,22 @@ func FprintPkgInfo(
 	}
 	FprintPkg(indent, out, cache, pkg)
 	return nil
+}
+
+func makeOverlayCache(
+	pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+) (*forklift.LayeredPalletCache, error) {
+	overrideCache, err := forklift.NewPalletOverrideCache(
+		[]*forklift.FSPallet{pallet},
+		map[string][]string{
+			pallet.Path(): {""},
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't make pallet override cache")
+	}
+	return &forklift.LayeredPalletCache{
+		Underlay: cache,
+		Overlay:  overrideCache,
+	}, nil
 }

@@ -47,6 +47,7 @@ func (c *FSPalletCache) LoadFSPallet(pltPath string, version string) (*FSPallet,
 		return nil, err
 	}
 	plt.Version = version
+	plt.FSPkgTree.Version = version
 	return plt, nil
 }
 
@@ -97,20 +98,19 @@ func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, 
 	// Search for the package by starting with the shortest possible package subdirectory path and the
 	// longest possible pkg tree path, and shifting path components from the pkg tree path to the package
 	// subdirectory path until we successfully load the package.
-	pkgTreePath := path.Dir(pkgPath)
+	palletPath := path.Dir(pkgPath)
 	pkgSubdir := path.Base(pkgPath)
-	for pkgTreePath != "." && pkgTreePath != "/" {
-		pkgTree, err := c.LoadFSPallet(pkgTreePath, version)
+	for palletPath != "." && palletPath != "/" {
+		pallet, err := c.LoadFSPallet(palletPath, version)
 		if err != nil {
-			pkgSubdir = path.Join(path.Base(pkgTreePath), pkgSubdir)
-			pkgTreePath = path.Dir(pkgTreePath)
+			pkgSubdir = path.Join(path.Base(palletPath), pkgSubdir)
+			palletPath = path.Dir(palletPath)
 			continue
 		}
-		pkg, err := pkgTree.LoadFSPkg(pkgSubdir)
+		pkg, err := pallet.LoadFSPkg(pkgSubdir)
 		if err != nil {
 			return nil, errors.Wrapf(
-				err, "couldn't load package %s from pkg tree %s at version %s",
-				pkgPath, pkgTreePath, version,
+				err, "couldn't load package %s from pallet %s at version %s", pkgPath, palletPath, version,
 			)
 		}
 		return pkg, nil
@@ -139,7 +139,7 @@ func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) 
 				err, "couldn't find the cached pallet providing the cached package at %s", pkg.FS.Path(),
 			)
 		}
-		if err = pkg.AttachFSPkgTree(pallet.PkgTree); err != nil {
+		if err = pkg.AttachFSPkgTree(pallet.FSPkgTree); err != nil {
 			return nil, errors.Wrap(err, "couldn't attach cached pallet to cached package")
 		}
 	}
@@ -148,9 +148,7 @@ func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) 
 
 // loadFSPalletContaining finds and loads the FSPallet which contains the provided subdirectory
 // path.
-func (c *FSPalletCache) loadFSPalletContaining(
-	subdirPath string,
-) (pallet *FSPallet, err error) {
+func (c *FSPalletCache) loadFSPalletContaining(subdirPath string) (pallet *FSPallet, err error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -166,6 +164,7 @@ func (c *FSPalletCache) loadFSPalletContaining(
 			pallet.FS.Path(),
 		)
 	}
+	pallet.FSPkgTree.Version = pallet.Version
 	if palletPath != pallet.Path() {
 		return nil, errors.Errorf(
 			"cached pallet %s is in cache at %s@%s instead of %s@%s",
@@ -295,14 +294,14 @@ func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, er
 		return nil, errors.Wrap(err, "couldn't load packages from underlay")
 	}
 	for _, pkg := range underlayPkgs {
-		if c.Overlay.IncludesFSPkg(pkg.Path(), pkg.PkgTree.Version) {
+		if c.Overlay.IncludesFSPkg(pkg.Path(), pkg.FSPkgTree.Version) {
 			continue
 		}
 		pkgs = append(pkgs, pkg)
 	}
 
 	sort.Slice(pkgs, func(i, j int) bool {
-		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) == core.CompareLT
+		return core.CompareFSPkgs(pkgs[i], pkgs[j]) == core.CompareLT
 	})
 	return pkgs, nil
 }

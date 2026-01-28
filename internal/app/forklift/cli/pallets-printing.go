@@ -13,6 +13,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
+	"github.com/forklift-run/forklift/pkg/core"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
@@ -46,7 +47,7 @@ func FprintCachedPallet(
 	}
 
 	_, _ = fmt.Fprintln(out)
-	if err := fprintPkgTreePkgs(indent, out, pallet.PkgTree); err != nil {
+	if err := fprintFSPkgTreePkgs(indent, out, pallet.FSPkgTree); err != nil {
 		return errors.Wrapf(err, "couldn't list packages provided by pallet %s", pallet.Path())
 	}
 
@@ -62,6 +63,54 @@ func FprintCachedPallet(
 		return errors.Wrapf(
 			err, "couldn't list importable features provided by pallet %s", pallet.Path(),
 		)
+	}
+	return nil
+}
+
+type readmeLoader interface {
+	LoadReadme() ([]byte, error)
+}
+
+func fprintReadme(indent int, out io.Writer, loader readmeLoader) error {
+	readme, err := loader.LoadReadme()
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load readme file")
+	}
+	const widthLimit = 100
+	const lengthLimit = 10
+	IndentedFprintf(indent, out, "Readme (first %d lines):\n", lengthLimit)
+	PrintMarkdown(indent+1, readme, widthLimit, lengthLimit)
+	return nil
+}
+
+func fprintFSPkgTreePkgs(indent int, out io.Writer, pkgTree *core.FSPkgTree) error {
+	IndentedFprint(indent, out, "Packages:")
+
+	pkgs, err := pkgTree.LoadFSPkgs("**")
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load packages from pkg tree %s", pkgTree.FS.Path())
+	}
+	slices.SortFunc(pkgs, core.CompareFSPkgs)
+
+	if len(pkgs) == 0 {
+		_, _ = fmt.Fprint(out, " (none)")
+	}
+	_, _ = fmt.Fprintln(out)
+	indent += 1
+	for _, pkg := range pkgs {
+		IndentedFprintf(indent, out, "...%s: ", strings.TrimPrefix(pkg.Path(), pkgTree.FS.Path()))
+
+		names := make([]string, 0, len(pkg.Decl.Features))
+		for name := range pkg.Decl.Features {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+
+		if len(names) == 0 {
+			_, _ = fmt.Fprintln(out, "(no optional features)")
+			continue
+		}
+		_, _ = fmt.Fprintf(out, "[%s]\n", strings.Join(names, ", "))
 	}
 	return nil
 }

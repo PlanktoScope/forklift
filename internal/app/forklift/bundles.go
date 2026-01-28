@@ -435,20 +435,6 @@ func (b *FSBundle) getPackagesPath() string {
 	return path.Join(b.FS.Path(), packagesDirName)
 }
 
-// WritePkgTreeDeclFile creates a repo definition file at the packages path, so that all loaded packages
-// are associated with a repo.
-func (b *FSBundle) WritePkgTreeDeclFile() error {
-	if err := EnsureExists(b.getPackagesPath()); err != nil {
-		return err
-	}
-	return core.WritePkgTreeDecl(
-		core.PkgTreeDecl{
-			ForkliftVersion: b.Manifest.ForkliftVersion,
-		},
-		filepath.FromSlash(path.Join(b.getPackagesPath(), core.PkgTreeDeclFile)),
-	)
-}
-
 // FSBundle: Exports
 
 func (b *FSBundle) getExportsPath() string {
@@ -728,20 +714,18 @@ func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	return LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
 }
 
-func (b *FSBundle) LoadFSPkgTree(pkgTreePath string, version string) (*core.FSPkgTree, error) {
+func (b *FSBundle) LoadFSPkgTree() (*core.FSPkgTree, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return core.LoadFSPkgTree(b.FS, path.Join(packagesDirName, pkgTreePath))
-}
-
-func (b *FSBundle) LoadFSPkgTrees(searchPattern string) ([]*core.FSPkgTree, error) {
-	if b == nil {
-		return nil, errors.New("bundle is nil")
+	fsys, err := b.FS.Sub(packagesDirName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't load package tree from bundle")
 	}
-
-	return core.LoadFSPkgTrees(b.FS, path.Join(packagesDirName, searchPattern))
+	return &core.FSPkgTree{
+		FS: fsys,
+	}, nil
 }
 
 // FSBundle: FSPkgLoader
@@ -751,7 +735,7 @@ func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*core.FSPkg, error
 		return nil, errors.New("bundle is nil")
 	}
 
-	pkgTree, err := b.LoadFSPkgTree(".", "")
+	pkgTree, err := b.LoadFSPkgTree()
 	if err != nil {
 		return nil, err
 	}
@@ -763,7 +747,7 @@ func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*core.FSPkg, error) {
 		return nil, errors.New("bundle is nil")
 	}
 
-	pkgTree, err := b.LoadFSPkgTree(".", "")
+	pkgTree, err := b.LoadFSPkgTree()
 	if err != nil {
 		return nil, err
 	}
