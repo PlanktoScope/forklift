@@ -9,9 +9,9 @@ import (
 	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/compose/v2/pkg/api"
-	"github.com/docker/compose/v2/pkg/compose"
-	dc "github.com/docker/docker/client"
+	"github.com/docker/compose/v5/pkg/api"
+	"github.com/docker/compose/v5/pkg/compose"
+	"github.com/moby/moby/client"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +19,7 @@ import (
 
 type clientOptions struct {
 	quiet     bool
-	apiClient []dc.Opt
+	apiClient []client.Opt
 	cli       []command.CLIOption
 	cliFlags  flags.ClientOptions
 }
@@ -51,15 +51,14 @@ func WithOutputStream(w io.Writer) ClientOption {
 
 type Client struct {
 	options clientOptions
-	Client  *dc.Client
+	Client  *client.Client
 	Compose api.Compose
 }
 
 func NewClient(opts ...ClientOption) (*Client, error) {
 	options := clientOptions{
-		apiClient: []dc.Opt{
-			dc.WithHostFromEnv(),
-			dc.WithAPIVersionNegotiation(),
+		apiClient: []client.Opt{
+			client.WithHostFromEnv(),
 		},
 		cli: []command.CLIOption{
 			command.WithDefaultContextStoreConfig(),
@@ -69,7 +68,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	for _, opt := range opts {
 		options = opt(options)
 	}
-	client, err := dc.NewClientWithOpts(options.apiClient...)
+	client, err := client.New(options.apiClient...)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't make docker client")
 	}
@@ -83,10 +82,15 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		return nil, errors.Wrap(err, "couldn't initialize docker cli")
 	}
 
+	composeService, err := compose.NewComposeService(cli)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't make compose service")
+	}
+
 	return &Client{
 		options: options,
 		Client:  client,
-		Compose: compose.NewComposeService(cli),
+		Compose: composeService,
 	}, nil
 }
 
