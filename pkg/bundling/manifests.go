@@ -1,43 +1,18 @@
 package bundling
 
 import (
+	"bytes"
+	"io/fs"
+	"os"
+	"path"
+	"path/filepath"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
+
 	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
-
-// Bundle
-
-const (
-	// bundledPalletDirName is the name of the directory containing the bundled pallet.
-	bundledPalletDirName = "pallet"
-	// bundledMergedPalletDirName is the name of the directory containing the bundled pallet, merged
-	// with file imports from its required pallets.
-	bundledMergedPalletDirName = "merged-pallet"
-	// packagesDirName is the name of the directory containing bundled files for each package.
-	packagesDirName = "packages"
-	// exportsDirName is the name of the directory containing exported files for all package
-	// deployments, collected together.
-	exportsDirName = "exports"
-)
-
-// A FSBundle is a Forklift pallet bundle stored at the root of a [fs.FS] filesystem.
-type FSBundle struct {
-	// Bundle is the pallet bundle at the root of the filesystem.
-	Bundle
-	// FSPkgTree is the package tree at the root of the bundle's packages directory.
-	FSPkgTree *fpkg.FSPkgTree
-	// FS is a filesystem which contains the bundle's contents.
-	FS ffs.PathedFS
-}
-
-// A Bundle is a Forklift pallet bundle, a complete compilation of all files (except container
-// images) needed for a pallet to be applied to a Docker host. Required pallets and packages are
-// included directly in the bundle.
-type Bundle struct {
-	// Manifest is the Forklift bundle manifest for the pallet bundle.
-	Manifest BundleManifest
-}
 
 // BundleManifestFile is the name of the file describing each Forklift pallet bundle.
 const BundleManifestFile = "forklift-bundle.yml"
@@ -155,4 +130,79 @@ type BundleDeplComposeApp struct {
 	CreatedNetworks []string `yaml:"created-networks,omitempty"`
 	// RequiredNetworks lists the names of the networks required by the Docker Compose app.
 	RequiredNetworks []string `yaml:"required-networks,omitempty"`
+}
+
+// BundleManifest
+
+// loadBundleManifest loads a BundleManifest from the specified file path in the provided base
+// filesystem.
+func loadBundleManifest(fsys ffs.PathedFS, filePath string) (BundleManifest, error) {
+	bytes, err := fs.ReadFile(fsys, filePath)
+	if err != nil {
+		return BundleManifest{}, errors.Wrapf(
+			err, "couldn't read bundle config file %s/%s", fsys.Path(), filePath,
+		)
+	}
+	config := BundleManifest{}
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
+		return BundleManifest{}, errors.Wrap(err, "couldn't parse bundle config")
+	}
+	return config, nil
+}
+
+// BundleInclusions
+
+func (i *BundleInclusions) HasInclusions() bool {
+	return len(i.Pallets) > 0
+}
+
+func (i *BundleInclusions) HasOverrides() bool {
+	for _, inclusion := range i.Pallets {
+		if inclusion.Override != (BundleInclusionOverride{}) {
+			return true
+		}
+	}
+	return false
+}
+
+// BundleDownloads
+
+func (d BundleDeplDownloads) Empty() bool {
+	if len(d.HTTPFile) > 0 {
+		return false
+	}
+	if len(d.OCIImage) > 0 {
+		return false
+	}
+	return true
+}
+
+// BundleExports
+
+func (d BundleDeplExports) Empty() bool {
+	if len(d.File) > 0 {
+		return false
+	}
+	if d.ComposeApp.Name != "" {
+		return false
+	}
+	return true
+}
+
+// FSBundle: Manifests
+
+func (b *FSBundle) WriteManifestFile() error {
+	buf := bytes.Buffer{}
+	encoder := yaml.NewEncoder(&buf)
+	const yamlIndent = 2
+	encoder.SetIndent(yamlIndent)
+	if err := encoder.Encode(b.Manifest); err != nil {
+		return errors.Wrapf(err, "couldn't marshal bundle manifest")
+	}
+	outputPath := filepath.FromSlash(path.Join(b.FS.Path(), BundleManifestFile))
+	const perm = 0o644 // owner rw, group r, public r
+	if err := os.WriteFile(outputPath, buf.Bytes(), perm); err != nil {
+		return errors.Wrapf(err, "couldn't save bundle manifest to %s", outputPath)
+	}
+	return nil
 }
