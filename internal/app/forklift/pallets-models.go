@@ -11,8 +11,7 @@ import (
 type FSPallet struct {
 	// Pallet is the pallet at the root of the filesystem.
 	Pallet
-	// FSPkgTree is the package repository at the root of the filesystem. It may be defined either
-	// explicitly or implicitly.
+	// FSPkgTree is the package tree at the root of the pallet's filesystem.
 	FSPkgTree *fpkg.FSPkgTree
 	// FS is a filesystem which contains the pallet's contents.
 	FS ffs.PathedFS
@@ -36,8 +35,7 @@ type PalletDecl struct {
 	// of Forklift. The version must be a valid Forklift version, and it sets the minimum version of
 	// Forklift required to use the pallet. The Forklift tool refuses to use pallets declaring newer
 	// Forklift versions for any operations beyond printing information. The Forklift version of the
-	// pallet must be greater than or equal to the Forklift version of every required Forklift repo or
-	// pallet.
+	// pallet must be greater than or equal to the Forklift version of every required Forklift pallet.
 	ForkliftVersion string `yaml:"forklift-version"`
 	// Pallet defines the basic metadata for the pallet.
 	Pallet PalletSpec `yaml:"pallet,omitempty"`
@@ -59,8 +57,7 @@ type PalletSpec struct {
 // ReqsDirName is the directory in a Forklift pallet which contains requirement declarations.
 const ReqsDirName = "requirements"
 
-// A GitRepoReq is a requirement for a specific Git repository (e.g. a pallet or Forklift repo) at
-// a specific version.
+// A GitRepoReq is a requirement for a specific Git repository (e.g. pallet) at a specific version.
 type GitRepoReq struct {
 	// GitRepoPath is the path of the required Git repository.
 	RequiredPath string `yaml:"-"`
@@ -94,7 +91,7 @@ type PalletReqLoader interface {
 
 // A PkgReq is a requirement for a package at a specific version.
 type PkgReq struct {
-	// PkgSubdir is the package subdirectory in the repo which should provide the required package.
+	// PkgSubdir is the package subdirectory in the pallet which should provide the required package.
 	PkgSubdir string
 	// Pallet is the pallet which should provide the required package.
 	Pallet PalletReq

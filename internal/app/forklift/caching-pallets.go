@@ -21,17 +21,17 @@ import (
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSPalletCache) Exists() bool {
-	return DirExists(filepath.FromSlash(c.FS.Path()))
+	return DirExists(filepath.FromSlash(c.pkgTree.FS.Path()))
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.
 func (c *FSPalletCache) Remove() error {
-	return os.RemoveAll(filepath.FromSlash(c.FS.Path()))
+	return os.RemoveAll(filepath.FromSlash(c.pkgTree.FS.Path()))
 }
 
 // Path returns the path of the cache's filesystem.
 func (c *FSPalletCache) Path() string {
-	return c.FS.Path()
+	return c.pkgTree.FS.Path()
 }
 
 // FSPalletCache: FSPalletLoader
@@ -43,7 +43,7 @@ func (c *FSPalletCache) LoadFSPallet(pltPath string, version string) (*FSPallet,
 		return nil, errors.New("cache is nil")
 	}
 
-	plt, err := LoadFSPallet(c.FS, fmt.Sprintf("%s@%s", pltPath, version))
+	plt, err := LoadFSPallet(c.pkgTree.FS, fmt.Sprintf("%s@%s", pltPath, version))
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error)
 		return nil, nil
 	}
 
-	plts, err := LoadFSPallets(c.FS, searchPattern)
+	plts, err := LoadFSPallets(c.pkgTree.FS, searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load pallets from cache")
 	}
@@ -109,6 +109,7 @@ func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, 
 			continue
 		}
 
+		// FIXME: we must merge the pallet first!
 		pkg, err := pallet.LoadFSPkg(pkgSubdir)
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -129,7 +130,7 @@ func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) 
 		return nil, nil
 	}
 
-	pkgs, err := fpkg.LoadFSPkgs(c.FS, searchPattern)
+	pkgs, err := c.pkgTree.LoadFSPkgs(searchPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +156,7 @@ func (c *FSPalletCache) loadFSPalletContaining(subdirPath string) (pallet *FSPal
 		return nil, errors.New("cache is nil")
 	}
 
-	if pallet, err = loadFSPalletContaining(c.FS, subdirPath); err != nil {
+	if pallet, err = loadFSPalletContaining(c.pkgTree.FS, subdirPath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't find any pallet containing %s", subdirPath)
 	}
 	var palletPath string

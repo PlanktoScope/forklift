@@ -26,12 +26,6 @@ func MakeCmd(versions Versions) *cli.Command {
 			"directory",
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
-				Name:    "repo",
-				Aliases: []string{"repos", "repository", "repositories"},
-				Usage: "Replaces version-locked required repos from the cache with the corresponding " +
-					"repos in the specified directory paths",
-			},
-			&cli.StringSliceFlag{
 				Name:    "plt",
 				Aliases: []string{"plts", "pallet", "pallets"},
 				Usage: "Replaces version-locked required pallets from the cache with the corresponding " +

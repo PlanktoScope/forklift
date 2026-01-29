@@ -37,19 +37,11 @@ type PathedPalletCache interface {
 	ffs.Pather
 }
 
-// FSPalletCache is a [PathedPalletCache] implementation with copies of unmerged pallets
-// stored in a [fpkg.PathedFS] filesystem.
+// FSPalletCache is a [PathedPalletCache] implementation with copies of pallets stored in a
+// [fpkg.PathedFS] filesystem.
 type FSPalletCache struct {
-	// FS is the filesystem which corresponds to the cache of pallets.
-	FS ffs.PathedFS
-}
-
-// FSMergedPalletCache is a [PathedPalletCache] implementation with copies of merged pallets
-// stored in a [fpkg.PathedFS] filesystem.
-// FIXME: implement this!
-type FSMergedPalletCache struct {
-	// FS is the filesystem which corresponds to the cache of pallets.
-	FS ffs.PathedFS
+	// pkgTree is the filesystem which corresponds to the cache of pallets.
+	pkgTree *fpkg.FSPkgTree
 }
 
 // LayeredPalletCache is a [PathedPalletCache] implementation where selected pallets can be
@@ -102,7 +94,7 @@ type FSPkgLoader interface {
 	LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error)
 }
 
-// FSPkgTreeCache is a source of repos and packages.
+// FSPkgTreeCache is a source of packages.
 type FSPkgTreeCache interface {
 	FSPkgLoader
 }
@@ -113,13 +105,10 @@ type PathedFSPkgTreeCache interface {
 	ffs.Pather
 }
 
-// OverlayFSPkgTreeCache is a [FSPkgTreeCache] which can report whether it includes any particular repo or
+// OverlayFSPkgTreeCache is a [FSPkgTreeCache] which can report whether it includes any particular
 // package.
 type OverlayFSPkgTreeCache interface {
 	FSPkgTreeCache
-	// IncludesFSPkgTree reports whether the cache expects to have the specified repo.
-	// This result does not necessarily correspond to whether the cache actually has it.
-	IncludesFSPkgTree(repoPath string, version string) bool
 	// IncludesFSPkg reports whether the cache expects to have the specified package.
 	// This result does not necessarily correspond to whether the cache actually has it.
 	IncludesFSPkg(pkgPath string, version string) bool

@@ -28,10 +28,19 @@ import (
 
 // FSBundle
 
-func NewFSBundle(path string) *FSBundle {
-	return &FSBundle{
-		FS: ffs.DirFS(path),
+func NewFSBundle(path string) (b *FSBundle, err error) {
+	fsys := ffs.DirFS(path)
+	pkgfs, err := fsys.Sub(packagesDirName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't load package tree from bundle")
 	}
+
+	return &FSBundle{
+		FS: fsys,
+		FSPkgTree: &fpkg.FSPkgTree{
+			FS: pkgfs,
+		},
+	}, nil
 }
 
 // LoadFSBundle loads a FSBundle from a specified directory path in the provided base filesystem.
@@ -42,6 +51,15 @@ func LoadFSBundle(fsys ffs.PathedFS, subdirPath string) (b *FSBundle, err error)
 			err, "couldn't enter directory %s from fs at %s", subdirPath, fsys.Path(),
 		)
 	}
+
+	pkgfs, err := b.FS.Sub(packagesDirName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't load package tree from bundle")
+	}
+	b.FSPkgTree = &fpkg.FSPkgTree{
+		FS: pkgfs,
+	}
+
 	if b.Bundle.Manifest, err = loadBundleManifest(b.FS, BundleManifestFile); err != nil {
 		return nil, errors.Errorf("couldn't load bundle manifest")
 	}
@@ -241,7 +259,7 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 		)
 	}
 	if definesComposeApp {
-		exports.ComposeApp, err = makeComposeAppSummary(depl, b.FS)
+		exports.ComposeApp, err = b.makeComposeAppSummary(depl)
 		if err != nil {
 			return errors.Wrap(err, "couldn't make summary of Compose app definition")
 		}
@@ -263,10 +281,8 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	return nil
 }
 
-func makeComposeAppSummary(
-	depl *ResolvedDepl, bundleFS ffs.PathedFS,
-) (BundleDeplComposeApp, error) {
-	bundlePkg, err := fpkg.LoadFSPkg(bundleFS, path.Join(packagesDirName, depl.Decl.Package))
+func (b *FSBundle) makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
+	bundlePkg, err := b.LoadFSPkg(depl.Decl.Package, "")
 	if err != nil {
 		return BundleDeplComposeApp{}, errors.Wrapf(
 			err, "couldn't load bundled package %s", depl.Pkg.Path(),
@@ -290,7 +306,7 @@ func makeComposeAppSummary(
 		images.Add(service.Image)
 	}
 
-	createdBindMounts, requiredBindMounts := makeComposeAppBindMountSummaries(appDef, bundleFS.Path())
+	createdBindMounts, requiredBindMounts := makeComposeAppBindMountSummaries(appDef, b.FS.Path())
 	createdVolumes, requiredVolumes := makeComposeAppVolumeSummaries(appDef)
 	createdNetworks, requiredNetworks := makeComposeAppNetworkSummaries(appDef)
 
@@ -714,20 +730,6 @@ func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
 	return LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
 }
 
-func (b *FSBundle) LoadFSPkgTree() (*fpkg.FSPkgTree, error) {
-	if b == nil {
-		return nil, errors.New("bundle is nil")
-	}
-
-	fsys, err := b.FS.Sub(packagesDirName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package tree from bundle")
-	}
-	return &fpkg.FSPkgTree{
-		FS: fsys,
-	}, nil
-}
-
 // FSBundle: FSPkgLoader
 
 func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
@@ -735,11 +737,7 @@ func (b *FSBundle) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error
 		return nil, errors.New("bundle is nil")
 	}
 
-	pkgTree, err := b.LoadFSPkgTree()
-	if err != nil {
-		return nil, err
-	}
-	return pkgTree.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
+	return b.FSPkgTree.LoadFSPkg(strings.TrimLeft(pkgPath, "/"))
 }
 
 func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
@@ -747,11 +745,7 @@ func (b *FSBundle) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
 		return nil, errors.New("bundle is nil")
 	}
 
-	pkgTree, err := b.LoadFSPkgTree()
-	if err != nil {
-		return nil, err
-	}
-	return pkgTree.LoadFSPkgs(searchPattern)
+	return b.FSPkgTree.LoadFSPkgs(searchPattern)
 }
 
 // BundleManifest

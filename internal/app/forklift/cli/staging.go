@@ -127,7 +127,10 @@ func buildBundle(
 	dlCache *forklift.FSDownloadCache,
 	forkliftVersion, outputPath string,
 ) (err error) {
-	outputBundle := forklift.NewFSBundle(outputPath)
+	outputBundle, err := forklift.NewFSBundle(outputPath)
+	if err != nil {
+		return errors.Errorf("couldn't initialize new bundle at %s", outputPath)
+	}
 	outputBundle.Manifest, err = newBundleManifest(merged, palletCache, forkliftVersion)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())

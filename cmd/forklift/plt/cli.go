@@ -527,7 +527,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 					},
 					&cli.BoolFlag{
 						Name:  "cache-req",
-						Usage: "Download repositories and pallets required by this pallet after cloning",
+						Usage: "Download pallets and exportable files required by this pallet after cloning",
 						Value: true,
 					},
 				},
@@ -551,7 +551,7 @@ func makeModifyGitSubcmds(versions Versions) []*cli.Command {
 				[]cli.Flag{
 					&cli.BoolFlag{
 						Name:  "cache-req",
-						Usage: "Download repositories and pallets required by this pallet after pulling",
+						Usage: "Download pallets and exportable files required by this pallet after pulling",
 						Value: true,
 					},
 					// TODO: add an option to fall back to a rebase if a fast-forward is not possible
@@ -641,7 +641,7 @@ func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name: "cache-req",
-					Usage: "Download repositories and pallets required by this pallet after adding the " +
+					Usage: "Download pallets and exportable files required by this pallet after adding the " +
 						"pallet",
 					Value: true,
 				},

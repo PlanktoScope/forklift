@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 func FileExists(filePath string) bool {
@@ -154,7 +155,7 @@ func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 		return nil, errors.Wrap(err, "couldn't get pallets cache from workspace")
 	}
 	return &FSPalletCache{
-		FS: pathedFS,
+		pkgTree: &fpkg.FSPkgTree{FS: pathedFS},
 	}, nil
 }
 

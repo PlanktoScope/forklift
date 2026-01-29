@@ -64,7 +64,7 @@ func checkDepl(
 	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, pkgLoader, depl.Decl.Package)
 	if err != nil {
 		return errors.Wrapf(
-			err, "couldn't resolve package path %s to a package using the pallet's repo requirements",
+			err, "couldn't resolve package path %s to a package using the pallet's pallet requirements",
 			depl.Decl.Package,
 		)
 	}

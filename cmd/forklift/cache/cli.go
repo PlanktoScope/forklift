@@ -7,7 +7,7 @@ import (
 
 var Cmd = &cli.Command{
 	Name:  "cache",
-	Usage: "Manages the local cache of repos and packages",
+	Usage: "Manages the local cache of pallets and downloads",
 	Subcommands: []*cli.Command{
 		{
 			Name:     "ls-plt",
@@ -28,7 +28,7 @@ var Cmd = &cli.Command{
 			Name:     "ls-pkg",
 			Aliases:  []string{"list-packages"},
 			Category: "Query the cache",
-			Usage:    "Lists packages offered by cached repos",
+			Usage:    "Lists packages offered by cached pallets",
 			// TODO: allow only listing packages matching a glob pattern
 			Action: lsPkgAction,
 		},

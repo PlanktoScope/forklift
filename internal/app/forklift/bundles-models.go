@@ -2,6 +2,7 @@ package forklift
 
 import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 // Bundle
@@ -23,13 +24,15 @@ const (
 type FSBundle struct {
 	// Bundle is the pallet bundle at the root of the filesystem.
 	Bundle
+	// FSPkgTree is the package tree at the root of the bundle's packages directory.
+	FSPkgTree *fpkg.FSPkgTree
 	// FS is a filesystem which contains the bundle's contents.
 	FS ffs.PathedFS
 }
 
 // A Bundle is a Forklift pallet bundle, a complete compilation of all files (except container
-// images) needed for a pallet to be applied to a Docker host. Required repos & pallets are included
-// directly in the bundle.
+// images) needed for a pallet to be applied to a Docker host. Required pallets and packages are
+// included directly in the bundle.
 type Bundle struct {
 	// Manifest is the Forklift bundle manifest for the pallet bundle.
 	Manifest BundleManifest
@@ -45,11 +48,11 @@ type BundleManifest struct {
 	// version of Forklift required to use the pallet bundle. The Forklift tool refuses to use pallet
 	// bundles declaring newer Forklift versions for any operations beyond printing information. The
 	// Forklift version of the pallet bundle must be greater than or equal to the Forklift version of
-	// every required Forklift repo or pallet bundle.
+	// every required Forklift pallet.
 	ForkliftVersion string `yaml:"forklift-version"`
 	// Pallet describes the basic metadata for the bundled pallet.
 	Pallet BundlePallet `yaml:"pallet"`
-	// Includes describes repos and pallets used to define the bundle's package deployments.
+	// Includes describes pallets used to define the bundle's package deployments.
 	Includes BundleInclusions `yaml:"includes,omitempty"`
 	// Imports lists the files imported from required pallets and the fully-qualified paths of those
 	// source files (relative to their respective source pallets). Keys are the target paths of the
@@ -69,13 +72,13 @@ type BundleManifest struct {
 // BundlePallet describes a bundle's bundled pallet.
 type BundlePallet struct {
 	// Path is the pallet bundle's path, which acts as the canonical name for the pallet bundle. It
-	// should just be the path of the VCS repository for the bundled pallet.
+	// should just be the path of the Git repository for the bundled pallet.
 	Path string `yaml:"path"`
 	// Version is the version or pseudoversion of the bundled pallet, if one can be determined.
 	Version string `yaml:"version"`
 	// Clean indicates whether the bundled pallet has been determined to have no changes beyond its
 	// latest Git commit, if the pallet is version-controlled with Git. This does not account for
-	// overrides of required repos/pallets - those should be checked in BundleInclusions instead.
+	// overrides of required pallets - those should be checked in BundleInclusions instead.
 	Clean bool `yaml:"clean"`
 	// Description is a short description of the bundled pallet to be shown to users.
 	Description string `yaml:"description,omitempty"`

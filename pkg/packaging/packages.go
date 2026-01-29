@@ -36,10 +36,10 @@ type Pkg struct {
 
 // FSPkg
 
-// LoadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
-// In the loaded FSPkg's embedded [Pkg], the repo path is not initialized, nor is the repo
-// subdirectory initialized, nor is the pointer to the repo initialized.
-func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
+// loadFSPkg loads a FSPkg from the specified directory path in the provided base filesystem.
+// In the loaded FSPkg's embedded [Pkg], the parent path is not initialized, nor is the subdirectory
+// path initialized.
+func loadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
 	p = &FSPkg{}
 	if p.FS, err = fsys.Sub(subdirPath); err != nil {
 		return nil, errors.Wrapf(
@@ -52,12 +52,12 @@ func LoadFSPkg(fsys ffs.PathedFS, subdirPath string) (p *FSPkg, err error) {
 	return p, nil
 }
 
-// LoadFSPkgs loads all FSPkgs from the provided base filesystem matching the specified search
+// loadFSPkgs loads all FSPkgs from the provided base filesystem matching the specified search
 // pattern. The search pattern should be a [doublestar] pattern, such as `**`, matching package
 // directories to search for.
 // The pkg tree path, and the package subdirectory, and the pointer to the pkg tree are all left
 // uninitialized.
-func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
+func loadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 	searchPattern = path.Join(searchPattern, PkgDeclFile)
 	pkgDeclFiles, err := doublestar.Glob(fsys, searchPattern)
 	if err != nil {
@@ -72,7 +72,7 @@ func LoadFSPkgs(fsys ffs.PathedFS, searchPattern string) ([]*FSPkg, error) {
 			continue
 		}
 
-		pkg, err := LoadFSPkg(fsys, path.Dir(pkgDeclFilePath))
+		pkg, err := loadFSPkg(fsys, path.Dir(pkgDeclFilePath))
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't load package from %s", pkgDeclFilePath)
 		}

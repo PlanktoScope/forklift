@@ -15,8 +15,8 @@ import (
 )
 
 var errMissingCache = errors.New(
-	"you first need to cache the repos specified by your pallet with " +
-		"`forklift plt cache-repo`",
+	"you first need to cache the pallets specified by your pallet with " +
+		"`forklift plt cache-pallet`",
 )
 
 func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache, error) {

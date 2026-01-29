@@ -11,7 +11,8 @@ import (
 
 // Lock
 
-// A Lock is a specification of a particular version of a repo or package.
+// A Lock is a specification of a particular version of a version-controlled artifact (e.g. a pallet
+// or package).
 type Lock struct {
 	// Decl is the version lock definition.
 	Decl LockDecl `yaml:",inline"`
@@ -53,11 +54,10 @@ func (l Lock) Check() (errs []error) {
 
 // LockDecl
 
-// LockDeclFile is the name of the file defining each version lock of a repo.
+// LockDeclFile is the name of the file defining each version lock of a version-controlled artifact.
 const LockDeclFile = "forklift-version-lock.yml"
 
-// A LockDecl defines a requirement for a repo or package at a specific
-// version.
+// A LockDecl defines a requirement for a version-controlled artifact at a specific version.
 type LockDecl struct {
 	// Type specifies the type of version lock (either "version" or "pseudoversion")
 	Type string `yaml:"type"`

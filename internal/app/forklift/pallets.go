@@ -240,28 +240,13 @@ func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 // LoadFSPkg loads a package at the specified filesystem path from the FSPallet instance
 // The loaded package is fully initialized.
 func (p *FSPallet) LoadFSPkg(pkgSubdir string) (pkg *fpkg.FSPkg, err error) {
-	if pkg, err = fpkg.LoadFSPkg(p.FS, pkgSubdir); err != nil {
-		return nil, errors.Wrapf(err, "couldn't load package %s from pkg tree %s", pkgSubdir, p.Path())
-	}
-	if err = pkg.AttachFSPkgTree(p.FSPkgTree); err != nil {
-		return nil, errors.Wrap(err, "couldn't attach pkg tree to package")
-	}
-	return pkg, nil
+	return p.FSPkgTree.LoadFSPkg(pkgSubdir)
 }
 
 // LoadFSPkgs loads all packages in the FSPallet instance.
 // The loaded packages are fully initialized.
 func (p *FSPallet) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
-	pkgs, err := fpkg.LoadFSPkgs(p.FS, searchPattern)
-	if err != nil {
-		return nil, err
-	}
-	for _, pkg := range pkgs {
-		if err = pkg.AttachFSPkgTree(p.FSPkgTree); err != nil {
-			return nil, errors.Wrap(err, "couldn't attach pkg tree to package")
-		}
-	}
-	return pkgs, nil
+	return p.FSPkgTree.LoadFSPkgs(searchPattern)
 }
 
 // FSPallet: Imports

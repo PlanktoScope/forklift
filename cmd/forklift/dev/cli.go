@@ -1,4 +1,4 @@
-// Package dev provides subcommands for developing packages, repositories, and pallets
+// Package dev provides subcommands for developing pallets, packages, etc.
 package dev
 
 import (
