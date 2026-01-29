@@ -96,7 +96,7 @@ func LoadFSPallets(fsys ffs.PathedFS, searchPattern string) ([]*FSPallet, error)
 
 // Exists checks whether the pallet actually exists on the OS's filesystem.
 func (p *FSPallet) Exists() bool {
-	return DirExists(p.FS.Path())
+	return ffs.DirExists(p.FS.Path())
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
 )
@@ -16,7 +17,7 @@ import (
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSDownloadCache) Exists() bool {
-	return DirExists(filepath.FromSlash(c.FS.Path()))
+	return ffs.DirExists(filepath.FromSlash(c.FS.Path()))
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.

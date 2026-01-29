@@ -12,6 +12,8 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/internal/clients/git"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 type workspaceCaches struct {
@@ -37,7 +39,7 @@ type processingOptions struct {
 
 func processFullBaseArgs(
 	wpath string, opts processingOptions,
-) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
+) (plt *fplt.FSPallet, caches workspaceCaches, err error) {
 	if plt, err = getShallowPallet(wpath); err != nil {
 		return nil, workspaceCaches{}, err
 	}
@@ -54,7 +56,7 @@ func processFullBaseArgs(
 		return nil, workspaceCaches{}, err
 	}
 	if opts.merge {
-		if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
+		if plt, err = fplt.MergeFSPallet(plt, caches.p, nil); err != nil {
 			return nil, workspaceCaches{}, errors.Wrap(
 				err, "couldn't merge local pallet with file imports from any pallets required by it",
 			)
@@ -71,7 +73,7 @@ func processFullBaseArgs(
 	return plt, caches, nil
 }
 
-func getShallowPallet(wpath string) (plt *forklift.FSPallet, err error) {
+func getShallowPallet(wpath string) (plt *fplt.FSPallet, err error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
@@ -125,7 +127,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 		if err = checkPalletDirtiness(workspace, c.Bool("force")); err != nil {
 			return err
 		}
-		if forklift.DirExists(workspace.GetCurrentPalletPath()) {
+		if ffs.DirExists(workspace.GetCurrentPalletPath()) {
 			fmt.Fprintf(os.Stderr, "Deleting the local pallet to replace it with %s...", query)
 			fmt.Fprintln(os.Stderr)
 		}
@@ -151,7 +153,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 }
 
 func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
-	if !forklift.DirExists(wpath) {
+	if !ffs.DirExists(wpath) {
 		fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 	}
 	if err := forklift.EnsureExists(wpath); err != nil {
@@ -267,7 +269,7 @@ const (
 
 func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
 	pltPath := workspace.GetCurrentPalletPath()
-	if !forklift.DirExists(pltPath) {
+	if !ffs.DirExists(pltPath) {
 		return nil
 	}
 
@@ -489,7 +491,7 @@ func checkUpgrade(
 
 	currentResolved, err := resolveCurrentPalletVersion(indent, workspace)
 	if err != nil {
-		currentResolved = forklift.GitRepoReq{}
+		currentResolved = fplt.GitRepoReq{}
 		fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrap(
 			err,
 			"we couldn't determine & resolve the current version of the local pallet, so any change "+
@@ -506,15 +508,15 @@ func checkUpgrade(
 
 func resolveCurrentPalletVersion(
 	indent int, workspace *forklift.FSWorkspace,
-) (resolved forklift.GitRepoReq, err error) {
+) (resolved fplt.GitRepoReq, err error) {
 	// Inspect the current plt
 	plt, err := workspace.GetCurrentPallet()
 	if err != nil {
-		return forklift.GitRepoReq{}, errors.Wrap(err, "couldn't load local pallet from workspace")
+		return fplt.GitRepoReq{}, errors.Wrap(err, "couldn't load local pallet from workspace")
 	}
 	ref, err := git.Head(plt.FS.Path())
 	if err != nil {
-		return forklift.GitRepoReq{}, errors.Wrap(
+		return fplt.GitRepoReq{}, errors.Wrap(
 			err, "couldn't determine current commit of local pallet",
 		)
 	}
@@ -546,7 +548,7 @@ func resolveCurrentPalletVersion(
 			plt.FS.Path(), currentQuery.VersionQuery,
 		)
 		if err != nil {
-			return forklift.GitRepoReq{}, errors.Wrap(
+			return fplt.GitRepoReq{}, errors.Wrap(
 				err, "couldn't resolve current version query from the local pallet",
 			)
 		}
@@ -555,7 +557,7 @@ func resolveCurrentPalletVersion(
 			indent, os.Stderr, "Resolved %s as %s@%s",
 			currentQuery.String(), plt.Decl.Pallet.Path, resolvedVersionLock.Version,
 		)
-		return forklift.GitRepoReq{
+		return fplt.GitRepoReq{
 			RequiredPath: plt.Decl.Pallet.Path,
 			VersionLock:  resolvedVersionLock,
 		}, nil
@@ -564,11 +566,11 @@ func resolveCurrentPalletVersion(
 	return currentResolved[currentQuery.String()], nil
 }
 
-func printUpgrade(indent int, current, upgrade forklift.GitRepoReq, allowDowngrade bool) error {
+func printUpgrade(indent int, current, upgrade fplt.GitRepoReq, allowDowngrade bool) error {
 	if current == upgrade {
 		return errors.New("no upgrade found")
 	}
-	if current == (forklift.GitRepoReq{}) {
+	if current == (fplt.GitRepoReq{}) {
 		if !allowDowngrade {
 			return errors.Errorf(
 				"upgrade/downgrade available to %s, but we couldn't determine whether the change is a "+

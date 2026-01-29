@@ -23,6 +23,7 @@ import (
 
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -96,7 +97,7 @@ func (b *FSBundle) Path() string {
 
 // FSBundle: Pallets
 
-func (b *FSBundle) SetBundledPallet(pallet *FSPallet) error {
+func (b *FSBundle) SetBundledPallet(pallet *fplt.FSPallet) error {
 	shallow := pallet.FS
 	for {
 		merged, ok := shallow.(*ffs.MergeFS)
@@ -224,7 +225,7 @@ func (b *FSBundle) getBundledMergedPalletPath() string {
 
 // FSBundle: Deployments
 
-func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
+func (b *FSBundle) AddResolvedDepl(depl *fplt.ResolvedDepl) (err error) {
 	b.Manifest.Deploys[depl.Name] = depl.Depl.Decl
 	downloads := BundleDeplDownloads{}
 	if downloads.HTTPFile, err = depl.GetHTTPFileDownloadURLs(); err != nil {
@@ -281,14 +282,14 @@ func (b *FSBundle) AddResolvedDepl(depl *ResolvedDepl) (err error) {
 	return nil
 }
 
-func (b *FSBundle) makeComposeAppSummary(depl *ResolvedDepl) (BundleDeplComposeApp, error) {
+func (b *FSBundle) makeComposeAppSummary(depl *fplt.ResolvedDepl) (BundleDeplComposeApp, error) {
 	bundlePkg, err := b.LoadFSPkg(depl.Decl.Package, "")
 	if err != nil {
 		return BundleDeplComposeApp{}, errors.Wrapf(
 			err, "couldn't load bundled package %s", depl.Pkg.Path(),
 		)
 	}
-	depl = &ResolvedDepl{
+	depl = &fplt.ResolvedDepl{
 		Depl:   depl.Depl,
 		PkgReq: depl.PkgReq,
 		Pkg:    bundlePkg,
@@ -385,18 +386,18 @@ func makeComposeAppNetworkSummaries(
 	return created, required
 }
 
-func (b *FSBundle) LoadDepl(name string) (Depl, error) {
+func (b *FSBundle) LoadDepl(name string) (fplt.Depl, error) {
 	depl, ok := b.Manifest.Deploys[name]
 	if !ok {
-		return Depl{}, errors.Errorf("bundle does not contain package deployment %s", name)
+		return fplt.Depl{}, errors.Errorf("bundle does not contain package deployment %s", name)
 	}
-	return Depl{
+	return fplt.Depl{
 		Name: name,
 		Decl: depl,
 	}, nil
 }
 
-func (b *FSBundle) LoadDepls(searchPattern string) ([]Depl, error) {
+func (b *FSBundle) LoadDepls(searchPattern string) ([]fplt.Depl, error) {
 	deplNames := make([]string, 0, len(b.Manifest.Deploys))
 	for deplName := range b.Manifest.Deploys {
 		match, err := doublestar.Match(searchPattern, deplName)
@@ -411,7 +412,7 @@ func (b *FSBundle) LoadDepls(searchPattern string) ([]Depl, error) {
 		deplNames = append(deplNames, deplName)
 	}
 	slices.Sort(deplNames)
-	depls := make([]Depl, 0, len(deplNames))
+	depls := make([]fplt.Depl, 0, len(deplNames))
 	for _, deplName := range deplNames {
 		depl, err := b.LoadDepl(deplName)
 		if err != nil {
@@ -422,9 +423,9 @@ func (b *FSBundle) LoadDepls(searchPattern string) ([]Depl, error) {
 	return depls, nil
 }
 
-func (b *FSBundle) LoadResolvedDepl(name string) (depl *ResolvedDepl, err error) {
-	resolved := &ResolvedDepl{
-		Depl: Depl{
+func (b *FSBundle) LoadResolvedDepl(name string) (depl *fplt.ResolvedDepl, err error) {
+	resolved := &fplt.ResolvedDepl{
+		Depl: fplt.Depl{
 			Name: name,
 			Decl: b.Manifest.Deploys[name],
 		},
@@ -439,8 +440,8 @@ func (b *FSBundle) LoadResolvedDepl(name string) (depl *ResolvedDepl, err error)
 	return resolved, nil
 }
 
-func (b *FSBundle) LoadPkgReq(pkgPath string) (r PkgReq, err error) {
-	return PkgReq{
+func (b *FSBundle) LoadPkgReq(pkgPath string) (r fplt.PkgReq, err error) {
+	return fplt.PkgReq{
 		PkgSubdir: strings.TrimLeft(pkgPath, "/"),
 	}, nil
 }
@@ -498,7 +499,11 @@ func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
 	return nil
 }
 
-func exportLocalFile(resolved *ResolvedDepl, export fpkg.FileExportRes, exportPath string) error {
+func exportLocalFile(
+	resolved *fplt.ResolvedDepl,
+	export fpkg.FileExportRes,
+	exportPath string,
+) error {
 	if err := copyFSFile(
 		resolved.Pkg.FS, strings.TrimPrefix(export.Source, "/"), filepath.FromSlash(exportPath),
 		export.Permissions,
@@ -714,20 +719,20 @@ func extractRegularFile(
 
 // FSBundle: FSPalletLoader
 
-func (b *FSBundle) LoadFSPallet(palletPath string, version string) (*FSPallet, error) {
+func (b *FSBundle) LoadFSPallet(palletPath string, version string) (*fplt.FSPallet, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return LoadFSPallet(b.FS, path.Join(packagesDirName, palletPath))
+	return fplt.LoadFSPallet(b.FS, path.Join(packagesDirName, palletPath))
 }
 
-func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
+func (b *FSBundle) LoadFSPallets(searchPattern string) ([]*fplt.FSPallet, error) {
 	if b == nil {
 		return nil, errors.New("bundle is nil")
 	}
 
-	return LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
+	return fplt.LoadFSPallets(b.FS, path.Join(packagesDirName, searchPattern))
 }
 
 // FSBundle: FSPkgLoader

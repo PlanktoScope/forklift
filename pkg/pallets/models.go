@@ -218,3 +218,21 @@ const (
 	// FeatureDeclFileExt is the file extension for import group files.
 	FeatureDeclFileExt = ".feature.yml"
 )
+
+// Loaders
+
+// FSPkgLoader is a source of [fpkg.FSPkg]s indexed by path and version.
+type FSPkgLoader interface {
+	// LoadFSPkg loads the FSPkg with the specified path and version.
+	LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error)
+	// LoadFSPkgs loads all FSPkgs matching the specified search pattern.
+	LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error)
+}
+
+// FSPalletLoader is a source of [FSPallet]s indexed by path and version.
+type FSPalletLoader interface {
+	// LoadFSPallet loads the FSPallet with the specified path and version.
+	LoadFSPallet(palletPath string, version string) (*FSPallet, error)
+	// LoadFSPallets loads all FSPallets matching the specified search pattern.
+	LoadFSPallets(searchPattern string) ([]*FSPallet, error)
+}

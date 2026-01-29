@@ -11,27 +11,27 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
 
 type ResolvedDeplsLoader interface {
-	forklift.PkgReqLoader
-	LoadDepls(searchPattern string) ([]forklift.Depl, error)
+	fplt.PkgReqLoader
+	LoadDepls(searchPattern string) ([]fplt.Depl, error)
 }
 
 // Check checks the validity of the pallet or bundle. It prints check failures.
 func Check(
-	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
-) ([]*forklift.ResolvedDepl, []forklift.SatisfiedDeplDeps, error) {
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader,
+) ([]*fplt.ResolvedDepl, []fplt.SatisfiedDeplDeps, error) {
 	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, nil, err
 	}
-	depls = forklift.FilterDeplsForEnabled(depls)
-	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
+	depls = fplt.FilterDeplsForEnabled(depls)
+	resolved, err := fplt.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,7 +54,7 @@ type invalidFileExport struct {
 
 // checkFileExports checks the file exports of all package deployments in the pallet or bundle
 // to ensure that the source paths of those file exports are all valid. It prints check failures.
-func checkFileExports(indent int, out io.Writer, depls []*forklift.ResolvedDepl) error {
+func checkFileExports(indent int, out io.Writer, depls []*fplt.ResolvedDepl) error {
 	invalidDeplNames := make([]string, 0, len(depls))
 	invalidFileExports := make(map[string][]invalidFileExport)
 	for _, depl := range depls {
@@ -102,7 +102,7 @@ func checkFileExports(indent int, out io.Writer, depls []*forklift.ResolvedDepl)
 }
 
 func printInvalidDeplFileExports(
-	indent int, out io.Writer, depl *forklift.ResolvedDepl, invalid []invalidFileExport,
+	indent int, out io.Writer, depl *fplt.ResolvedDepl, invalid []invalidFileExport,
 ) {
 	IndentedFprintf(indent, out, "Deployment %s:\n", depl.Name)
 	indent++
@@ -138,8 +138,8 @@ func checkFileOrSymlink(fsys ffs.PathedFS, file string) error {
 // checkResources checks the resource constraints among package deployments in the pallet or bundle.
 // It prints check failures.
 func checkResources(
-	indent int, out io.Writer, depls []*forklift.ResolvedDepl,
-) ([]forklift.SatisfiedDeplDeps, error) {
+	indent int, out io.Writer, depls []*fplt.ResolvedDepl,
+) ([]fplt.SatisfiedDeplDeps, error) {
 	conflicts, err := checkDeplConflicts(indent, out, depls)
 	if err != nil {
 		return nil, err
@@ -158,9 +158,9 @@ func checkResources(
 }
 
 func checkDeplConflicts(
-	indent int, out io.Writer, depls []*forklift.ResolvedDepl,
-) ([]forklift.DeplConflict, error) {
-	conflicts, err := forklift.CheckDeplConflicts(depls)
+	indent int, out io.Writer, depls []*fplt.ResolvedDepl,
+) ([]fplt.DeplConflict, error) {
+	conflicts, err := fplt.CheckDeplConflicts(depls)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't check for conflicts among deployments")
 	}
@@ -178,7 +178,7 @@ func checkDeplConflicts(
 	return conflicts, nil
 }
 
-func printDeplConflict(indent int, out io.Writer, conflict forklift.DeplConflict) error {
+func printDeplConflict(indent int, out io.Writer, conflict fplt.DeplConflict) error {
 	IndentedFprintf(indent, out, "Between %s and %s:\n", conflict.First.Name, conflict.Second.Name)
 	indent++
 
@@ -265,9 +265,9 @@ func printResOrigin(indent int, out io.Writer, origin []string) (finalIndent int
 }
 
 func checkDeplDeps(
-	indent int, out io.Writer, depls []*forklift.ResolvedDepl,
-) (satisfied []forklift.SatisfiedDeplDeps, missing []forklift.MissingDeplDeps, err error) {
-	if satisfied, missing, err = forklift.CheckDeplDeps(depls); err != nil {
+	indent int, out io.Writer, depls []*fplt.ResolvedDepl,
+) (satisfied []fplt.SatisfiedDeplDeps, missing []fplt.MissingDeplDeps, err error) {
+	if satisfied, missing, err = fplt.CheckDeplDeps(depls); err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't check dependencies among deployments")
 	}
 	if len(missing) > 0 {
@@ -281,7 +281,7 @@ func checkDeplDeps(
 	return satisfied, missing, nil
 }
 
-func printMissingDeplDep(indent int, out io.Writer, deps forklift.MissingDeplDeps) error {
+func printMissingDeplDep(indent int, out io.Writer, deps fplt.MissingDeplDeps) error {
 	IndentedFprintf(indent, out, "For %s:\n", deps.Depl.Name)
 	indent++
 

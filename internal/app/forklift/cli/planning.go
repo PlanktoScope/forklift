@@ -10,8 +10,8 @@ import (
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -24,8 +24,8 @@ const (
 type ReconciliationChange struct {
 	Name string
 	Type string
-	Depl *forklift.ResolvedDepl // this is nil for an app to be removed
-	App  api.Stack              // this is empty for an app which does not yet exist
+	Depl *fplt.ResolvedDepl // this is nil for an app to be removed
+	App  api.Stack          // this is empty for an app which does not yet exist
 }
 
 func (c *ReconciliationChange) String() string {
@@ -43,20 +43,20 @@ func (c *ReconciliationChange) PlanString() string {
 }
 
 func newAddReconciliationChange(
-	deplName string, depl *forklift.ResolvedDepl,
+	deplName string, depl *fplt.ResolvedDepl,
 ) *ReconciliationChange {
 	return &ReconciliationChange{
-		Name: forklift.GetComposeAppName(deplName),
+		Name: fplt.GetComposeAppName(deplName),
 		Type: addReconciliationChange,
 		Depl: depl,
 	}
 }
 
 func newUpdateReconciliationChange(
-	deplName string, depl *forklift.ResolvedDepl, app api.Stack,
+	deplName string, depl *fplt.ResolvedDepl, app api.Stack,
 ) *ReconciliationChange {
 	return &ReconciliationChange{
-		Name: forklift.GetComposeAppName(deplName),
+		Name: fplt.GetComposeAppName(deplName),
 		Type: updateReconciliationChange,
 		Depl: depl,
 		App:  app,
@@ -80,7 +80,7 @@ func newRemoveReconciliationChange(appName string, app api.Stack) *Reconciliatio
 // graph are pruned away (e.g. if A depends on B and B depends on C and A also depends on C, the
 // dependency of A on C is omitted).
 func Plan(
-	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, parallel bool,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader, parallel bool,
 ) (
 	prunedChangeDeps structures.Digraph[*ReconciliationChange],
 	serialization []*ReconciliationChange,
@@ -99,7 +99,7 @@ func Plan(
 	// to be considered for a total ordering. And we don't want nonblocking dependency relationships
 	// to count towards dependency cycles. And it's simpler to just have the same behavior (and the
 	// same resulting dependency graph) regardless of serial vs. concurrent execution.
-	deps := forklift.ResolveDeps(satisfiedDeps, true)
+	deps := fplt.ResolveDeps(satisfiedDeps, true)
 
 	IndentedFprintln(indent, os.Stderr, "Determining and ordering package deployment changes...")
 	apps, err := dc.ListApps(context.Background())
@@ -184,7 +184,7 @@ func printNodeOutboundEdges[Node comparable, Digraph MapDigraph[Node]](
 // for executing the changes serially (rather than concurrently); otherwise, a nil sequential order
 // will be returned.
 func planChanges(
-	depls []*forklift.ResolvedDepl, deplDirectDeps structures.Digraph[string], apps []api.Stack,
+	depls []*fplt.ResolvedDepl, deplDirectDeps structures.Digraph[string], apps []api.Stack,
 	serialize bool,
 ) (
 	changeDirectDeps structures.Digraph[*ReconciliationChange],
@@ -218,9 +218,9 @@ func planChanges(
 // identifyReconciliationChanges builds an arbitrarily-ordered list of changes to carry out to
 // reconcile the desired list of deployments with the actual list of active Docker Compose apps.
 func identifyReconciliationChanges(
-	depls []*forklift.ResolvedDepl, apps []api.Stack,
+	depls []*fplt.ResolvedDepl, apps []api.Stack,
 ) ([]*ReconciliationChange, error) {
-	deplsByName := make(map[string]*forklift.ResolvedDepl)
+	deplsByName := make(map[string]*fplt.ResolvedDepl)
 	for _, depl := range depls {
 		deplsByName[depl.Name] = depl
 	}
@@ -236,8 +236,8 @@ func identifyReconciliationChanges(
 	appDeplNames := make(map[string]string)
 	changes := make([]*ReconciliationChange, 0, len(depls)+len(apps))
 	for name, depl := range deplsByName {
-		appDeplNames[forklift.GetComposeAppName(name)] = name
-		app, ok := appsByName[forklift.GetComposeAppName(name)]
+		appDeplNames[fplt.GetComposeAppName(name)] = name
+		app, ok := appsByName[fplt.GetComposeAppName(name)]
 		if !ok {
 			if composeAppDefinerSet.Has(name) {
 				changes = append(changes, newAddReconciliationChange(name, depl))
@@ -261,7 +261,7 @@ func identifyReconciliationChanges(
 
 // identifyComposeAppDefiners builds a set of the names of deployments which define Compose apps.
 func identifyComposeAppDefiners(
-	depls map[string]*forklift.ResolvedDepl,
+	depls map[string]*fplt.ResolvedDepl,
 ) (structures.Set[string], error) {
 	composeAppDefinerSet := make(structures.Set[string])
 	for _, depl := range depls {

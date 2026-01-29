@@ -58,7 +58,7 @@ func LoadFSStageStore(fsys ffs.PathedFS, subdirPath string) (s *FSStageStore, er
 
 // Exists checks whether the store actually exists on the OS's filesystem.
 func (s *FSStageStore) Exists() bool {
-	return DirExists(filepath.FromSlash(s.FS.Path()))
+	return ffs.DirExists(filepath.FromSlash(s.FS.Path()))
 }
 
 // Remove deletes the store from the OS's filesystem, if it exists.
@@ -126,7 +126,7 @@ func (s *FSStageStore) AllocateNew() (index int, err error) {
 	// index (i.e. Go's default-initialization for an int) can represent a missing index.
 	index = prevIndex + 1
 	newPath := filepath.FromSlash(s.GetBundlePath(index))
-	if DirExists(newPath) {
+	if ffs.DirExists(newPath) {
 		return index, errors.Wrapf(err, "a stage already exists at %s", newPath)
 	}
 	if err = EnsureExists(newPath); err != nil {

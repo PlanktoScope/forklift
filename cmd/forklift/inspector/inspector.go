@@ -9,6 +9,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 // resolve-git-repo
@@ -31,7 +32,7 @@ func resolveGitRepoAction(c *cli.Context) error {
 }
 
 func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
-	if !forklift.DirExists(wpath) {
+	if !ffs.DirExists(wpath) {
 		fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 	}
 	if err := forklift.EnsureExists(wpath); err != nil {

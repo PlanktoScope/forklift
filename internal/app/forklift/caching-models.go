@@ -3,6 +3,7 @@ package forklift
 import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -17,18 +18,10 @@ type FSMirrorCache struct {
 
 // Pallet
 
-// FSPalletLoader is a source of [FSPallet]s indexed by path and version.
-type FSPalletLoader interface {
-	// LoadFSPallet loads the FSPallet with the specified path and version.
-	LoadFSPallet(palletPath string, version string) (*FSPallet, error)
-	// LoadFSPallets loads all FSPallets matching the specified search pattern.
-	LoadFSPallets(searchPattern string) ([]*FSPallet, error)
-}
-
 // PalletCache is a source of pallets.
 type PalletCache interface {
-	FSPalletLoader
-	FSPkgLoader
+	fplt.FSPalletLoader
+	fplt.FSPkgLoader
 }
 
 // PathedPalletCache is a PalletCache rooted at a single path.
@@ -74,7 +67,7 @@ type PalletOverrideCache struct {
 	// pallets is a map associating pallet paths to loaded pallets.
 	// For each key-value pair, the key must be the path of the pallet which is the value of that
 	// key-value pair.
-	pallets map[string]*FSPallet
+	pallets map[string]*fplt.FSPallet
 	// palletPaths is an alphabetically ordered list of the keys of pallets.
 	palletPaths []string
 	// palletVersions is a map associating pallet paths to pallet version strings.
@@ -86,17 +79,9 @@ type PalletOverrideCache struct {
 
 // FSPkgTree
 
-// FSPkgLoader is a source of [fpkg.FSPkg]s indexed by path and version.
-type FSPkgLoader interface {
-	// LoadFSPkg loads the FSPkg with the specified path and version.
-	LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error)
-	// LoadFSPkgs loads all FSPkgs matching the specified search pattern.
-	LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error)
-}
-
 // FSPkgTreeCache is a source of packages.
 type FSPkgTreeCache interface {
-	FSPkgLoader
+	fplt.FSPkgLoader
 }
 
 // PathedFSPkgTreeCache is a FSPkgTreeCache rooted at a single path.

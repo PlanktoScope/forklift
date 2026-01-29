@@ -16,9 +16,10 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
-func ListPalletFiles(pallet *forklift.FSPallet, pattern string) ([]string, error) {
+func ListPalletFiles(pallet *fplt.FSPallet, pattern string) ([]string, error) {
 	if pattern == "" {
 		pattern = "**"
 	}
@@ -46,7 +47,7 @@ func ListPalletFiles(pallet *forklift.FSPallet, pattern string) ([]string, error
 	return paths, nil
 }
 
-func GetFileLocation(pallet *forklift.FSPallet, filePath string) (string, error) {
+func GetFileLocation(pallet *fplt.FSPallet, filePath string) (string, error) {
 	fsys, ok := pallet.FS.(*ffs.MergeFS)
 	if !ok {
 		return path.Join(pallet.FS.Path(), filePath), nil
@@ -61,7 +62,7 @@ func GetFileLocation(pallet *forklift.FSPallet, filePath string) (string, error)
 	return resolved, nil
 }
 
-func FprintFile(out io.Writer, pallet *forklift.FSPallet, filePath string) error {
+func FprintFile(out io.Writer, pallet *fplt.FSPallet, filePath string) error {
 	data, err := fs.ReadFile(pallet.FS, filePath)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't read file %s in %s", filePath, pallet.FS.Path())
@@ -71,7 +72,7 @@ func FprintFile(out io.Writer, pallet *forklift.FSPallet, filePath string) error
 	return nil
 }
 
-func EditFileWithCOW(pallet *forklift.FSPallet, filePath, editor string) error {
+func EditFileWithCOW(pallet *fplt.FSPallet, filePath, editor string) error {
 	fsys, ok := pallet.FS.(*ffs.MergeFS)
 	if !ok {
 		fullPath := path.Join(pallet.FS.Path(), filePath)
@@ -168,7 +169,7 @@ func editWithTempFile(editor, filePath string, original []byte) (edited []byte, 
 	return edited, nil
 }
 
-func RemoveFile(indent int, pallet *forklift.FSPallet, filePath string) error {
+func RemoveFile(indent int, pallet *fplt.FSPallet, filePath string) error {
 	if err := os.RemoveAll(filepath.FromSlash(path.Join(pallet.FS.Path(), filePath))); err != nil {
 		return err
 	}

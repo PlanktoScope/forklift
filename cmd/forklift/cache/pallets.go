@@ -5,8 +5,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 // ls-plt
@@ -21,8 +21,8 @@ func lsPltAction(c *cli.Context) error {
 	}
 
 	// TODO: add a --pattern cli flag for the pattern
-	return lsGitRepo("pallet", "**", cache.LoadFSPallets, func(r, s *forklift.FSPallet) int {
-		return forklift.ComparePallets(r.Pallet, s.Pallet)
+	return lsGitRepo("pallet", "**", cache.LoadFSPallets, func(r, s *fplt.FSPallet) int {
+		return fplt.ComparePallets(r.Pallet, s.Pallet)
 	})
 }
 

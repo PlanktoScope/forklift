@@ -12,6 +12,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 var errMissingCache = errors.New(
@@ -21,7 +22,7 @@ var errMissingCache = errors.New(
 
 func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache, error) {
 	if ensureWorkspace {
-		if !forklift.DirExists(wpath) {
+		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 		}
 		if err := forklift.EnsureExists(wpath); err != nil {
@@ -41,7 +42,7 @@ func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache
 
 func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
 	if ensureWorkspace {
-		if !forklift.DirExists(wpath) {
+		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 		}
 		if err := forklift.EnsureExists(wpath); err != nil {

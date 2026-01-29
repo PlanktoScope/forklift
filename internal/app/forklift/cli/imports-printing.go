@@ -9,9 +9,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
-func FprintPalletImports(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func FprintPalletImports(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	imps, err := pallet.LoadImports("**/*")
 	if err != nil {
 		return err
@@ -24,7 +25,7 @@ func FprintPalletImports(indent int, out io.Writer, pallet *forklift.FSPallet) e
 
 func FprintImportInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, importName string,
+	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, importName string,
 ) error {
 	imp, err := pallet.LoadImport(importName)
 	if err != nil {
@@ -32,11 +33,11 @@ func FprintImportInfo(
 			err, "couldn't find import group declaration %s in pallet %s", importName, pallet.FS.Path(),
 		)
 	}
-	resolved, err := forklift.ResolveImport(pallet, cache, imp)
+	resolved, err := fplt.ResolveImport(pallet, cache, imp)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve import group %s", imp.Name)
 	}
-	resolved.Pallet, err = forklift.MergeFSPallet(resolved.Pallet, cache, nil)
+	resolved.Pallet, err = fplt.MergeFSPallet(resolved.Pallet, cache, nil)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't print merge pallet referenced by resolved import group %s", imp.Name,
@@ -49,7 +50,7 @@ func FprintImportInfo(
 }
 
 func FprintResolvedImport(
-	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+	indent int, out io.Writer, imp *fplt.ResolvedImport, loader fplt.FSPalletLoader,
 ) error {
 	IndentedFprint(indent, out, "Import group")
 	if imp.Import.Decl.Disabled {
@@ -86,7 +87,7 @@ func FprintResolvedImport(
 
 func fprintModifiers(
 	indent int, out io.Writer,
-	modifiers []forklift.ImportModifier, plt *forklift.FSPallet, loader forklift.FSPalletLoader,
+	modifiers []fplt.ImportModifier, plt *fplt.FSPallet, loader fplt.FSPalletLoader,
 ) error {
 	IndentedFprint(indent, out, "Sequential definition:")
 	if len(modifiers) == 0 {
@@ -96,15 +97,15 @@ func fprintModifiers(
 	indent++
 	for i, modifier := range modifiers {
 		switch modifier.Type {
-		case forklift.ImportModifierTypeAdd:
+		case fplt.ImportModifierTypeAdd:
 			fprintAddModifier(indent, out, i, modifier)
-		case forklift.ImportModifierTypeRemove:
+		case fplt.ImportModifierTypeRemove:
 			fprintRemoveModifier(indent, out, i, modifier)
-		case forklift.ImportModifierTypeAddFeature:
+		case fplt.ImportModifierTypeAddFeature:
 			if err := fprintAddFeatureModifier(indent, out, i, modifier, plt, loader); err != nil {
 				return err
 			}
-		case forklift.ImportModifierTypeRemoveFeature:
+		case fplt.ImportModifierTypeRemoveFeature:
 			if err := fprintRemoveFeatureModifier(indent, out, i, modifier, plt, loader); err != nil {
 				return err
 			}
@@ -117,7 +118,7 @@ func fprintModifiers(
 	return nil
 }
 
-func fprintAddModifier(indent int, out io.Writer, index int, modifier forklift.ImportModifier) {
+func fprintAddModifier(indent int, out io.Writer, index int, modifier fplt.ImportModifier) {
 	BulletedFprintf(indent, out, "[%d] Add files to group", index)
 	if modifier.Description == "" {
 		_, _ = fmt.Fprintln(out)
@@ -136,7 +137,7 @@ func fprintAddModifier(indent int, out io.Writer, index int, modifier forklift.I
 	}
 }
 
-func fprintRemoveModifier(indent int, out io.Writer, index int, modifier forklift.ImportModifier) {
+func fprintRemoveModifier(indent int, out io.Writer, index int, modifier fplt.ImportModifier) {
 	BulletedFprintf(indent, out, "[%d] Remove files from group", index)
 	if modifier.Description == "" {
 		_, _ = fmt.Fprintln(out)
@@ -151,8 +152,8 @@ func fprintRemoveModifier(indent int, out io.Writer, index int, modifier forklif
 }
 
 func fprintAddFeatureModifier(
-	indent int, out io.Writer, index int, modifier forklift.ImportModifier, plt *forklift.FSPallet,
-	loader forklift.FSPalletLoader,
+	indent int, out io.Writer, index int, modifier fplt.ImportModifier, plt *fplt.FSPallet,
+	loader fplt.FSPalletLoader,
 ) error {
 	BulletedFprintf(indent, out, "[%d] Add feature-flagged files to group", index)
 	if modifier.Description == "" {
@@ -167,7 +168,7 @@ func fprintAddFeatureModifier(
 }
 
 func fprintReferencedFeature(
-	indent int, out io.Writer, name string, plt *forklift.FSPallet, loader forklift.FSPalletLoader,
+	indent int, out io.Writer, name string, plt *fplt.FSPallet, loader fplt.FSPalletLoader,
 ) error {
 	IndentedFprintf(indent, out, "Feature %s", name)
 	feature, err := plt.LoadFeature(name, loader)
@@ -181,7 +182,7 @@ func fprintReferencedFeature(
 		_, _ = fmt.Fprintln(out, " (no description)")
 	}
 
-	resolved := &forklift.ResolvedImport{
+	resolved := &fplt.ResolvedImport{
 		Import: feature,
 		Pallet: plt,
 	}
@@ -199,8 +200,8 @@ func fprintReferencedFeature(
 }
 
 func fprintRemoveFeatureModifier(
-	indent int, out io.Writer, index int, modifier forklift.ImportModifier, plt *forklift.FSPallet,
-	loader forklift.FSPalletLoader,
+	indent int, out io.Writer, index int, modifier fplt.ImportModifier, plt *fplt.FSPallet,
+	loader fplt.FSPalletLoader,
 ) error {
 	BulletedFprintf(indent, out, "[%d] Remove feature-flagged files from group", index)
 	if modifier.Description == "" {
@@ -215,7 +216,7 @@ func fprintRemoveFeatureModifier(
 }
 
 func fprintImportEvaluation(
-	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+	indent int, out io.Writer, imp *fplt.ResolvedImport, loader fplt.FSPalletLoader,
 ) error {
 	importMappings, err := imp.Evaluate(loader)
 	if err != nil {

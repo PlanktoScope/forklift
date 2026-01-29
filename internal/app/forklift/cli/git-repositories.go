@@ -15,6 +15,8 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
@@ -131,7 +133,7 @@ func filterTags[T nameGetter](tags []T) []T {
 
 func ResolveQueriesUsingLocalMirrors(
 	indent int, mirrorsPath string, queries []string, updateLocalMirror bool,
-) (resolved map[string]forklift.GitRepoReq, err error) {
+) (resolved map[string]fplt.GitRepoReq, err error) {
 	IndentedFprintln(
 		indent, os.Stderr, "Resolving version queries using local mirrors of remote Git repos...",
 	)
@@ -215,8 +217,8 @@ func updateLocalGitRepoMirror(indent int, remote, mirrorPath string) error {
 
 func resolveGitRepoQueriesUsingLocalMirrors(
 	indent int, queries []string, mirrorsPath string,
-) (resolved map[string]forklift.GitRepoReq, err error) {
-	resolved = make(map[string]forklift.GitRepoReq)
+) (resolved map[string]fplt.GitRepoReq, err error) {
+	resolved = make(map[string]fplt.GitRepoReq)
 	for _, query := range queries {
 		if _, ok := resolved[query]; ok {
 			continue
@@ -225,7 +227,7 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 		if !ok {
 			return nil, errors.Errorf("couldn't parse '%s' as git_repo_path@version", query)
 		}
-		req := forklift.GitRepoReq{
+		req := fplt.GitRepoReq{
 			RequiredPath: gitRepoPath,
 		}
 		if req.VersionLock, err = ResolveVersionQueryUsingRepo(
@@ -266,7 +268,7 @@ func performOptionalLocalMirrorsUpdate(indent int, queries []string, mirrorsPath
 
 func DownloadQueriedGitReposUsingLocalMirrors(
 	indent int, mirrorsPath, cachePath string, queries []string,
-) (resolved map[string]forklift.GitRepoReq, changed map[forklift.GitRepoReq]bool, err error) {
+) (resolved map[string]fplt.GitRepoReq, changed map[fplt.GitRepoReq]bool, err error) {
 	if err = validateGitRepoQueries(queries); err != nil {
 		return nil, nil, errors.Wrap(err, "one or more arguments is invalid")
 	}
@@ -276,7 +278,7 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 		return nil, nil, err
 	}
 
-	changed = make(map[forklift.GitRepoReq]bool)
+	changed = make(map[fplt.GitRepoReq]bool)
 	for _, req := range resolved {
 		downloaded, err := cloneLockedGitRepoFromLocalMirror(
 			indent, cachePath, mirrorsPath, req.Path(), req.VersionLock,
@@ -358,7 +360,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	gitRepoCachePath := filepath.FromSlash(path.Join(
 		cachePath, fmt.Sprintf("%s@%s", gitRepoPath, version),
 	))
-	if forklift.DirExists(gitRepoCachePath) {
+	if ffs.DirExists(gitRepoCachePath) {
 		// TODO: perform a disk checksum
 		return false, nil
 	}

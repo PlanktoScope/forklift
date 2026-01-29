@@ -11,14 +11,14 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FprintCachedPallet(
-	indent int, out io.Writer, cache ffs.Pather, pallet *forklift.FSPallet, printHeader bool,
+	indent int, out io.Writer, cache ffs.Pather, pallet *fplt.FSPallet, printHeader bool,
 ) error {
 	if printHeader {
 		IndentedFprintf(indent, out, "Cached pallet: %s\n", pallet.Path())
@@ -115,7 +115,7 @@ func fprintFSPkgTreePkgs(indent int, out io.Writer, pkgTree *fpkg.FSPkgTree) err
 	return nil
 }
 
-func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func fprintPalletDepls(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	IndentedFprint(indent, out, "Package deployments:")
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
@@ -140,7 +140,7 @@ func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) err
 	return nil
 }
 
-func fprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func fprintPalletFeatures(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	IndentedFprint(indent, out, "Importable features:")
 	imps, err := pallet.LoadFeatures("**/*")
 	if err != nil {
@@ -157,7 +157,7 @@ func fprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) 
 	return nil
 }
 
-func FprintPalletInfo(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func FprintPalletInfo(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	IndentedFprintf(indent, out, "Pallet: %s\n", pallet.Path())
 	indent++
 

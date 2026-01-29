@@ -15,6 +15,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/crane"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -39,7 +40,7 @@ func GetDownloadCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache
 // Download
 
 func DownloadExportFiles(
-	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
 ) error {
@@ -90,16 +91,16 @@ func DownloadExportFiles(
 }
 
 func ListRequiredDownloads(
-	deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, includeDisabled bool,
+	deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader, includeDisabled bool,
 ) (http, oci []string, err error) {
 	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, nil, err
 	}
 	if !includeDisabled {
-		depls = forklift.FilterDeplsForEnabled(depls)
+		depls = fplt.FilterDeplsForEnabled(depls)
 	}
-	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
+	resolved, err := fplt.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, nil, err
 	}

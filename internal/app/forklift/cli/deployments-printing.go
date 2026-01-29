@@ -12,9 +12,10 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
-func FprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func FprintPalletDepls(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
 		return err
@@ -27,7 +28,7 @@ func FprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) err
 
 func FprintDeplInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, deplName string,
+	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, deplName string,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -40,7 +41,7 @@ func FprintDeplInfo(
 	if err != nil {
 		return err
 	}
-	resolved, err := forklift.ResolveDepl(pallet, overlayCache, depl)
+	resolved, err := fplt.ResolveDepl(pallet, overlayCache, depl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
@@ -51,7 +52,7 @@ func FprintDeplInfo(
 }
 
 func FprintResolvedDepl(
-	indent int, out io.Writer, cache forklift.PathedPalletCache, resolved *forklift.ResolvedDepl,
+	indent int, out io.Writer, cache forklift.PathedPalletCache, resolved *fplt.ResolvedDepl,
 ) error {
 	if err := fprintDepl(indent, out, cache, resolved); err != nil {
 		return err
@@ -84,7 +85,7 @@ func FprintResolvedDepl(
 }
 
 func fprintDepl(
-	indent int, out io.Writer, cache forklift.PathedPalletCache, depl *forklift.ResolvedDepl,
+	indent int, out io.Writer, cache forklift.PathedPalletCache, depl *fplt.ResolvedDepl,
 ) error {
 	IndentedFprint(indent, out, "Package deployment")
 	if depl.Depl.Decl.Disabled {
@@ -130,7 +131,7 @@ func fprintDepl(
 }
 
 func fprintDeplPkg(
-	indent int, out io.Writer, cache forklift.PathedPalletCache, depl *forklift.ResolvedDepl,
+	indent int, out io.Writer, cache forklift.PathedPalletCache, depl *fplt.ResolvedDepl,
 ) {
 	IndentedFprintf(indent, out, "Deploys package: %s\n", depl.Decl.Package)
 	indent++
@@ -154,7 +155,7 @@ func fprintFeatures(indent int, out io.Writer, features map[string]fpkg.PkgFeatu
 	}
 }
 
-func fprintDockerAppDefFiles(indent int, out io.Writer, depl *forklift.ResolvedDepl) error {
+func fprintDockerAppDefFiles(indent int, out io.Writer, depl *fplt.ResolvedDepl) error {
 	composeFiles, err := depl.GetComposeFilenames()
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine Compose files for deployment")
@@ -247,7 +248,8 @@ func fprintDockerAppVolumes(indent int, out io.Writer, volumes dct.Volumes) {
 
 func FprintDeplPkgLocation(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, deplName string, allowDisabled bool,
+	pallet *fplt.FSPallet,
+	cache forklift.PathedPalletCache, deplName string, allowDisabled bool,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -260,7 +262,7 @@ func FprintDeplPkgLocation(
 	if err != nil {
 		return err
 	}
-	resolved, err := forklift.ResolveDepl(pallet, overlayCache, depl)
+	resolved, err := fplt.ResolveDepl(pallet, overlayCache, depl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}

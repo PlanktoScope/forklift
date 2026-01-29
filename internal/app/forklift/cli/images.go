@@ -14,6 +14,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -70,7 +71,7 @@ func DownloadImagesForStoreApply(
 }
 
 func DownloadImages(
-	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader,
 	platform string, includeDisabled, parallel bool,
 ) error {
 	orderedImages, err := ListRequiredImages(deplsLoader, pkgLoader, includeDisabled)
@@ -95,16 +96,16 @@ func DownloadImages(
 }
 
 func ListRequiredImages(
-	deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, includeDisabled bool,
+	deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader, includeDisabled bool,
 ) ([]string, error) {
 	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, err
 	}
 	if !includeDisabled {
-		depls = forklift.FilterDeplsForEnabled(depls)
+		depls = fplt.FilterDeplsForEnabled(depls)
 	}
-	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
+	resolved, err := fplt.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, err
 	}

@@ -9,19 +9,12 @@ import (
 
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FileExists(filePath string) bool {
 	results, err := os.Stat(filePath)
 	if err == nil && !results.IsDir() {
-		return true
-	}
-	return false
-}
-
-func DirExists(dirPath string) bool {
-	dir, err := os.Stat(dirPath)
-	if err == nil && dir.IsDir() {
 		return true
 	}
 	return false
@@ -40,7 +33,7 @@ func EnsureExists(dirPath string) error {
 // [XDG base directory spec](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html).
 // The provided path must use the host OS's path separators.
 func LoadWorkspace(dirPath string) (*FSWorkspace, error) {
-	if !DirExists(dirPath) {
+	if !ffs.DirExists(dirPath) {
 		return nil, errors.Errorf("couldn't find workspace at %s", dirPath)
 	}
 	return &FSWorkspace{
@@ -72,12 +65,12 @@ func (w *FSWorkspace) GetCurrentPalletPath() string {
 	return path.Join(w.GetDataPath(), dataCurrentPalletDirName)
 }
 
-func (w *FSWorkspace) GetCurrentPallet() (*FSPallet, error) {
+func (w *FSWorkspace) GetCurrentPallet() (*fplt.FSPallet, error) {
 	fsys, err := w.getDataFS()
 	if err != nil {
 		return nil, err
 	}
-	return LoadFSPallet(fsys, dataCurrentPalletDirName)
+	return fplt.LoadFSPallet(fsys, dataCurrentPalletDirName)
 }
 
 // Data: Stages (i.e. pallet bundles which have been staged to be applied)

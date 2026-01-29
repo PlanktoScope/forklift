@@ -14,6 +14,7 @@ import (
 
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -21,7 +22,7 @@ import (
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSPalletCache) Exists() bool {
-	return DirExists(filepath.FromSlash(c.pkgTree.FS.Path()))
+	return ffs.DirExists(filepath.FromSlash(c.pkgTree.FS.Path()))
 }
 
 // Remove deletes the cache from the OS's filesystem, if it exists.
@@ -38,12 +39,12 @@ func (c *FSPalletCache) Path() string {
 
 // LoadFSPallet loads the FSPallet with the specified path and version.
 // The loaded FSPallet instance is fully initialized.
-func (c *FSPalletCache) LoadFSPallet(pltPath string, version string) (*FSPallet, error) {
+func (c *FSPalletCache) LoadFSPallet(pltPath string, version string) (*fplt.FSPallet, error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
 
-	plt, err := LoadFSPallet(c.pkgTree.FS, fmt.Sprintf("%s@%s", pltPath, version))
+	plt, err := fplt.LoadFSPallet(c.pkgTree.FS, fmt.Sprintf("%s@%s", pltPath, version))
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +57,12 @@ func (c *FSPalletCache) LoadFSPallet(pltPath string, version string) (*FSPallet,
 // The search pattern should be a [doublestar] pattern, such as `**`, matching pallet directories to
 // search for.
 // The loaded FSPallet instances are fully initialized.
-func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
+func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*fplt.FSPallet, error) {
 	if c == nil {
 		return nil, nil
 	}
 
-	plts, err := LoadFSPallets(c.pkgTree.FS, searchPattern)
+	plts, err := fplt.LoadFSPallets(c.pkgTree.FS, searchPattern)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load pallets from cache")
 	}
@@ -151,7 +152,9 @@ func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) 
 
 // loadFSPalletContaining finds and loads the FSPallet which contains the provided subdirectory
 // path.
-func (c *FSPalletCache) loadFSPalletContaining(subdirPath string) (pallet *FSPallet, err error) {
+func (c *FSPalletCache) loadFSPalletContaining(
+	subdirPath string,
+) (pallet *fplt.FSPallet, err error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -181,10 +184,10 @@ func (c *FSPalletCache) loadFSPalletContaining(subdirPath string) (pallet *FSPal
 // provided base filesystem.
 // The sub-directory path does not have to actually exist.
 // In the loaded FSPallet's embedded [Pallet], the version is *not* initialized.
-func loadFSPalletContaining(fsys ffs.PathedFS, subdirPath string) (*FSPallet, error) {
+func loadFSPalletContaining(fsys ffs.PathedFS, subdirPath string) (*fplt.FSPallet, error) {
 	repoCandidatePath := subdirPath
 	for {
-		if repo, err := LoadFSPallet(fsys, repoCandidatePath); err == nil {
+		if repo, err := fplt.LoadFSPallet(fsys, repoCandidatePath); err == nil {
 			return repo, nil
 		}
 		repoCandidatePath = path.Dir(repoCandidatePath)
@@ -208,7 +211,7 @@ func (c *LayeredPalletCache) Path() string {
 // The loaded FSPallet instance is fully initialized.
 // If the overlay cache expects to have the pallet, it will attempt to load the pallet; otherwise,
 // the underlay cache will attempt to load the pallet.
-func (c *LayeredPalletCache) LoadFSPallet(pltPath string, version string) (*FSPallet, error) {
+func (c *LayeredPalletCache) LoadFSPallet(pltPath string, version string) (*fplt.FSPallet, error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -228,7 +231,7 @@ func (c *LayeredPalletCache) LoadFSPallet(pltPath string, version string) (*FSPa
 // All matching pallets from the overlay cache will be included; all matching pallets from the
 // underlay cache will also be included, except for those pallets which the overlay cache expected
 // to have.
-func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
+func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*fplt.FSPallet, error) {
 	if c == nil {
 		return nil, nil
 	}
@@ -249,8 +252,8 @@ func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, e
 		loadedPallets = append(loadedPallets, pallet)
 	}
 
-	slices.SortFunc(loadedPallets, func(a, b *FSPallet) int {
-		return ComparePallets(a.Pallet, b.Pallet)
+	slices.SortFunc(loadedPallets, func(a, b *fplt.FSPallet) int {
+		return fplt.ComparePallets(a.Pallet, b.Pallet)
 	})
 	return loadedPallets, nil
 }
@@ -313,10 +316,10 @@ func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, er
 // map associating pallet paths with lists of versions which the respective pallets will be
 // associated with.
 func NewPalletOverrideCache(
-	overridePallets []*FSPallet, palletVersions map[string][]string,
+	overridePallets []*fplt.FSPallet, palletVersions map[string][]string,
 ) (*PalletOverrideCache, error) {
 	c := &PalletOverrideCache{
-		pallets:           make(map[string]*FSPallet),
+		pallets:           make(map[string]*fplt.FSPallet),
 		palletPaths:       make([]string, 0, len(overridePallets)),
 		palletVersions:    make(map[string][]string),
 		palletVersionSets: make(map[string]structures.Set[string]),
@@ -378,7 +381,10 @@ func (c *PalletOverrideCache) IncludesFSPallet(palletPath string, version string
 // LoadFSPallet loads the FSPallet with the specified path, if the version matches any of versions
 // for the pallet in the cache.
 // The loaded FSPallet instance is fully initialized.
-func (c *PalletOverrideCache) LoadFSPallet(palletPath string, version string) (*FSPallet, error) {
+func (c *PalletOverrideCache) LoadFSPallet(
+	palletPath string,
+	version string,
+) (*fplt.FSPallet, error) {
 	if c == nil {
 		return nil, errors.New("cache is nil")
 	}
@@ -397,12 +403,12 @@ func (c *PalletOverrideCache) LoadFSPallet(palletPath string, version string) (*
 // The search pattern should be a [doublestar] pattern, such as `**`, matching pallets to search
 // for.
 // The loaded FSPallet instances are fully initialized.
-func (c *PalletOverrideCache) LoadFSPallets(searchPattern string) ([]*FSPallet, error) {
+func (c *PalletOverrideCache) LoadFSPallets(searchPattern string) ([]*fplt.FSPallet, error) {
 	if c == nil {
 		return nil, nil
 	}
 
-	loadedPallets := make(map[string]*FSPallet) // indexed by pallet cache path
+	loadedPallets := make(map[string]*fplt.FSPallet) // indexed by pallet cache path
 	palletCachePaths := make([]string, 0)
 	for _, palletPath := range c.palletPaths {
 		pallet := c.pallets[palletPath]
@@ -425,7 +431,7 @@ func (c *PalletOverrideCache) LoadFSPallets(searchPattern string) ([]*FSPallet, 
 	}
 	sort.Strings(matchingPalletCachePaths)
 
-	matchingPallets := make([]*FSPallet, 0, len(matchingPalletCachePaths))
+	matchingPallets := make([]*fplt.FSPallet, 0, len(matchingPalletCachePaths))
 	for _, cachePath := range matchingPalletCachePaths {
 		matchingPallets = append(matchingPallets, loadedPallets[cachePath])
 	}

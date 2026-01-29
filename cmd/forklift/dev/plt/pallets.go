@@ -11,6 +11,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -38,7 +39,7 @@ type processingOptions struct {
 
 func processFullBaseArgs(
 	c *cli.Context, opts processingOptions,
-) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
+) (plt *fplt.FSPallet, caches workspaceCaches, err error) {
 	if plt, err = getShallowPallet(c.String("cwd")); err != nil {
 		return nil, workspaceCaches{}, err
 	}
@@ -64,7 +65,7 @@ func processFullBaseArgs(
 		}
 	}
 	if opts.merge {
-		if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
+		if plt, err = fplt.MergeFSPallet(plt, caches.p, nil); err != nil {
 			return nil, workspaceCaches{}, errors.Wrap(
 				err, "couldn't merge development pallet with file imports from any pallets required by it",
 			)
@@ -81,8 +82,8 @@ func processFullBaseArgs(
 	return plt, caches, nil
 }
 
-func getShallowPallet(cwdPath string) (plt *forklift.FSPallet, err error) {
-	if plt, err = forklift.LoadFSPalletContaining(cwdPath); err != nil {
+func getShallowPallet(cwdPath string) (plt *fplt.FSPallet, err error) {
+	if plt, err = fplt.LoadFSPalletContaining(cwdPath); err != nil {
 		return nil, errors.Wrapf(
 			err, "The current working directory %s is not part of a Forklift pallet", cwdPath,
 		)
@@ -91,7 +92,7 @@ func getShallowPallet(cwdPath string) (plt *forklift.FSPallet, err error) {
 }
 
 func overlayPalletCacheOverrides(
-	underlay forklift.PathedPalletCache, pallets []string, plt *forklift.FSPallet,
+	underlay forklift.PathedPalletCache, pallets []string, plt *fplt.FSPallet,
 ) (palletCache *forklift.LayeredPalletCache, err error) {
 	palletCache = &forklift.LayeredPalletCache{
 		Underlay: underlay,
@@ -111,16 +112,16 @@ func overlayPalletCacheOverrides(
 	return palletCache, nil
 }
 
-func loadReplacementPallets(fsPaths []string) (replacements []*forklift.FSPallet, err error) {
+func loadReplacementPallets(fsPaths []string) (replacements []*fplt.FSPallet, err error) {
 	for _, path := range fsPaths {
 		replacementPath, err := filepath.Abs(path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't convert '%s' into an absolute path", path)
 		}
-		if !forklift.DirExists(replacementPath) {
+		if !ffs.DirExists(replacementPath) {
 			return nil, errors.Errorf("couldn't find pallet replacement path %s", replacementPath)
 		}
-		externalPallets, err := forklift.LoadFSPallets(ffs.DirFS(replacementPath), "**")
+		externalPallets, err := fplt.LoadFSPallets(ffs.DirFS(replacementPath), "**")
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't list replacement pallets in path %s", replacementPath)
 		}
@@ -139,7 +140,7 @@ func loadReplacementPallets(fsPaths []string) (replacements []*forklift.FSPallet
 }
 
 func setPalletOverrideCacheVersions(
-	plt *forklift.FSPallet, overrideCache *forklift.PalletOverrideCache,
+	plt *fplt.FSPallet, overrideCache *forklift.PalletOverrideCache,
 ) error {
 	reqs, err := plt.LoadFSPalletReqs("**")
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 // Pallets
@@ -21,7 +22,7 @@ type Versions struct {
 // and - unless the ignoreTool flag is set - the Forklift tool (as specified by toolVersions). Note
 // that minimum versions are still enforced even if the ignoreTool flag is set.
 func CheckPltCompat(
-	pallet *forklift.FSPallet, toolVersions Versions, ignoreTool bool,
+	pallet *fplt.FSPallet, toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
 		fmt.Fprintf(
@@ -76,7 +77,7 @@ func CheckArtifactCompat(
 // Forklift tool (as specified by toolVersions). Note that minimum versions are still enforced even
 // if the ignoreTool flag is set.
 func CheckDeepCompat(
-	pallet *forklift.FSPallet, palletLoader forklift.FSPalletLoader,
+	pallet *fplt.FSPallet, palletLoader fplt.FSPalletLoader,
 	toolVersions Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
@@ -103,7 +104,7 @@ func CheckDeepCompat(
 }
 
 func checkReqPalletVersions(
-	pallet *forklift.FSPallet, palletLoader forklift.FSPalletLoader,
+	pallet *fplt.FSPallet, palletLoader fplt.FSPalletLoader,
 	toolVersions Versions, ignoreTool bool,
 ) error {
 	versions, err := loadPalletReqForkliftVersions(pallet, palletLoader)
@@ -137,7 +138,7 @@ type reqForkliftVersion struct {
 }
 
 func loadPalletReqForkliftVersions(
-	pallet *forklift.FSPallet, palletLoader forklift.FSPalletLoader,
+	pallet *fplt.FSPallet, palletLoader fplt.FSPalletLoader,
 ) ([]reqForkliftVersion, error) {
 	palletReqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {

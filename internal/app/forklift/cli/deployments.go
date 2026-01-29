@@ -11,13 +11,14 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // Add
 
 func AddDepl(
-	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
+	indent int, pallet *fplt.FSPallet, pkgLoader fplt.FSPkgLoader,
 	deplName, pkgPath string, features []string, disabled, force bool,
 ) error {
 	disabledString := ""
@@ -32,9 +33,9 @@ func AddDepl(
 		indent, os.Stderr, "Adding %spackage deployment %s for %s%s...\n",
 		disabledString, deplName, pkgPath, featuresString,
 	)
-	depl := forklift.Depl{
+	depl := fplt.Depl{
 		Name: deplName,
-		Decl: forklift.DeplDecl{
+		Decl: fplt.DeplDecl{
 			Package:  pkgPath,
 			Features: features,
 			Disabled: disabled,
@@ -59,9 +60,9 @@ func AddDepl(
 }
 
 func checkDepl(
-	pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader, depl forklift.Depl,
+	pallet *fplt.FSPallet, pkgLoader fplt.FSPkgLoader, depl fplt.Depl,
 ) error {
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, pkgLoader, depl.Decl.Package)
+	pkg, _, err := fplt.LoadRequiredFSPkg(pallet, pkgLoader, depl.Decl.Package)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't resolve package path %s to a package using the pallet's pallet requirements",
@@ -82,7 +83,7 @@ func checkDepl(
 	return nil
 }
 
-func writeDepl(pallet *forklift.FSPallet, depl forklift.Depl) error {
+func writeDepl(pallet *fplt.FSPallet, depl fplt.Depl) error {
 	deplsFS, err := pallet.GetDeplsFS()
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func writeDepl(pallet *forklift.FSPallet, depl forklift.Depl) error {
 
 // Remove
 
-func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) error {
+func RemoveDepls(indent int, pallet *fplt.FSPallet, deplNames []string) error {
 	IndentedFprintf(indent, os.Stderr, "Removing package deployments from %s...\n", pallet.FS.Path())
 	for _, deplName := range deplNames {
 		deplsFS, err := pallet.GetDeplsFS()
@@ -133,7 +134,7 @@ func RemoveDepls(indent int, pallet *forklift.FSPallet, deplNames []string) erro
 // Set Package
 
 func SetDeplPkg(
-	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
+	indent int, pallet *fplt.FSPallet, pkgLoader fplt.FSPkgLoader,
 	deplName, pkgPath string, force bool,
 ) error {
 	IndentedFprintf(
@@ -170,7 +171,7 @@ func SetDeplPkg(
 // Add Feature
 
 func AddDeplFeat(
-	indent int, pallet *forklift.FSPallet, pkgLoader forklift.FSPkgLoader,
+	indent int, pallet *fplt.FSPallet, pkgLoader fplt.FSPkgLoader,
 	deplName string, features []string, force bool,
 ) error {
 	IndentedFprintf(
@@ -183,7 +184,7 @@ func AddDeplFeat(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	resolved, err := forklift.ResolveDepl(pallet, pkgLoader, depl)
+	resolved, err := fplt.ResolveDepl(pallet, pkgLoader, depl)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
@@ -226,7 +227,7 @@ func AddDeplFeat(
 // Remove Feature
 
 func RemoveDeplFeat(
-	indent int, pallet *forklift.FSPallet, deplName string, features []string,
+	indent int, pallet *fplt.FSPallet, deplName string, features []string,
 ) error {
 	IndentedFprintf(
 		indent, os.Stderr, "Disabling features %+v in package deployment %s...\n", features, deplName,
@@ -260,7 +261,7 @@ func RemoveDeplFeat(
 
 // Set Disabled
 
-func SetDeplDisabled(indent int, pallet *forklift.FSPallet, deplName string, disabled bool) error {
+func SetDeplDisabled(indent int, pallet *fplt.FSPallet, deplName string, disabled bool) error {
 	if disabled {
 		IndentedFprintf(indent, os.Stderr, "Disabling package deployment %s...\n", deplName)
 	} else {

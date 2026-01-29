@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 	"github.com/forklift-run/forklift/pkg/versioning"
 )
@@ -124,7 +125,7 @@ func fprintBundleInclusion(
 	_, _ = fmt.Fprintln(out)
 }
 
-func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]forklift.DeplDecl) {
+func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]fplt.DeplDecl) {
 	sortedDeplNames := make([]string, 0, len(deployments))
 	for deplName := range deployments {
 		sortedDeplNames = append(sortedDeplNames, deplName)

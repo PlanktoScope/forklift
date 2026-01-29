@@ -17,6 +17,7 @@ import (
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -75,7 +76,7 @@ type StagingCaches struct {
 }
 
 func StagePallet(
-	indent int, merged *forklift.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
+	indent int, merged *fplt.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
 	exportPath string, versions StagingVersions,
 	skipImageCaching bool, platform string, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
@@ -122,7 +123,7 @@ func StagePallet(
 }
 
 func buildBundle(
-	merged *forklift.FSPallet,
+	merged *fplt.FSPallet,
 	palletCache forklift.PathedPalletCache,
 	dlCache *forklift.FSDownloadCache,
 	forkliftVersion, outputPath string,
@@ -163,7 +164,7 @@ func buildBundle(
 }
 
 func newBundleManifest(
-	merged *forklift.FSPallet, palletCache forklift.PathedPalletCache, forkliftVersion string,
+	merged *fplt.FSPallet, palletCache forklift.PathedPalletCache, forkliftVersion string,
 ) (forklift.BundleManifest, error) {
 	desc := forklift.BundleManifest{
 		ForkliftVersion: forkliftVersion,
@@ -174,7 +175,7 @@ func newBundleManifest(
 		Includes: forklift.BundleInclusions{
 			Pallets: make(map[string]forklift.BundlePalletInclusion),
 		},
-		Deploys:   make(map[string]forklift.DeplDecl),
+		Deploys:   make(map[string]fplt.DeplDecl),
 		Downloads: make(map[string]forklift.BundleDeplDownloads),
 		Exports:   make(map[string]forklift.BundleDeplExports),
 	}
@@ -236,7 +237,7 @@ func CheckGitRepoVersion(palletPath string) (version string, clean bool) {
 }
 
 func newBundlePalletInclusion(
-	pallet *forklift.FSPallet, req *forklift.FSPalletReq, palletCache forklift.PathedPalletCache,
+	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache forklift.PathedPalletCache,
 	describeImports bool,
 ) (inclusion forklift.BundlePalletInclusion, err error) {
 	inclusion = forklift.BundlePalletInclusion{
@@ -296,22 +297,22 @@ func newBundlePalletInclusion(
 }
 
 func describePalletImports(
-	pallet *forklift.FSPallet, req *forklift.FSPalletReq, palletCache forklift.PathedPalletCache,
+	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache forklift.PathedPalletCache,
 ) (fileMappings map[string]map[string]string, err error) {
 	imports, err := pallet.LoadImports(path.Join(req.RequiredPath, "**/*"))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't load file import groups")
 	}
-	allResolved, err := forklift.ResolveImports(pallet, palletCache, imports)
+	allResolved, err := fplt.ResolveImports(pallet, palletCache, imports)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't resolve file import groups")
 	}
-	requiredPallets := make(map[string]*forklift.FSPallet) // pallet path -> pallet
+	requiredPallets := make(map[string]*fplt.FSPallet) // pallet path -> pallet
 	for _, resolved := range allResolved {
 		requiredPallets[resolved.Pallet.Path()] = resolved.Pallet
 	}
 	for palletPath, requiredPallet := range requiredPallets {
-		if requiredPallets[palletPath], err = forklift.MergeFSPallet(
+		if requiredPallets[palletPath], err = fplt.MergeFSPallet(
 			requiredPallet, palletCache, nil,
 		); err != nil {
 			return nil, errors.Wrapf(
@@ -445,7 +446,7 @@ func applyReconciliationChange(
 }
 
 func deployApp(
-	ctx context.Context, indent int, depl *forklift.ResolvedDepl, name string, dc *docker.Client,
+	ctx context.Context, indent int, depl *fplt.ResolvedDepl, name string, dc *docker.Client,
 ) error {
 	definesApp, err := depl.DefinesComposeApp()
 	if err != nil {

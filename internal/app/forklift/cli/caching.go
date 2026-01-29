@@ -7,10 +7,11 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func CacheAllReqs(
-	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
+	indent int, pallet *fplt.FSPallet, mirrorsCache ffs.Pather,
 	palletCache forklift.PathedPalletCache,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
@@ -36,11 +37,11 @@ func CacheAllReqs(
 }
 
 func CacheStagingReqs(
-	indent int, pallet *forklift.FSPallet, mirrorsCache ffs.Pather,
+	indent int, pallet *fplt.FSPallet, mirrorsCache ffs.Pather,
 	palletCache forklift.PathedPalletCache,
 	dlCache *forklift.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
-) (merged *forklift.FSPallet, palletCacheWithMerged *forklift.LayeredPalletCache, err error) {
+) (merged *fplt.FSPallet, palletCacheWithMerged *forklift.LayeredPalletCache, err error) {
 	IndentedFprintln(indent, os.Stderr, "Caching everything needed to stage the pallet...")
 	indent++
 
@@ -50,7 +51,7 @@ func CacheStagingReqs(
 		return nil, nil, err
 	}
 
-	if merged, err = forklift.MergeFSPallet(pallet, palletCache, nil); err != nil {
+	if merged, err = fplt.MergeFSPallet(pallet, palletCache, nil); err != nil {
 		return nil, nil, errors.Wrap(
 			err, "couldn't merge pallet with file imports from any pallets required by it",
 		)

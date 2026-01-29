@@ -7,6 +7,14 @@ import (
 	"path/filepath"
 )
 
+func DirExists(dirPath string) bool {
+	dir, err := os.Stat(dirPath)
+	if err == nil && dir.IsDir() {
+		return true
+	}
+	return false
+}
+
 // DirFS returns a filesystem (a ReadLinkFS) for a tree of files rooted at the directory dir.
 func DirFS(dir string) ReadLinkFS {
 	return &dirFS{

@@ -11,6 +11,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FprintPkg(indent int, out io.Writer, cache forklift.PathedPalletCache, pkg *fpkg.FSPkg) {
@@ -217,7 +218,7 @@ func FprintFeatureSpec(indent int, out io.Writer, name string, spec fpkg.PkgFeat
 // Pallet packages
 
 func FprintPalletPkgs(
-	indent int, out io.Writer, pallet *forklift.FSPallet, loader forklift.FSPkgLoader,
+	indent int, out io.Writer, pallet *fplt.FSPallet, loader fplt.FSPkgLoader,
 ) error {
 	reqs, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
@@ -255,13 +256,13 @@ func FprintPalletPkgs(
 }
 
 func FprintPkgLocation(
-	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
+	out io.Writer, pallet *fplt.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
 	overlayCache, err := MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
+	pkg, _, err := fplt.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
@@ -283,13 +284,13 @@ func FprintPkgLocation(
 
 func FprintPkgInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
+	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
 	overlayCache, err := MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
-	pkg, _, err := forklift.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
+	pkg, _, err := fplt.LoadRequiredFSPkg(pallet, overlayCache, pkgPath)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't look up information about package %s in pallet %s", pkgPath, pallet.FS.Path(),
@@ -300,10 +301,10 @@ func FprintPkgInfo(
 }
 
 func MakeOverlayCache(
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
+	pallet *fplt.FSPallet, cache forklift.PathedPalletCache,
 ) (*forklift.LayeredPalletCache, error) {
 	overrideCache, err := forklift.NewPalletOverrideCache(
-		[]*forklift.FSPallet{pallet},
+		[]*fplt.FSPallet{pallet},
 		map[string][]string{
 			pallet.Path(): {""},
 		},

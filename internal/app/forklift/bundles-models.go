@@ -3,6 +3,7 @@ package forklift
 import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
+	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 // Bundle
@@ -60,7 +61,7 @@ type BundleManifest struct {
 	// the deepest ancestor at the end of each list).
 	Imports map[string][]string `yaml:"imports,omitempty"`
 	// Deploys describes deployments provided by the bundle. Keys are names of deployments.
-	Deploys map[string]DeplDecl `yaml:"deploys,omitempty"`
+	Deploys map[string]fplt.DeplDecl `yaml:"deploys,omitempty"`
 	// Downloads lists the downloadable paths of resources downloaded for creation and/or use of the
 	// bundle. Keys are the names of the bundle's deployments which include downloads.
 	Downloads map[string]BundleDeplDownloads `yaml:"downloads,omitempty"`
@@ -92,7 +93,7 @@ type BundleInclusions struct {
 
 // BundlePalletInclusion describes a pallet used to build the bundled pallet.
 type BundlePalletInclusion struct {
-	Req PalletReq `yaml:"requirement,inline"`
+	Req fplt.PalletReq `yaml:"requirement,inline"`
 	// Override describes the pallet used to override the required pallet, if an override was
 	// specified for the pallet when building the bundled pallet.
 	Override BundleInclusionOverride `yaml:"override,omitempty"`
