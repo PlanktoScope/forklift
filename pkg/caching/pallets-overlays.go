@@ -2,12 +2,9 @@ package caching
 
 import (
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 	"slices"
 	"sort"
-	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
@@ -18,194 +15,52 @@ import (
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
-// FSPalletCache
-
-func NewFSPalletCache(fsys ffs.PathedFS) *FSPalletCache {
-	return &FSPalletCache{
-		pkgTree: &fpkg.FSPkgTree{
-			FS: fsys,
-		},
-	}
+// LayeredPalletCache is a [PathedPalletCache] implementation where selected pallets can be
+// overridden by an [OverlayPalletCache], for loading pallets.
+// The path of the LayeredPalletCache instance is just the path of the underlying cache.
+type LayeredPalletCache struct {
+	// Underlay is the underlying cache.
+	Underlay PathedPalletCache
+	// Overlay is the overlying cache which is used instead of the underlying cache for pallets
+	// covered by the overlying cache.
+	Overlay OverlayPalletCache
 }
 
-// Exists checks whether the cache actually exists on the OS's filesystem.
-func (c *FSPalletCache) Exists() bool {
-	return ffs.DirExists(filepath.FromSlash(c.pkgTree.FS.Path()))
+// PathedPalletCache is a pallet cache rooted at a single path.
+type PathedPalletCache interface {
+	ffs.Pather
+	fplt.FSPalletLoader
+	fplt.FSPkgLoader
 }
 
-// Remove deletes the cache from the OS's filesystem, if it exists.
-func (c *FSPalletCache) Remove() error {
-	return os.RemoveAll(filepath.FromSlash(c.pkgTree.FS.Path()))
+// OverlayPalletCache is a pallet cache which can report whether it includes any particular pallet.
+type OverlayPalletCache interface {
+	fplt.FSPalletLoader
+	fplt.FSPkgLoader
+	// IncludesFSPallet reports whether the cache expects to have the specified pallet.
+	// This result does not necessarily correspond to whether the cache actually has it.
+	IncludesFSPallet(palletPath string, version string) bool
+	// IncludesFSPkg reports whether the cache expects to have the specified package.
+	// This result does not necessarily correspond to whether the cache actually has it.
+	IncludesFSPkg(pkgPath string, version string) bool
 }
 
-// Path returns the path of the cache's filesystem.
-func (c *FSPalletCache) Path() string {
-	return c.pkgTree.FS.Path()
-}
-
-// FSPalletCache: FSPalletLoader
-
-// LoadFSPallet loads the FSPallet with the specified path and version.
-// The loaded FSPallet instance is fully initialized.
-func (c *FSPalletCache) LoadFSPallet(pltPath string, version string) (*fplt.FSPallet, error) {
-	if c == nil {
-		return nil, errors.New("cache is nil")
-	}
-
-	plt, err := fplt.LoadFSPallet(c.pkgTree.FS, fmt.Sprintf("%s@%s", pltPath, version))
-	if err != nil {
-		return nil, err
-	}
-	plt.Version = version
-	plt.FSPkgTree.Version = version
-	return plt, nil
-}
-
-// LoadFSPallets loads all FSPallets from the cache matching the specified search pattern.
-// The search pattern should be a [doublestar] pattern, such as `**`, matching pallet directories to
-// search for.
-// The loaded FSPallet instances are fully initialized.
-func (c *FSPalletCache) LoadFSPallets(searchPattern string) ([]*fplt.FSPallet, error) {
-	if c == nil {
-		return nil, nil
-	}
-
-	plts, err := fplt.LoadFSPallets(c.pkgTree.FS, searchPattern)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't load pallets from cache")
-	}
-
-	// set the Version field of the pallet based on its path in the cache
-	for _, plt := range plts {
-		var pltPath string
-		var ok bool
-		if pltPath, plt.Version, ok = strings.Cut(ffs.GetSubdirPath(c, plt.FS.Path()), "@"); !ok {
-			return nil, errors.Wrapf(
-				err, "couldn't parse path of cached pallet configured at %s as pallet_path@version",
-				plt.FS.Path(),
-			)
-		}
-		if pltPath != plt.Path() {
-			return nil, errors.Errorf(
-				"cached pallet %s is in cache at %s@%s instead of %s@%s",
-				plt.Path(), pltPath, plt.Version, plt.Path(), plt.Version,
-			)
-		}
-	}
-
-	return plts, nil
-}
-
-// FSPalletCache: FSPkgLoader
-
-// LoadFSPkg loads the FSPkg with the specified path and version.
-// The loaded FSPkg instance is fully initialized.
-func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, error) {
-	if c == nil {
-		return nil, errors.New("cache is nil")
-	}
-
-	// Search for the package by starting with the shortest possible package subdirectory path and the
-	// longest possible pkg tree path, and shifting path components from the pkg tree path to the package
-	// subdirectory path until we successfully load the package.
-	palletPath := path.Dir(pkgPath)
-	pkgSubdir := path.Base(pkgPath)
-	for palletPath != "." && palletPath != "/" {
-		pallet, err := c.LoadFSPallet(palletPath, version)
-		if err != nil {
-			pkgSubdir = path.Join(path.Base(palletPath), pkgSubdir)
-			palletPath = path.Dir(palletPath)
-			continue
-		}
-
-		// FIXME: we must merge the pallet first!
-		pkg, err := pallet.LoadFSPkg(pkgSubdir)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't load package %s from pallet %s at version %s", pkgPath, palletPath, version,
-			)
-		}
-		return pkg, nil
-	}
-	return nil, errors.Errorf("no cached packages were found matching %s@%s", pkgPath, version)
-}
-
-// LoadFSPkgs loads all FSPkgs from the cache matching the specified search pattern.
-// The search pattern should be a [doublestar] pattern, such as `**`, matching package directories
-// to search for.
-// The loaded FSPkg instances are fully initialized.
-func (c *FSPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, error) {
-	if c == nil {
-		return nil, nil
-	}
-
-	pkgs, err := c.pkgTree.LoadFSPkgs(searchPattern)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, pkg := range pkgs {
-		pallet, err := c.loadFSPalletContaining(ffs.GetSubdirPath(c, pkg.FS.Path()))
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't find the cached pallet providing the cached package at %s", pkg.FS.Path(),
-			)
-		}
-		if err = pkg.AttachFSPkgTree(pallet.FSPkgTree); err != nil {
-			return nil, errors.Wrap(err, "couldn't attach cached pallet to cached package")
-		}
-	}
-	return pkgs, nil
-}
-
-// loadFSPalletContaining finds and loads the FSPallet which contains the provided subdirectory
-// path.
-func (c *FSPalletCache) loadFSPalletContaining(
-	subdirPath string,
-) (pallet *fplt.FSPallet, err error) {
-	if c == nil {
-		return nil, errors.New("cache is nil")
-	}
-
-	if pallet, err = loadFSPalletContaining(c.pkgTree.FS, subdirPath); err != nil {
-		return nil, errors.Wrapf(err, "couldn't find any pallet containing %s", subdirPath)
-	}
-	var palletPath string
-	var ok bool
-	if palletPath, pallet.Version, ok = strings.Cut(ffs.GetSubdirPath(c, pallet.FS.Path()), "@"); !ok {
-		return nil, errors.Wrapf(
-			err, "couldn't parse path of cached pallet configured at %s as pallet_path@version",
-			pallet.FS.Path(),
-		)
-	}
-	pallet.FSPkgTree.Version = pallet.Version
-	if palletPath != pallet.Path() {
-		return nil, errors.Errorf(
-			"cached pallet %s is in cache at %s@%s instead of %s@%s",
-			pallet.Path(), palletPath, pallet.Version, pallet.Path(), pallet.Version,
-		)
-	}
-	return pallet, nil
-}
-
-// loadFSPalletContaining loads the FSPallet containing the specified sub-directory path in the
-// provided base filesystem.
-// The sub-directory path does not have to actually exist.
-// In the loaded FSPallet's embedded [Pallet], the version is *not* initialized.
-func loadFSPalletContaining(fsys ffs.PathedFS, subdirPath string) (*fplt.FSPallet, error) {
-	repoCandidatePath := subdirPath
-	for {
-		if repo, err := fplt.LoadFSPallet(fsys, repoCandidatePath); err == nil {
-			return repo, nil
-		}
-		repoCandidatePath = path.Dir(repoCandidatePath)
-		if repoCandidatePath == "/" || repoCandidatePath == "." {
-			// we can't go up anymore!
-			return nil, errors.Errorf(
-				"no repo declaration file was found in any parent directory of %s", subdirPath,
-			)
-		}
-	}
+// PalletOverrideCache is an [OverlayPalletCache] implementation containing a set of pallets which
+// can be retrieved from the root of the cache. A pallet from the cache will be retrieved if it is
+// stored in the cache with a matching version, regardless of whether the pallet's own version
+// actually matches - in other words, pallets can be stored with fictional versions.
+type PalletOverrideCache struct {
+	// pallets is a map associating pallet paths to loaded pallets.
+	// For each key-value pair, the key must be the path of the pallet which is the value of that
+	// key-value pair.
+	pallets map[string]*fplt.FSPallet
+	// palletPaths is an alphabetically ordered list of the keys of pallets.
+	palletPaths []string
+	// palletVersions is a map associating pallet paths to pallet version strings.
+	palletVersions map[string][]string
+	// palletVersionSets is like palletVersions, but every value is a set of versions rather than a
+	// list of versions.
+	palletVersionSets map[string]structures.Set[string]
 }
 
 // LayeredPalletCache
@@ -386,6 +241,26 @@ func (c *PalletOverrideCache) IncludesFSPallet(palletPath string, version string
 	return c.palletVersionSets[palletPath].Has(version)
 }
 
+// IncludesFSPkg reports whether the PalletOverrideCache instance has a pallet with the specified
+// version which covers the specified package path.
+func (c *PalletOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
+	if c == nil {
+		return false
+	}
+
+	// Beyond a certain number of pallets, it's probably faster to just recurse down via the subdirs.
+	// But we probably don't need to worry about this for now.
+	for _, pallet := range c.pallets {
+		if !ffs.CoversPath(pallet, pkgPath) {
+			continue
+		}
+		return c.palletVersionSets[pallet.Path()].Has(version)
+	}
+	return false
+}
+
+// PalletOverrideCache: OverlayPalletCache: FSPalletLoader
+
 // LoadFSPallet loads the FSPallet with the specified path, if the version matches any of versions
 // for the pallet in the cache.
 // The loaded FSPallet instance is fully initialized.
@@ -446,23 +321,7 @@ func (c *PalletOverrideCache) LoadFSPallets(searchPattern string) ([]*fplt.FSPal
 	return matchingPallets, nil
 }
 
-// IncludesFSPkg reports whether the PalletOverrideCache instance has a pallet with the specified
-// version which covers the specified package path.
-func (c *PalletOverrideCache) IncludesFSPkg(pkgPath string, version string) bool {
-	if c == nil {
-		return false
-	}
-
-	// Beyond a certain number of pallets, it's probably faster to just recurse down via the subdirs.
-	// But we probably don't need to worry about this for now.
-	for _, pallet := range c.pallets {
-		if !ffs.CoversPath(pallet, pkgPath) {
-			continue
-		}
-		return c.palletVersionSets[pallet.Path()].Has(version)
-	}
-	return false
-}
+// PalletOverrideCache: OverlayPalletCache: FSPkgLoader
 
 // LoadFSPkg loads the FSPkg with the specified path, if the version matches any of versions for
 // the package's pallet in the cache.
