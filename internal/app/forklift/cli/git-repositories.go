@@ -7,12 +7,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
-	"golang.org/x/mod/semver"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
@@ -47,7 +46,7 @@ func ResolveVersionQueryUsingRepo(
 			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
 		)
 	}
-	if l.Decl, err = lockCommit(gitRepo, commit); err != nil {
+	if l.Decl, err = forklift.LockCommit(gitRepo, commit); err != nil {
 		return l, err
 	}
 	if l.Version, err = l.Decl.Version(); err != nil {
@@ -72,60 +71,6 @@ func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error
 		return ref.Hash().String(), nil
 	}
 	return "", nil
-}
-
-func lockCommit(gitRepo *git.Repo, commit string) (d versioning.LockDecl, err error) {
-	d.Commit = commit
-	if d.Timestamp, err = versioning.GetCommitTimestamp(gitRepo, d.Commit); err != nil {
-		return d, err
-	}
-
-	// Attempt to lock as a tagged version
-	tags, err := gitRepo.GetTagsAt(commit)
-	if err != nil {
-		return d, errors.Wrapf(err, "couldn't lookup tags matching %s", commit)
-	}
-	tags = filterTags(tags)
-	sort.Slice(tags, func(i, j int) bool {
-		return semver.Compare(tags[i].Name, tags[j].Name) > 0
-	})
-	if len(tags) > 0 {
-		d.Tag = tags[0].Name
-		d.Type = versioning.LockTypeVersion
-		return d, nil
-	}
-
-	// Lock as a pseudoversion
-	d.Type = versioning.LockTypePseudoversion
-	ancestralTags, err := gitRepo.GetAncestralTags(commit)
-	if err != nil {
-		return d, errors.Wrapf(
-			err, "couldn't determine tagged ancestors of %s", commit,
-		)
-	}
-	ancestralTags = filterTags(ancestralTags)
-	sort.Slice(ancestralTags, func(i, j int) bool {
-		return semver.Compare(ancestralTags[i].Name, ancestralTags[j].Name) > 0
-	})
-	if len(ancestralTags) > 0 {
-		d.Tag = ancestralTags[0].Name
-	}
-	return d, nil
-}
-
-type nameGetter interface {
-	GetName() string
-}
-
-func filterTags[T nameGetter](tags []T) []T {
-	filtered := make([]T, 0, len(tags))
-	for _, tag := range tags {
-		if !semver.IsValid(tag.GetName()) {
-			continue
-		}
-		filtered = append(filtered, tag)
-	}
-	return filtered
 }
 
 // Resolving multiple version queries
@@ -268,7 +213,7 @@ func performOptionalLocalMirrorsUpdate(indent int, queries []string, mirrorsPath
 func DownloadQueriedGitReposUsingLocalMirrors(
 	indent int, mirrorsPath, cachePath string, queries []string,
 ) (resolved map[string]fplt.GitRepoReq, changed map[fplt.GitRepoReq]bool, err error) {
-	if err = validateGitRepoQueries(queries); err != nil {
+	if err = forklift.ValidateGitRepoQueries(queries); err != nil {
 		return nil, nil, errors.Wrap(err, "one or more arguments is invalid")
 	}
 	if resolved, err = ResolveQueriesUsingLocalMirrors(
@@ -297,18 +242,6 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 		changed[req] = true
 	}
 	return resolved, changed, nil
-}
-
-func validateGitRepoQueries(queries []string) error {
-	if len(queries) == 0 {
-		return errors.Errorf("at least one query must be specified")
-	}
-	for _, query := range queries {
-		if _, _, ok := strings.Cut(query, "@"); !ok {
-			return errors.Errorf("couldn't parse query '%s' as path@version", query)
-		}
-	}
-	return nil
 }
 
 func DownloadLockedGitRepoUsingLocalMirror(
@@ -378,7 +311,7 @@ func cloneLockedGitRepoFromLocalMirror(
 
 	// Validate commit
 	shortCommit := lock.Decl.ShortCommit()
-	if err = validateCommit(lock, gitRepo); err != nil {
+	if err = forklift.ValidateCommit(lock, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
 			IndentedFprintf(
@@ -408,34 +341,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	return true, nil
 }
 
-func validateCommit(versionLock versioning.Lock, gitRepo *git.Repo) error {
-	// Check commit time
-	commitTimestamp, err := versioning.GetCommitTimestamp(gitRepo, versionLock.Decl.Commit)
-	if err != nil {
-		return err
-	}
-	versionedTimestamp := versionLock.Decl.Timestamp
-	if commitTimestamp != versionedTimestamp {
-		return errors.Errorf(
-			"commit %s was made at %s, while the repo version lock definition expects it to have "+
-				"been made at %s",
-			versionLock.Decl.ShortCommit(), commitTimestamp, versionedTimestamp,
-		)
-	}
-
-	// TODO: implement remaining checks specified in https://go.dev/ref/mod#pseudo-versions
-	// (if base version is specified, there must be a corresponding semantic version tag that is an
-	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
-	// of one of the module repository's branches or tags)
-	return nil
-}
-
 // Cloning to local copy
-
-const (
-	OriginRemoteName              = "origin"
-	ForkliftCacheMirrorRemoteName = "forklift-cache-mirror"
-)
 
 func CloneQueriedGitRepoUsingLocalMirror(
 	indent int, mirrorsPath, gitRepoPath, versionQuery, destination string,
@@ -463,19 +369,19 @@ func CloneQueriedGitRepoUsingLocalMirror(
 			err, "couldn't clone git repo %s from %s to %s", gitRepoPath, mirrorCachePath, destination,
 		)
 	}
-	if err = gitRepo.MakeTrackingBranches(OriginRemoteName); err != nil {
+	if err = gitRepo.MakeTrackingBranches(forklift.OriginRemoteName); err != nil {
 		return errors.Wrapf(err, "couldn't set up local branches to track the remote")
 	}
 	if err = gitRepo.FetchAll(indent+1, os.Stdout); err != nil {
 		return errors.Wrapf(err, "couldn't fetch new local branches tracking the remote")
 	}
 	if err = gitRepo.SetRemoteURLs(
-		OriginRemoteName, []string{fmt.Sprintf("https://%s", gitRepoPath)},
+		forklift.OriginRemoteName, []string{fmt.Sprintf("https://%s", gitRepoPath)},
 	); err != nil {
 		return errors.Wrapf(err, "couldn't set the correct URL of the origin remote")
 	}
 	if err = gitRepo.CreateRemote(
-		ForkliftCacheMirrorRemoteName, []string{mirrorCachePath},
+		forklift.ForkliftCacheMirrorRemoteName, []string{mirrorCachePath},
 	); err != nil {
 		return errors.Wrapf(err, "couldn't add a remote for the local mirror")
 	}

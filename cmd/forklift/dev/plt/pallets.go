@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
@@ -53,7 +54,7 @@ func processFullBaseArgs(
 		return nil, workspaceCaches{}, err
 	}
 	caches.p = &caching.LayeredPalletCache{}
-	if caches.p.Underlay, err = fcli.GetPalletCache(
+	if caches.p.Underlay, err = forklift.GetPalletCache(
 		wpath, plt, opts.requirePalletCache || opts.merge,
 	); err != nil {
 		return nil, workspaceCaches{}, err
@@ -77,7 +78,7 @@ func processFullBaseArgs(
 			err, "couldn't make overlay of development pallet with pallet cache",
 		)
 	}
-	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
+	if caches.d, err = forklift.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	return plt, caches, nil
@@ -130,7 +131,7 @@ func loadReplacementPallets(fsPaths []string) (replacements []*fplt.FSPallet, er
 			return nil, errors.Errorf("no replacement pallets found in path %s", replacementPath)
 		}
 		for _, pallet := range externalPallets {
-			version, clean := fcli.CheckGitRepoVersion(pallet.FS.Path())
+			version, clean := forklift.CheckGitRepoVersion(pallet.FS.Path())
 			if clean {
 				pallet.Version = version
 			}
@@ -270,7 +271,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		stageStore, err := fcli.GetStageStore(
+		stageStore, err := forklift.GetStageStore(
 			workspace, c.String("stage-store"), versions.NewStageStore,
 		)
 		if err != nil {
@@ -311,7 +312,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		stageStore, err := fcli.GetStageStore(
+		stageStore, err := forklift.GetStageStore(
 			workspace, c.String("stage-store"), versions.NewStageStore,
 		)
 		if err != nil {
@@ -488,7 +489,7 @@ func lsPltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -497,7 +498,7 @@ func lsPltFileAction(c *cli.Context) error {
 		// Exclude hidden directories such as `.git`
 		filter = "{*,[^.]*/**}"
 	}
-	paths, err := fcli.ListPalletFiles(plt, filter)
+	paths, err := forklift.ListPalletFiles(plt, filter)
 	if err != nil {
 		return err
 	}
@@ -517,11 +518,11 @@ func locatePltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
-	location, err := fcli.GetFileLocation(plt, c.Args().Get(1))
+	location, err := forklift.GetFileLocation(plt, c.Args().Get(1))
 	if err != nil {
 		return err
 	}
@@ -539,7 +540,7 @@ func showPltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -556,7 +557,7 @@ func lsPltFeatAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -573,7 +574,7 @@ func showPltFeatAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}

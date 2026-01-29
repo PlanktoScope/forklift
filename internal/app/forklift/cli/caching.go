@@ -17,16 +17,14 @@ func CacheAllReqs(
 	platform string, includeDisabled, parallel bool,
 ) error {
 	pallet, palletCacheWithMerged, err := CacheStagingReqs(
-		indent, pallet, mirrorsCache, palletCache, dlCache,
-		platform, includeDisabled, parallel,
+		indent, pallet, mirrorsCache, palletCache, dlCache, platform, includeDisabled, parallel,
 	)
 	if err != nil {
 		return err
 	}
 
 	IndentedFprintln(
-		indent, os.Stderr,
-		"Downloading Docker container images to be deployed by the local pallet...",
+		indent, os.Stderr, "Downloading Docker container images to be deployed by the local pallet...",
 	)
 	if err := DownloadImages(
 		1, pallet, palletCacheWithMerged, platform, includeDisabled, parallel,

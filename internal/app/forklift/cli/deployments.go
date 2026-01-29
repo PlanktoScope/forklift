@@ -1,16 +1,13 @@
 package cli
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 
-	ffs "github.com/forklift-run/forklift/pkg/fs"
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
@@ -42,7 +39,7 @@ func AddDepl(
 		},
 	}
 
-	if err := checkDepl(pallet, pkgLoader, depl); err != nil {
+	if err := forklift.CheckDepl(pallet, pkgLoader, depl); err != nil {
 		if !force {
 			return errors.Wrap(
 				err, "package deployment has invalid settings; to skip this check, enable the --force flag",
@@ -53,59 +50,8 @@ func AddDepl(
 		)
 	}
 
-	if err := writeDepl(pallet, depl); err != nil {
+	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save deployment %s", deplName)
-	}
-	return nil
-}
-
-func checkDepl(
-	pallet *fplt.FSPallet, pkgLoader fplt.FSPkgLoader, depl fplt.Depl,
-) error {
-	pkg, _, err := fplt.LoadRequiredFSPkg(pallet, pkgLoader, depl.Decl.Package)
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't resolve package path %s to a package using the pallet's pallet requirements",
-			depl.Decl.Package,
-		)
-	}
-
-	allowedFeatures := pkg.Decl.Features
-	unrecognizedFeatures := make([]string, 0, len(depl.Decl.Features))
-	for _, name := range depl.Decl.Features {
-		if _, ok := allowedFeatures[name]; !ok {
-			unrecognizedFeatures = append(unrecognizedFeatures, name)
-		}
-	}
-	if len(unrecognizedFeatures) > 0 {
-		return errors.Errorf("unrecognized feature flags: %+v", unrecognizedFeatures)
-	}
-	return nil
-}
-
-func writeDepl(pallet *fplt.FSPallet, depl fplt.Depl) error {
-	deplsFS, err := pallet.GetDeplsFS()
-	if err != nil {
-		return err
-	}
-	deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", depl.Name))
-	buf := bytes.Buffer{}
-	encoder := yaml.NewEncoder(&buf)
-	const yamlIndent = 2
-	encoder.SetIndent(yamlIndent)
-	if err = encoder.Encode(depl.Decl); err != nil {
-		return errors.Wrapf(err, "couldn't marshal package deployment for %s", deplPath)
-	}
-	if err := ffs.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
-		return errors.Wrapf(
-			err, "couldn't make directory %s", filepath.FromSlash(path.Dir(deplPath)),
-		)
-	}
-	const perm = 0o644 // owner rw, group r, public r
-	if err := os.WriteFile(filepath.FromSlash(deplPath), buf.Bytes(), perm); err != nil {
-		return errors.Wrapf(
-			err, "couldn't save deployment declaration to %s", filepath.FromSlash(deplPath),
-		)
 	}
 	return nil
 }
@@ -151,7 +97,7 @@ func SetDeplPkg(
 	depl.Decl.Package = pkgPath
 	// We want to check both the package path and the feature flags for validity, since changing the
 	// package path could change the allowed feature flags:
-	if err := checkDepl(pallet, pkgLoader, depl); err != nil {
+	if err := forklift.CheckDepl(pallet, pkgLoader, depl); err != nil {
 		if !force {
 			return errors.Wrap(
 				err, "package deployment has invalid settings; to skip this check, enable the --force flag",
@@ -162,7 +108,7 @@ func SetDeplPkg(
 		)
 	}
 
-	if err := writeDepl(pallet, depl); err != nil {
+	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
 	return nil
@@ -218,7 +164,7 @@ func AddDeplFeat(
 	}
 
 	depl.Decl.Features = append(depl.Decl.Features, newFeatures...)
-	if err := writeDepl(pallet, depl); err != nil {
+	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
 	return nil
@@ -253,7 +199,7 @@ func RemoveDeplFeat(
 	}
 
 	depl.Decl.Features = newFeatures
-	if err := writeDepl(pallet, depl); err != nil {
+	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
 	return nil
@@ -276,7 +222,7 @@ func SetDeplDisabled(indent int, pallet *fplt.FSPallet, deplName string, disable
 	}
 
 	depl.Decl.Disabled = disabled
-	if err := writeDepl(pallet, depl); err != nil {
+	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
 	return nil

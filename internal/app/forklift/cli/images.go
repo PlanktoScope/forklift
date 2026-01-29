@@ -4,18 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"maps"
 	"os"
-	"slices"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/staging"
-	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // Download
@@ -74,7 +72,7 @@ func DownloadImages(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader,
 	platform string, includeDisabled, parallel bool,
 ) error {
-	orderedImages, err := ListRequiredImages(deplsLoader, pkgLoader, includeDisabled)
+	orderedImages, err := forklift.ListRequiredImages(deplsLoader, pkgLoader, includeDisabled)
 	if err != nil {
 		return errors.Wrap(err, "couldn't determine images required by package deployments")
 	}
@@ -93,44 +91,6 @@ func DownloadImages(
 		return downloadImagesParallel(indent, orderedImages, platform, dc)
 	}
 	return downloadImagesSerial(indent, orderedImages, platform, dc)
-}
-
-func ListRequiredImages(
-	deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader, includeDisabled bool,
-) ([]string, error) {
-	depls, err := deplsLoader.LoadDepls("**/*")
-	if err != nil {
-		return nil, err
-	}
-	if !includeDisabled {
-		depls = fplt.FilterDeplsForEnabled(depls)
-	}
-	resolved, err := fplt.ResolveDepls(deplsLoader, pkgLoader, depls)
-	if err != nil {
-		return nil, err
-	}
-
-	images := make(structures.Set[string])
-	for _, depl := range resolved {
-		definesApp, err := depl.DefinesComposeApp()
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
-			)
-		}
-		if !definesApp {
-			continue
-		}
-
-		appDef, err := depl.LoadComposeAppDefinition(false)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't load Compose app definition")
-		}
-		for _, service := range appDef.Services {
-			images.Add(service.Image)
-		}
-	}
-	return slices.Sorted(maps.Keys(images)), nil
 }
 
 func downloadImagesParallel(indent int, images []string, platform string, dc *docker.Client) error {

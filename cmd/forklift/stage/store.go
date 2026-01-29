@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	"github.com/forklift-run/forklift/pkg/staging"
@@ -81,7 +82,7 @@ func getStageStore(
 			)
 		}
 	}
-	if store, err = fcli.GetStageStore(workspace, sspath, versions.NewStageStore); err != nil {
+	if store, err = forklift.GetStageStore(workspace, sspath, versions.NewStageStore); err != nil {
 		return nil, err
 	}
 	return store, nil

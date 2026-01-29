@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	"github.com/forklift-run/forklift/pkg/caching"
@@ -51,7 +52,7 @@ func processFullBaseArgs(
 	if caches.m, err = workspace.GetMirrorCache(); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.p, err = fcli.GetPalletCache(
+	if caches.p, err = forklift.GetPalletCache(
 		wpath, plt, opts.requirePalletCache || opts.merge,
 	); err != nil {
 		return nil, workspaceCaches{}, err
@@ -68,7 +69,7 @@ func processFullBaseArgs(
 			err, "couldn't make overlay of local pallet with pallet cache",
 		)
 	}
-	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
+	if caches.d, err = forklift.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	return plt, caches, nil
@@ -368,7 +369,7 @@ func getRemoteRefs(indent int, gitRepo *git.Repo) ([]*plumbing.Reference, error)
 	refs := make([]*plumbing.Reference, 0)
 	queryCacheMirrorRemote := false
 	for _, remote := range remotes {
-		if remote.Config().Name == fcli.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
+		if remote.Config().Name == forklift.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
 			fcli.IndentedFprintf(
 				indent, os.Stderr,
 				"Skipped remote %s, because remote origin's references were successfully retrieved!\n",
@@ -382,7 +383,7 @@ func getRemoteRefs(indent int, gitRepo *git.Repo) ([]*plumbing.Reference, error)
 			fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrapf(
 				err, "couldn't retrieve references for remote %s", remote.Config().Name,
 			))
-			if remote.Config().Name == fcli.OriginRemoteName {
+			if remote.Config().Name == forklift.OriginRemoteName {
 				queryCacheMirrorRemote = true
 			}
 			continue
@@ -896,7 +897,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		stageStore, err := fcli.GetStageStore(
+		stageStore, err := forklift.GetStageStore(
 			workspace, c.String("stage-store"), versions.NewStageStore,
 		)
 		if err != nil {
@@ -936,7 +937,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		stageStore, err := fcli.GetStageStore(
+		stageStore, err := forklift.GetStageStore(
 			workspace, c.String("stage-store"), versions.NewStageStore,
 		)
 		if err != nil {
@@ -1107,7 +1108,7 @@ func lsPltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -1116,7 +1117,7 @@ func lsPltFileAction(c *cli.Context) error {
 		// Exclude hidden directories such as `.git`
 		filter = "{*,[^.]*/**}"
 	}
-	paths, err := fcli.ListPalletFiles(plt, filter)
+	paths, err := forklift.ListPalletFiles(plt, filter)
 	if err != nil {
 		return err
 	}
@@ -1134,11 +1135,11 @@ func locatePltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
-	location, err := fcli.GetFileLocation(plt, c.Args().Get(1))
+	location, err := forklift.GetFileLocation(plt, c.Args().Get(1))
 	if err != nil {
 		return err
 	}
@@ -1154,7 +1155,7 @@ func showPltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -1169,7 +1170,7 @@ func lsPltFeatAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -1184,7 +1185,7 @@ func showPltFeatAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}

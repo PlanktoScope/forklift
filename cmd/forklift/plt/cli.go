@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
@@ -14,7 +15,7 @@ type Versions struct {
 	NewStageStore string
 }
 
-func (v Versions) Core() fcli.Versions {
+func (v Versions) Core() forklift.Versions {
 	return v.Staging.Core
 }
 

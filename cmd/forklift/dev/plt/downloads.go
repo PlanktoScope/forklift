@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
@@ -20,7 +21,7 @@ func lsDlAction(c *cli.Context) error {
 		return err
 	}
 
-	http, oci, err := fcli.ListRequiredDownloads(plt, caches.pp, c.Bool("include-disabled"))
+	http, oci, err := forklift.ListRequiredDownloads(plt, caches.pp, c.Bool("include-disabled"))
 	if err != nil {
 		return err
 	}

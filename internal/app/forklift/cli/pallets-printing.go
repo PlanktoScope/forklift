@@ -11,6 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
@@ -265,7 +266,7 @@ func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 	SortRemotes(remotes)
 	printCacheMirrorRemote := false
 	for _, remote := range remotes {
-		if remote.Config().Name == ForkliftCacheMirrorRemoteName && !printCacheMirrorRemote {
+		if remote.Config().Name == forklift.ForkliftCacheMirrorRemoteName && !printCacheMirrorRemote {
 			IndentedFprintf(
 				indent, out,
 				"%s: (skipped because origin was successfully queried)\n", remote.Config().Name,
@@ -275,7 +276,7 @@ func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 
 		if err := fprintRemoteInfo(
 			indent, out, remote,
-		); err != nil && remote.Config().Name == OriginRemoteName {
+		); err != nil && remote.Config().Name == forklift.OriginRemoteName {
 			printCacheMirrorRemote = true
 		}
 	}
@@ -284,10 +285,10 @@ func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 
 func SortRemotes(remotes []*ggit.Remote) {
 	slices.SortFunc(remotes, func(a, b *ggit.Remote) int {
-		if a.Config().Name == OriginRemoteName {
+		if a.Config().Name == forklift.OriginRemoteName {
 			return -1
 		}
-		if b.Config().Name == OriginRemoteName {
+		if b.Config().Name == forklift.OriginRemoteName {
 			return 1
 		}
 		return cmp.Compare(a.Config().Name, b.Config().Name)

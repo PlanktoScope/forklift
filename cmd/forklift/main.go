@@ -14,6 +14,7 @@ import (
 	"github.com/forklift-run/forklift/cmd/forklift/inspector"
 	"github.com/forklift-run/forklift/cmd/forklift/plt"
 	"github.com/forklift-run/forklift/cmd/forklift/stage"
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/internal/clients/crane"
 )
@@ -30,7 +31,7 @@ var (
 )
 
 var fcliVersions fcli.StagingVersions = fcli.StagingVersions{
-	Core: fcli.Versions{
+	Core: forklift.Versions{
 		Tool:               toolVersion,
 		MinSupportedPallet: palletMinVersion,
 	},
