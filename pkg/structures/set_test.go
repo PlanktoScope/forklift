@@ -139,6 +139,15 @@ func TestSetDiff(t *testing.T) {
 			if got, want := test.second, second; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got))
 			}
+
+			t.Logf("%s (remove equivalence)", name)
+			byRemoval := maps.Clone(test.first)
+			for elem := range test.second {
+				byRemoval.Remove(elem)
+			}
+			if got, want := byRemoval, test.out; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got))
+			}
 		})
 	}
 }

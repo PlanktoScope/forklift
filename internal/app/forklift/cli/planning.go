@@ -76,11 +76,14 @@ func newRemoveReconciliationChange(appName string, app api.Stack) *Reconciliatio
 // which can be used to build a partial ordering of the changes (where each change is a node in the
 // graph) for concurrent execution, and - if serial execution is required either because the
 // parallel arg is set to true or because a dependency cycle was detected - a total ordering of the
-// changes for serial (rather than concurrent) execution.
+// changes for serial (rather than concurrent) execution. Redundant dependencies in the dependency
+// graph are pruned away (e.g. if A depends on B and B depends on C and A also depends on C, the
+// dependency of A on C is omitted).
 func Plan(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader, parallel bool,
 ) (
-	changeDeps structures.Digraph[*ReconciliationChange], serialization []*ReconciliationChange,
+	prunedChangeDeps structures.Digraph[*ReconciliationChange],
+	serialization []*ReconciliationChange,
 	err error,
 ) {
 	dc, err := docker.NewClient()
@@ -103,13 +106,15 @@ func Plan(
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "couldn't list active Docker Compose apps")
 	}
-	changeDeps, cycles, serialization, err := planChanges(depls, deps, apps, !parallel)
+	_, prunedChangeDeps, cycles, serialization, err := planChanges(
+		depls, deps, apps, !parallel,
+	)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't compute a plan for changes")
 	}
 
 	IndentedFprintln(indent, os.Stderr, "Ordering relationships:")
-	printDigraph(indent+1, changeDeps, "after")
+	printDigraph(indent+1, prunedChangeDeps, "after")
 	if len(cycles) > 0 {
 		IndentedFprintln(indent, os.Stderr, "Detected ordering cycles:")
 		for _, cycle := range cycles {
@@ -123,7 +128,7 @@ func Plan(
 		}
 	}
 	if serialization == nil {
-		return changeDeps, nil, nil
+		return prunedChangeDeps, nil, nil
 	}
 
 	fmt.Fprintln(os.Stderr)
@@ -131,7 +136,7 @@ func Plan(
 	for _, change := range serialization {
 		IndentedFprintln(indent+1, os.Stderr, change.PlanString())
 	}
-	return changeDeps, serialization, nil
+	return prunedChangeDeps, serialization, nil
 }
 
 type MapDigraph[Node comparable] interface {
@@ -182,22 +187,24 @@ func planChanges(
 	depls []*forklift.ResolvedDepl, deplDirectDeps structures.Digraph[string], apps []api.Stack,
 	serialize bool,
 ) (
-	changeDirectDeps structures.Digraph[*ReconciliationChange], cycles [][]*ReconciliationChange,
-	serialization []*ReconciliationChange, err error,
+	changeDirectDeps structures.Digraph[*ReconciliationChange],
+	changePrunedDeps structures.Digraph[*ReconciliationChange],
+	cycles [][]*ReconciliationChange, serialization []*ReconciliationChange,
+	err error,
 ) {
 	// TODO: make a reconciliation plan where relevant resources (i.e. Docker networks) are created
 	// simultaneously/independently so that circular dependencies for those resources won't prevent
 	// successful application.
 	changes, err := identifyReconciliationChanges(depls, apps)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "couldn't identify the changes to make")
+		return nil, nil, nil, nil, errors.Wrap(err, "couldn't identify the changes to make")
 	}
 
 	changeDirectDeps = computeChangeDeps(changes, deplDirectDeps)
-	changeIndirectDeps := changeDirectDeps.ComputeTransitiveClosure()
+	changePrunedDeps, changeIndirectDeps, _ := changeDirectDeps.ComputeTransitiveReduction()
 	cycles = changeIndirectDeps.IdentifyCycles()
 	if !serialize {
-		return changeDirectDeps, cycles, nil, nil
+		return changeDirectDeps, changePrunedDeps, cycles, nil, nil
 	}
 
 	// Serialize changes with a total ordering
@@ -205,7 +212,7 @@ func planChanges(
 	slices.SortFunc(changes, func(i, j *ReconciliationChange) int {
 		return compareChangesTotal(i, j, changeIndirectDeps, dependents)
 	})
-	return changeDirectDeps, cycles, changes, nil
+	return changeDirectDeps, changePrunedDeps, cycles, changes, nil
 }
 
 // identifyReconciliationChanges builds an arbitrarily-ordered list of changes to carry out to

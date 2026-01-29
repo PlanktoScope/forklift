@@ -8,10 +8,17 @@ import (
 
 type Set[Node comparable] map[Node]struct{}
 
-// Add adds the node to the set. If the node was already in the set, nothing changes.
+// Add adds each node to the set for each node not already in the set.
 func (s Set[Node]) Add(n ...Node) {
 	for _, node := range n {
 		s[node] = struct{}{}
+	}
+}
+
+// Remove removes each node from the set for each node still in the set.
+func (s Set[Node]) Remove(n ...Node) {
+	for _, node := range n {
+		delete(s, node)
 	}
 }
 

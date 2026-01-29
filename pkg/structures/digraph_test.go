@@ -297,57 +297,72 @@ func TestDigraphInvert(t *testing.T) {
 	}
 }
 
-var checkDigraphTransClosureTests = map[string]struct {
+var checkDigraphTCTRTests = map[string]struct {
 	nodes []int
 	edges []edge
 	out   TransitiveClosure[int]
 	cyc   [][]int
 	inv   TransitiveClosure[int]
+	red   Digraph[int]
 }{
 	"{} {}": {},
 	"{1} {}": {
 		nodes: []int{1},
 		out:   TransitiveClosure[int]{1: nil},
+		red:   Digraph[int]{1: nil},
 	},
 	"{} {1->1}": {
 		edges: []edge{{from: 1, to: 1}},
 		out:   TransitiveClosure[int]{1: Set[int]{1: o}},
 		cyc:   [][]int{{1}},
+		red:   Digraph[int]{1: Set[int]{1: o}},
 	},
 	"{} {1->2}": {
 		edges: []edge{{from: 1, to: 2}},
 		out:   TransitiveClosure[int]{1: Set[int]{2: o}, 2: nil},
+		red:   Digraph[int]{1: Set[int]{2: o}, 2: nil},
 	},
 	"{3} {1->2 1->1}": {
 		nodes: []int{3},
 		edges: []edge{{from: 1, to: 2}, {from: 1, to: 1}},
 		out:   TransitiveClosure[int]{1: Set[int]{1: o, 2: o}, 2: nil, 3: nil},
 		cyc:   [][]int{{1}},
+		red:   Digraph[int]{1: Set[int]{1: o, 2: o}, 2: nil, 3: nil},
 	},
 	"{3} {1->2 2->2}": {
 		nodes: []int{3},
 		edges: []edge{{from: 1, to: 2}, {from: 2, to: 2}},
 		out:   TransitiveClosure[int]{1: Set[int]{2: o}, 2: Set[int]{2: o}, 3: nil},
 		cyc:   [][]int{{2}},
+		red:   Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{2: o}, 3: nil},
 	},
 	"{3} {1->2 1->2}": {
 		nodes: []int{3},
 		edges: []edge{{from: 1, to: 2}, {from: 1, to: 2}},
 		out:   TransitiveClosure[int]{1: Set[int]{2: o}, 2: nil, 3: nil},
+		red:   Digraph[int]{1: Set[int]{2: o}, 2: nil, 3: nil},
 	},
 	"{3} {1->2 2->1}": {
 		nodes: []int{3},
 		edges: []edge{{from: 1, to: 2}, {from: 2, to: 1}},
 		out:   TransitiveClosure[int]{1: Set[int]{1: o, 2: o}, 2: Set[int]{1: o, 2: o}, 3: nil},
 		cyc:   [][]int{{1, 2}},
+		red:   Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{1: o}, 3: nil},
 	},
 	"{} {1->2 1->3}": {
 		edges: []edge{{from: 1, to: 2}, {from: 1, to: 3}},
 		out:   TransitiveClosure[int]{1: Set[int]{2: o, 3: o}, 2: nil, 3: nil},
+		red:   Digraph[int]{1: Set[int]{2: o, 3: o}, 2: nil, 3: nil},
 	},
 	"{} {1->2 2->3}": {
 		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}},
 		out:   TransitiveClosure[int]{1: Set[int]{2: o, 3: o}, 2: Set[int]{3: o}, 3: nil},
+		red:   Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: nil},
+	},
+	"{} {1->2 2->3 1->3}": {
+		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}, {from: 1, to: 3}},
+		out:   TransitiveClosure[int]{1: Set[int]{2: o, 3: o}, 2: Set[int]{3: o}, 3: nil},
+		red:   Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: nil},
 	},
 	"{} {1->2 2->1 3->1}": {
 		nodes: []int{},
@@ -358,6 +373,7 @@ var checkDigraphTransClosureTests = map[string]struct {
 			3: Set[int]{1: o, 2: o},
 		},
 		cyc: [][]int{{1, 2}},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{1: o}, 3: Set[int]{1: o}},
 	},
 	"{} {1->2 2->1 1->3}": {
 		nodes: []int{},
@@ -368,6 +384,7 @@ var checkDigraphTransClosureTests = map[string]struct {
 			3: nil,
 		},
 		cyc: [][]int{{1, 2}},
+		red: Digraph[int]{1: Set[int]{2: o, 3: o}, 2: Set[int]{1: o}, 3: nil},
 	},
 	"{} {1->2 2->1 1->3 3->1}": {
 		nodes: []int{},
@@ -378,6 +395,7 @@ var checkDigraphTransClosureTests = map[string]struct {
 			3: Set[int]{1: o, 2: o, 3: o},
 		},
 		cyc: [][]int{{1, 2, 3}},
+		red: Digraph[int]{1: Set[int]{2: o, 3: o}, 2: Set[int]{1: o}, 3: Set[int]{1: o}},
 	},
 	"{} {1->2 2->3 3->1}": {
 		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 1}},
@@ -387,6 +405,7 @@ var checkDigraphTransClosureTests = map[string]struct {
 			3: Set[int]{1: o, 2: o, 3: o},
 		},
 		cyc: [][]int{{1, 2, 3}},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: Set[int]{1: o}},
 	},
 	"{} {1->2 2->3 1->4}": {
 		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}, {from: 1, to: 4}},
@@ -396,11 +415,62 @@ var checkDigraphTransClosureTests = map[string]struct {
 			3: nil,
 			4: nil,
 		},
+		red: Digraph[int]{1: Set[int]{2: o, 4: o}, 2: Set[int]{3: o}, 3: nil, 4: nil},
+	},
+	"{} {1->2 2->3 3->4 1->4}": {
+		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 1, to: 4}},
+		out: TransitiveClosure[int]{
+			1: Set[int]{2: o, 3: o, 4: o},
+			2: Set[int]{3: o, 4: o},
+			3: Set[int]{4: o},
+			4: nil,
+		},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: Set[int]{4: o}, 4: nil},
+	},
+	"{} {1->2 2->3 3->4 1->3}": {
+		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 1, to: 3}},
+		out: TransitiveClosure[int]{
+			1: Set[int]{2: o, 3: o, 4: o},
+			2: Set[int]{3: o, 4: o},
+			3: Set[int]{4: o},
+			4: nil,
+		},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: Set[int]{4: o}, 4: nil},
+	},
+	"{} {1->2 2->3 3->4 1->3 1->4}": {
+		edges: []edge{
+			{from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 1, to: 3}, {from: 1, to: 4},
+		},
+		out: TransitiveClosure[int]{
+			1: Set[int]{2: o, 3: o, 4: o},
+			2: Set[int]{3: o, 4: o},
+			3: Set[int]{4: o},
+			4: nil,
+		},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: Set[int]{4: o}, 4: nil},
+	},
+	"{} {1->2 2->3 3->4 1->4 2->4}": {
+		edges: []edge{
+			{from: 1, to: 2}, {from: 2, to: 3}, {from: 3, to: 4}, {from: 1, to: 4}, {from: 2, to: 4},
+		},
+		out: TransitiveClosure[int]{
+			1: Set[int]{2: o, 3: o, 4: o},
+			2: Set[int]{3: o, 4: o},
+			3: Set[int]{4: o},
+			4: nil,
+		},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{3: o}, 3: Set[int]{4: o}, 4: nil},
 	},
 	"{} {1->2 2->3 2->4}": {
 		edges: []edge{{from: 1, to: 2}, {from: 2, to: 3}, {from: 2, to: 4}},
 		out: TransitiveClosure[int]{
 			1: Set[int]{2: o, 3: o, 4: o},
+			2: Set[int]{3: o, 4: o},
+			3: nil,
+			4: nil,
+		},
+		red: Digraph[int]{
+			1: Set[int]{2: o},
 			2: Set[int]{3: o, 4: o},
 			3: nil,
 			4: nil,
@@ -415,6 +485,7 @@ var checkDigraphTransClosureTests = map[string]struct {
 			4: Set[int]{3: o, 4: o},
 		},
 		cyc: [][]int{{1, 2}, {3, 4}},
+		red: Digraph[int]{1: Set[int]{2: o}, 2: Set[int]{1: o}, 3: Set[int]{4: o}, 4: Set[int]{3: o}},
 	},
 	"{} {1->2 2->1 1->3 3->2}": {
 		nodes: []int{},
@@ -425,6 +496,7 @@ var checkDigraphTransClosureTests = map[string]struct {
 			3: Set[int]{1: o, 2: o, 3: o},
 		},
 		cyc: [][]int{{1, 2, 3}},
+		red: Digraph[int]{1: Set[int]{2: o, 3: o}, 2: Set[int]{1: o}, 3: Set[int]{2: o}},
 	},
 	"{} {1->2 2->1 1->3 3->4 4->3}": {
 		nodes: []int{},
@@ -442,6 +514,12 @@ var checkDigraphTransClosureTests = map[string]struct {
 			4: Set[int]{3: o, 4: o},
 		},
 		cyc: [][]int{{1, 2}, {3, 4}},
+		red: Digraph[int]{
+			1: Set[int]{2: o, 3: o},
+			2: Set[int]{1: o},
+			3: Set[int]{4: o},
+			4: Set[int]{3: o},
+		},
 	},
 	"{} {1->2 2->1 1->3 3->4 4->3 4->2}": {
 		nodes: []int{},
@@ -460,12 +538,65 @@ var checkDigraphTransClosureTests = map[string]struct {
 			4: Set[int]{1: o, 2: o, 3: o, 4: o},
 		},
 		cyc: [][]int{{1, 2, 3, 4}},
+		red: Digraph[int]{
+			1: Set[int]{2: o, 3: o},
+			2: Set[int]{1: o},
+			3: Set[int]{4: o},
+			4: Set[int]{2: o, 3: o},
+		},
+	},
+	"{} {1->2 2->1 3->1 3->4 4->3 4->2}": {
+		nodes: []int{},
+		edges: []edge{
+			{from: 1, to: 2},
+			{from: 2, to: 1},
+			{from: 3, to: 1},
+			{from: 3, to: 4},
+			{from: 4, to: 3},
+			{from: 4, to: 2},
+		},
+		out: TransitiveClosure[int]{
+			1: Set[int]{1: o, 2: o},
+			2: Set[int]{1: o, 2: o},
+			3: Set[int]{1: o, 2: o, 3: o, 4: o},
+			4: Set[int]{1: o, 2: o, 3: o, 4: o},
+		},
+		cyc: [][]int{{1, 2}, {3, 4}},
+		red: Digraph[int]{
+			1: Set[int]{2: o},
+			2: Set[int]{1: o},
+			3: Set[int]{1: o, 4: o},
+			4: Set[int]{2: o, 3: o},
+		},
+	},
+	"{} {1->2 2->3 3->1 1->4 4->3}": {
+		nodes: []int{},
+		edges: []edge{
+			{from: 1, to: 2},
+			{from: 2, to: 3},
+			{from: 3, to: 1},
+			{from: 1, to: 4},
+			{from: 4, to: 3},
+		},
+		out: TransitiveClosure[int]{
+			1: Set[int]{1: o, 2: o, 3: o, 4: o},
+			2: Set[int]{1: o, 2: o, 3: o, 4: o},
+			3: Set[int]{1: o, 2: o, 3: o, 4: o},
+			4: Set[int]{1: o, 2: o, 3: o, 4: o},
+		},
+		cyc: [][]int{{1, 2, 3, 4}},
+		red: Digraph[int]{
+			1: Set[int]{2: o, 4: o},
+			2: Set[int]{3: o},
+			3: Set[int]{1: o},
+			4: Set[int]{3: o},
+		},
 	},
 }
 
 func TestDigraphTransClosure(t *testing.T) {
 	t.Parallel()
-	for name, test := range checkDigraphTransClosureTests {
+	for name, test := range checkDigraphTCTRTests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -514,7 +645,7 @@ func TestDigraphTransClosure(t *testing.T) {
 
 func TestDigraphTransClosureHasEdge(t *testing.T) {
 	t.Parallel()
-	for name, test := range checkDigraphTransClosureTests {
+	for name, test := range checkDigraphTCTRTests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -539,6 +670,62 @@ func TestDigraphTransClosureHasEdge(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+func TestDigraphTransReduction(t *testing.T) {
+	t.Parallel()
+	for name, test := range checkDigraphTCTRTests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			t.Log(name)
+			g := make(Digraph[int])
+			gg := make(Digraph[int])
+			for _, elem := range test.nodes {
+				g.AddNode(elem)
+				gg.AddNode(elem)
+			}
+			for _, elem := range test.edges {
+				g.AddEdge(elem.from, elem.to)
+				gg.AddEdge(elem.from, elem.to)
+			}
+			t.Logf("%s", name)
+			tr, tc, cyc := g.ComputeTransitiveReduction()
+			if got, want := tr, test.red; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			}
+			if got, want := tc, test.out; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			}
+			if got, want := cyc, test.cyc; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			}
+
+			t.Logf("%s (unmodified)", name)
+			if got, want := g, gg; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			}
+
+			t.Logf("%s (transitive closure of transreduction)", name)
+			if got, want := tr.ComputeTransitiveClosure(), test.out; !cmp.Equal(
+				got, want, cmpopts.EquateEmpty(),
+			) {
+				t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			}
+
+			// t.Logf("%s (double-transreduction)", name)
+			// tr, tc, cyc = tr.ComputeTransitiveReduction()
+			// if got, want := tr, test.red; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+			// 	t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			// }
+			// if got, want := tc, test.out; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+			// 	t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			// }
+			// if got, want := cyc, test.cyc; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+			// 	t.Errorf("diff (-want +got):\n%+v", cmp.Diff(want, got, cmpopts.EquateEmpty()))
+			// }
 		})
 	}
 }

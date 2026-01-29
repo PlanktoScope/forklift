@@ -8,6 +8,7 @@ import (
 
 // Digraph
 
+// Digraph is an adjacency matrix.
 type Digraph[Node comparable] map[Node]Set[Node]
 
 // AddNode adds the node to the graph. If the node was already in the graph, nothing changes.
@@ -24,6 +25,12 @@ func (g Digraph[Node]) AddEdge(from, to Node) {
 	g.AddNode(from)
 	g.AddNode(to)
 	g[from].Add(to)
+}
+
+// AddEdge removes any edge from the first node to the second node. If the edge already wasn't in
+// the graph, nothing changes.
+func (g Digraph[Node]) RemoveEdge(from, to Node) {
+	g[from].Remove(to)
 }
 
 // HasEdge checks whether an edge exists from the first node to the second node.
@@ -50,6 +57,40 @@ func (g Digraph[Node]) Invert() Digraph[Node] {
 		}
 	}
 	return inverted
+}
+
+// ComputeTransitiveClosure removes edges between every pair of nodes which are connected by some
+// other longer path of directed edges. For DAGs, this is just the transitive reduction of the
+// relation expressed by the digraph. Note: edges in any cycles will be kept.
+func (g Digraph[Node]) ComputeTransitiveReduction() (
+	tr Digraph[Node], tc TransitiveClosure[Node], cycles [][]Node,
+) {
+	tc = g.ComputeTransitiveClosure()
+	cycles = tc.IdentifyCycles()
+	tr = make(Digraph[Node])
+	for node := range g {
+		tr.AddNode(node)
+		for parent := range g[node] {
+			tr.AddEdge(node, parent)
+		}
+	}
+	for node := range g {
+		ancestors := tc[node]
+		for p := range ancestors {
+			for q := range ancestors {
+				if p == q || p == node || q == node {
+					continue
+				}
+				if tc.edgeInCycle(p, node) || tc.edgeInCycle(p, q) || tc.edgeInCycle(node, q) {
+					continue
+				}
+				if tc.HasEdge(node, p) && tc.HasEdge(p, q) {
+					tr.RemoveEdge(node, q)
+				}
+			}
+		}
+	}
+	return tr, tc, cycles
 }
 
 // ComputeTransitiveClosure adds edges between every pair of nodes which are transitively connected
@@ -163,6 +204,17 @@ func (g TransitiveClosure[Node]) IdentifyCycles() [][]Node {
 		return cmp.Compare(fmt.Sprintf("%+v", a), fmt.Sprintf("%+v", b))
 	})
 	return orderedCycles
+}
+
+func (g TransitiveClosure[Node]) edgeInCycle(from, to Node) bool {
+	parents := g[from]
+	if !parents.Has(from) { // the "from" node is not in a cycle
+		return false
+	}
+	if !parents.Has(to) { // the edge does not exist
+		return false
+	}
+	return g[to].Has(from) // the "from" node is a grandparent of itself via the "to" node
 }
 
 // Invert converts a digraph of children pointing to parents into a new digraph of parents pointing
