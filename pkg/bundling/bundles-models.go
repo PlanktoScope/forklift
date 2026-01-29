@@ -1,4 +1,4 @@
-package forklift
+package bundling
 
 import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"

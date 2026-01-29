@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
@@ -179,7 +179,7 @@ func checkVersionConsistency(
 // Bundles
 
 func CheckBundleShallowCompat(
-	bundle *forklift.FSBundle, toolVersion, bundleMinVersion string, ignoreTool bool,
+	bundle *fbun.FSBundle, toolVersion, bundleMinVersion string, ignoreTool bool,
 ) error {
 	if ignoreTool {
 		fmt.Fprintf(

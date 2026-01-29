@@ -16,6 +16,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/crane"
 	"github.com/forklift-run/forklift/pkg/caching"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
@@ -31,7 +32,7 @@ func GetDownloadCache(wpath string, ensureCache bool) (*caching.FSDownloadCache,
 	}
 
 	if ensureCache && !cache.Exists() {
-		if err = forklift.EnsureExists(cache.FS.Path()); err != nil {
+		if err = ffs.EnsureExists(cache.FS.Path()); err != nil {
 			return nil, err
 		}
 	}
@@ -213,7 +214,7 @@ func downloadSerial(
 }
 
 func downloadFile(ctx context.Context, url, outputPath string, hc *http.Client) error {
-	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(outputPath))); err != nil {
+	if err := ffs.EnsureExists(filepath.FromSlash(path.Dir(outputPath))); err != nil {
 		return err
 	}
 	tmpPath := outputPath + ".fkldownload"
@@ -257,7 +258,7 @@ func downloadFile(ctx context.Context, url, outputPath string, hc *http.Client) 
 }
 
 func downloadOCIImage(ctx context.Context, imageName, outputPath, platform string) error {
-	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(outputPath))); err != nil {
+	if err := ffs.EnsureExists(filepath.FromSlash(path.Dir(outputPath))); err != nil {
 		return err
 	}
 	tmpPath := outputPath + ".fkldownload"

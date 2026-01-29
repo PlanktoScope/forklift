@@ -16,6 +16,7 @@ import (
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
+	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
@@ -129,7 +130,7 @@ func buildBundle(
 	dlCache *caching.FSDownloadCache,
 	forkliftVersion, outputPath string,
 ) (err error) {
-	outputBundle, err := forklift.NewFSBundle(outputPath)
+	outputBundle, err := fbun.NewFSBundle(outputPath)
 	if err != nil {
 		return errors.Errorf("couldn't initialize new bundle at %s", outputPath)
 	}
@@ -166,19 +167,19 @@ func buildBundle(
 
 func newBundleManifest(
 	merged *fplt.FSPallet, palletCache caching.PathedPalletCache, forkliftVersion string,
-) (forklift.BundleManifest, error) {
-	desc := forklift.BundleManifest{
+) (fbun.BundleManifest, error) {
+	desc := fbun.BundleManifest{
 		ForkliftVersion: forkliftVersion,
-		Pallet: forklift.BundlePallet{
+		Pallet: fbun.BundlePallet{
 			Path:        merged.Path(),
 			Description: merged.Decl.Pallet.Description,
 		},
-		Includes: forklift.BundleInclusions{
-			Pallets: make(map[string]forklift.BundlePalletInclusion),
+		Includes: fbun.BundleInclusions{
+			Pallets: make(map[string]fbun.BundlePalletInclusion),
 		},
 		Deploys:   make(map[string]fplt.DeplDecl),
-		Downloads: make(map[string]forklift.BundleDeplDownloads),
-		Exports:   make(map[string]forklift.BundleDeplExports),
+		Downloads: make(map[string]fbun.BundleDeplDownloads),
+		Exports:   make(map[string]fbun.BundleDeplExports),
 	}
 	desc.Pallet.Version, desc.Pallet.Clean = CheckGitRepoVersion(merged.FS.Path())
 	palletReqs, err := merged.LoadFSPalletReqs("**")
@@ -240,10 +241,10 @@ func CheckGitRepoVersion(palletPath string) (version string, clean bool) {
 func newBundlePalletInclusion(
 	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache caching.PathedPalletCache,
 	describeImports bool,
-) (inclusion forklift.BundlePalletInclusion, err error) {
-	inclusion = forklift.BundlePalletInclusion{
+) (inclusion fbun.BundlePalletInclusion, err error) {
+	inclusion = fbun.BundlePalletInclusion{
 		Req:      req.PalletReq,
-		Includes: make(map[string]forklift.BundlePalletInclusion),
+		Includes: make(map[string]fbun.BundlePalletInclusion),
 	}
 	for {
 		if palletCache == nil {
@@ -336,7 +337,7 @@ func describePalletImports(
 // Apply
 
 func ApplyNextOrCurrentBundle(
-	indent int, store *forklift.FSStageStore, bundle *forklift.FSBundle, parallel bool,
+	indent int, store *forklift.FSStageStore, bundle *fbun.FSBundle, parallel bool,
 ) error {
 	applyingFallback := store.NextFailed()
 	applyErr := applyBundle(0, bundle, parallel)
@@ -375,7 +376,7 @@ func ApplyNextOrCurrentBundle(
 	return nil
 }
 
-func applyBundle(indent int, bundle *forklift.FSBundle, parallel bool) error {
+func applyBundle(indent int, bundle *fbun.FSBundle, parallel bool) error {
 	concurrentPlan, serialPlan, err := Plan(indent, bundle, bundle, parallel)
 	if err != nil {
 		return err

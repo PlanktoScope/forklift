@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
@@ -96,7 +96,7 @@ func writeDepl(pallet *fplt.FSPallet, depl fplt.Depl) error {
 	if err = encoder.Encode(depl.Decl); err != nil {
 		return errors.Wrapf(err, "couldn't marshal package deployment for %s", deplPath)
 	}
-	if err := forklift.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
+	if err := ffs.EnsureExists(filepath.FromSlash(path.Dir(deplPath))); err != nil {
 		return errors.Wrapf(
 			err, "couldn't make directory %s", filepath.FromSlash(path.Dir(deplPath)),
 		)

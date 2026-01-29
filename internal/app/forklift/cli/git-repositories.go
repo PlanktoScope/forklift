@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
@@ -315,7 +314,7 @@ func validateGitRepoQueries(queries []string) error {
 func DownloadLockedGitRepoUsingLocalMirror(
 	indent int, mirrorsPath, cachePath, gitRepoPath string, lock versioning.Lock,
 ) (downloaded bool, err error) {
-	if err := forklift.EnsureExists(mirrorsPath); err != nil {
+	if err := ffs.EnsureExists(mirrorsPath); err != nil {
 		return false, errors.Wrap(err, "couldn't ensure existence of mirrors cache")
 	}
 	mirrorPath := filepath.Join(filepath.FromSlash(mirrorsPath), gitRepoPath)

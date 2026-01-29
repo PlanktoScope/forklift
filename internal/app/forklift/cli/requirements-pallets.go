@@ -180,7 +180,7 @@ func writeVersionLock(lock versioning.Lock, writePath string) error {
 		return errors.Wrapf(err, "couldn't marshal version lock")
 	}
 	parentDir := filepath.FromSlash(path.Dir(writePath))
-	if err := forklift.EnsureExists(parentDir); err != nil {
+	if err := ffs.EnsureExists(parentDir); err != nil {
 		return errors.Wrapf(err, "couldn't make directory %s", parentDir)
 	}
 	const perm = 0o644 // owner rw, group r, public r

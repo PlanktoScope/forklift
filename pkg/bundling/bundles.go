@@ -1,4 +1,5 @@
-package forklift
+// Package bundling implements the Forklift bundling spec for exporting Forklift pallets.
+package bundling
 
 import (
 	"archive/tar"
@@ -460,7 +461,7 @@ func (b *FSBundle) getExportsPath() string {
 }
 
 func (b *FSBundle) WriteFileExports(dlCache *caching.FSDownloadCache) error {
-	if err := EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
+	if err := ffs.EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
 		return errors.Wrapf(err, "couldn't make directory for all file exports")
 	}
 	for deplName := range b.Manifest.Deploys {
@@ -474,7 +475,7 @@ func (b *FSBundle) WriteFileExports(dlCache *caching.FSDownloadCache) error {
 		}
 		for _, export := range exports {
 			exportPath := path.Join(b.getExportsPath(), export.Target)
-			if err := EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {
+			if err := ffs.EnsureExists(filepath.FromSlash(path.Dir(exportPath))); err != nil {
 				return errors.Wrapf(
 					err, "couldn't make export directory %s in bundle", path.Dir(exportPath),
 				)
@@ -659,7 +660,7 @@ func extractFile(
 	default:
 		return errors.Errorf("unknown type of file %s in archive: %b", header.Name, header.Typeflag)
 	case tar.TypeDir:
-		if err := EnsureExists(filepath.FromSlash(targetPath)); err != nil {
+		if err := ffs.EnsureExists(filepath.FromSlash(targetPath)); err != nil {
 			return errors.Wrapf(
 				err, "couldn't export directory %s from archive to %s", header.Name, targetPath,
 			)

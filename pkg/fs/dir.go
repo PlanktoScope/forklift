@@ -15,6 +15,11 @@ func DirExists(dirPath string) bool {
 	return false
 }
 
+func EnsureExists(dirPath string) error {
+	const perm = 0o755 // owner rwx, group rx, public rx
+	return os.MkdirAll(dirPath, perm)
+}
+
 // DirFS returns a filesystem (a ReadLinkFS) for a tree of files rooted at the directory dir.
 func DirFS(dir string) ReadLinkFS {
 	return &dirFS{

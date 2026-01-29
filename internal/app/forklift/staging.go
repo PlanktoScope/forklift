@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
@@ -21,7 +22,7 @@ import (
 // base filesystem, if a stage store is not already initialized there.
 func EnsureFSStageStore(fsys ffs.PathedFS, subdirPath, newStateStoreVersion string) error {
 	storePath := path.Join(fsys.Path(), subdirPath)
-	if err := EnsureExists(filepath.FromSlash(storePath)); err != nil {
+	if err := ffs.EnsureExists(filepath.FromSlash(storePath)); err != nil {
 		return errors.Wrapf(
 			err, "couldn't ensure the existence of the stage store at %s", storePath,
 		)
@@ -73,8 +74,8 @@ func (s *FSStageStore) Path() string {
 
 // LoadFSBundle loads the FSBundle with the specified index.
 // The loaded FSBundle instance is fully initialized.
-func (s *FSStageStore) LoadFSBundle(index int) (*FSBundle, error) {
-	return LoadFSBundle(s.FS, fmt.Sprintf("%d", index))
+func (s *FSStageStore) LoadFSBundle(index int) (*fbun.FSBundle, error) {
+	return fbun.LoadFSBundle(s.FS, fmt.Sprintf("%d", index))
 }
 
 // List returns a numerically-sorted (in ascending order) list of staged pallet bundles in the
@@ -129,7 +130,7 @@ func (s *FSStageStore) AllocateNew() (index int, err error) {
 	if ffs.DirExists(newPath) {
 		return index, errors.Wrapf(err, "a stage already exists at %s", newPath)
 	}
-	if err = EnsureExists(newPath); err != nil {
+	if err = ffs.EnsureExists(newPath); err != nil {
 		return index, errors.Wrapf(err, "couldn't ensure the existence of %s", newPath)
 	}
 	return index, nil

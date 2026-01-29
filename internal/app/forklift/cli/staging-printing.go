@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 	"github.com/forklift-run/forklift/pkg/versioning"
@@ -15,7 +16,7 @@ import (
 
 func FprintStagedBundle(
 	indent int, out io.Writer,
-	store *forklift.FSStageStore, bundle *forklift.FSBundle, index int, names []string,
+	store *forklift.FSStageStore, bundle *fbun.FSBundle, index int, names []string,
 ) {
 	IndentedFprintf(indent, out, "Staged pallet bundle: %d\n", index)
 	indent++
@@ -66,7 +67,7 @@ func FprintStagedBundle(
 	}
 }
 
-func fprintBundlePallet(indent int, out io.Writer, pallet forklift.BundlePallet) {
+func fprintBundlePallet(indent int, out io.Writer, pallet fbun.BundlePallet) {
 	IndentedFprintf(indent, out, "Path: %s\n", pallet.Path)
 	IndentedFprintf(indent, out, "Version: %s", pallet.Version)
 	if !pallet.Clean {
@@ -77,7 +78,7 @@ func fprintBundlePallet(indent int, out io.Writer, pallet forklift.BundlePallet)
 	_, _ = fmt.Fprintln(out)
 }
 
-func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.BundleInclusions) {
+func fprintBundleInclusions(indent int, out io.Writer, inclusions fbun.BundleInclusions) {
 	IndentedFprint(indent, out, "Pallets:")
 	if len(inclusions.Pallets) == 0 {
 		_, _ = fmt.Fprintln(out, " (none)")
@@ -97,18 +98,18 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 
 func fprintBundleInclusion(
 	indent int, out io.Writer, path string,
-	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock versioning.Lock,
+	inclOverride fbun.BundleInclusionOverride, inclReqVersionLock versioning.Lock,
 ) {
 	IndentedFprintf(indent, out, "%s:\n", path)
 	indent++
 	IndentedFprint(indent, out, "Required version")
-	if inclOverride != (forklift.BundleInclusionOverride{}) {
+	if inclOverride != (fbun.BundleInclusionOverride{}) {
 		_, _ = fmt.Fprint(out, " (overridden)")
 	}
 	_, _ = fmt.Fprint(out, ": ")
 	_, _ = fmt.Fprintln(out, inclReqVersionLock.Version)
 
-	if inclOverride == (forklift.BundleInclusionOverride{}) {
+	if inclOverride == (fbun.BundleInclusionOverride{}) {
 		return
 	}
 	IndentedFprintln(indent, out, "Override:")
@@ -137,7 +138,7 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 }
 
 func fprintBundleDownloads(
-	indent int, out io.Writer, downloads map[string]forklift.BundleDeplDownloads,
+	indent int, out io.Writer, downloads map[string]fbun.BundleDeplDownloads,
 ) {
 	lists := []string{"httpFiles", "ociImages"}
 	aggs := make(map[string]structures.Set[string])
@@ -163,7 +164,7 @@ func fprintOptionalSet(indent int, out io.Writer, name string, items structures.
 	}
 }
 
-func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.BundleDeplExports) {
+func fprintBundleExports(indent int, out io.Writer, exports map[string]fbun.BundleDeplExports) {
 	lists := []string{
 		"files", "appNames", "appServices", "appImages", "appNewBindMounts", "appReqBindMounts",
 		"appNewVolumes", "appReqVolumes", "appNewNetworks", "appReqNetworks",

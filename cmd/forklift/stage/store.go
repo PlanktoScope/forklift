@@ -10,6 +10,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
+	fbun "github.com/forklift-run/forklift/pkg/bundling"
 )
 
 var errMissingStore = errors.Errorf(
@@ -18,7 +19,7 @@ var errMissingStore = errors.Errorf(
 
 func loadNextBundle(
 	wpath, sspath string, versions Versions,
-) (*forklift.FSBundle, *forklift.FSStageStore, error) {
+) (*fbun.FSBundle, *forklift.FSStageStore, error) {
 	store, err := getStageStore(wpath, sspath, versions)
 	if err != nil {
 		return nil, nil, err
@@ -171,7 +172,7 @@ func printNextSummary(indent int, store *forklift.FSStageStore, index int, names
 	}
 }
 
-func printBasicSummary(indent int, bundle *forklift.FSBundle, names []string) {
+func printBasicSummary(indent int, bundle *fbun.FSBundle, names []string) {
 	fcli.IndentedPrint(indent, "Staged names:")
 	if len(names) == 0 {
 		fmt.Println(" (none)")

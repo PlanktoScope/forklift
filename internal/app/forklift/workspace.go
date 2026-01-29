@@ -20,11 +20,6 @@ func FileExists(filePath string) bool {
 	return false
 }
 
-func EnsureExists(dirPath string) error {
-	const perm = 0o755 // owner rwx, group rx, public rx
-	return os.MkdirAll(dirPath, perm)
-}
-
 // FSWorkspace
 
 // LoadWorkspace loads the workspace at the specified path.
@@ -48,7 +43,7 @@ func (w *FSWorkspace) GetDataPath() string {
 }
 
 func (w *FSWorkspace) getDataFS() (ffs.PathedFS, error) {
-	if err := EnsureExists(w.GetDataPath()); err != nil {
+	if err := ffs.EnsureExists(w.GetDataPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.GetDataPath())
 	}
 
@@ -101,7 +96,7 @@ func (w *FSWorkspace) getCachePath() string {
 }
 
 func (w *FSWorkspace) getCacheFS() (ffs.PathedFS, error) {
-	if err := EnsureExists(w.getCachePath()); err != nil {
+	if err := ffs.EnsureExists(w.getCachePath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getCachePath())
 	}
 
@@ -177,7 +172,7 @@ func (w *FSWorkspace) getConfigPath() string {
 }
 
 func (w *FSWorkspace) getConfigFS() (ffs.PathedFS, error) {
-	if err := EnsureExists(w.getConfigPath()); err != nil {
+	if err := ffs.EnsureExists(w.getConfigPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", w.getConfigPath())
 	}
 

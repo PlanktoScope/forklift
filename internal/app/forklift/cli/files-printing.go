@@ -14,7 +14,6 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
@@ -106,7 +105,7 @@ func EditFileWithCOW(pallet *fplt.FSPallet, filePath, editor string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Saving edits on %s to %s...\n", resolved, overlayPath)
-	if err = forklift.EnsureExists(filepath.FromSlash(path.Dir(overlayPath))); err != nil {
+	if err = ffs.EnsureExists(filepath.FromSlash(path.Dir(overlayPath))); err != nil {
 		return err
 	}
 	overlayFile, err := os.OpenFile(

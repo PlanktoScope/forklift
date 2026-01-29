@@ -26,7 +26,7 @@ func getMirrorCache(wpath string, ensureWorkspace bool) (*caching.FSMirrorCache,
 		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 		}
-		if err := forklift.EnsureExists(wpath); err != nil {
+		if err := ffs.EnsureExists(wpath); err != nil {
 			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
 	}
@@ -46,7 +46,7 @@ func getPalletCache(wpath string, ensureWorkspace bool) (*caching.FSPalletCache,
 		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 		}
-		if err := forklift.EnsureExists(wpath); err != nil {
+		if err := ffs.EnsureExists(wpath); err != nil {
 			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
 	}
