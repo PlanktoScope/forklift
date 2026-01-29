@@ -1,22 +1,20 @@
-package forklift
+package staging
 
-import ffs "github.com/forklift-run/forklift/pkg/fs"
+import (
+	"io/fs"
+	"os"
+	"path/filepath"
 
-// Stage Store
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
+
+	ffs "github.com/forklift-run/forklift/pkg/fs"
+)
 
 const (
 	StageStoreManifestFile     = "forklift-stage-store.yml"
 	StageStoreManifestSwapFile = "forklift-stage-store-swap.yml"
 )
-
-// FSStageStore is a source of bundles rooted at a single path, with bundles stored as
-// incrementally-numbered directories within a [fpkg.PathedFS] filesystem.
-type FSStageStore struct {
-	// Manifest is the Forklift stage store's manifest.
-	Manifest StageStoreManifest
-	// FS is the filesystem which corresponds to the store of staged pallets.
-	FS ffs.PathedFS
-}
 
 // A StageStoreManifest holds the state of the stage store.
 type StageStoreManifest struct {
@@ -42,4 +40,35 @@ type StagesSpec struct {
 	History []int `yaml:"history,omitempty"`
 	// Names is a list of aliases for staged pallet bundles.
 	Names map[string]int `yaml:"names,omitempty"`
+}
+
+// loadStageStoreManifest loads a StageStoreManifest from the specified file path in the provided
+// base filesystem.
+func loadStageStoreManifest(fsys ffs.PathedFS, filePath string) (StageStoreManifest, error) {
+	bytes, err := fs.ReadFile(fsys, filePath)
+	if err != nil {
+		return StageStoreManifest{}, errors.Wrapf(
+			err, "couldn't read stage store manifest file %s/%s", fsys.Path(), filePath,
+		)
+	}
+	config := StageStoreManifest{}
+	if err = yaml.Unmarshal(bytes, &config); err != nil {
+		return StageStoreManifest{}, errors.Wrap(err, "couldn't parse stage store state")
+	}
+	if config.Stages.Names == nil {
+		config.Stages.Names = make(map[string]int)
+	}
+	return config, nil
+}
+
+func (m StageStoreManifest) Write(outputPath string) error {
+	marshaled, err := yaml.Marshal(m)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't marshal stage store state")
+	}
+	const perm = 0o644 // owner rw, group r, public r
+	if err = os.WriteFile(filepath.FromSlash(outputPath), marshaled, perm); err != nil {
+		return errors.Wrapf(err, "couldn't save stage store to %s", outputPath)
+	}
+	return nil
 }

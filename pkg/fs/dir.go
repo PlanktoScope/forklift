@@ -20,6 +20,14 @@ func EnsureExists(dirPath string) error {
 	return os.MkdirAll(dirPath, perm)
 }
 
+func FileExists(filePath string) bool {
+	results, err := os.Stat(filePath)
+	if err == nil && !results.IsDir() {
+		return true
+	}
+	return false
+}
+
 // DirFS returns a filesystem (a ReadLinkFS) for a tree of files rooted at the directory dir.
 func DirFS(dir string) ReadLinkFS {
 	return &dirFS{

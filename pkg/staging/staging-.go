@@ -1,4 +1,6 @@
-package forklift
+// Package staging implements the Forklift staging spec for atomically applying Forklift pallet
+// bundles with generational upgrades and downgrades.
+package staging
 
 import (
 	"fmt"
@@ -10,11 +12,19 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 
 	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
+
+// FSStageStore is a source of bundles rooted at a single path, with bundles stored as
+// incrementally-numbered directories within a [fpkg.PathedFS] filesystem.
+type FSStageStore struct {
+	// Manifest is the Forklift stage store's manifest.
+	Manifest StageStoreManifest
+	// FS is the filesystem which corresponds to the store of staged pallets.
+	FS ffs.PathedFS
+}
 
 // FSStageStore
 
@@ -235,7 +245,7 @@ func (s *FSStageStore) CommitState() error {
 	// TODO: we might want to be less sloppy about read locks vs. write locks in the future. After
 	// successfully acquiring a write lock, then we could just overwrite the swap file.
 	swapPath := path.Join(s.FS.Path(), StageStoreManifestSwapFile)
-	if FileExists(filepath.FromSlash(swapPath)) {
+	if ffs.FileExists(filepath.FromSlash(swapPath)) {
 		return errors.Errorf(
 			"stage store manifest swap file %s already exists, so either another operation is "+
 				"currently running or the previous operation failed or was interrupted before it could "+
@@ -254,39 +264,6 @@ func (s *FSStageStore) CommitState() error {
 		return errors.Wrapf(
 			err, "couldn't commit stage store update from %s to %s", swapPath, outputPath,
 		)
-	}
-	return nil
-}
-
-// StageStoreManifest
-
-// loadStageStoreManifest loads a StageStoreManifest from the specified file path in the provided
-// base filesystem.
-func loadStageStoreManifest(fsys ffs.PathedFS, filePath string) (StageStoreManifest, error) {
-	bytes, err := fs.ReadFile(fsys, filePath)
-	if err != nil {
-		return StageStoreManifest{}, errors.Wrapf(
-			err, "couldn't read stage store manifest file %s/%s", fsys.Path(), filePath,
-		)
-	}
-	config := StageStoreManifest{}
-	if err = yaml.Unmarshal(bytes, &config); err != nil {
-		return StageStoreManifest{}, errors.Wrap(err, "couldn't parse stage store state")
-	}
-	if config.Stages.Names == nil {
-		config.Stages.Names = make(map[string]int)
-	}
-	return config, nil
-}
-
-func (m StageStoreManifest) Write(outputPath string) error {
-	marshaled, err := yaml.Marshal(m)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal stage store state")
-	}
-	const perm = 0o644 // owner rw, group r, public r
-	if err = os.WriteFile(filepath.FromSlash(outputPath), marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save stage store to %s", outputPath)
 	}
 	return nil
 }

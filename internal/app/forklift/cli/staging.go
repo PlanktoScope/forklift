@@ -20,25 +20,26 @@ import (
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	"github.com/forklift-run/forklift/pkg/staging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 func GetStageStore(
 	workspace *forklift.FSWorkspace, stageStorePath, newStageStoreVersion string,
-) (*forklift.FSStageStore, error) {
+) (*staging.FSStageStore, error) {
 	if stageStorePath == "" {
 		return workspace.GetStageStore(newStageStoreVersion)
 	}
 
 	fsys := ffs.DirFS(stageStorePath)
-	if err := forklift.EnsureFSStageStore(fsys, ".", newStageStoreVersion); err != nil {
+	if err := staging.EnsureFSStageStore(fsys, ".", newStageStoreVersion); err != nil {
 		return nil, err
 	}
-	return forklift.LoadFSStageStore(fsys, ".")
+	return staging.LoadFSStageStore(fsys, ".")
 }
 
 func SetNextStagedBundle(
-	indent int, store *forklift.FSStageStore, index int, exportPath,
+	indent int, store *staging.FSStageStore, index int, exportPath,
 	toolVersion, bundleMinVersion string, skipImageCaching bool, platform string, parallel,
 	ignoreToolVersion bool,
 ) error {
@@ -78,7 +79,7 @@ type StagingCaches struct {
 }
 
 func StagePallet(
-	indent int, merged *fplt.FSPallet, stageStore *forklift.FSStageStore, caches StagingCaches,
+	indent int, merged *fplt.FSPallet, stageStore *staging.FSStageStore, caches StagingCaches,
 	exportPath string, versions StagingVersions,
 	skipImageCaching bool, platform string, parallel, ignoreToolVersion bool,
 ) (index int, err error) {
@@ -337,7 +338,7 @@ func describePalletImports(
 // Apply
 
 func ApplyNextOrCurrentBundle(
-	indent int, store *forklift.FSStageStore, bundle *fbun.FSBundle, parallel bool,
+	indent int, store *staging.FSStageStore, bundle *fbun.FSBundle, parallel bool,
 ) error {
 	applyingFallback := store.NextFailed()
 	applyErr := applyBundle(0, bundle, parallel)

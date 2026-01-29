@@ -11,6 +11,7 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	fbun "github.com/forklift-run/forklift/pkg/bundling"
+	"github.com/forklift-run/forklift/pkg/staging"
 )
 
 var errMissingStore = errors.Errorf(
@@ -19,7 +20,7 @@ var errMissingStore = errors.Errorf(
 
 func loadNextBundle(
 	wpath, sspath string, versions Versions,
-) (*fbun.FSBundle, *forklift.FSStageStore, error) {
+) (*fbun.FSBundle, *staging.FSStageStore, error) {
 	store, err := getStageStore(wpath, sspath, versions)
 	if err != nil {
 		return nil, nil, err
@@ -69,7 +70,7 @@ func loadNextBundle(
 
 func getStageStore(
 	wpath, sspath string, versions Versions,
-) (store *forklift.FSStageStore, err error) {
+) (store *staging.FSStageStore, err error) {
 	var workspace *forklift.FSWorkspace
 	if sspath == "" {
 		workspace, err = forklift.LoadWorkspace(wpath)
@@ -138,7 +139,7 @@ func showAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-func printNextSummary(indent int, store *forklift.FSStageStore, index int, names []string) {
+func printNextSummary(indent int, store *staging.FSStageStore, index int, names []string) {
 	bundle, err := store.LoadFSBundle(index)
 	if err != nil {
 		fmt.Printf("Error: couldn't load staged bundle d (was it deleted?): %s\n", err.Error())
@@ -196,7 +197,7 @@ func printBasicSummary(indent int, bundle *fbun.FSBundle, names []string) {
 	}
 }
 
-func printCurrentSummary(indent int, store *forklift.FSStageStore, index int, names []string) {
+func printCurrentSummary(indent int, store *staging.FSStageStore, index int, names []string) {
 	bundle, err := store.LoadFSBundle(index)
 	if err != nil {
 		fmt.Printf("Error: couldn't load staged bundle %d (was it deleted?): %s\n", index, err.Error())
@@ -206,7 +207,7 @@ func printCurrentSummary(indent int, store *forklift.FSStageStore, index int, na
 	printBasicSummary(indent, bundle, names)
 }
 
-func printRollbackSummary(indent int, store *forklift.FSStageStore, index int, names []string) {
+func printRollbackSummary(indent int, store *staging.FSStageStore, index int, names []string) {
 	bundle, err := store.LoadFSBundle(index)
 	if err != nil {
 		fmt.Printf("Error: couldn't load staged bundle %d (was it deleted?): %s\n", index, err.Error())
@@ -343,7 +344,7 @@ func unsetNextAction(versions Versions) cli.ActionFunc {
 // resolveBundleIdentifier parses/resolves a staged bundle index or name (provided as a string)
 // into an index of a staged bundle in the store.
 func resolveBundleIdentifier(
-	identifier string, store *forklift.FSStageStore,
+	identifier string, store *staging.FSStageStore,
 ) (index int, err error) {
 	index, indexParseErr := strconv.Atoi(identifier)
 	if indexParseErr == nil {

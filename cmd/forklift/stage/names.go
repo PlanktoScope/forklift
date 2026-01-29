@@ -5,10 +5,9 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/forklift-run/forklift/pkg/staging"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-
-	"github.com/forklift-run/forklift/internal/app/forklift"
 )
 
 const (
@@ -55,7 +54,7 @@ func lsBunNamesAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-func printNamedBundleSummary(store *forklift.FSStageStore, name string, index int) {
+func printNamedBundleSummary(store *staging.FSStageStore, name string, index int) {
 	bundle, err := store.LoadFSBundle(index)
 	if err != nil {
 		fmt.Printf(

@@ -10,15 +10,8 @@ import (
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	"github.com/forklift-run/forklift/pkg/staging"
 )
-
-func FileExists(filePath string) bool {
-	results, err := os.Stat(filePath)
-	if err == nil && !results.IsDir() {
-		return true
-	}
-	return false
-}
 
 // FSWorkspace
 
@@ -76,17 +69,17 @@ func (w *FSWorkspace) GetStageStorePath() string {
 
 // GetStageStore loads the workspace's stage store from the path, initializing a state file (which
 // has the specified minimum supported Forklift tool version) if it does not already exist.
-func (w *FSWorkspace) GetStageStore(newStateStoreVersion string) (*FSStageStore, error) {
+func (w *FSWorkspace) GetStageStore(newStateStoreVersion string) (*staging.FSStageStore, error) {
 	fsys, err := w.getDataFS()
 	if err != nil {
 		return nil, err
 	}
-	if err = EnsureFSStageStore(
+	if err = staging.EnsureFSStageStore(
 		w.FS, path.Join(dataDirPath, dataStageStoreDirName), newStateStoreVersion,
 	); err != nil {
 		return nil, err
 	}
-	return LoadFSStageStore(fsys, dataStageStoreDirName)
+	return staging.LoadFSStageStore(fsys, dataStageStoreDirName)
 }
 
 // Cache
@@ -197,7 +190,7 @@ func (w *FSWorkspace) CommitCurrentPalletUpgrades(query GitRepoQuery) error {
 	// TODO: we might want to be less sloppy about read locks vs. write locks in the future. After
 	// successfully acquiring a write lock, then we could just overwrite the swap file.
 	swapPath := path.Join(w.getConfigPath(), configCurrentPalletUpgradesSwapFile)
-	if FileExists(filepath.FromSlash(swapPath)) {
+	if ffs.FileExists(filepath.FromSlash(swapPath)) {
 		return errors.Errorf(
 			"current pallet upgrades swap file %s already exists, so either another operation is "+
 				"currently running or the previous operation failed or was interrupted before it could "+

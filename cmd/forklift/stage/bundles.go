@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
+	"github.com/forklift-run/forklift/pkg/staging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -39,7 +39,7 @@ func lsBunAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-func getBundleNames(store *forklift.FSStageStore) map[int][]string {
+func getBundleNames(store *staging.FSStageStore) map[int][]string {
 	names := make(map[int][]string)
 	for name, index := range store.Manifest.Stages.Names {
 		names[index] = append(names[index], name)
@@ -62,7 +62,7 @@ func getBundleNames(store *forklift.FSStageStore) map[int][]string {
 	return names
 }
 
-func printBundleSummary(store *forklift.FSStageStore, index int, names map[int][]string) {
+func printBundleSummary(store *staging.FSStageStore, index int, names map[int][]string) {
 	bundle, err := store.LoadFSBundle(index)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%d: Error: couldn't load bundle: %s\n", index, err)

@@ -5,9 +5,9 @@ import (
 	"io"
 	"slices"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	"github.com/forklift-run/forklift/pkg/staging"
 	"github.com/forklift-run/forklift/pkg/structures"
 	"github.com/forklift-run/forklift/pkg/versioning"
 )
@@ -16,7 +16,7 @@ import (
 
 func FprintStagedBundle(
 	indent int, out io.Writer,
-	store *forklift.FSStageStore, bundle *fbun.FSBundle, index int, names []string,
+	store *staging.FSStageStore, bundle *fbun.FSBundle, index int, names []string,
 ) {
 	IndentedFprintf(indent, out, "Staged pallet bundle: %d\n", index)
 	indent++

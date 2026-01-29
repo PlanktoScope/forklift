@@ -11,17 +11,17 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	"github.com/forklift-run/forklift/pkg/staging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // Download
 
 func DownloadImagesForStoreApply(
-	indent int, store *forklift.FSStageStore, platform, toolVersion, bundleMinVersion string,
+	indent int, store *staging.FSStageStore, platform, toolVersion, bundleMinVersion string,
 	parallel, ignoreToolVersion bool,
 ) error {
 	next, hasNext := store.GetNext()
