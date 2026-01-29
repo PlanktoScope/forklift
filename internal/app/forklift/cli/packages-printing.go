@@ -228,7 +228,7 @@ func FprintPalletPkgs(
 	// List packages provided by required pkg trees
 	pkgs := make([]*fpkg.FSPkg, 0)
 	for _, req := range reqs {
-		pkgTreeCachePath := req.GetCachePath()
+		pkgTreeCachePath := req.GetQueryPath()
 		loaded, err := loader.LoadFSPkgs(path.Join(pkgTreeCachePath, "**"))
 		if err != nil {
 			return errors.Wrapf(
