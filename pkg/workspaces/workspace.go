@@ -1,4 +1,6 @@
-package forklift
+// Package workspaces implements storage and organization of Forklift-related data in the user's
+// HOME directory.
+package workspaces
 
 import (
 	"os"
@@ -11,6 +13,35 @@ import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/staging"
+)
+
+type FSWorkspace struct {
+	FS ffs.PathedFS
+}
+
+// in $HOME/.cache/forklift:
+
+const (
+	cacheDirPath          = ".cache/forklift"
+	cacheMirrorsDirName   = "mirrors"
+	cachePalletsDirName   = "pallets"
+	cacheDownloadsDirName = "downloads"
+)
+
+// in $HOME/.local/share/forklift:
+
+const (
+	dataDirPath              = ".local/share/forklift"
+	dataCurrentPalletDirName = "pallet"
+	dataStageStoreDirName    = "stages"
+)
+
+// in $HOME/.config/forklift:
+
+const (
+	configDirPath                       = ".config/forklift"
+	configCurrentPalletUpgradesFile     = "pallet-upgrades.yml"
+	configCurrentPalletUpgradesSwapFile = "pallet-upgrades-swap.yml"
 )
 
 // FSWorkspace

@@ -8,10 +8,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	"github.com/forklift-run/forklift/pkg/staging"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 var errMissingStore = errors.Errorf(
@@ -71,9 +71,9 @@ func loadNextBundle(
 func getStageStore(
 	wpath, sspath string, versions Versions,
 ) (store *staging.FSStageStore, err error) {
-	var workspace *forklift.FSWorkspace
+	var workspace *fws.FSWorkspace
 	if sspath == "" {
-		workspace, err = forklift.LoadWorkspace(wpath)
+		workspace, err = fws.LoadWorkspace(wpath)
 		if err != nil {
 			return nil, errors.Wrap(
 				err, "couldn't load workspace to load the stage store, since no explicit path was "+

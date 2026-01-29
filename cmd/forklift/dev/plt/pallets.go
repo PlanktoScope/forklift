@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 type workspaceCaches struct {
@@ -45,7 +45,7 @@ func processFullBaseArgs(
 		return nil, workspaceCaches{}, err
 	}
 	wpath := c.String("workspace")
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, workspaceCaches{}, err
 	}
@@ -266,7 +266,7 @@ func stageAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
@@ -306,7 +306,7 @@ func applyAction(versions Versions) cli.ActionFunc {
 		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
@@ -346,7 +346,7 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
@@ -424,7 +424,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}

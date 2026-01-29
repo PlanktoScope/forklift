@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 // ls-*
@@ -73,7 +73,7 @@ func addGitRepoAction[Cache ffs.Pather](
 		if err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}

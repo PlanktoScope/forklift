@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
@@ -22,10 +21,11 @@ import (
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/staging"
 	"github.com/forklift-run/forklift/pkg/structures"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 func GetStageStore(
-	workspace *forklift.FSWorkspace, stageStorePath, newStageStoreVersion string,
+	workspace *fws.FSWorkspace, stageStorePath, newStageStoreVersion string,
 ) (*staging.FSStageStore, error) {
 	if stageStorePath == "" {
 		return workspace.GetStageStore(newStageStoreVersion)

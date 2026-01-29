@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 // resolve-git-repo
@@ -31,14 +31,14 @@ func resolveGitRepoAction(c *cli.Context) error {
 	return nil
 }
 
-func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
+func ensureWorkspace(wpath string) (*fws.FSWorkspace, error) {
 	if !ffs.DirExists(wpath) {
 		fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 	}
 	if err := ffs.EnsureExists(wpath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}

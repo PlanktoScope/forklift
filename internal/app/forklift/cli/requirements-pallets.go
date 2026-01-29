@@ -13,18 +13,18 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 	"github.com/forklift-run/forklift/pkg/versioning"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 func GetPalletCache(
 	wpath string, pallet *fplt.FSPallet, requireCache bool,
 ) (*caching.FSPalletCache, error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}

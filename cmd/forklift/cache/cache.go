@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 var errMissingCache = errors.New(
@@ -30,7 +30,7 @@ func getMirrorCache(wpath string, ensureWorkspace bool) (*caching.FSMirrorCache,
 			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func getPalletCache(wpath string, ensureWorkspace bool) (*caching.FSPalletCache,
 			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}

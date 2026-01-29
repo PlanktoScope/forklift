@@ -6,16 +6,15 @@ import (
 	"os"
 
 	"github.com/bmatcuk/doublestar/v4"
+	fws "github.com/forklift-run/forklift/pkg/workspaces"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-
-	"github.com/forklift-run/forklift/internal/app/forklift"
 )
 
 // ls-dl
 
 func lsDlAction(c *cli.Context) error {
-	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+	workspace, err := fws.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return err
 	}
@@ -47,7 +46,7 @@ func lsDlAction(c *cli.Context) error {
 // del-dl
 
 func delDlAction(c *cli.Context) error {
-	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+	workspace, err := fws.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return err
 	}
