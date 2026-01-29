@@ -257,7 +257,7 @@ func FprintPalletPkgs(
 func FprintPkgLocation(
 	out io.Writer, pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
-	overlayCache, err := makeOverlayCache(pallet, cache)
+	overlayCache, err := MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func FprintPkgInfo(
 	indent int, out io.Writer,
 	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, pkgPath string,
 ) error {
-	overlayCache, err := makeOverlayCache(pallet, cache)
+	overlayCache, err := MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func FprintPkgInfo(
 	return nil
 }
 
-func makeOverlayCache(
+func MakeOverlayCache(
 	pallet *forklift.FSPallet, cache forklift.PathedPalletCache,
 ) (*forklift.LayeredPalletCache, error) {
 	overrideCache, err := forklift.NewPalletOverrideCache(

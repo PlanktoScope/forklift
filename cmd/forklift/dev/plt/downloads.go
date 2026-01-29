@@ -13,15 +13,14 @@ import (
 
 func lsDlAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c, processingOptions{
-		requireRepoCache: true,
-		enableOverrides:  true,
-		merge:            true,
+		enableOverrides: true,
+		merge:           true,
 	})
 	if err != nil {
 		return err
 	}
 
-	http, oci, err := fcli.ListRequiredDownloads(plt, caches.p, c.Bool("include-disabled"))
+	http, oci, err := fcli.ListRequiredDownloads(plt, caches.pp, c.Bool("include-disabled"))
 	if err != nil {
 		return err
 	}
@@ -40,7 +39,6 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requirePalletCache: true,
-			requireRepoCache:   true,
 			enableOverrides:    true,
 			merge:              true,
 		})
@@ -54,7 +52,7 @@ func cacheDlAction(versions Versions) cli.ActionFunc {
 		}
 
 		if err := fcli.DownloadExportFiles(
-			0, plt, caches.p, caches.d, c.String("platform"), false, c.Bool("parallel"),
+			0, plt, caches.pp, caches.d, c.String("platform"), false, c.Bool("parallel"),
 		); err != nil {
 			return err
 		}

@@ -15,9 +15,10 @@ import (
 )
 
 type workspaceCaches struct {
-	m *forklift.FSMirrorCache
-	p *forklift.LayeredPalletCache
-	d *forklift.FSDownloadCache
+	m  *forklift.FSMirrorCache
+	p  *forklift.LayeredPalletCache
+	pp *forklift.LayeredPalletCache
+	d  *forklift.FSDownloadCache
 }
 
 func (c workspaceCaches) staging() fcli.StagingCaches {
@@ -30,7 +31,6 @@ func (c workspaceCaches) staging() fcli.StagingCaches {
 
 type processingOptions struct {
 	requirePalletCache   bool
-	requireRepoCache     bool
 	requireDownloadCache bool
 	enableOverrides      bool
 	merge                bool
@@ -69,6 +69,11 @@ func processFullBaseArgs(
 				err, "couldn't merge development pallet with file imports from any pallets required by it",
 			)
 		}
+	}
+	if caches.pp, err = fcli.MakeOverlayCache(plt, caches.p); err != nil {
+		return nil, workspaceCaches{}, errors.Wrap(
+			err, "couldn't make overlay of development pallet with pallet cache",
+		)
 	}
 	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
 		return nil, workspaceCaches{}, err
@@ -199,7 +204,6 @@ func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requirePalletCache: true,
-			requireRepoCache:   true,
 			enableOverrides:    true,
 			merge:              true,
 		})
@@ -212,7 +216,7 @@ func checkAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if _, _, err := fcli.Check(0, plt, caches.p); err != nil {
+		if _, _, err := fcli.Check(0, plt, caches.pp); err != nil {
 			return err
 		}
 		return nil
@@ -225,7 +229,6 @@ func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requirePalletCache: true,
-			requireRepoCache:   true,
 			enableOverrides:    true,
 			merge:              true,
 		})
@@ -238,7 +241,7 @@ func planAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if _, _, err = fcli.Plan(0, plt, caches.p, c.Bool("parallel")); err != nil {
+		if _, _, err = fcli.Plan(0, plt, caches.pp, c.Bool("parallel")); err != nil {
 			return err
 		}
 		return nil

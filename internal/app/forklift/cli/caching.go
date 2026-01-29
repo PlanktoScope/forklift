@@ -56,13 +56,8 @@ func CacheStagingReqs(
 		)
 	}
 
-	palletCacheWithMerged = &forklift.LayeredPalletCache{
-		Underlay: palletCache,
-	}
-	if palletCacheWithMerged.Overlay, err = makePalletOverrideCacheFromPallet(
-		merged, true,
-	); err != nil {
-		return merged, nil, err
+	if palletCacheWithMerged, err = MakeOverlayCache(merged, palletCache); err != nil {
+		return nil, nil, err
 	}
 
 	if err = DownloadExportFiles(
@@ -75,21 +70,4 @@ func CacheStagingReqs(
 	// forklift version is incompatible or ahead of the pallet version
 
 	return merged, palletCacheWithMerged, nil
-}
-
-func makePalletOverrideCacheFromPallet(
-	pallet *forklift.FSPallet, generatePalletFromPallet bool,
-) (*forklift.PalletOverrideCache, error) {
-	palletAsPallet, err := forklift.LoadFSPallet(pallet.FS, ".")
-	if err != nil {
-		if !generatePalletFromPallet {
-			return nil, nil
-		}
-	}
-	return forklift.NewPalletOverrideCache(
-		[]*forklift.FSPallet{palletAsPallet}, map[string][]string{
-			// In a pallet which is a repo, the implicit repo requirement is for an empty version string
-			palletAsPallet.Path(): {""},
-		},
-	)
 }

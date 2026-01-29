@@ -12,7 +12,6 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
@@ -322,20 +321,20 @@ func compareChangesTotal(
 	r, s *ReconciliationChange, deps, dependents structures.TransitiveClosure[*ReconciliationChange],
 ) int {
 	// Apply the partial ordering from dependencies
-	if result := compareReconciliationChangesByDeps(r, s, deps); result != fpkg.CompareEQ {
+	if result := compareReconciliationChangesByDeps(r, s, deps); result != 0 {
 		return result
 	}
 
 	// Now r and s either are in a circular dependency or have no dependency relationships
-	if result := compareDeplsByDepCounts(r, s, deps, dependents); result != fpkg.CompareEQ {
+	if result := compareDeplsByDepCounts(r, s, deps, dependents); result != 0 {
 		return result
 	}
 
 	// Compare by names as a last resort
 	if r.Depl != nil && s.Depl != nil {
-		return compareDeplNames(r.Depl.Name, s.Depl.Name)
+		return cmp.Compare(r.Depl.Name, s.Depl.Name)
 	}
-	return compareDeplNames(r.Name, s.Name)
+	return cmp.Compare(r.Name, s.Name)
 }
 
 func compareReconciliationChangesByDeps(
@@ -344,12 +343,12 @@ func compareReconciliationChangesByDeps(
 	rDependsOnS := deps.HasEdge(r, s)
 	sDependsOnR := deps.HasEdge(s, r)
 	if rDependsOnS && !sDependsOnR {
-		return fpkg.CompareGT
+		return 1
 	}
 	if !rDependsOnS && sDependsOnR {
-		return fpkg.CompareLT
+		return -1
 	}
-	return fpkg.CompareEQ
+	return 0
 }
 
 func compareDeplsByDepCounts(
@@ -357,28 +356,12 @@ func compareDeplsByDepCounts(
 ) int {
 	// Deployments with greater numbers of dependents go first (needed for correct ordering among
 	// unrelated deployments sorted by slices.SortFunc).
-	if len(dependents[r]) > len(dependents[s]) {
-		return fpkg.CompareLT
-	}
-	if len(dependents[r]) < len(dependents[s]) {
-		return fpkg.CompareGT
+	if result := cmp.Compare(len(dependents[s]), len(dependents[r])); result != 0 {
+		return result
 	}
 	// Deployments with greater numbers of dependencies go first (for aesthetic reasons)
-	if len(deps[r]) > len(deps[s]) {
-		return fpkg.CompareLT
+	if result := cmp.Compare(len(deps[s]), len(deps[r])); result != 0 {
+		return result
 	}
-	if len(deps[r]) < len(deps[s]) {
-		return fpkg.CompareGT
-	}
-	return fpkg.CompareEQ
-}
-
-func compareDeplNames(r, s string) int {
-	if r < s {
-		return fpkg.CompareLT
-	}
-	if r > s {
-		return fpkg.CompareGT
-	}
-	return fpkg.CompareEQ
+	return 0
 }

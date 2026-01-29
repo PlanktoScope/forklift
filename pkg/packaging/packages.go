@@ -1,6 +1,7 @@
 package packaging
 
 import (
+	"cmp"
 	"fmt"
 	"path"
 	"strings"
@@ -106,13 +107,13 @@ func (p *FSPkg) Check() (errs []error) {
 // the same but r has a lower version than s; or +1 if r has a path which alphabetically comes after
 // the path of s, or if the paths are the same but r has a higher version than s.
 func CompareFSPkgs(p, q *FSPkg) int {
-	if result := ComparePaths(p.Path(), q.Path()); result != CompareEQ {
+	if result := cmp.Compare(p.Path(), q.Path()); result != 0 {
 		return result
 	}
-	if result := semver.Compare(p.FSPkgTree.Version, q.FSPkgTree.Version); result != CompareEQ {
+	if result := semver.Compare(p.FSPkgTree.Version, q.FSPkgTree.Version); result != 0 {
 		return result
 	}
-	return CompareEQ
+	return 0
 }
 
 // Pkg

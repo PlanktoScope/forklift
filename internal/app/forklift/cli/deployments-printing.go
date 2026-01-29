@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"slices"
 	"sort"
 
 	dct "github.com/compose-spec/compose-go/v2/types"
@@ -35,7 +36,7 @@ func FprintDeplInfo(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	overlayCache, err := makeOverlayCache(pallet, cache)
+	overlayCache, err := MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -232,9 +233,7 @@ func fprintDockerAppVolumes(indent int, out io.Writer, volumes dct.Volumes) {
 		volumeNames = append(volumeNames, name)
 	}
 	IndentedFprint(indent, out, "Volumes:")
-	sort.Slice(volumeNames, func(i, j int) bool {
-		return volumeNames[i] < volumeNames[j]
-	})
+	slices.Sort(volumeNames)
 	if len(volumeNames) == 0 {
 		_, _ = fmt.Fprint(out, " (none)")
 	}
@@ -257,7 +256,7 @@ func FprintDeplPkgLocation(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	overlayCache, err := makeOverlayCache(pallet, cache)
+	overlayCache, err := MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}

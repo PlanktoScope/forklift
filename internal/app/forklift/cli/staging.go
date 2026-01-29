@@ -133,7 +133,11 @@ func buildBundle(
 		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
 	}
 
-	depls, _, err := Check(0, merged, palletCache)
+	overlayCache, err := MakeOverlayCache(merged, palletCache)
+	if err != nil {
+		return err
+	}
+	depls, _, err := Check(0, merged, overlayCache)
 	if err != nil {
 		return errors.Wrap(err, "couldn't ensure pallet validity")
 	}

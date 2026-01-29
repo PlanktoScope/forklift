@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -107,6 +108,7 @@ func (c *FSPalletCache) LoadFSPkg(pkgPath string, version string) (*fpkg.FSPkg, 
 			palletPath = path.Dir(palletPath)
 			continue
 		}
+
 		pkg, err := pallet.LoadFSPkg(pkgSubdir)
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -246,8 +248,8 @@ func (c *LayeredPalletCache) LoadFSPallets(searchPattern string) ([]*FSPallet, e
 		loadedPallets = append(loadedPallets, pallet)
 	}
 
-	sort.Slice(loadedPallets, func(i, j int) bool {
-		return ComparePallets(loadedPallets[i].Pallet, loadedPallets[j].Pallet) == fpkg.CompareLT
+	slices.SortFunc(loadedPallets, func(a, b *FSPallet) int {
+		return ComparePallets(a.Pallet, b.Pallet)
 	})
 	return loadedPallets, nil
 }
@@ -300,9 +302,7 @@ func (c *LayeredPalletCache) LoadFSPkgs(searchPattern string) ([]*fpkg.FSPkg, er
 		pkgs = append(pkgs, pkg)
 	}
 
-	sort.Slice(pkgs, func(i, j int) bool {
-		return fpkg.CompareFSPkgs(pkgs[i], pkgs[j]) == fpkg.CompareLT
-	})
+	slices.SortFunc(pkgs, fpkg.CompareFSPkgs)
 	return pkgs, nil
 }
 

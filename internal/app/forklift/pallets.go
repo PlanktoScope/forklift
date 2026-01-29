@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"cmp"
 	"fmt"
 	"io/fs"
 	"os"
@@ -379,13 +380,13 @@ func ErrsWrap(errs []error, message string) []error {
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
 func ComparePallets(r, s Pallet) int {
-	if result := fpkg.ComparePaths(r.Path(), s.Path()); result != fpkg.CompareEQ {
+	if result := cmp.Compare(r.Path(), s.Path()); result != 0 {
 		return result
 	}
-	if result := semver.Compare(r.Version, s.Version); result != fpkg.CompareEQ {
+	if result := semver.Compare(r.Version, s.Version); result != 0 {
 		return result
 	}
-	return fpkg.CompareEQ
+	return 0
 }
 
 // PalletDecl

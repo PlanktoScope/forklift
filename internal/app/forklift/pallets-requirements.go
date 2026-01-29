@@ -1,6 +1,7 @@
 package forklift
 
 import (
+	"cmp"
 	"fmt"
 	"path"
 	"strings"
@@ -33,15 +34,13 @@ func (r GitRepoReq) GetQueryPath() string {
 // lower version than s; or +1 if r has a path which alphabetically comes after the path of s or if
 // the paths are the same but r has a higher version than s.
 func CompareGitRepoReqs(r, s GitRepoReq) int {
-	if result := fpkg.ComparePaths(r.Path(), s.Path()); result != fpkg.CompareEQ {
+	if result := cmp.Compare(r.Path(), s.Path()); result != 0 {
 		return result
 	}
-	if result := semver.Compare(
-		r.VersionLock.Version, s.VersionLock.Version,
-	); result != fpkg.CompareEQ {
+	if result := semver.Compare(r.VersionLock.Version, s.VersionLock.Version); result != 0 {
 		return result
 	}
-	return fpkg.CompareEQ
+	return 0
 }
 
 // PalletReq
