@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/caching"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
@@ -24,7 +24,7 @@ func FprintPalletFeatures(indent int, out io.Writer, pallet *fplt.FSPallet) erro
 
 func FprintFeatureInfo(
 	indent int, out io.Writer,
-	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, featureName string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, featureName string,
 ) error {
 	imp, err := pallet.LoadFeature(featureName, cache)
 	if err != nil {

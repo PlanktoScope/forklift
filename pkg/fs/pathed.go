@@ -1,3 +1,4 @@
+// Package fs provides some custom filesystem data structures and utilities.
 package fs
 
 import (

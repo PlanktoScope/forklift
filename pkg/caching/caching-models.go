@@ -1,4 +1,4 @@
-package forklift
+package caching
 
 import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"

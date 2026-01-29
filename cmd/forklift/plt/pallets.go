@@ -12,15 +12,16 @@ import (
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/internal/clients/git"
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 type workspaceCaches struct {
-	m  *forklift.FSMirrorCache
-	p  *forklift.FSPalletCache
-	pp *forklift.LayeredPalletCache
-	d  *forklift.FSDownloadCache
+	m  *caching.FSMirrorCache
+	p  *caching.FSPalletCache
+	pp *caching.LayeredPalletCache
+	d  *caching.FSDownloadCache
 }
 
 func (c workspaceCaches) staging() fcli.StagingCaches {

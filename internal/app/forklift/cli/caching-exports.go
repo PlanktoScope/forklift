@@ -15,11 +15,12 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/crane"
+	"github.com/forklift-run/forklift/pkg/caching"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
-func GetDownloadCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache, error) {
+func GetDownloadCache(wpath string, ensureCache bool) (*caching.FSDownloadCache, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func GetDownloadCache(wpath string, ensureCache bool) (*forklift.FSDownloadCache
 
 func DownloadExportFiles(
 	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader,
-	dlCache *forklift.FSDownloadCache,
+	dlCache *caching.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
 ) error {
 	httpDownloads, ociDownloads, err := ListRequiredDownloads(deplsLoader, pkgLoader, includeDisabled)
@@ -142,7 +143,7 @@ func ListRequiredDownloads(
 }
 
 func downloadParallel(
-	indent int, httpURLs, ociImageNames []string, platform string, cache *forklift.FSDownloadCache,
+	indent int, httpURLs, ociImageNames []string, platform string, cache *caching.FSDownloadCache,
 	hc *http.Client,
 ) error {
 	eg, egctx := errgroup.WithContext(context.Background())
@@ -181,7 +182,7 @@ func downloadParallel(
 }
 
 func downloadSerial(
-	indent int, httpURLs, ociImageNames []string, platform string, cache *forklift.FSDownloadCache,
+	indent int, httpURLs, ociImageNames []string, platform string, cache *caching.FSDownloadCache,
 	hc *http.Client,
 ) error {
 	for _, url := range httpURLs {

@@ -1,4 +1,4 @@
-package forklift
+package pallets
 
 import (
 	"github.com/pkg/errors"

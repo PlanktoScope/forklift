@@ -1,4 +1,4 @@
-package forklift
+package pallets
 
 import (
 	"maps"

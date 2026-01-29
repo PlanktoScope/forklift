@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
@@ -118,7 +118,7 @@ func (w *FSWorkspace) GetMirrorCachePath() string {
 	return path.Join(w.getCachePath(), cacheMirrorsDirName)
 }
 
-func (w *FSWorkspace) GetMirrorCache() (*FSMirrorCache, error) {
+func (w *FSWorkspace) GetMirrorCache() (*caching.FSMirrorCache, error) {
 	fsys, err := w.getCacheFS()
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (w *FSWorkspace) GetMirrorCache() (*FSMirrorCache, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get mirrors cache from workspace")
 	}
-	return &FSMirrorCache{
+	return &caching.FSMirrorCache{
 		FS: pathedFS,
 	}, nil
 }
@@ -138,7 +138,7 @@ func (w *FSWorkspace) GetPalletCachePath() string {
 	return path.Join(w.getCachePath(), cachePalletsDirName)
 }
 
-func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
+func (w *FSWorkspace) GetPalletCache() (*caching.FSPalletCache, error) {
 	fsys, err := w.getCacheFS()
 	if err != nil {
 		return nil, err
@@ -147,9 +147,7 @@ func (w *FSWorkspace) GetPalletCache() (*FSPalletCache, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get pallets cache from workspace")
 	}
-	return &FSPalletCache{
-		pkgTree: &fpkg.FSPkgTree{FS: pathedFS},
-	}, nil
+	return caching.NewFSPalletCache(pathedFS), nil
 }
 
 // Cache: Downloads
@@ -158,7 +156,7 @@ func (w *FSWorkspace) GetDownloadCachePath() string {
 	return path.Join(w.getCachePath(), cacheDownloadsDirName)
 }
 
-func (w *FSWorkspace) GetDownloadCache() (*FSDownloadCache, error) {
+func (w *FSWorkspace) GetDownloadCache() (*caching.FSDownloadCache, error) {
 	fsys, err := w.getCacheFS()
 	if err != nil {
 		return nil, err
@@ -167,7 +165,7 @@ func (w *FSWorkspace) GetDownloadCache() (*FSDownloadCache, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get downloads cache from workspace")
 	}
-	return &FSDownloadCache{
+	return &caching.FSDownloadCache{
 		FS: pathedFS,
 	}, nil
 }

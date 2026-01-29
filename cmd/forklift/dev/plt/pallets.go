@@ -10,16 +10,17 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 type workspaceCaches struct {
-	m  *forklift.FSMirrorCache
-	p  *forklift.LayeredPalletCache
-	pp *forklift.LayeredPalletCache
-	d  *forklift.FSDownloadCache
+	m  *caching.FSMirrorCache
+	p  *caching.LayeredPalletCache
+	pp *caching.LayeredPalletCache
+	d  *caching.FSDownloadCache
 }
 
 func (c workspaceCaches) staging() fcli.StagingCaches {
@@ -51,7 +52,7 @@ func processFullBaseArgs(
 	if caches.m, err = workspace.GetMirrorCache(); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	caches.p = &forklift.LayeredPalletCache{}
+	caches.p = &caching.LayeredPalletCache{}
 	if caches.p.Underlay, err = fcli.GetPalletCache(
 		wpath, plt, opts.requirePalletCache || opts.merge,
 	); err != nil {
@@ -92,16 +93,16 @@ func getShallowPallet(cwdPath string) (plt *fplt.FSPallet, err error) {
 }
 
 func overlayPalletCacheOverrides(
-	underlay forklift.PathedPalletCache, pallets []string, plt *fplt.FSPallet,
-) (palletCache *forklift.LayeredPalletCache, err error) {
-	palletCache = &forklift.LayeredPalletCache{
+	underlay caching.PathedPalletCache, pallets []string, plt *fplt.FSPallet,
+) (palletCache *caching.LayeredPalletCache, err error) {
+	palletCache = &caching.LayeredPalletCache{
 		Underlay: underlay,
 	}
 	replacementPallets, err := loadReplacementPallets(pallets)
 	if err != nil {
 		return nil, err
 	}
-	override, err := forklift.NewPalletOverrideCache(replacementPallets, nil)
+	override, err := caching.NewPalletOverrideCache(replacementPallets, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func loadReplacementPallets(fsPaths []string) (replacements []*fplt.FSPallet, er
 }
 
 func setPalletOverrideCacheVersions(
-	plt *fplt.FSPallet, overrideCache *forklift.PalletOverrideCache,
+	plt *fplt.FSPallet, overrideCache *caching.PalletOverrideCache,
 ) error {
 	reqs, err := plt.LoadFSPalletReqs("**")
 	if err != nil {

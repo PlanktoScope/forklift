@@ -1,3 +1,4 @@
+// Package resources implements resource constraint checking.
 package resources
 
 // CheckDeps identifies all unsatisfied resource dependencies between the provided

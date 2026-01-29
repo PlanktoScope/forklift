@@ -12,6 +12,7 @@ import (
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
@@ -20,7 +21,7 @@ var errMissingCache = errors.New(
 		"`forklift plt cache-pallet`",
 )
 
-func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache, error) {
+func getMirrorCache(wpath string, ensureWorkspace bool) (*caching.FSMirrorCache, error) {
 	if ensureWorkspace {
 		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
@@ -40,7 +41,7 @@ func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache
 	return cache, nil
 }
 
-func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
+func getPalletCache(wpath string, ensureWorkspace bool) (*caching.FSPalletCache, error) {
 	if ensureWorkspace {
 		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)

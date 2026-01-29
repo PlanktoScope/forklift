@@ -5,15 +5,15 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func CacheAllReqs(
 	indent int, pallet *fplt.FSPallet, mirrorsCache ffs.Pather,
-	palletCache forklift.PathedPalletCache,
-	dlCache *forklift.FSDownloadCache,
+	palletCache caching.PathedPalletCache,
+	dlCache *caching.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
 ) error {
 	pallet, palletCacheWithMerged, err := CacheStagingReqs(
@@ -38,10 +38,10 @@ func CacheAllReqs(
 
 func CacheStagingReqs(
 	indent int, pallet *fplt.FSPallet, mirrorsCache ffs.Pather,
-	palletCache forklift.PathedPalletCache,
-	dlCache *forklift.FSDownloadCache,
+	palletCache caching.PathedPalletCache,
+	dlCache *caching.FSDownloadCache,
 	platform string, includeDisabled, parallel bool,
-) (merged *fplt.FSPallet, palletCacheWithMerged *forklift.LayeredPalletCache, err error) {
+) (merged *fplt.FSPallet, palletCacheWithMerged *caching.LayeredPalletCache, err error) {
 	IndentedFprintln(indent, os.Stderr, "Caching everything needed to stage the pallet...")
 	indent++
 

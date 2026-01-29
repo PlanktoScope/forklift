@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/caching"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
@@ -25,7 +25,7 @@ func FprintPalletImports(indent int, out io.Writer, pallet *fplt.FSPallet) error
 
 func FprintImportInfo(
 	indent int, out io.Writer,
-	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, importName string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, importName string,
 ) error {
 	imp, err := pallet.LoadImport(importName)
 	if err != nil {

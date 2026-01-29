@@ -21,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
@@ -458,7 +459,7 @@ func (b *FSBundle) getExportsPath() string {
 	return path.Join(b.FS.Path(), exportsDirName)
 }
 
-func (b *FSBundle) WriteFileExports(dlCache *FSDownloadCache) error {
+func (b *FSBundle) WriteFileExports(dlCache *caching.FSDownloadCache) error {
 	if err := EnsureExists(filepath.FromSlash(b.getExportsPath())); err != nil {
 		return errors.Wrapf(err, "couldn't make directory for all file exports")
 	}
@@ -513,7 +514,11 @@ func exportLocalFile(
 	return nil
 }
 
-func exportHTTPFile(export fpkg.FileExportRes, exportPath string, dlCache *FSDownloadCache) error {
+func exportHTTPFile(
+	export fpkg.FileExportRes,
+	exportPath string,
+	dlCache *caching.FSDownloadCache,
+) error {
 	sourcePath, err := dlCache.GetFilePath(export.URL)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't determine cache path for HTTP download %s", export.URL)
@@ -529,7 +534,7 @@ func exportHTTPFile(export fpkg.FileExportRes, exportPath string, dlCache *FSDow
 }
 
 func exportArchiveFile(
-	export fpkg.FileExportRes, exportPath string, dlCache *FSDownloadCache,
+	export fpkg.FileExportRes, exportPath string, dlCache *caching.FSDownloadCache,
 ) error {
 	kind, err := determineFileType(export, dlCache)
 	if err != nil {
@@ -589,7 +594,7 @@ func exportArchiveFile(
 }
 
 func determineFileType(
-	export fpkg.FileExportRes, dlCache *FSDownloadCache,
+	export fpkg.FileExportRes, dlCache *caching.FSDownloadCache,
 ) (ft ftt.Type, err error) {
 	var archiveFile fs.File
 	switch export.SourceType {

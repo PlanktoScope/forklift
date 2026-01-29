@@ -1,4 +1,4 @@
-package forklift
+package caching
 
 import (
 	"fmt"
@@ -19,6 +19,14 @@ import (
 )
 
 // FSPalletCache
+
+func NewFSPalletCache(fsys ffs.PathedFS) *FSPalletCache {
+	return &FSPalletCache{
+		pkgTree: &fpkg.FSPkgTree{
+			FS: fsys,
+		},
+	}
+}
 
 // Exists checks whether the cache actually exists on the OS's filesystem.
 func (c *FSPalletCache) Exists() bool {

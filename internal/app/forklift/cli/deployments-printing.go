@@ -10,7 +10,7 @@ import (
 	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/caching"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
@@ -28,7 +28,7 @@ func FprintPalletDepls(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 
 func FprintDeplInfo(
 	indent int, out io.Writer,
-	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, deplName string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, deplName string,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {
@@ -52,7 +52,7 @@ func FprintDeplInfo(
 }
 
 func FprintResolvedDepl(
-	indent int, out io.Writer, cache forklift.PathedPalletCache, resolved *fplt.ResolvedDepl,
+	indent int, out io.Writer, cache caching.PathedPalletCache, resolved *fplt.ResolvedDepl,
 ) error {
 	if err := fprintDepl(indent, out, cache, resolved); err != nil {
 		return err
@@ -85,7 +85,7 @@ func FprintResolvedDepl(
 }
 
 func fprintDepl(
-	indent int, out io.Writer, cache forklift.PathedPalletCache, depl *fplt.ResolvedDepl,
+	indent int, out io.Writer, cache caching.PathedPalletCache, depl *fplt.ResolvedDepl,
 ) error {
 	IndentedFprint(indent, out, "Package deployment")
 	if depl.Depl.Decl.Disabled {
@@ -131,7 +131,7 @@ func fprintDepl(
 }
 
 func fprintDeplPkg(
-	indent int, out io.Writer, cache forklift.PathedPalletCache, depl *fplt.ResolvedDepl,
+	indent int, out io.Writer, cache caching.PathedPalletCache, depl *fplt.ResolvedDepl,
 ) {
 	IndentedFprintf(indent, out, "Deploys package: %s\n", depl.Decl.Package)
 	indent++
@@ -249,7 +249,7 @@ func fprintDockerAppVolumes(indent int, out io.Writer, volumes dct.Volumes) {
 func FprintDeplPkgLocation(
 	indent int, out io.Writer,
 	pallet *fplt.FSPallet,
-	cache forklift.PathedPalletCache, deplName string, allowDisabled bool,
+	cache caching.PathedPalletCache, deplName string, allowDisabled bool,
 ) error {
 	depl, err := pallet.LoadDepl(deplName)
 	if err != nil {

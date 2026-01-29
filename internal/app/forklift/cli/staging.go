@@ -16,6 +16,7 @@ import (
 	"github.com/forklift-run/forklift/internal/clients/cli"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
@@ -71,8 +72,8 @@ type StagingVersions struct {
 
 type StagingCaches struct {
 	Mirrors   ffs.Pather
-	Pallets   forklift.PathedPalletCache
-	Downloads *forklift.FSDownloadCache
+	Pallets   caching.PathedPalletCache
+	Downloads *caching.FSDownloadCache
 }
 
 func StagePallet(
@@ -124,8 +125,8 @@ func StagePallet(
 
 func buildBundle(
 	merged *fplt.FSPallet,
-	palletCache forklift.PathedPalletCache,
-	dlCache *forklift.FSDownloadCache,
+	palletCache caching.PathedPalletCache,
+	dlCache *caching.FSDownloadCache,
 	forkliftVersion, outputPath string,
 ) (err error) {
 	outputBundle, err := forklift.NewFSBundle(outputPath)
@@ -164,7 +165,7 @@ func buildBundle(
 }
 
 func newBundleManifest(
-	merged *fplt.FSPallet, palletCache forklift.PathedPalletCache, forkliftVersion string,
+	merged *fplt.FSPallet, palletCache caching.PathedPalletCache, forkliftVersion string,
 ) (forklift.BundleManifest, error) {
 	desc := forklift.BundleManifest{
 		ForkliftVersion: forkliftVersion,
@@ -237,7 +238,7 @@ func CheckGitRepoVersion(palletPath string) (version string, clean bool) {
 }
 
 func newBundlePalletInclusion(
-	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache forklift.PathedPalletCache,
+	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache caching.PathedPalletCache,
 	describeImports bool,
 ) (inclusion forklift.BundlePalletInclusion, err error) {
 	inclusion = forklift.BundlePalletInclusion{
@@ -248,7 +249,7 @@ func newBundlePalletInclusion(
 		if palletCache == nil {
 			break
 		}
-		layeredCache, ok := palletCache.(*forklift.LayeredPalletCache)
+		layeredCache, ok := palletCache.(*caching.LayeredPalletCache)
 		if !ok {
 			break
 		}
@@ -297,7 +298,7 @@ func newBundlePalletInclusion(
 }
 
 func describePalletImports(
-	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache forklift.PathedPalletCache,
+	pallet *fplt.FSPallet, req *fplt.FSPalletReq, palletCache caching.PathedPalletCache,
 ) (fileMappings map[string]map[string]string, err error) {
 	imports, err := pallet.LoadImports(path.Join(req.RequiredPath, "**/*"))
 	if err != nil {

@@ -1,4 +1,6 @@
-package forklift
+// Package pallets implements the Forklift pallets specification for deployment and composition of
+// Forklift packages.
+package pallets
 
 import (
 	"cmp"

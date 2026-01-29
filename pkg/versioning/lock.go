@@ -1,3 +1,4 @@
+// Package versioning provides structures for referencing versioned artifacts.
 package versioning
 
 import (

@@ -1,3 +1,5 @@
+// Package packaging implements the Forklift package spec for modular encapsulation of software with
+// configs.
 package packaging
 
 import (

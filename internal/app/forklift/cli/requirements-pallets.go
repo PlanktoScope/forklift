@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
@@ -22,7 +23,7 @@ import (
 
 func GetPalletCache(
 	wpath string, pallet *fplt.FSPallet, requireCache bool,
-) (*forklift.FSPalletCache, error) {
+) (*caching.FSPalletCache, error) {
 	workspace, err := forklift.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
@@ -45,7 +46,7 @@ func GetPalletCache(
 }
 
 func GetRequiredPallet(
-	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, requiredPalletPath string,
 ) (*fplt.FSPallet, error) {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -90,7 +91,7 @@ func FprintRequiredPallets(indent int, out io.Writer, pallet *fplt.FSPallet) err
 
 func FprintRequiredPalletInfo(
 	indent int, out io.Writer,
-	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, requiredPalletPath string,
 ) error {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -129,7 +130,7 @@ func fprintPalletReq(indent int, out io.Writer, req fplt.PalletReq) {
 
 func FprintRequiredPalletVersion(
 	indent int, out io.Writer,
-	pallet *fplt.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, requiredPalletPath string,
 ) error {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -279,7 +280,7 @@ func determineUsedPalletReqs(
 
 func DownloadAllRequiredPallets(
 	indent int, pallet *fplt.FSPallet,
-	mirrorsCache ffs.Pather, palletsCache forklift.PathedPalletCache,
+	mirrorsCache ffs.Pather, palletsCache caching.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
@@ -298,7 +299,7 @@ func DownloadAllRequiredPallets(
 
 func downloadRequiredPallets(
 	indent int, reqs []*fplt.FSPalletReq,
-	mirrorsCache ffs.Pather, palletsCache forklift.PathedPalletCache,
+	mirrorsCache ffs.Pather, palletsCache caching.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	allSkip := make(structures.Set[string])
