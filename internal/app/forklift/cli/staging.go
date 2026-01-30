@@ -84,6 +84,10 @@ func StagePallet(
 	}
 	fmt.Fprintln(os.Stderr)
 
+	if _, _, err = Check(0, merged, palletCacheWithMerged); err != nil {
+		return index, errors.Wrap(err, "couldn't ensure pallet validity")
+	}
+
 	index, err = stageStore.AllocateNew()
 	if err != nil {
 		return 0, errors.Wrap(err, "couldn't allocate a directory for staging")
@@ -91,8 +95,9 @@ func StagePallet(
 	IndentedFprintf(
 		indent, os.Stderr, "Bundling pallet as stage %d for staged application...\n", index,
 	)
-	if err = buildBundle(
-		merged, palletCacheWithMerged, caches.Downloads,
+
+	if err = forklift.BuildBundle(
+		merged, caches.Pallets, caches.Downloads,
 		versions.NewBundle, path.Join(stageStore.FS.Path(), fmt.Sprintf("%d", index)),
 	); err != nil {
 		return index, errors.Wrapf(err, "couldn't bundle pallet %s as stage %d", merged.Path(), index)
@@ -106,47 +111,6 @@ func StagePallet(
 		)
 	}
 	return index, nil
-}
-
-func buildBundle(
-	merged *fplt.FSPallet,
-	palletCache caching.PathedPalletCache,
-	dlCache *caching.FSDownloadCache,
-	forkliftVersion, outputPath string,
-) (err error) {
-	outputBundle, err := fbun.NewFSBundle(outputPath)
-	if err != nil {
-		return errors.Errorf("couldn't initialize new bundle at %s", outputPath)
-	}
-	outputBundle.Manifest, err = forklift.NewBundleManifest(merged, palletCache, forkliftVersion)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
-	}
-
-	overlayCache, err := MakeOverlayCache(merged, palletCache)
-	if err != nil {
-		return err
-	}
-	depls, _, err := Check(0, merged, overlayCache)
-	if err != nil {
-		return errors.Wrap(err, "couldn't ensure pallet validity")
-	}
-	for _, depl := range depls {
-		if err := outputBundle.AddResolvedDepl(depl); err != nil {
-			return errors.Wrapf(err, "couldn't add deployment %s to bundle", depl.Name)
-		}
-	}
-
-	if err := outputBundle.SetBundledPallet(merged); err != nil {
-		return errors.Wrapf(err, "couldn't write pallet %s into bundle", merged.Decl.Pallet.Path)
-	}
-	if err = outputBundle.WriteFileExports(dlCache); err != nil {
-		return errors.Wrap(err, "couldn't write file exports into bundle")
-	}
-	if err = outputBundle.WriteManifestFile(); err != nil {
-		return errors.Wrap(err, "couldn't write bundle manifest file into bundle")
-	}
-	return nil
 }
 
 // Apply
@@ -237,53 +201,18 @@ func applyReconciliationChange(
 			indent, os.Stderr,
 			"Adding package deployment %s as Compose app %s...\n", change.Depl.Name, change.Name,
 		)
-		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
-			return errors.Wrapf(err, "couldn't add %s", change.Name)
-		}
-		return nil
 	case forklift.RemoveReconciliationChange:
 		// Note: removeReconciliationChange has a nil Depl field
 		IndentedFprintf(
 			indent, os.Stderr, "Removing Compose app %s (unknown deployment)...\n", change.Name,
 		)
-		if err := dc.RemoveApps(ctx, []string{change.Name}); err != nil {
-			return errors.Wrapf(err, "couldn't remove %s", change.Name)
-		}
-		return nil
 	case forklift.UpdateReconciliationChange:
 		IndentedFprintf(
 			indent, os.Stderr, "Updating package deployment %s as Compose app %s...\n",
 			change.Depl.Name, change.Name,
 		)
-		if err := deployApp(ctx, indent, change.Depl, change.Name, dc); err != nil {
-			return errors.Wrapf(err, "couldn't add %s", change.Name)
-		}
-		return nil
 	}
-}
-
-func deployApp(
-	ctx context.Context, indent int, depl *fplt.ResolvedDepl, name string, dc *docker.Client,
-) error {
-	definesApp, err := depl.DefinesComposeApp()
-	if err != nil {
-		return errors.Wrapf(
-			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
-		)
-	}
-	if !definesApp {
-		IndentedFprintln(indent, os.Stderr, "No Docker Compose app to deploy!")
-		return nil
-	}
-
-	appDef, err := depl.LoadComposeAppDefinition(true)
-	if err != nil {
-		return errors.Wrap(err, "couldn't load Compose app definition")
-	}
-	if err = dc.DeployApp(ctx, appDef, 0); err != nil {
-		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
-	}
-	return nil
+	return forklift.ApplyReconciliationChange(ctx, change, dc)
 }
 
 func applyChangesConcurrently(
@@ -318,9 +247,7 @@ func applyChangesConcurrently(
 			for dep := range deps {
 				<-changeDone[dep]
 			}
-			if err := applyReconciliationChange(
-				context.Background(), indent, change, dc,
-			); err != nil {
+			if err := applyReconciliationChange(context.Background(), indent, change, dc); err != nil {
 				return errors.Wrapf(err, "couldn't apply change '%s'", change.PlanString())
 			}
 			return nil

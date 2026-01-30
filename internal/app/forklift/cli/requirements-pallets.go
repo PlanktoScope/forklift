@@ -5,8 +5,6 @@ import (
 	"io"
 	"maps"
 	"os"
-	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -17,7 +15,6 @@ import (
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	"github.com/forklift-run/forklift/pkg/structures"
-	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // Printing
@@ -109,13 +106,8 @@ func AddPalletReqs(
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", palletQuery)
 		}
-		reqsPalletsFS, err := pallet.GetPalletReqsFS()
-		if err != nil {
+		if err = pallet.WriteFSPalletReq(req); err != nil {
 			return err
-		}
-		palletReqPath := path.Join(reqsPalletsFS.Path(), req.Path(), versioning.LockDeclFile)
-		if err = forklift.WriteVersionLock(req.VersionLock, palletReqPath); err != nil {
-			return errors.Wrapf(err, "couldn't write version lock for pallet requirement")
 		}
 	}
 	return nil
@@ -145,11 +137,6 @@ func RemovePalletReqs(
 			)
 			palletPath = actualPalletPath
 		}
-		reqsPalletsFS, err := pallet.GetPalletReqsFS()
-		if err != nil {
-			return err
-		}
-		palletReqPath := path.Join(reqsPalletsFS.Path(), palletPath)
 		if !force && len(usedPalletReqs[palletPath]) > 0 {
 			return errors.Errorf(
 				"couldn't remove requirement for pallet %s because it's needed by file imports %+v; to "+
@@ -157,12 +144,8 @@ func RemovePalletReqs(
 				palletPath, usedPalletReqs[palletPath],
 			)
 		}
-		if err = os.RemoveAll(filepath.FromSlash(path.Join(
-			palletReqPath, versioning.LockDeclFile,
-		))); err != nil {
-			return errors.Wrapf(
-				err, "couldn't remove requirement for pallet %s, at %s", palletPath, palletReqPath,
-			)
+		if err = pallet.RemoveFSPalletReq(palletPath); err != nil {
+			return err
 		}
 	}
 	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the

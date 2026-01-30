@@ -1,17 +1,10 @@
 package forklift
 
 import (
-	"os"
-	"path"
-	"path/filepath"
-
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 
 	"github.com/forklift-run/forklift/pkg/caching"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/versioning"
 	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
@@ -65,22 +58,4 @@ func GetRequiredPallet(
 		)
 	}
 	return mergedPallet, nil
-}
-
-// Add
-
-func WriteVersionLock(lock versioning.Lock, writePath string) error {
-	marshaled, err := yaml.Marshal(lock.Decl)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't marshal version lock")
-	}
-	parentDir := filepath.FromSlash(path.Dir(writePath))
-	if err := ffs.EnsureExists(parentDir); err != nil {
-		return errors.Wrapf(err, "couldn't make directory %s", parentDir)
-	}
-	const perm = 0o644 // owner rw, group r, public r
-	if err := os.WriteFile(filepath.FromSlash(writePath), marshaled, perm); err != nil {
-		return errors.Wrapf(err, "couldn't save version lock to %s", filepath.FromSlash(writePath))
-	}
-	return nil
 }

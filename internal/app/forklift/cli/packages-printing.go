@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
@@ -258,7 +259,7 @@ func FprintPalletPkgs(
 func FprintPkgLocation(
 	out io.Writer, pallet *fplt.FSPallet, cache caching.PathedPalletCache, pkgPath string,
 ) error {
-	overlayCache, err := MakeOverlayCache(pallet, cache)
+	overlayCache, err := forklift.MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -286,7 +287,7 @@ func FprintPkgInfo(
 	indent int, out io.Writer,
 	pallet *fplt.FSPallet, cache caching.PathedPalletCache, pkgPath string,
 ) error {
-	overlayCache, err := MakeOverlayCache(pallet, cache)
+	overlayCache, err := forklift.MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -298,22 +299,4 @@ func FprintPkgInfo(
 	}
 	FprintPkg(indent, out, cache, pkg)
 	return nil
-}
-
-func MakeOverlayCache(
-	pallet *fplt.FSPallet, cache caching.PathedPalletCache,
-) (*caching.LayeredPalletCache, error) {
-	overrideCache, err := caching.NewPalletOverrideCache(
-		[]*fplt.FSPallet{pallet},
-		map[string][]string{
-			pallet.Path(): {""},
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't make pallet override cache")
-	}
-	return &caching.LayeredPalletCache{
-		Underlay: cache,
-		Overlay:  overrideCache,
-	}, nil
 }

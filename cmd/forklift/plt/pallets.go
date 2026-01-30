@@ -64,7 +64,7 @@ func processFullBaseArgs(
 			)
 		}
 	}
-	if caches.pp, err = fcli.MakeOverlayCache(plt, caches.p); err != nil {
+	if caches.pp, err = forklift.MakeOverlayCache(plt, caches.p); err != nil {
 		return nil, workspaceCaches{}, errors.Wrap(
 			err, "couldn't make overlay of local pallet with pallet cache",
 		)

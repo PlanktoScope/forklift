@@ -10,6 +10,7 @@ import (
 	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/caching"
 	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
@@ -37,7 +38,7 @@ func FprintDeplInfo(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	overlayCache, err := MakeOverlayCache(pallet, cache)
+	overlayCache, err := forklift.MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}
@@ -258,7 +259,7 @@ func FprintDeplPkgLocation(
 			deplName, pallet.FS.Path(),
 		)
 	}
-	overlayCache, err := MakeOverlayCache(pallet, cache)
+	overlayCache, err := forklift.MakeOverlayCache(pallet, cache)
 	if err != nil {
 		return err
 	}

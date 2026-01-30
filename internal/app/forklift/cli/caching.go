@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/pkg/caching"
 	ffs "github.com/forklift-run/forklift/pkg/fs"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
@@ -55,7 +56,7 @@ func CacheStagingReqs(
 		)
 	}
 
-	if palletCacheWithMerged, err = MakeOverlayCache(merged, palletCache); err != nil {
+	if palletCacheWithMerged, err = forklift.MakeOverlayCache(merged, palletCache); err != nil {
 		return nil, nil, err
 	}
 

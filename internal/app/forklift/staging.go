@@ -1,12 +1,14 @@
 package forklift
 
 import (
+	"context"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
 	fbun "github.com/forklift-run/forklift/pkg/bundling"
 	"github.com/forklift-run/forklift/pkg/caching"
@@ -199,4 +201,121 @@ func describePalletImports(
 		}
 	}
 	return fileMappings, nil
+}
+
+// Bundling
+
+func BuildBundle(
+	merged *fplt.FSPallet,
+	palletCache caching.PathedPalletCache,
+	dlCache *caching.FSDownloadCache,
+	forkliftVersion, outputPath string,
+) (err error) {
+	outputBundle, err := fbun.NewFSBundle(outputPath)
+	if err != nil {
+		return errors.Errorf("couldn't initialize new bundle at %s", outputPath)
+	}
+	outputBundle.Manifest, err = NewBundleManifest(merged, palletCache, forkliftVersion)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't create bundle manifest for %s", outputBundle.FS.Path())
+	}
+
+	overlayCache, err := MakeOverlayCache(merged, palletCache)
+	if err != nil {
+		return err
+	}
+	depls, err := merged.LoadDepls("**/*")
+	if err != nil {
+		return err
+	}
+	depls = fplt.FilterDeplsForEnabled(depls)
+	resolved, err := fplt.ResolveDepls(merged, overlayCache, depls)
+	if err != nil {
+		return err
+	}
+
+	for _, depl := range resolved {
+		if err := outputBundle.AddResolvedDepl(depl); err != nil {
+			return errors.Wrapf(err, "couldn't add deployment %s to bundle", depl.Name)
+		}
+	}
+
+	if err := outputBundle.SetBundledPallet(merged); err != nil {
+		return errors.Wrapf(err, "couldn't write pallet %s into bundle", merged.Decl.Pallet.Path)
+	}
+	if err = outputBundle.WriteFileExports(dlCache); err != nil {
+		return errors.Wrap(err, "couldn't write file exports into bundle")
+	}
+	if err = outputBundle.WriteManifestFile(); err != nil {
+		return errors.Wrap(err, "couldn't write bundle manifest file into bundle")
+	}
+	return nil
+}
+
+func MakeOverlayCache(
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache,
+) (*caching.LayeredPalletCache, error) {
+	overrideCache, err := caching.NewPalletOverrideCache(
+		[]*fplt.FSPallet{pallet},
+		map[string][]string{
+			pallet.Path(): {""},
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't make pallet override cache")
+	}
+	return &caching.LayeredPalletCache{
+		Underlay: cache,
+		Overlay:  overrideCache,
+	}, nil
+}
+
+// Apply
+
+func ApplyReconciliationChange(
+	ctx context.Context, change *ReconciliationChange, dc *docker.Client,
+) error {
+	switch change.Type {
+	default:
+		return errors.Errorf("unknown change type '%s'", change.Type)
+	case AddReconciliationChange:
+		if err := deployApp(ctx, change.Depl, change.Name, dc); err != nil {
+			return errors.Wrapf(err, "couldn't add %s", change.Name)
+		}
+		return nil
+	case RemoveReconciliationChange:
+		// Note: removeReconciliationChange has a nil Depl field
+		if err := dc.RemoveApps(ctx, []string{change.Name}); err != nil {
+			return errors.Wrapf(err, "couldn't remove %s", change.Name)
+		}
+		return nil
+	case UpdateReconciliationChange:
+		if err := deployApp(ctx, change.Depl, change.Name, dc); err != nil {
+			return errors.Wrapf(err, "couldn't add %s", change.Name)
+		}
+		return nil
+	}
+}
+
+func deployApp(
+	ctx context.Context, depl *fplt.ResolvedDepl, name string, dc *docker.Client,
+) error {
+	definesApp, err := depl.DefinesComposeApp()
+	if err != nil {
+		return errors.Wrapf(
+			err, "couldn't determine whether package deployment %s defines a Compose app", depl.Name,
+		)
+	}
+	if !definesApp {
+		return errors.Errorf("package deployment %s has no Compose app to deploy", depl.Name)
+	}
+
+	appDef, err := depl.LoadComposeAppDefinition(true)
+	if err != nil {
+		return errors.Wrap(err, "couldn't load Compose app definition")
+	}
+	if err = dc.DeployApp(ctx, appDef, 0); err != nil {
+		return errors.Wrapf(err, "couldn't deploy Compose app '%s'", name)
+	}
+	return nil
 }
