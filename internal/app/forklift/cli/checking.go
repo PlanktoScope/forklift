@@ -1,18 +1,12 @@
 package cli
 
 import (
-	"cmp"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
-	"path"
-	"slices"
 
 	"github.com/pkg/errors"
 
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
 	res "github.com/forklift-run/forklift/pkg/resources"
 )
@@ -46,41 +40,12 @@ func Check(
 	return resolved, satisfied, resourcesErr
 }
 
-type invalidFileExport struct {
-	sourcePath string
-	targetPath string
-	err        error
-}
-
 // checkFileExports checks the file exports of all package deployments in the pallet or bundle
 // to ensure that the source paths of those file exports are all valid. It prints check failures.
-func checkFileExports(indent int, out io.Writer, depls []*fplt.ResolvedDepl) error {
-	invalidDeplNames := make([]string, 0, len(depls))
-	invalidFileExports := make(map[string][]invalidFileExport)
-	for _, depl := range depls {
-		exports, err := depl.GetFileExports()
-		if err != nil {
-			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", depl.Name)
-		}
-		for _, export := range exports {
-			switch export.SourceType {
-			default:
-				// TODO: should we also check file exports from files in the cache of downloaded files?
-				continue
-			case fpkg.FileExportSourceTypeLocal, "":
-			}
-			sourcePath := cmp.Or(export.Source, export.Target)
-			if err = checkFileOrSymlink(depl.Pkg.FS, sourcePath); err != nil {
-				invalidFileExports[depl.Name] = append(
-					invalidFileExports[depl.Name],
-					invalidFileExport{
-						sourcePath: sourcePath,
-						targetPath: export.Target,
-						err:        err,
-					},
-				)
-			}
-		}
+func checkFileExports(indent int, out io.Writer, depls []*fplt.ResolvedDepl) (err error) {
+	invalidFileExports, err := fplt.CheckFileExports(depls)
+	if err != nil {
+		return errors.Wrap(err, "couldn't check file exports")
 	}
 	if len(invalidFileExports) == 0 {
 		return nil
@@ -88,7 +53,6 @@ func checkFileExports(indent int, out io.Writer, depls []*fplt.ResolvedDepl) err
 
 	IndentedFprintln(indent, out, "Found invalid file exports among deployments:")
 	indent++
-	slices.Sort(invalidDeplNames)
 	for _, depl := range depls {
 		invalid := invalidFileExports[depl.Name]
 		if len(invalid) == 0 {
@@ -102,37 +66,15 @@ func checkFileExports(indent int, out io.Writer, depls []*fplt.ResolvedDepl) err
 }
 
 func printInvalidDeplFileExports(
-	indent int, out io.Writer, depl *fplt.ResolvedDepl, invalid []invalidFileExport,
+	indent int, out io.Writer, depl *fplt.ResolvedDepl, invalid []fplt.InvalidFileExport,
 ) {
 	IndentedFprintf(indent, out, "Deployment %s:\n", depl.Name)
 	indent++
 	for _, invalidFileExport := range invalid {
-		BulletedFprintf(indent, out, "File export source: %s\n", invalidFileExport.sourcePath)
-		IndentedFprintf(indent+1, out, "File export target: %s\n", invalidFileExport.targetPath)
-		IndentedFprintf(indent+1, out, "Error: %s\n", invalidFileExport.err.Error())
+		BulletedFprintf(indent, out, "File export source: %s\n", invalidFileExport.Source)
+		IndentedFprintf(indent+1, out, "File export target: %s\n", invalidFileExport.Target)
+		IndentedFprintf(indent+1, out, "Error: %s\n", invalidFileExport.Err.Error())
 	}
-}
-
-func checkFileOrSymlink(fsys ffs.PathedFS, file string) error {
-	if _, err := fs.Stat(fsys, file); err == nil {
-		return nil
-	}
-	// fs.Stat will return an error if the sourcePath exists but is a symlink pointing to a
-	// nonexistent location. Really we want fs.Lstat (which is not implemented yet); until fs.Lstat
-	// is implemented, when we get an error when we'll just check if a DirEntry exists for the path
-	// (and if so, we'll assume the file is valid).
-	dirEntries, err := fs.ReadDir(fsys, path.Dir(file))
-	if err != nil {
-		return err
-	}
-	for _, dirEntry := range dirEntries {
-		if dirEntry.Name() == path.Base(file) {
-			return nil
-		}
-	}
-	return errors.Errorf(
-		"couldn't find %s in %s", path.Base(file), path.Join(fsys.Path(), path.Dir(file)),
-	)
 }
 
 // checkResources checks the resource constraints among package deployments in the pallet or bundle.

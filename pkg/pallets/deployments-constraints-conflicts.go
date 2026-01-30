@@ -92,6 +92,9 @@ func (d *ResolvedDepl) CheckConflicts(candidate *ResolvedDepl) (DeplConflict, er
 		Filesets: res.CheckConflicts(
 			d.providedFilesets(enabledFeatures), candidate.providedFilesets(candidateEnabledFeatures),
 		),
+		// FIXME: for some reason, the checker doesn't detect a conflict between one depl which exports
+		// a non-directory file at a certain path and another depl which exports a file into a
+		// subdirectory of that same path (i.e. which assumes that the path is a directory)
 		FileExports: res.CheckConflicts(
 			d.providedFileExports(enabledFeatures),
 			candidate.providedFileExports(candidateEnabledFeatures),
