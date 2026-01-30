@@ -5,15 +5,18 @@ import (
 	"io"
 	"slices"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/structures"
+	fbun "github.com/forklift-run/forklift/exp/bundling"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/staging"
+	"github.com/forklift-run/forklift/exp/structures"
+	"github.com/forklift-run/forklift/exp/versioning"
 )
 
 // Bundles
 
 func FprintStagedBundle(
 	indent int, out io.Writer,
-	store *forklift.FSStageStore, bundle *forklift.FSBundle, index int, names []string,
+	store *staging.FSStageStore, bundle *fbun.FSBundle, index int, names []string,
 ) {
 	IndentedFprintf(indent, out, "Staged pallet bundle: %d\n", index)
 	indent++
@@ -64,7 +67,7 @@ func FprintStagedBundle(
 	}
 }
 
-func fprintBundlePallet(indent int, out io.Writer, pallet forklift.BundlePallet) {
+func fprintBundlePallet(indent int, out io.Writer, pallet fbun.BundlePallet) {
 	IndentedFprintf(indent, out, "Path: %s\n", pallet.Path)
 	IndentedFprintf(indent, out, "Version: %s", pallet.Version)
 	if !pallet.Clean {
@@ -75,7 +78,7 @@ func fprintBundlePallet(indent int, out io.Writer, pallet forklift.BundlePallet)
 	_, _ = fmt.Fprintln(out)
 }
 
-func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.BundleInclusions) {
+func fprintBundleInclusions(indent int, out io.Writer, inclusions fbun.BundleInclusions) {
 	IndentedFprint(indent, out, "Pallets:")
 	if len(inclusions.Pallets) == 0 {
 		_, _ = fmt.Fprintln(out, " (none)")
@@ -91,37 +94,22 @@ func fprintBundleInclusions(indent int, out io.Writer, inclusions forklift.Bundl
 			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
 		}
 	}
-	IndentedFprint(indent, out, "Repos:")
-	if len(inclusions.Repos) == 0 {
-		_, _ = fmt.Fprintln(out, " (none)")
-	} else {
-		_, _ = fmt.Fprintln(out)
-		sortedPaths := make([]string, 0, len(inclusions.Repos))
-		for path := range inclusions.Repos {
-			sortedPaths = append(sortedPaths, path)
-		}
-		slices.Sort(sortedPaths)
-		for _, path := range sortedPaths {
-			inclusion := inclusions.Repos[path]
-			fprintBundleInclusion(indent+1, out, path, inclusion.Override, inclusion.Req.VersionLock)
-		}
-	}
 }
 
 func fprintBundleInclusion(
 	indent int, out io.Writer, path string,
-	inclOverride forklift.BundleInclusionOverride, inclReqVersionLock forklift.VersionLock,
+	inclOverride fbun.BundleInclusionOverride, inclReqVersionLock versioning.Lock,
 ) {
 	IndentedFprintf(indent, out, "%s:\n", path)
 	indent++
 	IndentedFprint(indent, out, "Required version")
-	if inclOverride != (forklift.BundleInclusionOverride{}) {
+	if inclOverride != (fbun.BundleInclusionOverride{}) {
 		_, _ = fmt.Fprint(out, " (overridden)")
 	}
 	_, _ = fmt.Fprint(out, ": ")
 	_, _ = fmt.Fprintln(out, inclReqVersionLock.Version)
 
-	if inclOverride == (forklift.BundleInclusionOverride{}) {
+	if inclOverride == (fbun.BundleInclusionOverride{}) {
 		return
 	}
 	IndentedFprintln(indent, out, "Override:")
@@ -138,7 +126,7 @@ func fprintBundleInclusion(
 	_, _ = fmt.Fprintln(out)
 }
 
-func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]forklift.DeplDef) {
+func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]fplt.DeplDecl) {
 	sortedDeplNames := make([]string, 0, len(deployments))
 	for deplName := range deployments {
 		sortedDeplNames = append(sortedDeplNames, deplName)
@@ -150,7 +138,7 @@ func fprintBundleDeployments(indent int, out io.Writer, deployments map[string]f
 }
 
 func fprintBundleDownloads(
-	indent int, out io.Writer, downloads map[string]forklift.BundleDeplDownloads,
+	indent int, out io.Writer, downloads map[string]fbun.BundleDeplDownloads,
 ) {
 	lists := []string{"httpFiles", "ociImages"}
 	aggs := make(map[string]structures.Set[string])
@@ -176,7 +164,7 @@ func fprintOptionalSet(indent int, out io.Writer, name string, items structures.
 	}
 }
 
-func fprintBundleExports(indent int, out io.Writer, exports map[string]forklift.BundleDeplExports) {
+func fprintBundleExports(indent int, out io.Writer, exports map[string]fbun.BundleDeplExports) {
 	lists := []string{
 		"files", "appNames", "appServices", "appImages", "appNewBindMounts", "appReqBindMounts",
 		"appNewVolumes", "appReqVolumes", "appNewNetworks", "appReqNetworks",

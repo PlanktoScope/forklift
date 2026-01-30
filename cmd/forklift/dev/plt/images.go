@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
@@ -13,15 +14,14 @@ import (
 
 func lsImgAction(c *cli.Context) error {
 	plt, caches, err := processFullBaseArgs(c, processingOptions{
-		requireRepoCache: true,
-		enableOverrides:  true,
-		merge:            true,
+		enableOverrides: true,
+		merge:           true,
 	})
 	if err != nil {
 		return err
 	}
 
-	images, err := fcli.ListRequiredImages(plt, caches.r, c.Bool("include-disabled"))
+	images, err := forklift.ListRequiredImages(plt, caches.pp, c.Bool("include-disabled"))
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,6 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c, processingOptions{
 			requirePalletCache: true,
-			requireRepoCache:   true,
 			enableOverrides:    true,
 			merge:              true,
 		})
@@ -45,7 +44,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
@@ -54,7 +53,7 @@ func cacheImgAction(versions Versions) cli.ActionFunc {
 			os.Stderr, "Downloading Docker container images specified by the development pallet...",
 		)
 		if err := fcli.DownloadImages(
-			0, plt, caches.r, c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
+			0, plt, caches.pp, c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
 		}

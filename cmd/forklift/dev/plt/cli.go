@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
@@ -14,7 +15,7 @@ type Versions struct {
 	NewStageStore string
 }
 
-func (v Versions) Core() fcli.Versions {
+func (v Versions) Core() forklift.Versions {
 	return v.Staging.Core
 }
 
@@ -25,12 +26,6 @@ func MakeCmd(versions Versions) *cli.Command {
 		Usage: "Facilitates development and maintenance of a Forklift pallet in the current working " +
 			"directory",
 		Flags: []cli.Flag{
-			&cli.StringSliceFlag{
-				Name:    "repo",
-				Aliases: []string{"repos", "repository", "repositories"},
-				Usage: "Replaces version-locked required repos from the cache with the corresponding " +
-					"repos in the specified directory paths",
-			},
 			&cli.StringSliceFlag{
 				Name:    "plt",
 				Aliases: []string{"plts", "pallet", "pallets"},
@@ -109,13 +104,6 @@ func makeUseCacheSubcmds(versions Versions) []*cli.Command {
 			Action:   cachePltAction(versions),
 		},
 		{
-			Name:     "cache-repo",
-			Aliases:  []string{"cache-repositories"},
-			Category: category,
-			Usage:    "Updates the cache with the repos required by the development pallet",
-			Action:   cacheRepoAction(versions),
-		},
-		{
 			Name:     "cache-dl",
 			Aliases:  []string{"cache-downloads"},
 			Category: category,
@@ -150,7 +138,6 @@ func makeQuerySubcmds() []*cli.Command {
 			},
 		},
 		makeQueryPltReqSubcmds(category),
-		makeQueryRepoReqSubcmds(category),
 		makeQueryImportSubcmds(category),
 		makeQueryFileSubcmds(category),
 		makeQueryPkgSubcmds(category),
@@ -218,43 +205,6 @@ func makeQueryPltReqSubcmds(category string) []*cli.Command {
 		makeQueryPltFileSubcmds(category),
 		makeQueryPltFeatSubcmds(category),
 	)
-}
-
-func makeQueryRepoReqSubcmds(category string) []*cli.Command {
-	return []*cli.Command{
-		{
-			Name:     "ls-repo",
-			Aliases:  []string{"list-repositories"},
-			Category: category,
-			Usage:    "Lists repos specified by the development pallet",
-			Action:   lsRepoAction,
-		},
-		{
-			Name:     "locate-repo",
-			Aliases:  []string{"locate-repository"},
-			Category: category,
-			Usage: "Prints the absolute filesystem path of a repo available in the development " +
-				"pallet",
-			ArgsUsage: "repo_path",
-			Action:    locateRepoAction,
-		},
-		{
-			Name:      "show-repo",
-			Aliases:   []string{"show-repository"},
-			Category:  category,
-			Usage:     "Describes a repo available in the development pallet",
-			ArgsUsage: "repo_path",
-			Action:    showRepoAction,
-		},
-		{
-			Name:      "show-repo-version",
-			Aliases:   []string{"show-repository-version"},
-			Category:  category,
-			Usage:     "Prints the required version of the available repo",
-			ArgsUsage: "repo_path",
-			Action:    showRepoVersionAction,
-		},
-	}
 }
 
 func makeQueryPltFileSubcmds(category string) []*cli.Command {
@@ -451,7 +401,6 @@ func makeModifySubcmds(versions Versions) []*cli.Command {
 		makeModifyPltSubcmds(versions),
 		// TODO: add `add-imp`, `del-imp`, `set-imp-disabled`, `unset-imp-disabled`,
 		// `add-imp-mod`, and `del-imp-mod` subcommands
-		makeModifyRepoSubcmds(versions),
 		makeModifyDeplSubcmds(versions),
 	)
 }
@@ -529,55 +478,6 @@ func makeModifyPltSubcmds(versions Versions) []*cli.Command {
 				},
 			},
 			Action: delPltAction(versions),
-		},
-	}
-}
-
-func makeModifyRepoSubcmds(versions Versions) []*cli.Command {
-	const category = "Modify the pallet's requirements"
-	return []*cli.Command{
-		{
-			Name: "add-repo",
-			Aliases: []string{
-				"add-repository", "add-repositories",
-				"req-repo", "require-repository", "require-repositories",
-			},
-			Category: category,
-			Usage: "Adds (or re-adds) repo requirements to the pallet, tracking specified versions " +
-				"or branches",
-			ArgsUsage: "[repo_path@version_query]...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "cache-req",
-					Usage: "Download repositories and pallets required by this pallet after adding the " +
-						"repo",
-					Value: true,
-				},
-			},
-			Action: addRepoAction(versions),
-			// TODO: add an upgrade-repo [repo_path]... command (upgrade all if no args)
-			// TODO: add a check-upgrade-repo [repo_path]... command (check all upgrades if no args)
-			// TODO: add a cache-upgrade-repo repo_path command (cache all upgrades if no args)
-			// TODO: add a show-upgrade-repo-query repo_path[@] command
-			// TODO: add a set-upgrade-repo-query repo_path@version_query command
-		},
-		{
-			Name: "del-repo",
-			Aliases: []string{
-				"delete-repository", "delete-repositories",
-				"drop-repo", "drop-repository", "drop-repositories",
-			},
-			Category:  category,
-			Usage:     "Removes repo requirements from the pallet",
-			ArgsUsage: "repo_path...",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name: "force",
-					Usage: "Remove specified repo requirements even if some declared package deployments " +
-						"depend on them",
-				},
-			},
-			Action: delRepoAction(versions),
 		},
 	}
 }

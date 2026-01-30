@@ -3,20 +3,20 @@ package cache
 import (
 	"fmt"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	fpkg "github.com/forklift-run/forklift/exp/packaging"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	"github.com/forklift-run/forklift/pkg/core"
 )
 
 // ls-pkg
 
 func lsPkgAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"), false)
+	cache, err := getPalletCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}
@@ -29,11 +29,9 @@ func lsPkgAction(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify packages")
 	}
-	sort.Slice(pkgs, func(i, j int) bool {
-		return core.ComparePkgs(pkgs[i].Pkg, pkgs[j].Pkg) < 0
-	})
+	slices.SortFunc(pkgs, fpkg.CompareFSPkgs)
 	for _, pkg := range pkgs {
-		fmt.Printf("%s@%s\n", pkg.Path(), pkg.Repo.Version)
+		fmt.Printf("%s@%s\n", pkg.Path(), pkg.FSPkgTree.Version)
 	}
 	return nil
 }
@@ -41,7 +39,7 @@ func lsPkgAction(c *cli.Context) error {
 // show-pkg
 
 func showPkgAction(c *cli.Context) error {
-	cache, err := getRepoCache(c.String("workspace"), false)
+	cache, err := getPalletCache(c.String("workspace"), false)
 	if err != nil {
 		return err
 	}

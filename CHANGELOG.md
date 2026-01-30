@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- (Breaking change) Renamed module from github.com/PlanktoScope/forklift to github.com/forklift-run/forklift .
+- (Breaking change; spec: packages, pallets) Forklift no longer has a separate of "repositories"; instead, all repository functionality has been merged into pallets. Support has been removed for `forklift-repository.yml` files as well as files in `(pallet)/requirements/repositories`.
+- (Breaking change; spec: bundling) Forklift no longer creates or expects a file at `(bundle)/packages/forklift-repository.yml` in pallet bundles.
+- (Breaking change; lib) Renamed module from `github.com/PlanktoScope/forklift` to `github.com/forklift-run/forklift`.
+- (Breaking change; lib) All packages in `/pkg` have been reorganized and moved into `/exp` (i.e. experimental libraries whose API surfaces haven't been stabilized yet).
+- (cli) `[dev] plt plan`/`stage plan` now prunes redundant transitive dependencies between changes before displaying and executing changes.
 
 ### Fixed
 

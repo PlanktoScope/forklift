@@ -11,32 +11,34 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fpkg "github.com/forklift-run/forklift/exp/packaging"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/core"
 )
 
 func FprintCachedPallet(
-	indent int, out io.Writer, cache core.Pather, pallet *forklift.FSPallet, printHeader bool,
+	indent int, out io.Writer, cache ffs.Pather, pallet *fplt.FSPallet, printHeader bool,
 ) error {
 	if printHeader {
 		IndentedFprintf(indent, out, "Cached pallet: %s\n", pallet.Path())
 		indent++
 	}
 
-	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Decl.ForkliftVersion)
 	_, _ = fmt.Fprintln(out)
 
 	IndentedFprintf(indent, out, "Version: %s\n", pallet.Version)
-	if core.CoversPath(cache, pallet.FS.Path()) {
-		IndentedFprintf(indent, out, "Path in cache: %s\n", core.GetSubdirPath(cache, pallet.FS.Path()))
+	if ffs.CoversPath(cache, pallet.FS.Path()) {
+		IndentedFprintf(indent, out, "Path in cache: %s\n", ffs.GetSubdirPath(cache, pallet.FS.Path()))
 	} else {
 		// Note: this is used when the pallet is replaced by an overlay from outside the cache
 		IndentedFprintf(
 			indent, out, "Absolute path (replacing any cached copy): %s\n", pallet.FS.Path(),
 		)
 	}
-	IndentedFprintf(indent, out, "Description: %s\n", pallet.Def.Pallet.Description)
+	IndentedFprintf(indent, out, "Description: %s\n", pallet.Decl.Pallet.Description)
 
 	if err := fprintReadme(indent, out, pallet); err != nil {
 		return errors.Wrapf(
@@ -46,7 +48,7 @@ func FprintCachedPallet(
 	}
 
 	_, _ = fmt.Fprintln(out)
-	if err := fprintRepoPkgs(indent, out, pallet.Repo); err != nil {
+	if err := fprintFSPkgTreePkgs(indent, out, pallet.FSPkgTree); err != nil {
 		return errors.Wrapf(err, "couldn't list packages provided by pallet %s", pallet.Path())
 	}
 
@@ -66,7 +68,55 @@ func FprintCachedPallet(
 	return nil
 }
 
-func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+type readmeLoader interface {
+	LoadReadme() ([]byte, error)
+}
+
+func fprintReadme(indent int, out io.Writer, loader readmeLoader) error {
+	readme, err := loader.LoadReadme()
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load readme file")
+	}
+	const widthLimit = 100
+	const lengthLimit = 10
+	IndentedFprintf(indent, out, "Readme (first %d lines):\n", lengthLimit)
+	PrintMarkdown(indent+1, readme, widthLimit, lengthLimit)
+	return nil
+}
+
+func fprintFSPkgTreePkgs(indent int, out io.Writer, pkgTree *fpkg.FSPkgTree) error {
+	IndentedFprint(indent, out, "Packages:")
+
+	pkgs, err := pkgTree.LoadFSPkgs("**")
+	if err != nil {
+		return errors.Wrapf(err, "couldn't load packages from pkg tree %s", pkgTree.FS.Path())
+	}
+	slices.SortFunc(pkgs, fpkg.CompareFSPkgs)
+
+	if len(pkgs) == 0 {
+		_, _ = fmt.Fprint(out, " (none)")
+	}
+	_, _ = fmt.Fprintln(out)
+	indent += 1
+	for _, pkg := range pkgs {
+		IndentedFprintf(indent, out, "...%s: ", strings.TrimPrefix(pkg.Path(), pkgTree.FS.Path()))
+
+		names := make([]string, 0, len(pkg.Decl.Features))
+		for name := range pkg.Decl.Features {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+
+		if len(names) == 0 {
+			_, _ = fmt.Fprintln(out, "(no optional features)")
+			continue
+		}
+		_, _ = fmt.Fprintf(out, "[%s]\n", strings.Join(names, ", "))
+	}
+	return nil
+}
+
+func fprintPalletDepls(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	IndentedFprint(indent, out, "Package deployments:")
 	depls, err := pallet.LoadDepls("**/*")
 	if err != nil {
@@ -78,12 +128,12 @@ func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) err
 	_, _ = fmt.Fprintln(out)
 	indent += 1
 	for _, depl := range depls {
-		BulletedFprintf(indent, out, "%s: %s", depl.Name, depl.Def.Package)
-		slices.Sort(depl.Def.Features)
-		if len(depl.Def.Features) > 0 {
-			_, _ = fmt.Fprintf(out, " +[%s]", strings.Join(depl.Def.Features, ", "))
+		BulletedFprintf(indent, out, "%s: %s", depl.Name, depl.Decl.Package)
+		slices.Sort(depl.Decl.Features)
+		if len(depl.Decl.Features) > 0 {
+			_, _ = fmt.Fprintf(out, " +[%s]", strings.Join(depl.Decl.Features, ", "))
 		}
-		if depl.Def.Disabled {
+		if depl.Decl.Disabled {
 			_, _ = fmt.Fprint(out, " (disabled)")
 		}
 		_, _ = fmt.Fprintln(out)
@@ -91,7 +141,7 @@ func fprintPalletDepls(indent int, out io.Writer, pallet *forklift.FSPallet) err
 	return nil
 }
 
-func fprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func fprintPalletFeatures(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	IndentedFprint(indent, out, "Importable features:")
 	imps, err := pallet.LoadFeatures("**/*")
 	if err != nil {
@@ -108,18 +158,18 @@ func fprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) 
 	return nil
 }
 
-func FprintPalletInfo(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func FprintPalletInfo(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	IndentedFprintf(indent, out, "Pallet: %s\n", pallet.Path())
 	indent++
 
-	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Def.ForkliftVersion)
+	IndentedFprintf(indent, out, "Forklift version: %s\n", pallet.Decl.ForkliftVersion)
 	_, _ = fmt.Fprintln(out)
 
-	if pallet.Def.Pallet.Path != "" {
+	if pallet.Decl.Pallet.Path != "" {
 		IndentedFprintf(indent, out, "Path in filesystem: %s\n", pallet.FS.Path())
 	}
-	IndentedFprintf(indent, out, "Description: %s\n", pallet.Def.Pallet.Description)
-	if pallet.Def.Pallet.ReadmeFile == "" {
+	IndentedFprintf(indent, out, "Description: %s\n", pallet.Decl.Pallet.Description)
+	if pallet.Decl.Pallet.ReadmeFile == "" {
 		_, _ = fmt.Fprintln(out)
 	} else if err := fprintReadme(indent, out, pallet); err != nil {
 		return errors.Wrapf(err, "couldn't preview readme file for pallet %s", pallet.FS.Path())
@@ -216,7 +266,7 @@ func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 	SortRemotes(remotes)
 	printCacheMirrorRemote := false
 	for _, remote := range remotes {
-		if remote.Config().Name == ForkliftCacheMirrorRemoteName && !printCacheMirrorRemote {
+		if remote.Config().Name == forklift.ForkliftCacheMirrorRemoteName && !printCacheMirrorRemote {
 			IndentedFprintf(
 				indent, out,
 				"%s: (skipped because origin was successfully queried)\n", remote.Config().Name,
@@ -226,7 +276,7 @@ func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 
 		if err := fprintRemoteInfo(
 			indent, out, remote,
-		); err != nil && remote.Config().Name == OriginRemoteName {
+		); err != nil && remote.Config().Name == forklift.OriginRemoteName {
 			printCacheMirrorRemote = true
 		}
 	}
@@ -235,10 +285,10 @@ func fprintRemotesInfo(indent int, out io.Writer, palletPath string) error {
 
 func SortRemotes(remotes []*ggit.Remote) {
 	slices.SortFunc(remotes, func(a, b *ggit.Remote) int {
-		if a.Config().Name == OriginRemoteName {
+		if a.Config().Name == forklift.OriginRemoteName {
 			return -1
 		}
-		if b.Config().Name == OriginRemoteName {
+		if b.Config().Name == forklift.OriginRemoteName {
 			return 1
 		}
 		return cmp.Compare(a.Config().Name, b.Config().Name)

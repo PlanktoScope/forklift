@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	"github.com/forklift-run/forklift/pkg/core"
 )
 
 // ls-*
@@ -43,10 +43,10 @@ func lsGitRepo[GitRepo versionQuerier](
 
 func showGitRepo[GitRepo any](
 	out io.Writer,
-	cache core.Pather, versionQuery string,
+	cache ffs.Pather, versionQuery string,
 	loader func(path, version string) (GitRepo, error),
 	fprinter func(
-		indent int, out io.Writer, cache core.Pather, gitRepo GitRepo, printHeader bool,
+		indent int, out io.Writer, cache ffs.Pather, gitRepo GitRepo, printHeader bool,
 	) error,
 	printHeader bool,
 ) error {
@@ -65,7 +65,7 @@ func showGitRepo[GitRepo any](
 
 // add-*
 
-func addGitRepoAction[Cache core.Pather](
+func addGitRepoAction[Cache ffs.Pather](
 	cacheGetter func(wpath string, ensureWorkspace bool) (Cache, error),
 ) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
@@ -73,7 +73,7 @@ func addGitRepoAction[Cache core.Pather](
 		if err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
