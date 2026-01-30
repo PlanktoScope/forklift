@@ -5,11 +5,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/pkg/caching"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/structures"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/structures"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 )
 
 func GetDownloadCache(wpath string, ensureCache bool) (*caching.FSDownloadCache, error) {

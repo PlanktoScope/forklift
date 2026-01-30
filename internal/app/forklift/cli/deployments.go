@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 // Add

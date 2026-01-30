@@ -5,11 +5,11 @@ import (
 	"io"
 	"slices"
 
-	fbun "github.com/forklift-run/forklift/pkg/bundling"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/staging"
-	"github.com/forklift-run/forklift/pkg/structures"
-	"github.com/forklift-run/forklift/pkg/versioning"
+	fbun "github.com/forklift-run/forklift/exp/bundling"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/staging"
+	"github.com/forklift-run/forklift/exp/structures"
+	"github.com/forklift-run/forklift/exp/versioning"
 )
 
 // Bundles

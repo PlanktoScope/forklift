@@ -3,9 +3,9 @@ package forklift
 import (
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/pkg/caching"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
+	"github.com/forklift-run/forklift/exp/caching"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 )
 
 func GetPalletCache(

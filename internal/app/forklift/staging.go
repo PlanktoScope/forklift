@@ -8,14 +8,14 @@ import (
 
 	"github.com/pkg/errors"
 
+	fbun "github.com/forklift-run/forklift/exp/bundling"
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/staging"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	fbun "github.com/forklift-run/forklift/pkg/bundling"
-	"github.com/forklift-run/forklift/pkg/caching"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/staging"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 func GetStageStore(

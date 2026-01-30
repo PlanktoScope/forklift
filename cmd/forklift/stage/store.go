@@ -8,11 +8,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	fbun "github.com/forklift-run/forklift/exp/bundling"
+	"github.com/forklift-run/forklift/exp/staging"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	fbun "github.com/forklift-run/forklift/pkg/bundling"
-	"github.com/forklift-run/forklift/pkg/staging"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 var errMissingStore = errors.Errorf(

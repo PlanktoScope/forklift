@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	fpkg "github.com/forklift-run/forklift/exp/packaging"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
 )
 
 // ls-pkg

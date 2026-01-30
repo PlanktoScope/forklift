@@ -9,10 +9,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/structures"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/docker"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // Plan builds a plan for changes to make to the Docker host in order to reconcile it with the

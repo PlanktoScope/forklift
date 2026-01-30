@@ -13,9 +13,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FprintFile(out io.Writer, pallet *fplt.FSPallet, filePath string) error {

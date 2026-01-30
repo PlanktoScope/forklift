@@ -12,7 +12,7 @@ import (
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/pkg/errors"
 
-	ffs "github.com/forklift-run/forklift/pkg/fs"
+	ffs "github.com/forklift-run/forklift/exp/fs"
 )
 
 // LoadAppDefinition parses the specified Docker Compose files from the provided fs as the current

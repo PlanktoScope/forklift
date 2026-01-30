@@ -9,13 +9,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/caching"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 type workspaceCaches struct {

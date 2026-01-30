@@ -8,11 +8,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fpkg "github.com/forklift-run/forklift/exp/packaging"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/caching"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FprintPkg(indent int, out io.Writer, cache caching.PathedPalletCache, pkg *fpkg.FSPkg) {

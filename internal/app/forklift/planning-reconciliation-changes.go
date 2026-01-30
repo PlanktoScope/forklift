@@ -6,8 +6,8 @@ import (
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/pkg/errors"
 
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/structures"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/structures"
 )
 
 const (

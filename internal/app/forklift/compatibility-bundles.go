@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	fbun "github.com/forklift-run/forklift/pkg/bundling"
+	fbun "github.com/forklift-run/forklift/exp/bundling"
 )
 
 func CheckBundleShallowCompat(

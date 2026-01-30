@@ -16,8 +16,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/exp/structures"
 	"github.com/forklift-run/forklift/internal/clients/cli"
-	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 func AbbreviateHash(h plumbing.Hash) string {

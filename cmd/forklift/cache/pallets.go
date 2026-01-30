@@ -5,8 +5,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 // ls-plt

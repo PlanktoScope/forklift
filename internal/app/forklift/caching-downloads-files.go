@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	ffs "github.com/forklift-run/forklift/pkg/fs"
+	ffs "github.com/forklift-run/forklift/exp/fs"
 )
 
 func DownloadFile(ctx context.Context, url, outputPath string, hc *http.Client) error {

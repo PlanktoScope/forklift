@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	res "github.com/forklift-run/forklift/pkg/resources"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	res "github.com/forklift-run/forklift/exp/resources"
 )
 
 type ResolvedDeplsLoader interface {

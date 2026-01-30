@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 )
 
 func CheckDepl(

@@ -9,8 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	ffs "github.com/forklift-run/forklift/exp/fs"
 	"github.com/forklift-run/forklift/internal/clients/crane"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
 )
 
 func DownloadOCIImage(ctx context.Context, imageName, outputPath, platform string) error {

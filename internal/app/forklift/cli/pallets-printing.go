@@ -11,11 +11,11 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fpkg "github.com/forklift-run/forklift/exp/packaging"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FprintCachedPallet(

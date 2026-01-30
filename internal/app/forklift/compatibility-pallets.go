@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 )
 
 // Pallets

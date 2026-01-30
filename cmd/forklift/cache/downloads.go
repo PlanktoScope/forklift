@@ -6,9 +6,10 @@ import (
 	"os"
 
 	"github.com/bmatcuk/doublestar/v4"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 )
 
 // ls-dl

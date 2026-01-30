@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/pkg/caching"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
+	"github.com/forklift-run/forklift/exp/caching"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 )
 
 func FprintPalletImports(indent int, out io.Writer, pallet *fplt.FSPallet) error {

@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/forklift-run/forklift/exp/caching"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/caching"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 // Download

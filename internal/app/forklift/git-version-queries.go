@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/mod/semver"
 
+	"github.com/forklift-run/forklift/exp/versioning"
 	"github.com/forklift-run/forklift/internal/clients/git"
-	"github.com/forklift-run/forklift/pkg/versioning"
 )
 
 // Resolving version query

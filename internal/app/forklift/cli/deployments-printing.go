@@ -10,10 +10,10 @@ import (
 	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/exp/caching"
+	fpkg "github.com/forklift-run/forklift/exp/packaging"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/caching"
-	fpkg "github.com/forklift-run/forklift/pkg/packaging"
-	fplt "github.com/forklift-run/forklift/pkg/pallets"
 )
 
 func FprintPalletDepls(indent int, out io.Writer, pallet *fplt.FSPallet) error {

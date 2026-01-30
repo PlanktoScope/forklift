@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
-	ffs "github.com/forklift-run/forklift/pkg/fs"
-	fws "github.com/forklift-run/forklift/pkg/workspaces"
 )
 
 // resolve-git-repo
