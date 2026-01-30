@@ -1,4 +1,5 @@
-package docker
+// Package compose facilitates handling of Docker Compose apps.
+package compose
 
 import (
 	"bytes"

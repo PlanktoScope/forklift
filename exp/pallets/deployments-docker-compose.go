@@ -6,7 +6,7 @@ import (
 	dct "github.com/compose-spec/compose-go/v2/types"
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/clients/docker"
+	"github.com/forklift-run/forklift/exp/docker/compose"
 )
 
 // ResolvedDepl: Docker Compose
@@ -52,7 +52,7 @@ func (d *ResolvedDepl) LoadComposeAppDefinition(resolvePaths bool) (*dct.Project
 		return nil, errors.Wrap(err, "couldn't determine Compose files for deployment")
 	}
 
-	appDef, err := docker.LoadAppDefinition(
+	appDef, err := compose.LoadAppDefinition(
 		d.Pkg.FS, GetComposeAppName(d.Name), composeFiles, nil, resolvePaths,
 	)
 	if err != nil {
