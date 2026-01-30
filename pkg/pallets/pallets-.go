@@ -244,6 +244,23 @@ func (p *FSPallet) LoadDepls(searchPattern string) ([]Depl, error) {
 	return loadDepls(fsys, searchPattern)
 }
 
+// RemoveDepls deletes specified deployment by deployment name. For example, if a deployment
+// named `infra/caddy-ingress` is to be removed, then the file
+// `/deployments/infra/caddy-ingress.deploy.yml` will be deleted.
+func (p *FSPallet) RemoveDepl(deplName string) error {
+	deplsFS, err := p.GetDeplsFS()
+	if err != nil {
+		return err
+	}
+	deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", deplName))
+	if err = os.RemoveAll(deplPath); err != nil {
+		return errors.Wrapf(
+			err, "couldn't remove package deployment %s, at %s", deplName, deplPath,
+		)
+	}
+	return nil
+}
+
 // FSPallet: Packages
 
 // LoadFSPkg loads a package at the specified filesystem path from the FSPallet instance

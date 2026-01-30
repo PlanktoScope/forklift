@@ -13,10 +13,10 @@ import (
 
 // Pallets
 
-// CheckPltCompat returns an error upon any version compatibility errors between a pallet
+// CheckPltShallowCompat returns an error upon any version compatibility errors between a pallet
 // and - unless the ignoreTool flag is set - the Forklift tool (as specified by toolVersions). Note
 // that minimum versions are still enforced even if the ignoreTool flag is set.
-func CheckPltCompat(
+func CheckPltShallowCompat(
 	pallet *fplt.FSPallet, toolVersions forklift.Versions, ignoreTool bool,
 ) error {
 	if ignoreTool {
@@ -45,22 +45,9 @@ func CheckDeepCompat(
 	pallet *fplt.FSPallet, palletLoader fplt.FSPalletLoader,
 	toolVersions forklift.Versions, ignoreTool bool,
 ) error {
-	if ignoreTool {
-		fmt.Fprintf(
-			os.Stderr, "Warning: ignoring the tool's version (%s) for version compatibility checking!\n",
-			toolVersions.Tool,
-		)
+	if err := CheckPltShallowCompat(pallet, toolVersions, ignoreTool); err != nil {
+		return err
 	}
-
-	if err := forklift.CheckArtifactCompat(
-		pallet.Decl.ForkliftVersion, toolVersions.Tool, toolVersions.MinSupportedPallet, pallet.Path(),
-		ignoreTool,
-	); err != nil {
-		return errors.Wrapf(
-			err, "forklift tool has a version incompatibility with pallet %s", pallet.Path(),
-		)
-	}
-
 	if err := forklift.CheckReqPalletVersions(
 		pallet, palletLoader, toolVersions, ignoreTool,
 	); err != nil {

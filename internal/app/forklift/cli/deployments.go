@@ -2,14 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"os"
-	"path"
+	"slices"
 
 	"github.com/pkg/errors"
 
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fplt "github.com/forklift-run/forklift/pkg/pallets"
-	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 // Add
@@ -61,15 +61,8 @@ func AddDepl(
 func RemoveDepls(indent int, pallet *fplt.FSPallet, deplNames []string) error {
 	IndentedFprintf(indent, os.Stderr, "Removing package deployments from %s...\n", pallet.FS.Path())
 	for _, deplName := range deplNames {
-		deplsFS, err := pallet.GetDeplsFS()
-		if err != nil {
+		if err := pallet.RemoveDepl(deplName); err != nil {
 			return err
-		}
-		deplPath := path.Join(deplsFS.Path(), fmt.Sprintf("%s.deploy.yml", deplName))
-		if err = os.RemoveAll(deplPath); err != nil {
-			return errors.Wrapf(
-				err, "couldn't remove package deployment %s, at %s", deplName, deplPath,
-			)
 		}
 	}
 	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the
@@ -135,27 +128,13 @@ func AddDeplFeat(
 		return errors.Wrapf(err, "couldn't resolve package deployment %s", depl.Name)
 	}
 
-	existingFeatures := make(structures.Set[string])
-	for _, name := range depl.Decl.Features {
-		existingFeatures.Add(name)
-	}
-	allowedFeatures := resolved.Pkg.Decl.Features
-	unrecognizedFeatures := make([]string, 0, len(features))
-	newFeatures := make([]string, 0, len(features))
-	for _, name := range features {
-		if _, ok := allowedFeatures[name]; !ok {
-			unrecognizedFeatures = append(unrecognizedFeatures, name)
-		}
-		if existingFeatures.Has(name) {
-			continue
-		}
-		newFeatures = append(newFeatures, name)
-		existingFeatures.Add(name) // suppress duplicates in the input features list
-	}
-	if len(unrecognizedFeatures) > 0 {
+	appended, unrecognized := depl.Decl.Features.With(
+		features, slices.Collect(maps.Keys(resolved.Pkg.Decl.Features)),
+	)
+	if len(unrecognized) > 0 {
 		err := errors.Errorf(
-			"feature flags %+v are allowed by package %s; to skip this check, enable the --force flag",
-			unrecognizedFeatures, depl.Decl.Package,
+			"feature flags %+v aren't allowed by package %s; to skip this check, enable the --force flag",
+			unrecognized, depl.Decl.Package,
 		)
 		if !force {
 			return err
@@ -163,7 +142,7 @@ func AddDeplFeat(
 		IndentedFprintf(indent, os.Stderr, "Warning: %s", err.Error())
 	}
 
-	depl.Decl.Features = append(depl.Decl.Features, newFeatures...)
+	depl.Decl.Features = appended
 	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}
@@ -186,19 +165,7 @@ func RemoveDeplFeat(
 		)
 	}
 
-	removedFeatures := make(structures.Set[string])
-	for _, name := range features {
-		removedFeatures.Add(name)
-	}
-	newFeatures := make([]string, 0, len(depl.Decl.Features))
-	for _, name := range depl.Decl.Features {
-		if removedFeatures.Has(name) {
-			continue
-		}
-		newFeatures = append(newFeatures, name)
-	}
-
-	depl.Decl.Features = newFeatures
+	depl.Decl.Features = depl.Decl.Features.Without(features)
 	if err := forklift.WriteDepl(pallet, depl); err != nil {
 		return errors.Wrapf(err, "couldn't save updated deployment declaration %s", depl.Name)
 	}

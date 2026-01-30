@@ -3,6 +3,7 @@ package pallets
 import (
 	"fmt"
 	"io/fs"
+	"slices"
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
@@ -10,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	ffs "github.com/forklift-run/forklift/pkg/fs"
+	"github.com/forklift-run/forklift/pkg/structures"
 )
 
 const (
@@ -33,10 +35,12 @@ type DeplDecl struct {
 	// Package is the package path of the package to deploy.
 	Package string `yaml:"package"`
 	// Features is a list of features from the package which should be enabled in the deployment.
-	Features []string `yaml:"features,omitempty"`
+	Features FeatureFlags `yaml:"features,omitempty"`
 	// Disabled represents whether the deployment should be ignored.
 	Disabled bool `yaml:"disabled,omitempty"`
 }
+
+type FeatureFlags []string
 
 // Depl
 
@@ -117,4 +121,47 @@ func loadDeplDecl(fsys ffs.PathedFS, filePath string) (DeplDecl, error) {
 		return DeplDecl{}, errors.Wrap(err, "couldn't parse deployment declaration")
 	}
 	return declaration, nil
+}
+
+// FeatureFlags
+
+// With returns a copy of f with any additional flags found in the provided featureFlags. Any
+// elements of featureFlags which aren't among the allowed will added to both result and
+// unrecognized.
+func (f FeatureFlags) With(
+	featureFlags FeatureFlags, allowed FeatureFlags,
+) (result FeatureFlags, unrecognized FeatureFlags) {
+	existing := make(structures.Set[string])
+	existing.Add(f...)
+	allowedSet := make(structures.Set[string])
+	allowedSet.Add(allowed...)
+
+	result = slices.Clone(f)
+	unrecognized = make([]string, 0, len(featureFlags))
+	for _, featureFlag := range featureFlags {
+		if !allowedSet.Has(featureFlag) {
+			unrecognized = append(unrecognized, featureFlag)
+		}
+		if existing.Has(featureFlag) {
+			continue
+		}
+		result = append(result, featureFlag)
+		existing.Add(featureFlag) // don't add duplicates to the preexisting list
+	}
+	return result, unrecognized
+}
+
+// Without returns a copy of f excluding any flags found in the provided featureFlags.
+func (f FeatureFlags) Without(featureFlags FeatureFlags) (result FeatureFlags) {
+	exclude := make(structures.Set[string])
+	exclude.Add(featureFlags...)
+
+	result = make([]string, 0, len(f))
+	for _, featureFlag := range f {
+		if exclude.Has(featureFlag) {
+			continue
+		}
+		result = append(result, featureFlag)
+	}
+	return result
 }

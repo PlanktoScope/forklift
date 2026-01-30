@@ -176,7 +176,9 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -263,7 +265,9 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		// Note: we cannot guarantee that all requirements are cached, so we don't check their versions
 		// here; fcli.StagePallet will do those checks for us.
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -304,7 +308,9 @@ func applyAction(versions Versions) cli.ActionFunc {
 		}
 		// Note: we cannot guarantee that all requirements are cached, so we don't check their versions
 		// here; fcli.StagePallet will do those checks for us.
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 		workspace, err := fws.LoadWorkspace(c.String("workspace"))
@@ -352,7 +358,9 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -430,7 +438,9 @@ func addPltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -467,7 +477,9 @@ func delPltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
