@@ -18,61 +18,6 @@ import (
 	"github.com/forklift-run/forklift/internal/clients/git"
 )
 
-// Resolving version query
-
-func ResolveVersionQueryUsingRepo(
-	localPath, versionQuery string,
-) (l versioning.Lock, err error) {
-	if versionQuery == "" {
-		return l, errors.New("empty version queries are not yet supported")
-	}
-
-	gitRepo, err := git.Open(localPath)
-	if err != nil {
-		return l, errors.Wrapf(err, "couldn't open %s as a git repo", localPath)
-	}
-	commit, err := queryRefs(gitRepo, versionQuery)
-	if err != nil {
-		return l, err
-	}
-	if commit == "" {
-		commit, err = gitRepo.GetCommitFullHash(versionQuery)
-		if err != nil {
-			commit = ""
-		}
-	}
-	if commit == "" {
-		return l, errors.Errorf(
-			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
-		)
-	}
-	if l.Decl, err = forklift.LockCommit(gitRepo, commit); err != nil {
-		return l, err
-	}
-	if l.Version, err = l.Decl.Version(); err != nil {
-		return l, err
-	}
-	return l, nil
-}
-
-func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error) {
-	refs, err := gitRepo.Refs()
-	if err != nil {
-		return "", err
-	}
-	for _, ref := range refs {
-		if ref.Name().Short() != versionQuery {
-			continue
-		}
-
-		if ref.Type() != git.HashReference {
-			return "", errors.New("only hash references are supported")
-		}
-		return ref.Hash().String(), nil
-	}
-	return "", nil
-}
-
 // Resolving multiple version queries
 
 func ResolveQueriesUsingLocalMirrors(
@@ -174,7 +119,7 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 		req := fplt.GitRepoReq{
 			RequiredPath: gitRepoPath,
 		}
-		if req.VersionLock, err = ResolveVersionQueryUsingRepo(
+		if req.VersionLock, err = forklift.ResolveVersionQueryUsingRepo(
 			filepath.FromSlash(path.Join(mirrorsPath, gitRepoPath)), versionQuery,
 		); err != nil {
 			return nil, errors.Wrapf(

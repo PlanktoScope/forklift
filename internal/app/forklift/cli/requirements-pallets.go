@@ -1,6 +1,7 @@
 package cli
 
 import (
+	er "errors"
 	"fmt"
 	"io"
 	"maps"
@@ -127,6 +128,7 @@ func RemovePalletReqs(
 		)
 	}
 
+	errs := make([]error, 0)
 	IndentedFprintf(indent, os.Stderr, "Removing requirements from %s...\n", pallet.FS.Path())
 	for _, palletPath := range palletPaths {
 		if actualPalletPath, _, ok := strings.Cut(palletPath, "@"); ok {
@@ -137,48 +139,95 @@ func RemovePalletReqs(
 			)
 			palletPath = actualPalletPath
 		}
-		if !force && len(usedPalletReqs[palletPath]) > 0 {
-			return errors.Errorf(
-				"couldn't remove requirement for pallet %s because it's needed by file imports %+v; to "+
-					"skip this check, enable the --force flag",
-				palletPath, usedPalletReqs[palletPath],
-			)
+		usage := usedPalletReqs[palletPath]
+		if !force && len(usage.FileImports)+len(usage.Depls) > 0 {
+			if len(usage.FileImports) > 0 {
+				errs = append(errs, errors.Errorf(
+					"couldn't remove requirement for pallet %s because it's needed by file imports %+v; to "+
+						"skip this check, enable the --force flag",
+					palletPath, usage.FileImports,
+				))
+			}
+			if len(usage.Depls) > 0 {
+				errs = append(errs, errors.Errorf(
+					"couldn't remove requirement for pallet %s because it's needed by package deployments "+
+						"%+v; to skip this check, enable the --force flag",
+					palletPath, usage.Depls,
+				))
+			}
+			continue
 		}
 		if err = pallet.RemoveFSPalletReq(palletPath); err != nil {
-			return err
+			errs = append(errs, err)
+			continue
 		}
 	}
-	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the
-	// end?
-	return nil
+	return er.Join(errs...)
+}
+
+type palletUsage struct {
+	// The names of file imports which depend on the pallet
+	FileImports []string
+	// The paths of package deployments which depend on the pallet
+	Depls []string
 }
 
 func determineUsedPalletReqs(
 	indent int, pallet *fplt.FSPallet, force bool,
+) (map[string]palletUsage, error) {
+	usedPalletReqs := make(map[string]palletUsage)
+
+	usedByFileImports, err := determinePalletsRequiredByImports(indent, pallet, force)
+	if !force && err != nil {
+		return nil, err
+	}
+	for palletPath, fileImports := range usedByFileImports {
+		usage := usedPalletReqs[palletPath]
+		usage.FileImports = fileImports
+		usedPalletReqs[palletPath] = usage
+	}
+
+	usedByDepls, err := determinePalletsRequiredByDepls(indent, pallet, force)
+	if !force && err != nil {
+		return nil, err
+	}
+	for palletPath, fileImports := range usedByDepls {
+		usage := usedPalletReqs[palletPath]
+		usage.Depls = fileImports
+		usedPalletReqs[palletPath] = usage
+	}
+
+	return usedPalletReqs, nil
+}
+
+func determinePalletsRequiredByImports(
+	indent int, pallet *fplt.FSPallet, force bool,
 ) (map[string][]string, error) {
 	imports, err := pallet.LoadImports("**/*")
-	if err != nil {
-		err = errors.Wrap(err, "couldn't load import groups")
+	if err = errors.Wrap(err, "couldn't load import groups"); err != nil {
 		if !force {
 			return nil, err
 		}
 		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
 	}
+
 	usedPalletReqs := make(map[string][]string)
 	if len(imports) == 0 {
 		return usedPalletReqs, nil
 	}
 	palletReqsFS, err := pallet.GetPalletReqsFS()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
+	if err = errors.Wrap(err, "couldn't open directory for pallet requirements"); err != nil {
+		if !force {
+			return nil, err
+		}
+		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
 	}
 
 	for _, imp := range imports {
 		fsPalletReq, err := fplt.LoadFSPalletReqContaining(palletReqsFS, imp.Name)
 		if err != nil {
 			err = errors.Wrapf(
-				err, "couldn't find pallet requirement needed for import group %s of package %s",
-				imp.Name, imp.Name,
+				err, "couldn't find pallet requirement needed for import group %s", imp.Name,
 			)
 			if !force {
 				return nil, err
@@ -187,6 +236,41 @@ func determineUsedPalletReqs(
 		}
 		usedPalletReqs[fsPalletReq.Path()] = append(usedPalletReqs[fsPalletReq.Path()], imp.Name)
 	}
+
+	return usedPalletReqs, nil
+}
+
+func determinePalletsRequiredByDepls(
+	indent int, pallet *fplt.FSPallet, force bool,
+) (map[string][]string, error) {
+	depls, err := pallet.LoadDepls("**/*")
+	if err = errors.Wrap(err, "couldn't load package deployments"); err != nil {
+		if !force {
+			return nil, err
+		}
+		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
+	}
+
+	usedPalletReqs := make(map[string][]string)
+	if len(depls) == 0 {
+		return usedPalletReqs, nil
+	}
+
+	for _, depl := range depls {
+		pkgReq, err := pallet.LoadPkgReq(depl.Decl.Package)
+		if err != nil {
+			err = errors.Wrapf(
+				err, "couldn't find pallet requirement needed for deployment %s of package %s",
+				depl.Name, depl.Decl.Package,
+			)
+			if !force {
+				return nil, err
+			}
+			IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
+		}
+		usedPalletReqs[pkgReq.Pallet.Path()] = append(usedPalletReqs[pkgReq.Pallet.Path()], depl.Name)
+	}
+
 	return usedPalletReqs, nil
 }
 

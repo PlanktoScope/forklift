@@ -131,7 +131,7 @@ func ApplyNextOrCurrentBundle(
 			IndentedFprintln(
 				indent, os.Stderr,
 				"Failed to apply the fallback pallet bundle, even though it was successfully applied "+
-					"in the past! You may need to try resetting your host, with `forklift host rm`.",
+					"in the past! You may need to try resetting your host, with `forklift host del`.",
 			)
 			return applyErr
 		}

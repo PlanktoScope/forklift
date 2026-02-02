@@ -548,7 +548,7 @@ func resolveCurrentPalletVersion(
 		fcli.IndentedFprintln(
 			indent, os.Stderr, "Resolving current version query using local pallet instead...",
 		)
-		resolvedVersionLock, err := fcli.ResolveVersionQueryUsingRepo(
+		resolvedVersionLock, err := forklift.ResolveVersionQueryUsingRepo(
 			plt.FS.Path(), currentQuery.VersionQuery,
 		)
 		if err != nil {
