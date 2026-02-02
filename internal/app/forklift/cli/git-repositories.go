@@ -7,130 +7,22 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
-	"golang.org/x/mod/semver"
 
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/versioning"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	"github.com/forklift-run/forklift/internal/clients/git"
 )
-
-// Resolving version query
-
-func ResolveVersionQueryUsingRepo(
-	localPath, versionQuery string,
-) (lock forklift.VersionLock, err error) {
-	if versionQuery == "" {
-		return forklift.VersionLock{}, errors.New("empty version queries are not yet supported")
-	}
-
-	gitRepo, err := git.Open(localPath)
-	if err != nil {
-		return forklift.VersionLock{}, errors.Wrapf(err, "couldn't open %s as a git repo", localPath)
-	}
-	commit, err := queryRefs(gitRepo, versionQuery)
-	if err != nil {
-		return forklift.VersionLock{}, err
-	}
-	if commit == "" {
-		commit, err = gitRepo.GetCommitFullHash(versionQuery)
-		if err != nil {
-			commit = ""
-		}
-	}
-	if commit == "" {
-		return forklift.VersionLock{}, errors.Errorf(
-			"couldn't find matching commit for '%s' in %s", versionQuery, localPath,
-		)
-	}
-	if lock.Def, err = lockCommit(gitRepo, commit); err != nil {
-		return forklift.VersionLock{}, err
-	}
-	if lock.Version, err = lock.Def.Version(); err != nil {
-		return forklift.VersionLock{}, err
-	}
-	return lock, nil
-}
-
-func queryRefs(gitRepo *git.Repo, versionQuery string) (commit string, err error) {
-	refs, err := gitRepo.Refs()
-	if err != nil {
-		return "", err
-	}
-	for _, ref := range refs {
-		if ref.Name().Short() != versionQuery {
-			continue
-		}
-
-		if ref.Type() != git.HashReference {
-			return "", errors.New("only hash references are supported")
-		}
-		return ref.Hash().String(), nil
-	}
-	return "", nil
-}
-
-func lockCommit(gitRepo *git.Repo, commit string) (config forklift.VersionLockDef, err error) {
-	config.Commit = commit
-	if config.Timestamp, err = forklift.GetCommitTimestamp(gitRepo, config.Commit); err != nil {
-		return forklift.VersionLockDef{}, err
-	}
-
-	// Attempt to lock as a tagged version
-	tags, err := gitRepo.GetTagsAt(commit)
-	if err != nil {
-		return forklift.VersionLockDef{}, errors.Wrapf(err, "couldn't lookup tags matching %s", commit)
-	}
-	tags = filterTags(tags)
-	sort.Slice(tags, func(i, j int) bool {
-		return semver.Compare(tags[i].Name, tags[j].Name) > 0
-	})
-	if len(tags) > 0 {
-		config.Tag = tags[0].Name
-		config.Type = forklift.LockTypeVersion
-		return config, nil
-	}
-
-	// Lock as a pseudoversion
-	config.Type = forklift.LockTypePseudoversion
-	ancestralTags, err := gitRepo.GetAncestralTags(commit)
-	if err != nil {
-		return forklift.VersionLockDef{}, errors.Wrapf(
-			err, "couldn't determine tagged ancestors of %s", commit,
-		)
-	}
-	ancestralTags = filterTags(ancestralTags)
-	sort.Slice(ancestralTags, func(i, j int) bool {
-		return semver.Compare(ancestralTags[i].Name, ancestralTags[j].Name) > 0
-	})
-	if len(ancestralTags) > 0 {
-		config.Tag = ancestralTags[0].Name
-	}
-	return config, nil
-}
-
-type nameGetter interface {
-	GetName() string
-}
-
-func filterTags[T nameGetter](tags []T) []T {
-	filtered := make([]T, 0, len(tags))
-	for _, tag := range tags {
-		if !semver.IsValid(tag.GetName()) {
-			continue
-		}
-		filtered = append(filtered, tag)
-	}
-	return filtered
-}
 
 // Resolving multiple version queries
 
 func ResolveQueriesUsingLocalMirrors(
 	indent int, mirrorsPath string, queries []string, updateLocalMirror bool,
-) (resolved map[string]forklift.GitRepoReq, err error) {
+) (resolved map[string]fplt.GitRepoReq, err error) {
 	IndentedFprintln(
 		indent, os.Stderr, "Resolving version queries using local mirrors of remote Git repos...",
 	)
@@ -214,8 +106,8 @@ func updateLocalGitRepoMirror(indent int, remote, mirrorPath string) error {
 
 func resolveGitRepoQueriesUsingLocalMirrors(
 	indent int, queries []string, mirrorsPath string,
-) (resolved map[string]forklift.GitRepoReq, err error) {
-	resolved = make(map[string]forklift.GitRepoReq)
+) (resolved map[string]fplt.GitRepoReq, err error) {
+	resolved = make(map[string]fplt.GitRepoReq)
 	for _, query := range queries {
 		if _, ok := resolved[query]; ok {
 			continue
@@ -224,10 +116,10 @@ func resolveGitRepoQueriesUsingLocalMirrors(
 		if !ok {
 			return nil, errors.Errorf("couldn't parse '%s' as git_repo_path@version", query)
 		}
-		req := forklift.GitRepoReq{
+		req := fplt.GitRepoReq{
 			RequiredPath: gitRepoPath,
 		}
-		if req.VersionLock, err = ResolveVersionQueryUsingRepo(
+		if req.VersionLock, err = forklift.ResolveVersionQueryUsingRepo(
 			filepath.FromSlash(path.Join(mirrorsPath, gitRepoPath)), versionQuery,
 		); err != nil {
 			return nil, errors.Wrapf(
@@ -265,8 +157,8 @@ func performOptionalLocalMirrorsUpdate(indent int, queries []string, mirrorsPath
 
 func DownloadQueriedGitReposUsingLocalMirrors(
 	indent int, mirrorsPath, cachePath string, queries []string,
-) (resolved map[string]forklift.GitRepoReq, changed map[forklift.GitRepoReq]bool, err error) {
-	if err = validateGitRepoQueries(queries); err != nil {
+) (resolved map[string]fplt.GitRepoReq, changed map[fplt.GitRepoReq]bool, err error) {
+	if err = forklift.ValidateGitRepoQueries(queries); err != nil {
 		return nil, nil, errors.Wrap(err, "one or more arguments is invalid")
 	}
 	if resolved, err = ResolveQueriesUsingLocalMirrors(
@@ -275,7 +167,7 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 		return nil, nil, err
 	}
 
-	changed = make(map[forklift.GitRepoReq]bool)
+	changed = make(map[fplt.GitRepoReq]bool)
 	for _, req := range resolved {
 		downloaded, err := cloneLockedGitRepoFromLocalMirror(
 			indent, cachePath, mirrorsPath, req.Path(), req.VersionLock,
@@ -283,7 +175,7 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 		if err != nil {
 			return resolved, nil, errors.Wrapf(
 				err, "couldn't download %s@%s as commit %s",
-				req.Path(), req.VersionLock.Version, req.VersionLock.Def.ShortCommit(),
+				req.Path(), req.VersionLock.Version, req.VersionLock.Decl.ShortCommit(),
 			)
 		}
 		if !downloaded {
@@ -297,22 +189,10 @@ func DownloadQueriedGitReposUsingLocalMirrors(
 	return resolved, changed, nil
 }
 
-func validateGitRepoQueries(queries []string) error {
-	if len(queries) == 0 {
-		return errors.Errorf("at least one query must be specified")
-	}
-	for _, query := range queries {
-		if _, _, ok := strings.Cut(query, "@"); !ok {
-			return errors.Errorf("couldn't parse query '%s' as path@version", query)
-		}
-	}
-	return nil
-}
-
 func DownloadLockedGitRepoUsingLocalMirror(
-	indent int, mirrorsPath, cachePath, gitRepoPath string, lock forklift.VersionLock,
+	indent int, mirrorsPath, cachePath, gitRepoPath string, lock versioning.Lock,
 ) (downloaded bool, err error) {
-	if err := forklift.EnsureExists(mirrorsPath); err != nil {
+	if err := ffs.EnsureExists(mirrorsPath); err != nil {
 		return false, errors.Wrap(err, "couldn't ensure existence of mirrors cache")
 	}
 	mirrorPath := filepath.Join(filepath.FromSlash(mirrorsPath), gitRepoPath)
@@ -346,9 +226,9 @@ func DownloadLockedGitRepoUsingLocalMirror(
 }
 
 func cloneLockedGitRepoFromLocalMirror(
-	indent int, cachePath, mirrorsPath, gitRepoPath string, lock forklift.VersionLock,
+	indent int, cachePath, mirrorsPath, gitRepoPath string, lock versioning.Lock,
 ) (downloaded bool, err error) {
-	if !lock.Def.IsCommitLocked() {
+	if !lock.Decl.IsCommitLocked() {
 		return false, errors.Errorf(
 			"the version lock definition for Git repo %s has no commit lock", gitRepoPath,
 		)
@@ -357,7 +237,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	gitRepoCachePath := filepath.FromSlash(path.Join(
 		cachePath, fmt.Sprintf("%s@%s", gitRepoPath, version),
 	))
-	if forklift.DirExists(gitRepoCachePath) {
+	if ffs.DirExists(gitRepoCachePath) {
 		// TODO: perform a disk checksum
 		return false, nil
 	}
@@ -375,8 +255,8 @@ func cloneLockedGitRepoFromLocalMirror(
 	}
 
 	// Validate commit
-	shortCommit := lock.Def.ShortCommit()
-	if err = validateCommit(lock, gitRepo); err != nil {
+	shortCommit := lock.Decl.ShortCommit()
+	if err = forklift.ValidateCommit(lock, gitRepo); err != nil {
 		// TODO: this should instead be a Clear method on a WritableFS at that path
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
 			IndentedFprintf(
@@ -391,7 +271,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	}
 
 	// Checkout commit
-	if err = gitRepo.Checkout(lock.Def.Commit, ""); err != nil {
+	if err = gitRepo.Checkout(lock.Decl.Commit, ""); err != nil {
 		if cerr := os.RemoveAll(gitRepoCachePath); cerr != nil {
 			IndentedFprintf(
 				indent, os.Stderr, "Error: couldn't clean up %s! You'll need to delete it yourself.\n",
@@ -406,34 +286,7 @@ func cloneLockedGitRepoFromLocalMirror(
 	return true, nil
 }
 
-func validateCommit(versionLock forklift.VersionLock, gitRepo *git.Repo) error {
-	// Check commit time
-	commitTimestamp, err := forklift.GetCommitTimestamp(gitRepo, versionLock.Def.Commit)
-	if err != nil {
-		return err
-	}
-	versionedTimestamp := versionLock.Def.Timestamp
-	if commitTimestamp != versionedTimestamp {
-		return errors.Errorf(
-			"commit %s was made at %s, while the repo version lock definition expects it to have "+
-				"been made at %s",
-			versionLock.Def.ShortCommit(), commitTimestamp, versionedTimestamp,
-		)
-	}
-
-	// TODO: implement remaining checks specified in https://go.dev/ref/mod#pseudo-versions
-	// (if base version is specified, there must be a corresponding semantic version tag that is an
-	// ancestor of the revision described by the pseudo-version; and the revision must be an ancestor
-	// of one of the module repository's branches or tags)
-	return nil
-}
-
 // Cloning to local copy
-
-const (
-	OriginRemoteName              = "origin"
-	ForkliftCacheMirrorRemoteName = "forklift-cache-mirror"
-)
 
 func CloneQueriedGitRepoUsingLocalMirror(
 	indent int, mirrorsPath, gitRepoPath, versionQuery, destination string,
@@ -461,19 +314,19 @@ func CloneQueriedGitRepoUsingLocalMirror(
 			err, "couldn't clone git repo %s from %s to %s", gitRepoPath, mirrorCachePath, destination,
 		)
 	}
-	if err = gitRepo.MakeTrackingBranches(OriginRemoteName); err != nil {
+	if err = gitRepo.MakeTrackingBranches(forklift.OriginRemoteName); err != nil {
 		return errors.Wrapf(err, "couldn't set up local branches to track the remote")
 	}
 	if err = gitRepo.FetchAll(indent+1, os.Stdout); err != nil {
 		return errors.Wrapf(err, "couldn't fetch new local branches tracking the remote")
 	}
 	if err = gitRepo.SetRemoteURLs(
-		OriginRemoteName, []string{fmt.Sprintf("https://%s", gitRepoPath)},
+		forklift.OriginRemoteName, []string{fmt.Sprintf("https://%s", gitRepoPath)},
 	); err != nil {
 		return errors.Wrapf(err, "couldn't set the correct URL of the origin remote")
 	}
 	if err = gitRepo.CreateRemote(
-		ForkliftCacheMirrorRemoteName, []string{mirrorCachePath},
+		forklift.ForkliftCacheMirrorRemoteName, []string{mirrorCachePath},
 	); err != nil {
 		return errors.Wrapf(err, "couldn't add a remote for the local mirror")
 	}

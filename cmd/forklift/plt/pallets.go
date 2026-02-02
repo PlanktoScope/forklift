@@ -9,70 +9,74 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 	"github.com/forklift-run/forklift/internal/clients/git"
 )
 
 type workspaceCaches struct {
-	m *forklift.FSMirrorCache
-	p *forklift.FSPalletCache
-	r *forklift.LayeredRepoCache
-	d *forklift.FSDownloadCache
+	m  *caching.FSMirrorCache
+	p  *caching.FSPalletCache
+	pp *caching.LayeredPalletCache
+	d  *caching.FSDownloadCache
 }
 
 func (c workspaceCaches) staging() fcli.StagingCaches {
 	return fcli.StagingCaches{
 		Mirrors:   c.m,
 		Pallets:   c.p,
-		Repos:     c.r,
 		Downloads: c.d,
 	}
 }
 
 type processingOptions struct {
 	requirePalletCache   bool
-	requireRepoCache     bool
 	requireDownloadCache bool
 	merge                bool
 }
 
 func processFullBaseArgs(
 	wpath string, opts processingOptions,
-) (plt *forklift.FSPallet, caches workspaceCaches, err error) {
+) (plt *fplt.FSPallet, caches workspaceCaches, err error) {
 	if plt, err = getShallowPallet(wpath); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	if caches.m, err = workspace.GetMirrorCache(); err != nil {
 		return nil, workspaceCaches{}, err
 	}
-	if caches.p, err = fcli.GetPalletCache(
+	if caches.p, err = forklift.GetPalletCache(
 		wpath, plt, opts.requirePalletCache || opts.merge,
 	); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	if opts.merge {
-		if plt, err = forklift.MergeFSPallet(plt, caches.p, nil); err != nil {
+		if plt, err = fplt.MergeFSPallet(plt, caches.p, nil); err != nil {
 			return nil, workspaceCaches{}, errors.Wrap(
 				err, "couldn't merge local pallet with file imports from any pallets required by it",
 			)
 		}
 	}
-	if caches.r, _, err = fcli.GetRepoCache(wpath, plt, opts.requireRepoCache); err != nil {
-		return nil, workspaceCaches{}, err
+	if caches.pp, err = forklift.MakeOverlayCache(plt, caches.p); err != nil {
+		return nil, workspaceCaches{}, errors.Wrap(
+			err, "couldn't make overlay of local pallet with pallet cache",
+		)
 	}
-	if caches.d, err = fcli.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
+	if caches.d, err = forklift.GetDownloadCache(wpath, opts.requireDownloadCache); err != nil {
 		return nil, workspaceCaches{}, err
 	}
 	return plt, caches, nil
 }
 
-func getShallowPallet(wpath string) (plt *forklift.FSPallet, err error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
+func getShallowPallet(wpath string) (plt *fplt.FSPallet, err error) {
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
@@ -93,12 +97,14 @@ func cacheAllAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
 		if err = fcli.CacheAllReqs(
-			0, plt, caches.m, caches.p, caches.r, caches.d,
+			0, plt, caches.m, caches.p, caches.d,
 			c.String("platform"), c.Bool("include-disabled"), c.Bool("parallel"),
 		); err != nil {
 			return err
@@ -125,7 +131,7 @@ func switchAction(versions Versions) cli.ActionFunc {
 		if err = checkPalletDirtiness(workspace, c.Bool("force")); err != nil {
 			return err
 		}
-		if forklift.DirExists(workspace.GetCurrentPalletPath()) {
+		if ffs.DirExists(workspace.GetCurrentPalletPath()) {
 			fmt.Fprintf(os.Stderr, "Deleting the local pallet to replace it with %s...", query)
 			fmt.Fprintln(os.Stderr)
 		}
@@ -150,29 +156,29 @@ func switchAction(versions Versions) cli.ActionFunc {
 	}
 }
 
-func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
-	if !forklift.DirExists(wpath) {
+func ensureWorkspace(wpath string) (*fws.FSWorkspace, error) {
+	if !ffs.DirExists(wpath) {
 		fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 	}
-	if err := forklift.EnsureExists(wpath); err != nil {
+	if err := ffs.EnsureExists(wpath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
-	if err = forklift.EnsureExists(workspace.GetDataPath()); err != nil {
+	if err = ffs.EnsureExists(workspace.GetDataPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
 	}
 	return workspace, nil
 }
 
 func handlePalletQuery(
-	workspace *forklift.FSWorkspace, providedQuery string, commitPalletQuery bool,
-) (forklift.GitRepoQuery, error) {
+	workspace *fws.FSWorkspace, providedQuery string, commitPalletQuery bool,
+) (fws.GitRepoQuery, error) {
 	query, loaded, provided, err := completePalletQuery(workspace, providedQuery)
 	if err != nil {
-		return forklift.GitRepoQuery{}, errors.Wrapf(
+		return fws.GitRepoQuery{}, errors.Wrapf(
 			err, "couldn't complete provided version query %s", providedQuery,
 		)
 	}
@@ -201,7 +207,7 @@ func handlePalletQuery(
 		return query, nil
 	}
 
-	if loaded == (forklift.GitRepoQuery{}) {
+	if loaded == (fws.GitRepoQuery{}) {
 		fmt.Fprintf(
 			os.Stderr,
 			"Initializing the tracked path & version query for the current pallet as %s...\n", query,
@@ -221,28 +227,28 @@ func handlePalletQuery(
 }
 
 func completePalletQuery(
-	workspace *forklift.FSWorkspace, providedQuery string,
-) (query, loaded, provided forklift.GitRepoQuery, err error) {
+	workspace *fws.FSWorkspace, providedQuery string,
+) (query, loaded, provided fws.GitRepoQuery, err error) {
 	if providedQuery == "" {
 		providedQuery = "@"
 	}
 	pltPath, versionQuery, ok := strings.Cut(providedQuery, "@")
 	if !ok {
-		return forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, errors.Errorf(
+		return fws.GitRepoQuery{}, fws.GitRepoQuery{}, fws.GitRepoQuery{}, errors.Errorf(
 			"couldn't parse '%s' as [pallet_path]@[version_query]", providedQuery,
 		)
 	}
-	provided = forklift.GitRepoQuery{
+	provided = fws.GitRepoQuery{
 		Path:         pltPath,
 		VersionQuery: versionQuery,
 	}
 	if loaded, err = workspace.GetCurrentPalletUpgrades(); err != nil {
 		if !provided.Complete() {
-			return forklift.GitRepoQuery{}, forklift.GitRepoQuery{}, provided, errors.Wrap(
+			return fws.GitRepoQuery{}, fws.GitRepoQuery{}, provided, errors.Wrap(
 				err, "couldn't load stored query for the current pallet",
 			)
 		}
-		loaded = forklift.GitRepoQuery{}
+		loaded = fws.GitRepoQuery{}
 	}
 	query = loaded.Overlay(provided)
 
@@ -265,9 +271,9 @@ const (
 	evenThoughSnippet   = "we will delete and replace the local pallet even though"
 )
 
-func checkPalletDirtiness(workspace *forklift.FSWorkspace, force bool) error {
+func checkPalletDirtiness(workspace *fws.FSWorkspace, force bool) error {
 	pltPath := workspace.GetCurrentPalletPath()
-	if !forklift.DirExists(pltPath) {
+	if !ffs.DirExists(pltPath) {
 		return nil
 	}
 
@@ -365,7 +371,7 @@ func getRemoteRefs(indent int, gitRepo *git.Repo) ([]*plumbing.Reference, error)
 	refs := make([]*plumbing.Reference, 0)
 	queryCacheMirrorRemote := false
 	for _, remote := range remotes {
-		if remote.Config().Name == fcli.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
+		if remote.Config().Name == forklift.ForkliftCacheMirrorRemoteName && !queryCacheMirrorRemote {
 			fcli.IndentedFprintf(
 				indent, os.Stderr,
 				"Skipped remote %s, because remote origin's references were successfully retrieved!\n",
@@ -379,7 +385,7 @@ func getRemoteRefs(indent int, gitRepo *git.Repo) ([]*plumbing.Reference, error)
 			fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrapf(
 				err, "couldn't retrieve references for remote %s", remote.Config().Name,
 			))
-			if remote.Config().Name == fcli.OriginRemoteName {
+			if remote.Config().Name == forklift.OriginRemoteName {
 				queryCacheMirrorRemote = true
 			}
 			continue
@@ -398,7 +404,7 @@ func getRemoteRefs(indent int, gitRepo *git.Repo) ([]*plumbing.Reference, error)
 }
 
 func preparePallet(
-	workspace *forklift.FSWorkspace, gitRepoQuery forklift.GitRepoQuery,
+	workspace *fws.FSWorkspace, gitRepoQuery fws.GitRepoQuery,
 	updateLocalMirror, cacheStagingReqs bool, platform string, parallel, ignoreToolVersion bool,
 	versions Versions,
 ) error {
@@ -416,7 +422,7 @@ func preparePallet(
 		return err
 	}
 
-	if err = fcli.CheckPltCompat(plt, versions.Core(), ignoreToolVersion); err != nil {
+	if err = fcli.CheckPltShallowCompat(plt, versions.Core(), ignoreToolVersion); err != nil {
 		return err
 	}
 
@@ -424,7 +430,7 @@ func preparePallet(
 	if cacheStagingReqs {
 		fmt.Fprintln(os.Stderr)
 		if _, _, err = fcli.CacheStagingReqs(
-			0, plt, caches.m, caches.p, caches.r, caches.d, platform, false, parallel,
+			0, plt, caches.m, caches.p, caches.d, platform, false, parallel,
 		); err != nil {
 			return err
 		}
@@ -476,7 +482,7 @@ func upgradeAction(versions Versions) cli.ActionFunc {
 }
 
 func checkUpgrade(
-	indent int, workspace *forklift.FSWorkspace, upgradeQuery forklift.GitRepoQuery,
+	indent int, workspace *fws.FSWorkspace, upgradeQuery fws.GitRepoQuery,
 	allowDowngrade bool,
 ) error {
 	fcli.IndentedFprintln(indent, os.Stderr, "Resolving upgrade version query...")
@@ -489,7 +495,7 @@ func checkUpgrade(
 
 	currentResolved, err := resolveCurrentPalletVersion(indent, workspace)
 	if err != nil {
-		currentResolved = forklift.GitRepoReq{}
+		currentResolved = fplt.GitRepoReq{}
 		fcli.IndentedFprintf(indent, os.Stderr, "Warning: %s\n", errors.Wrap(
 			err,
 			"we couldn't determine & resolve the current version of the local pallet, so any change "+
@@ -505,26 +511,26 @@ func checkUpgrade(
 }
 
 func resolveCurrentPalletVersion(
-	indent int, workspace *forklift.FSWorkspace,
-) (resolved forklift.GitRepoReq, err error) {
+	indent int, workspace *fws.FSWorkspace,
+) (resolved fplt.GitRepoReq, err error) {
 	// Inspect the current plt
 	plt, err := workspace.GetCurrentPallet()
 	if err != nil {
-		return forklift.GitRepoReq{}, errors.Wrap(err, "couldn't load local pallet from workspace")
+		return fplt.GitRepoReq{}, errors.Wrap(err, "couldn't load local pallet from workspace")
 	}
 	ref, err := git.Head(plt.FS.Path())
 	if err != nil {
-		return forklift.GitRepoReq{}, errors.Wrap(
+		return fplt.GitRepoReq{}, errors.Wrap(
 			err, "couldn't determine current commit of local pallet",
 		)
 	}
-	currentQuery := forklift.GitRepoQuery{
-		Path:         plt.Def.Pallet.Path,
+	currentQuery := fws.GitRepoQuery{
+		Path:         plt.Decl.Pallet.Path,
 		VersionQuery: ref.Hash().String(),
 	}
 	fcli.IndentedFprintf(
 		indent, os.Stderr,
-		"Local pallet currently is %s at %s\n", plt.Def.Pallet.Path, git.StringifyRef(ref),
+		"Local pallet currently is %s at %s\n", plt.Decl.Pallet.Path, git.StringifyRef(ref),
 	)
 	indent++
 	fcli.IndentedFprintln(indent, os.Stderr, "Resolving current version query...")
@@ -542,21 +548,21 @@ func resolveCurrentPalletVersion(
 		fcli.IndentedFprintln(
 			indent, os.Stderr, "Resolving current version query using local pallet instead...",
 		)
-		resolvedVersionLock, err := fcli.ResolveVersionQueryUsingRepo(
+		resolvedVersionLock, err := forklift.ResolveVersionQueryUsingRepo(
 			plt.FS.Path(), currentQuery.VersionQuery,
 		)
 		if err != nil {
-			return forklift.GitRepoReq{}, errors.Wrap(
+			return fplt.GitRepoReq{}, errors.Wrap(
 				err, "couldn't resolve current version query from the local pallet",
 			)
 		}
 
 		fcli.IndentedFprintf(
 			indent, os.Stderr, "Resolved %s as %s@%s",
-			currentQuery.String(), plt.Def.Pallet.Path, resolvedVersionLock.Version,
+			currentQuery.String(), plt.Decl.Pallet.Path, resolvedVersionLock.Version,
 		)
-		return forklift.GitRepoReq{
-			RequiredPath: plt.Def.Pallet.Path,
+		return fplt.GitRepoReq{
+			RequiredPath: plt.Decl.Pallet.Path,
 			VersionLock:  resolvedVersionLock,
 		}, nil
 	}
@@ -564,11 +570,11 @@ func resolveCurrentPalletVersion(
 	return currentResolved[currentQuery.String()], nil
 }
 
-func printUpgrade(indent int, current, upgrade forklift.GitRepoReq, allowDowngrade bool) error {
+func printUpgrade(indent int, current, upgrade fplt.GitRepoReq, allowDowngrade bool) error {
 	if current == upgrade {
 		return errors.New("no upgrade found")
 	}
-	if current == (forklift.GitRepoReq{}) {
+	if current == (fplt.GitRepoReq{}) {
 		if !allowDowngrade {
 			return errors.Errorf(
 				"upgrade/downgrade available to %s, but we couldn't determine whether the change is a "+
@@ -728,7 +734,7 @@ func cloneAction(versions Versions) cli.ActionFunc {
 // fetch
 
 func fetchAction(c *cli.Context) error {
-	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+	workspace, err := fws.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return err
 	}
@@ -751,7 +757,7 @@ func fetchAction(c *cli.Context) error {
 
 func pullAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
@@ -775,13 +781,15 @@ func pullAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
 		if c.Bool("cache-req") {
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d,
+				0, plt, caches.m, caches.p, caches.d,
 				c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
@@ -803,7 +811,7 @@ func pullAction(versions Versions) cli.ActionFunc {
 // del
 
 func delAction(c *cli.Context) error {
-	workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+	workspace, err := fws.LoadWorkspace(c.String("workspace"))
 	if err != nil {
 		return err
 	}
@@ -831,19 +839,18 @@ func checkAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
 			requirePalletCache: true,
-			requireRepoCache:   true,
 			merge:              true,
 		})
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err := fcli.Check(0, plt, caches.r); err != nil {
+		if _, _, err := fcli.Check(0, plt, caches.pp); err != nil {
 			return err
 		}
 		return nil
@@ -856,19 +863,18 @@ func planAction(versions Versions) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		plt, caches, err := processFullBaseArgs(c.String("workspace"), processingOptions{
 			requirePalletCache: true,
-			requireRepoCache:   true,
 			merge:              true,
 		})
 		if err != nil {
 			return err
 		}
 		if err = fcli.CheckDeepCompat(
-			plt, caches.p, caches.r, versions.Core(), c.Bool("ignore-tool-version"),
+			plt, caches.p, versions.Core(), c.Bool("ignore-tool-version"),
 		); err != nil {
 			return err
 		}
 
-		if _, _, err = fcli.Plan(0, plt, caches.r, c.Bool("parallel")); err != nil {
+		if _, _, err = fcli.Plan(0, plt, caches.pp, c.Bool("parallel")); err != nil {
 			return errors.Wrap(
 				err, "couldn't deploy local pallet (have you run `forklift plt cache` recently?)",
 			)
@@ -887,15 +893,17 @@ func stageAction(versions Versions) cli.ActionFunc {
 		}
 		// Note: we cannot guarantee that all requirements are cached, so we don't check their versions
 		// here; fcli.StagePallet will do those checks for us.
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
-		stageStore, err := fcli.GetStageStore(
+		stageStore, err := forklift.GetStageStore(
 			workspace, c.String("stage-store"), versions.NewStageStore,
 		)
 		if err != nil {
@@ -927,15 +935,17 @@ func applyAction(versions Versions) cli.ActionFunc {
 		}
 		// Note: we cannot guarantee that all requirements are cached, so we don't check their versions
 		// here; fcli.StagePallet will do those checks for us.
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
 
-		stageStore, err := fcli.GetStageStore(
+		stageStore, err := forklift.GetStageStore(
 			workspace, c.String("stage-store"), versions.NewStageStore,
 		)
 		if err != nil {
@@ -970,12 +980,14 @@ func cachePltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
 
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -1046,12 +1058,14 @@ func addPltAction(versions Versions) cli.ActionFunc {
 		if err != nil {
 			return err
 		}
-		workspace, err := forklift.LoadWorkspace(c.String("workspace"))
+		workspace, err := fws.LoadWorkspace(c.String("workspace"))
 		if err != nil {
 			return err
 		}
 
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -1066,8 +1080,7 @@ func addPltAction(versions Versions) cli.ActionFunc {
 				return err
 			}
 			if _, _, err = fcli.CacheStagingReqs(
-				0, plt, caches.m, caches.p, caches.r, caches.d,
-				c.String("platform"), false, c.Bool("parallel"),
+				0, plt, caches.m, caches.p, caches.d, c.String("platform"), false, c.Bool("parallel"),
 			); err != nil {
 				return err
 			}
@@ -1087,7 +1100,9 @@ func delPltAction(versions Versions) cli.ActionFunc {
 			return err
 		}
 
-		if err = fcli.CheckPltCompat(plt, versions.Core(), c.Bool("ignore-tool-version")); err != nil {
+		if err = fcli.CheckPltShallowCompat(
+			plt, versions.Core(), c.Bool("ignore-tool-version"),
+		); err != nil {
 			return err
 		}
 
@@ -1107,7 +1122,7 @@ func lsPltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -1116,7 +1131,7 @@ func lsPltFileAction(c *cli.Context) error {
 		// Exclude hidden directories such as `.git`
 		filter = "{*,[^.]*/**}"
 	}
-	paths, err := fcli.ListPalletFiles(plt, filter)
+	paths, err := forklift.ListPalletFiles(plt, filter)
 	if err != nil {
 		return err
 	}
@@ -1134,11 +1149,11 @@ func locatePltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
-	location, err := fcli.GetFileLocation(plt, c.Args().Get(1))
+	location, err := forklift.GetFileLocation(plt, c.Args().Get(1))
 	if err != nil {
 		return err
 	}
@@ -1154,7 +1169,7 @@ func showPltFileAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -1169,7 +1184,7 @@ func lsPltFeatAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}
@@ -1184,7 +1199,7 @@ func showPltFeatAction(c *cli.Context) error {
 		return err
 	}
 
-	plt, err = fcli.GetRequiredPallet(plt, caches.p, c.Args().First())
+	plt, err = forklift.GetRequiredPallet(plt, caches.p, c.Args().First())
 	if err != nil {
 		return nil
 	}

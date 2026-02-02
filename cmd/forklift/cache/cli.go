@@ -7,7 +7,7 @@ import (
 
 var Cmd = &cli.Command{
 	Name:  "cache",
-	Usage: "Manages the local cache of repos and packages",
+	Usage: "Manages the local cache of pallets and downloads",
 	Subcommands: []*cli.Command{
 		{
 			Name:     "ls-plt",
@@ -25,25 +25,10 @@ var Cmd = &cli.Command{
 			Action:    showPltAction,
 		},
 		{
-			Name:     "ls-repo",
-			Aliases:  []string{"list-repositories"},
-			Category: "Query the cache",
-			Usage:    "Lists cached repos",
-			Action:   lsRepoAction,
-		},
-		{
-			Name:      "show-repo",
-			Aliases:   []string{"show-repository"},
-			Category:  "Query the cache",
-			Usage:     "Describes a cached repo",
-			ArgsUsage: "repo_path@version",
-			Action:    showRepoAction,
-		},
-		{
 			Name:     "ls-pkg",
 			Aliases:  []string{"list-packages"},
 			Category: "Query the cache",
-			Usage:    "Lists packages offered by cached repos",
+			Usage:    "Lists packages offered by cached pallets",
 			// TODO: allow only listing packages matching a glob pattern
 			Action: lsPkgAction,
 		},
@@ -87,14 +72,6 @@ var Cmd = &cli.Command{
 			Action:    addGitRepoAction(getPalletCache),
 		},
 		{
-			Name:      "add-repo",
-			Aliases:   []string{"add-repositories"},
-			Category:  "Modify the cache",
-			Usage:     "Downloads local copies of repos from remote releases",
-			ArgsUsage: "[repo_path@release]...",
-			Action:    addGitRepoAction(getRepoCache),
-		},
-		{
 			Name:     "del-all",
 			Aliases:  []string{"delete-all"},
 			Category: "Modify the cache",
@@ -116,14 +93,6 @@ var Cmd = &cli.Command{
 			Usage:    "Removes locally-cached pallets",
 			// TODO: allow only removing pallets matching a glob pattern
 			Action: delGitRepoAction("pallet", getPalletCache),
-		},
-		{
-			Name:     "del-repo",
-			Aliases:  []string{"delete-repositories"},
-			Category: "Modify the cache",
-			Usage:    "Removes locally-cached repos",
-			// TODO: allow only removing repos matching a glob pattern
-			Action: delGitRepoAction("repo", getRepoCache),
 		},
 		{
 			Name:     "del-dl",

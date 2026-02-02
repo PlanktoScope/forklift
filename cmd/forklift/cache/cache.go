@@ -10,25 +10,27 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	"github.com/forklift-run/forklift/internal/clients/docker"
 )
 
 var errMissingCache = errors.New(
-	"you first need to cache the repos specified by your pallet with " +
-		"`forklift plt cache-repo`",
+	"you first need to cache the pallets specified by your pallet with " +
+		"`forklift plt cache-pallet`",
 )
 
-func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache, error) {
+func getMirrorCache(wpath string, ensureWorkspace bool) (*caching.FSMirrorCache, error) {
 	if ensureWorkspace {
-		if !forklift.DirExists(wpath) {
+		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 		}
-		if err := forklift.EnsureExists(wpath); err != nil {
+		if err := ffs.EnsureExists(wpath); err != nil {
 			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
@@ -39,40 +41,20 @@ func getMirrorCache(wpath string, ensureWorkspace bool) (*forklift.FSMirrorCache
 	return cache, nil
 }
 
-func getPalletCache(wpath string, ensureWorkspace bool) (*forklift.FSPalletCache, error) {
+func getPalletCache(wpath string, ensureWorkspace bool) (*caching.FSPalletCache, error) {
 	if ensureWorkspace {
-		if !forklift.DirExists(wpath) {
+		if !ffs.DirExists(wpath) {
 			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 		}
-		if err := forklift.EnsureExists(wpath); err != nil {
+		if err := ffs.EnsureExists(wpath); err != nil {
 			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 		}
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
 	cache, err := workspace.GetPalletCache()
-	if err != nil {
-		return nil, err
-	}
-	return cache, nil
-}
-
-func getRepoCache(wpath string, ensureWorkspace bool) (*forklift.FSRepoCache, error) {
-	if ensureWorkspace {
-		if !forklift.DirExists(wpath) {
-			fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
-		}
-		if err := forklift.EnsureExists(wpath); err != nil {
-			return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
-		}
-	}
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return nil, err
-	}
-	cache, err := workspace.GetRepoCache()
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +69,6 @@ func delAllAction(c *cli.Context) error {
 	}
 	if err := delGitRepoAction("pallet", getPalletCache)(c); err != nil {
 		return errors.Wrap(err, "couldn't remove cached pallets")
-	}
-	if err := delGitRepoAction("repo", getRepoCache)(c); err != nil {
-		return errors.Wrap(err, "couldn't remove cached repositories")
 	}
 
 	if err := delImgAction(c); err != nil {

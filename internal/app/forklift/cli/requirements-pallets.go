@@ -1,83 +1,32 @@
 package cli
 
 import (
+	er "errors"
 	"fmt"
 	"io"
 	"maps"
 	"os"
-	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
 
+	"github.com/forklift-run/forklift/exp/caching"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	"github.com/forklift-run/forklift/exp/structures"
 	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
-	"github.com/forklift-run/forklift/pkg/structures"
 )
-
-func GetPalletCache(
-	wpath string, pallet *forklift.FSPallet, requireCache bool,
-) (*forklift.FSPalletCache, error) {
-	workspace, err := forklift.LoadWorkspace(wpath)
-	if err != nil {
-		return nil, err
-	}
-	cache, err := workspace.GetPalletCache()
-	if err != nil {
-		return nil, err
-	}
-
-	if requireCache && !cache.Exists() && pallet != nil {
-		palletReqs, err := pallet.LoadFSPalletReqs("**")
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't check whether the pallet requires any pallets")
-		}
-		if len(palletReqs) > 0 {
-			return nil, errors.New("you first need to cache the pallets specified by your pallet")
-		}
-	}
-	return cache, nil
-}
-
-func GetRequiredPallet(
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
-) (*forklift.FSPallet, error) {
-	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't load pallet version lock definition %s from pallet %s",
-			requiredPalletPath, pallet.Path(),
-		)
-	}
-	version := req.VersionLock.Version
-	cachedPallet, err := cache.LoadFSPallet(requiredPalletPath, version)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't find pallet %s@%s in cache, please update the local cache of pallets",
-			requiredPalletPath, version,
-		)
-	}
-	mergedPallet, err := forklift.MergeFSPallet(cachedPallet, cache, nil)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "couldn't merge pallet %s with file imports from any pallets required by it",
-			cachedPallet.Path(),
-		)
-	}
-	return mergedPallet, nil
-}
 
 // Printing
 
-func FprintRequiredPallets(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func FprintRequiredPallets(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	loadedPallets, err := pallet.LoadFSPalletReqs("**")
 	if err != nil {
 		return errors.Wrapf(err, "couldn't identify pallets")
 	}
-	slices.SortFunc(loadedPallets, func(a, b *forklift.FSPalletReq) int {
-		return forklift.CompareGitRepoReqs(a.PalletReq.GitRepoReq, b.PalletReq.GitRepoReq)
+	slices.SortFunc(loadedPallets, func(a, b *fplt.FSPalletReq) int {
+		return fplt.CompareGitRepoReqs(a.PalletReq.GitRepoReq, b.PalletReq.GitRepoReq)
 	})
 	for _, pallet := range loadedPallets {
 		IndentedFprintf(indent, out, "%s\n", pallet.Path())
@@ -87,7 +36,7 @@ func FprintRequiredPallets(indent int, out io.Writer, pallet *forklift.FSPallet)
 
 func FprintRequiredPalletInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, requiredPalletPath string,
 ) error {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -108,7 +57,7 @@ func FprintRequiredPalletInfo(
 		)
 	}
 	// We must merge the required pallet to get an accurate list of its deployments & packages:
-	mergedPallet, err := forklift.MergeFSPallet(cachedPallet, cache, nil)
+	mergedPallet, err := fplt.MergeFSPallet(cachedPallet, cache, nil)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't merge pallet %s with file imports from any pallets required by it",
@@ -118,7 +67,7 @@ func FprintRequiredPalletInfo(
 	return FprintCachedPallet(indent, out, cache, mergedPallet, false)
 }
 
-func fprintPalletReq(indent int, out io.Writer, req forklift.PalletReq) {
+func fprintPalletReq(indent int, out io.Writer, req fplt.PalletReq) {
 	IndentedFprintf(indent, out, "Pallet: %s\n", req.Path())
 	indent++
 	IndentedFprintf(indent, out, "Locked pallet version: %s\n", req.VersionLock.Version)
@@ -126,7 +75,7 @@ func fprintPalletReq(indent int, out io.Writer, req forklift.PalletReq) {
 
 func FprintRequiredPalletVersion(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, requiredPalletPath string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, requiredPalletPath string,
 ) error {
 	req, err := pallet.LoadFSPalletReq(requiredPalletPath)
 	if err != nil {
@@ -142,9 +91,9 @@ func FprintRequiredPalletVersion(
 // Add
 
 func AddPalletReqs(
-	indent int, pallet *forklift.FSPallet, mirrorsPath string, palletQueries []string,
+	indent int, pallet *fplt.FSPallet, mirrorsPath string, palletQueries []string,
 ) error {
-	if err := validateGitRepoQueries(palletQueries); err != nil {
+	if err := forklift.ValidateGitRepoQueries(palletQueries); err != nil {
 		return errors.Wrap(err, "one or more pallet queries is invalid")
 	}
 	resolved, err := ResolveQueriesUsingLocalMirrors(0, mirrorsPath, palletQueries, true)
@@ -158,13 +107,8 @@ func AddPalletReqs(
 		if !ok {
 			return errors.Errorf("couldn't find configuration for %s", palletQuery)
 		}
-		reqsPalletsFS, err := pallet.GetPalletReqsFS()
-		if err != nil {
+		if err = pallet.WriteFSPalletReq(req); err != nil {
 			return err
-		}
-		palletReqPath := path.Join(reqsPalletsFS.Path(), req.Path(), forklift.VersionLockDefFile)
-		if err = writeVersionLock(req.VersionLock, palletReqPath); err != nil {
-			return errors.Wrapf(err, "couldn't write version lock for pallet requirement")
 		}
 	}
 	return nil
@@ -173,7 +117,7 @@ func AddPalletReqs(
 // Remove
 
 func RemovePalletReqs(
-	indent int, pallet *forklift.FSPallet, palletPaths []string, force bool,
+	indent int, pallet *fplt.FSPallet, palletPaths []string, force bool,
 ) error {
 	usedPalletReqs, err := determineUsedPalletReqs(indent, pallet, force)
 	if err != nil {
@@ -184,6 +128,7 @@ func RemovePalletReqs(
 		)
 	}
 
+	errs := make([]error, 0)
 	IndentedFprintf(indent, os.Stderr, "Removing requirements from %s...\n", pallet.FS.Path())
 	for _, palletPath := range palletPaths {
 		if actualPalletPath, _, ok := strings.Cut(palletPath, "@"); ok {
@@ -194,57 +139,95 @@ func RemovePalletReqs(
 			)
 			palletPath = actualPalletPath
 		}
-		reqsPalletsFS, err := pallet.GetPalletReqsFS()
-		if err != nil {
-			return err
+		usage := usedPalletReqs[palletPath]
+		if !force && len(usage.FileImports)+len(usage.Depls) > 0 {
+			if len(usage.FileImports) > 0 {
+				errs = append(errs, errors.Errorf(
+					"couldn't remove requirement for pallet %s because it's needed by file imports %+v; to "+
+						"skip this check, enable the --force flag",
+					palletPath, usage.FileImports,
+				))
+			}
+			if len(usage.Depls) > 0 {
+				errs = append(errs, errors.Errorf(
+					"couldn't remove requirement for pallet %s because it's needed by package deployments "+
+						"%+v; to skip this check, enable the --force flag",
+					palletPath, usage.Depls,
+				))
+			}
+			continue
 		}
-		palletReqPath := path.Join(reqsPalletsFS.Path(), palletPath)
-		if !force && len(usedPalletReqs[palletPath]) > 0 {
-			return errors.Errorf(
-				"couldn't remove requirement for pallet %s because it's needed by file imports %+v; to "+
-					"skip this check, enable the --force flag",
-				palletPath, usedPalletReqs[palletPath],
-			)
-		}
-		if err = os.RemoveAll(filepath.FromSlash(path.Join(
-			palletReqPath, forklift.VersionLockDefFile,
-		))); err != nil {
-			return errors.Wrapf(
-				err, "couldn't remove requirement for pallet %s, at %s", palletPath, palletReqPath,
-			)
+		if err = pallet.RemoveFSPalletReq(palletPath); err != nil {
+			errs = append(errs, err)
+			continue
 		}
 	}
-	// TODO: maybe it'd be better to remove everything we can remove and then report errors at the
-	// end?
-	return nil
+	return er.Join(errs...)
+}
+
+type palletUsage struct {
+	// The names of file imports which depend on the pallet
+	FileImports []string
+	// The paths of package deployments which depend on the pallet
+	Depls []string
 }
 
 func determineUsedPalletReqs(
-	indent int, pallet *forklift.FSPallet, force bool,
+	indent int, pallet *fplt.FSPallet, force bool,
+) (map[string]palletUsage, error) {
+	usedPalletReqs := make(map[string]palletUsage)
+
+	usedByFileImports, err := determinePalletsRequiredByImports(indent, pallet, force)
+	if !force && err != nil {
+		return nil, err
+	}
+	for palletPath, fileImports := range usedByFileImports {
+		usage := usedPalletReqs[palletPath]
+		usage.FileImports = fileImports
+		usedPalletReqs[palletPath] = usage
+	}
+
+	usedByDepls, err := determinePalletsRequiredByDepls(indent, pallet, force)
+	if !force && err != nil {
+		return nil, err
+	}
+	for palletPath, fileImports := range usedByDepls {
+		usage := usedPalletReqs[palletPath]
+		usage.Depls = fileImports
+		usedPalletReqs[palletPath] = usage
+	}
+
+	return usedPalletReqs, nil
+}
+
+func determinePalletsRequiredByImports(
+	indent int, pallet *fplt.FSPallet, force bool,
 ) (map[string][]string, error) {
 	imports, err := pallet.LoadImports("**/*")
-	if err != nil {
-		err = errors.Wrap(err, "couldn't load import groups")
+	if err = errors.Wrap(err, "couldn't load import groups"); err != nil {
 		if !force {
 			return nil, err
 		}
 		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
 	}
+
 	usedPalletReqs := make(map[string][]string)
 	if len(imports) == 0 {
 		return usedPalletReqs, nil
 	}
 	palletReqsFS, err := pallet.GetPalletReqsFS()
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't open directory for pallet requirements from pallet")
+	if err = errors.Wrap(err, "couldn't open directory for pallet requirements"); err != nil {
+		if !force {
+			return nil, err
+		}
+		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
 	}
 
 	for _, imp := range imports {
-		fsPalletReq, err := forklift.LoadFSPalletReqContaining(palletReqsFS, imp.Name)
+		fsPalletReq, err := fplt.LoadFSPalletReqContaining(palletReqsFS, imp.Name)
 		if err != nil {
 			err = errors.Wrapf(
-				err, "couldn't find pallet requirement needed for import group %s of package %s",
-				imp.Name, imp.Name,
+				err, "couldn't find pallet requirement needed for import group %s", imp.Name,
 			)
 			if !force {
 				return nil, err
@@ -253,14 +236,49 @@ func determineUsedPalletReqs(
 		}
 		usedPalletReqs[fsPalletReq.Path()] = append(usedPalletReqs[fsPalletReq.Path()], imp.Name)
 	}
+
+	return usedPalletReqs, nil
+}
+
+func determinePalletsRequiredByDepls(
+	indent int, pallet *fplt.FSPallet, force bool,
+) (map[string][]string, error) {
+	depls, err := pallet.LoadDepls("**/*")
+	if err = errors.Wrap(err, "couldn't load package deployments"); err != nil {
+		if !force {
+			return nil, err
+		}
+		IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
+	}
+
+	usedPalletReqs := make(map[string][]string)
+	if len(depls) == 0 {
+		return usedPalletReqs, nil
+	}
+
+	for _, depl := range depls {
+		pkgReq, err := pallet.LoadPkgReq(depl.Decl.Package)
+		if err != nil {
+			err = errors.Wrapf(
+				err, "couldn't find pallet requirement needed for deployment %s of package %s",
+				depl.Name, depl.Decl.Package,
+			)
+			if !force {
+				return nil, err
+			}
+			IndentedFprintf(indent, os.Stderr, "Warning: %s\n", err.Error())
+		}
+		usedPalletReqs[pkgReq.Pallet.Path()] = append(usedPalletReqs[pkgReq.Pallet.Path()], depl.Name)
+	}
+
 	return usedPalletReqs, nil
 }
 
 // Download
 
 func DownloadAllRequiredPallets(
-	indent int, pallet *forklift.FSPallet,
-	mirrorsCache core.Pather, palletsCache forklift.PathedPalletCache,
+	indent int, pallet *fplt.FSPallet,
+	mirrorsCache ffs.Pather, palletsCache caching.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	loadedPalletReqs, err := pallet.LoadFSPalletReqs("**")
@@ -278,8 +296,8 @@ func DownloadAllRequiredPallets(
 }
 
 func downloadRequiredPallets(
-	indent int, reqs []*forklift.FSPalletReq,
-	mirrorsCache core.Pather, palletsCache forklift.PathedPalletCache,
+	indent int, reqs []*fplt.FSPalletReq,
+	mirrorsCache ffs.Pather, palletsCache caching.PathedPalletCache,
 	skipPalletQueries structures.Set[string],
 ) (downloadedPallets structures.Set[string], err error) {
 	allSkip := make(structures.Set[string])
@@ -297,7 +315,7 @@ func downloadRequiredPallets(
 			}
 			if err != nil {
 				return downloadedPallets, errors.Wrapf(
-					err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Def.ShortCommit(),
+					err, "couldn't download %s at commit %s", req.Path(), req.VersionLock.Decl.ShortCommit(),
 				)
 			}
 		} else {

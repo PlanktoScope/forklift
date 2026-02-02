@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/forklift-run/forklift/internal/app/forklift"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
@@ -24,7 +25,7 @@ func lsFileAction(c *cli.Context) error {
 		// Exclude hidden directories such as `.git`
 		filter = "{*,[^.]*/**}"
 	}
-	paths, err := fcli.ListPalletFiles(plt, filter)
+	paths, err := forklift.ListPalletFiles(plt, filter)
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func locateFileAction(c *cli.Context) error {
 		return err
 	}
 
-	location, err := fcli.GetFileLocation(plt, c.Args().First())
+	location, err := forklift.GetFileLocation(plt, c.Args().First())
 	if err != nil {
 		return err
 	}

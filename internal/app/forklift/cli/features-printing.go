@@ -7,10 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	"github.com/forklift-run/forklift/exp/caching"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
 )
 
-func FprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) error {
+func FprintPalletFeatures(indent int, out io.Writer, pallet *fplt.FSPallet) error {
 	imps, err := pallet.LoadFeatures("**/*")
 	if err != nil {
 		return err
@@ -23,7 +24,7 @@ func FprintPalletFeatures(indent int, out io.Writer, pallet *forklift.FSPallet) 
 
 func FprintFeatureInfo(
 	indent int, out io.Writer,
-	pallet *forklift.FSPallet, cache forklift.PathedPalletCache, featureName string,
+	pallet *fplt.FSPallet, cache caching.PathedPalletCache, featureName string,
 ) error {
 	imp, err := pallet.LoadFeature(featureName, cache)
 	if err != nil {
@@ -31,11 +32,11 @@ func FprintFeatureInfo(
 			err, "couldn't find feature declaration %s in pallet %s", featureName, pallet.FS.Path(),
 		)
 	}
-	resolved := &forklift.ResolvedImport{
+	resolved := &fplt.ResolvedImport{
 		Import: imp,
 		Pallet: pallet,
 	}
-	resolved.Pallet, err = forklift.MergeFSPallet(resolved.Pallet, cache, nil)
+	resolved.Pallet, err = fplt.MergeFSPallet(resolved.Pallet, cache, nil)
 	if err != nil {
 		return errors.Wrapf(
 			err, "couldn't print merge pallet referenced by feature %s resolved as import group %s",
@@ -51,7 +52,7 @@ func FprintFeatureInfo(
 }
 
 func FprintFeature(
-	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+	indent int, out io.Writer, imp *fplt.ResolvedImport, loader fplt.FSPalletLoader,
 ) error {
 	IndentedFprintf(indent, out, "Feature %s:\n", imp.Name)
 	indent++
@@ -66,7 +67,7 @@ func FprintFeature(
 		}
 	}
 
-	if err := fprintModifiers(indent, out, imp.Def.Modifiers, imp.Pallet, loader); err != nil {
+	if err := fprintModifiers(indent, out, imp.Decl.Modifiers, imp.Pallet, loader); err != nil {
 		return err
 	}
 
@@ -80,7 +81,7 @@ func FprintFeature(
 }
 
 func fprintFeatureEvaluation(
-	indent int, out io.Writer, imp *forklift.ResolvedImport, loader forklift.FSPalletLoader,
+	indent int, out io.Writer, imp *fplt.ResolvedImport, loader fplt.FSPalletLoader,
 ) error {
 	importMappings, err := imp.Evaluate(loader)
 	if err != nil {

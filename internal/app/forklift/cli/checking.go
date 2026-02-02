@@ -1,35 +1,31 @@
 package cli
 
 import (
-	"cmp"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
-	"path"
-	"slices"
 
 	"github.com/pkg/errors"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
-	"github.com/forklift-run/forklift/pkg/core"
+	fplt "github.com/forklift-run/forklift/exp/pallets"
+	res "github.com/forklift-run/forklift/exp/resources"
 )
 
 type ResolvedDeplsLoader interface {
-	forklift.PkgReqLoader
-	LoadDepls(searchPattern string) ([]forklift.Depl, error)
+	fplt.PkgReqLoader
+	LoadDepls(searchPattern string) ([]fplt.Depl, error)
 }
 
 // Check checks the validity of the pallet or bundle. It prints check failures.
 func Check(
-	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader forklift.FSPkgLoader,
-) ([]*forklift.ResolvedDepl, []forklift.SatisfiedDeplDeps, error) {
+	indent int, deplsLoader ResolvedDeplsLoader, pkgLoader fplt.FSPkgLoader,
+) ([]*fplt.ResolvedDepl, []fplt.SatisfiedDeplDeps, error) {
 	depls, err := deplsLoader.LoadDepls("**/*")
 	if err != nil {
 		return nil, nil, err
 	}
-	depls = forklift.FilterDeplsForEnabled(depls)
-	resolved, err := forklift.ResolveDepls(deplsLoader, pkgLoader, depls)
+	depls = fplt.FilterDeplsForEnabled(depls)
+	resolved, err := fplt.ResolveDepls(deplsLoader, pkgLoader, depls)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,41 +40,12 @@ func Check(
 	return resolved, satisfied, resourcesErr
 }
 
-type invalidFileExport struct {
-	sourcePath string
-	targetPath string
-	err        error
-}
-
 // checkFileExports checks the file exports of all package deployments in the pallet or bundle
 // to ensure that the source paths of those file exports are all valid. It prints check failures.
-func checkFileExports(indent int, out io.Writer, depls []*forklift.ResolvedDepl) error {
-	invalidDeplNames := make([]string, 0, len(depls))
-	invalidFileExports := make(map[string][]invalidFileExport)
-	for _, depl := range depls {
-		exports, err := depl.GetFileExports()
-		if err != nil {
-			return errors.Wrapf(err, "couldn't determine file exports for deployment %s", depl.Name)
-		}
-		for _, export := range exports {
-			switch export.SourceType {
-			default:
-				// TODO: should we also check file exports from files in the cache of downloaded files?
-				continue
-			case core.FileExportSourceTypeLocal, "":
-			}
-			sourcePath := cmp.Or(export.Source, export.Target)
-			if err = checkFileOrSymlink(depl.Pkg.FS, sourcePath); err != nil {
-				invalidFileExports[depl.Name] = append(
-					invalidFileExports[depl.Name],
-					invalidFileExport{
-						sourcePath: sourcePath,
-						targetPath: export.Target,
-						err:        err,
-					},
-				)
-			}
-		}
+func checkFileExports(indent int, out io.Writer, depls []*fplt.ResolvedDepl) (err error) {
+	invalidFileExports, err := fplt.CheckFileExports(depls)
+	if err != nil {
+		return errors.Wrap(err, "couldn't check file exports")
 	}
 	if len(invalidFileExports) == 0 {
 		return nil
@@ -86,7 +53,6 @@ func checkFileExports(indent int, out io.Writer, depls []*forklift.ResolvedDepl)
 
 	IndentedFprintln(indent, out, "Found invalid file exports among deployments:")
 	indent++
-	slices.Sort(invalidDeplNames)
 	for _, depl := range depls {
 		invalid := invalidFileExports[depl.Name]
 		if len(invalid) == 0 {
@@ -100,44 +66,22 @@ func checkFileExports(indent int, out io.Writer, depls []*forklift.ResolvedDepl)
 }
 
 func printInvalidDeplFileExports(
-	indent int, out io.Writer, depl *forklift.ResolvedDepl, invalid []invalidFileExport,
+	indent int, out io.Writer, depl *fplt.ResolvedDepl, invalid []fplt.InvalidFileExport,
 ) {
 	IndentedFprintf(indent, out, "Deployment %s:\n", depl.Name)
 	indent++
 	for _, invalidFileExport := range invalid {
-		BulletedFprintf(indent, out, "File export source: %s\n", invalidFileExport.sourcePath)
-		IndentedFprintf(indent+1, out, "File export target: %s\n", invalidFileExport.targetPath)
-		IndentedFprintf(indent+1, out, "Error: %s\n", invalidFileExport.err.Error())
+		BulletedFprintf(indent, out, "File export source: %s\n", invalidFileExport.Source)
+		IndentedFprintf(indent+1, out, "File export target: %s\n", invalidFileExport.Target)
+		IndentedFprintf(indent+1, out, "Error: %s\n", invalidFileExport.Err.Error())
 	}
-}
-
-func checkFileOrSymlink(fsys core.PathedFS, file string) error {
-	if _, err := fs.Stat(fsys, file); err == nil {
-		return nil
-	}
-	// fs.Stat will return an error if the sourcePath exists but is a symlink pointing to a
-	// nonexistent location. Really we want fs.Lstat (which is not implemented yet); until fs.Lstat
-	// is implemented, when we get an error when we'll just check if a DirEntry exists for the path
-	// (and if so, we'll assume the file is valid).
-	dirEntries, err := fs.ReadDir(fsys, path.Dir(file))
-	if err != nil {
-		return err
-	}
-	for _, dirEntry := range dirEntries {
-		if dirEntry.Name() == path.Base(file) {
-			return nil
-		}
-	}
-	return errors.Errorf(
-		"couldn't find %s in %s", path.Base(file), path.Join(fsys.Path(), path.Dir(file)),
-	)
 }
 
 // checkResources checks the resource constraints among package deployments in the pallet or bundle.
 // It prints check failures.
 func checkResources(
-	indent int, out io.Writer, depls []*forklift.ResolvedDepl,
-) ([]forklift.SatisfiedDeplDeps, error) {
+	indent int, out io.Writer, depls []*fplt.ResolvedDepl,
+) ([]fplt.SatisfiedDeplDeps, error) {
 	conflicts, err := checkDeplConflicts(indent, out, depls)
 	if err != nil {
 		return nil, err
@@ -156,9 +100,9 @@ func checkResources(
 }
 
 func checkDeplConflicts(
-	indent int, out io.Writer, depls []*forklift.ResolvedDepl,
-) ([]forklift.DeplConflict, error) {
-	conflicts, err := forklift.CheckDeplConflicts(depls)
+	indent int, out io.Writer, depls []*fplt.ResolvedDepl,
+) ([]fplt.DeplConflict, error) {
+	conflicts, err := fplt.CheckDeplConflicts(depls)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't check for conflicts among deployments")
 	}
@@ -176,7 +120,7 @@ func checkDeplConflicts(
 	return conflicts, nil
 }
 
-func printDeplConflict(indent int, out io.Writer, conflict forklift.DeplConflict) error {
+func printDeplConflict(indent int, out io.Writer, conflict fplt.DeplConflict) error {
 	IndentedFprintf(indent, out, "Between %s and %s:\n", conflict.First.Name, conflict.Second.Name)
 	indent++
 
@@ -217,7 +161,7 @@ func printDeplConflict(indent int, out io.Writer, conflict forklift.DeplConflict
 }
 
 func printResConflicts[Res any](
-	indent int, out io.Writer, conflicts []core.ResConflict[Res],
+	indent int, out io.Writer, conflicts []res.Conflict[Res, []string],
 ) error {
 	for _, resourceConflict := range conflicts {
 		if err := printResConflict(indent, out, resourceConflict); err != nil {
@@ -228,16 +172,16 @@ func printResConflicts[Res any](
 }
 
 func printResConflict[Res any](
-	indent int, out io.Writer, conflict core.ResConflict[Res],
+	indent int, out io.Writer, conflict res.Conflict[Res, []string],
 ) error {
-	BulletedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.First.Source[0])
+	BulletedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.First.Origin[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResSource(indent+1, out, conflict.First.Source[1:])
+	resourceIndent := printResOrigin(indent+1, out, conflict.First.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, conflict.First.Res); err != nil {
 		return errors.Wrap(err, "couldn't print first resource")
 	}
-	IndentedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.Second.Source[0])
-	resourceIndent = printResSource(indent+1, out, conflict.Second.Source[1:])
+	IndentedFprintf(indent, out, "Conflicting resource from %s:\n", conflict.Second.Origin[0])
+	resourceIndent = printResOrigin(indent+1, out, conflict.Second.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, conflict.Second.Res); err != nil {
 		return errors.Wrap(err, "couldn't print second resource")
 	}
@@ -253,8 +197,8 @@ func printResConflict[Res any](
 	return nil
 }
 
-func printResSource(indent int, out io.Writer, source []string) (finalIndent int) {
-	for i, line := range source {
+func printResOrigin(indent int, out io.Writer, origin []string) (finalIndent int) {
+	for i, line := range origin {
 		finalIndent = indent + i
 		IndentedFprintf(finalIndent, out, "%s:", line)
 		_, _ = fmt.Fprintln(out)
@@ -263,9 +207,9 @@ func printResSource(indent int, out io.Writer, source []string) (finalIndent int
 }
 
 func checkDeplDeps(
-	indent int, out io.Writer, depls []*forklift.ResolvedDepl,
-) (satisfied []forklift.SatisfiedDeplDeps, missing []forklift.MissingDeplDeps, err error) {
-	if satisfied, missing, err = forklift.CheckDeplDeps(depls); err != nil {
+	indent int, out io.Writer, depls []*fplt.ResolvedDepl,
+) (satisfied []fplt.SatisfiedDeplDeps, missing []fplt.MissingDeplDeps, err error) {
+	if satisfied, missing, err = fplt.CheckDeplDeps(depls); err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't check dependencies among deployments")
 	}
 	if len(missing) > 0 {
@@ -279,7 +223,7 @@ func checkDeplDeps(
 	return satisfied, missing, nil
 }
 
-func printMissingDeplDep(indent int, out io.Writer, deps forklift.MissingDeplDeps) error {
+func printMissingDeplDep(indent int, out io.Writer, deps fplt.MissingDeplDeps) error {
 	IndentedFprintf(indent, out, "For %s:\n", deps.Depl.Name)
 	indent++
 
@@ -311,7 +255,7 @@ func printMissingDeplDep(indent int, out io.Writer, deps forklift.MissingDeplDep
 }
 
 func printMissingDeps[Res any](
-	indent int, out io.Writer, missingDeps []core.MissingResDep[Res],
+	indent int, out io.Writer, missingDeps []res.MissingDep[Res, []string],
 ) error {
 	for _, missingDep := range missingDeps {
 		if err := printMissingDep(indent, out, missingDep); err != nil {
@@ -321,10 +265,14 @@ func printMissingDeps[Res any](
 	return nil
 }
 
-func printMissingDep[Res any](indent int, out io.Writer, missingDep core.MissingResDep[Res]) error {
-	BulletedFprintf(indent, out, "Resource required by %s:\n", missingDep.Required.Source[0])
+func printMissingDep[Res any](
+	indent int,
+	out io.Writer,
+	missingDep res.MissingDep[Res, []string],
+) error {
+	BulletedFprintf(indent, out, "Resource required by %s:\n", missingDep.Required.Origin[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResSource(indent+1, out, missingDep.Required.Source[1:])
+	resourceIndent := printResOrigin(indent+1, out, missingDep.Required.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, missingDep.Required.Res); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}
@@ -345,11 +293,11 @@ func printMissingDep[Res any](indent int, out io.Writer, missingDep core.Missing
 
 /*
 func printDepCandidate[Res any](
-	indent int, out io.Writer, candidate core.ResDepCandidate[Res],
+	indent int, out io.Writer, candidate fpkg.ResDepCandidate[Res],
 ) error {
-	BulletedFprintf(indent, out, "Candidate resource from %s:\n", candidate.Provided.Source[0])
+	BulletedFprintf(indent, out, "Candidate resource from %s:\n", candidate.Provided.Origin[0])
 	indent++ // because the bullet adds an indentation level
-	resourceIndent := printResSource(indent+1, out, candidate.Provided.Source[1:])
+	resourceIndent := printResOrigin(indent+1, out, candidate.Provided.Origin[1:])
 	if err := IndentedFprintYaml(resourceIndent+1, out, candidate.Provided.Res); err != nil {
 		return errors.Wrap(err, "couldn't print resource")
 	}

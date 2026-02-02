@@ -7,7 +7,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/forklift-run/forklift/internal/app/forklift"
+	ffs "github.com/forklift-run/forklift/exp/fs"
+	fws "github.com/forklift-run/forklift/exp/workspaces"
 	fcli "github.com/forklift-run/forklift/internal/app/forklift/cli"
 )
 
@@ -30,18 +31,18 @@ func resolveGitRepoAction(c *cli.Context) error {
 	return nil
 }
 
-func ensureWorkspace(wpath string) (*forklift.FSWorkspace, error) {
-	if !forklift.DirExists(wpath) {
+func ensureWorkspace(wpath string) (*fws.FSWorkspace, error) {
+	if !ffs.DirExists(wpath) {
 		fmt.Fprintf(os.Stderr, "Making a new workspace at %s...", wpath)
 	}
-	if err := forklift.EnsureExists(wpath); err != nil {
+	if err := ffs.EnsureExists(wpath); err != nil {
 		return nil, errors.Wrapf(err, "couldn't make new workspace at %s", wpath)
 	}
-	workspace, err := forklift.LoadWorkspace(wpath)
+	workspace, err := fws.LoadWorkspace(wpath)
 	if err != nil {
 		return nil, err
 	}
-	if err = forklift.EnsureExists(workspace.GetDataPath()); err != nil {
+	if err = ffs.EnsureExists(workspace.GetDataPath()); err != nil {
 		return nil, errors.Wrapf(err, "couldn't ensure the existence of %s", workspace.GetDataPath())
 	}
 	return workspace, nil
