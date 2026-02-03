@@ -7,15 +7,14 @@ import (
 	"io"
 	"strings"
 
+	"github.com/containerd/platforms"
 	"github.com/distribution/reference"
 	"github.com/docker/cli/cli/command/inspect"
 	"github.com/docker/cli/cli/streams"
-	"github.com/docker/cli/cli/trust"
-	dtf "github.com/docker/docker/api/types/filters"
 	dti "github.com/docker/docker/api/types/image"
-	dtr "github.com/docker/docker/api/types/registry"
-	dc "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/moby/client"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -29,21 +28,18 @@ type Image struct {
 // docker image ls
 
 func (c *Client) ListImages(ctx context.Context, matchName string) ([]Image, error) {
-	listOptions := dti.ListOptions{}
+	listOptions := client.ImageListOptions{}
 	if matchName != "" {
-		listOptions.Filters = dtf.NewArgs(dtf.KeyValuePair{
-			Key:   "reference",
-			Value: matchName,
-		})
+		listOptions.Filters = make(client.Filters).Add("reference", matchName)
 	}
 
-	imageSummaries, err := c.Client.ImageList(ctx, listOptions)
+	result, err := c.Client.ImageList(ctx, listOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't list Docker images")
 	}
-	imageNames := make([]string, 0, len(imageSummaries))
+	imageNames := make([]string, 0, len(result.Items))
 	images := make(map[string]Image)
-	for _, summary := range imageSummaries {
+	for _, summary := range result.Items {
 		image := Image{
 			ID: strings.TrimPrefix(summary.ID, "sha256:")[:12],
 		}
@@ -77,7 +73,7 @@ func (c *Client) InspectImage(ctx context.Context, imageHash string) (Image, err
 	buffer := &bytes.Buffer{}
 	getRefFunc := func(imageHash string) (interface{}, []byte, error) {
 		raw := bytes.Buffer{}
-		response, err := c.Client.ImageInspect(ctx, imageHash, dc.ImageInspectWithRawResponse(&raw))
+		response, err := c.Client.ImageInspect(ctx, imageHash, client.ImageInspectWithRawResponse(&raw))
 		return response, raw.Bytes(), err
 	}
 	if err := inspect.Inspect(buffer, []string{imageHash}, "", getRefFunc); err != nil {
@@ -107,13 +103,10 @@ func (c *Client) InspectImage(ctx context.Context, imageHash string) (Image, err
 	return image, nil
 }
 
-func (c *Client) PruneUnusedImages(ctx context.Context) (dti.PruneReport, error) {
-	return c.Client.ImagesPrune(ctx, dtf.NewArgs(dtf.KeyValuePair{
-		// Note: it appears that the "dangling" filter sets whether to only prune dangling images;
-		// otherwise, all unused images will be pruned (which is what we want)
-		Key:   "dangling",
-		Value: "false",
-	}))
+func (c *Client) PruneUnusedImages(ctx context.Context) (client.ImagePruneResult, error) {
+	return c.Client.ImagePrune(ctx, client.ImagePruneOptions{
+		Filters: make(client.Filters).Add("dangling", "false"),
+	})
 }
 
 func CompareDeletedImages(i, j dti.DeleteResponse) int {
@@ -137,58 +130,27 @@ func CompareDeletedImages(i, j dti.DeleteResponse) int {
 
 func (c *Client) PullImage(
 	ctx context.Context, taggedName, platform string, outStream *streams.Out,
-) (trust.ImageRefAndAuth, error) {
+) error {
 	// This function is adapted from the github.com/docker/cli/cli/command/image
-	// package's RunPull function, which is licensed under Apache-2.0. This function was changed to
+	// package's runPull function, which is licensed under Apache-2.0. This function was changed to
 	// assume that the name is already tagged and normalized and that no auth or content trust image
 	// verification is needed.
 	distributionRef, err := reference.ParseNormalizedNamed(taggedName)
 	switch {
 	case err != nil:
-		return trust.ImageRefAndAuth{}, err
+		return err
 	case reference.IsNameOnly(distributionRef):
-		return trust.ImageRefAndAuth{}, errors.Errorf(
-			"image %s must be specified with a tag", taggedName,
-		)
+		return errors.Errorf("image %s must be specified with a tag", taggedName)
 	}
 
-	imgRefAndAuth, err := trust.GetImageReferencesAndAuth(ctx, authResolver, taggedName)
-	if err != nil {
-		return trust.ImageRefAndAuth{}, errors.Wrapf(
-			err, "couldn't look up ref of image %s", taggedName,
-		)
-	}
-
-	if err = c.pullImage(ctx, imgRefAndAuth, platform, outStream); err != nil {
-		return trust.ImageRefAndAuth{}, err
-	}
-
-	return imgRefAndAuth, nil
-}
-
-func NewOutStream(out io.Writer) *streams.Out {
-	return streams.NewOut(out)
-}
-
-func authResolver(ctx context.Context, index *dtr.IndexInfo) dtr.AuthConfig {
-	return dtr.AuthConfig{}
-}
-
-func (c *Client) pullImage(
-	ctx context.Context, imgRefAndAuth trust.ImageRefAndAuth, platform string, out *streams.Out,
-) (err error) {
-	// This function is adapted from the github.com/docker/cli/cli/command/image
-	// package's imagePullPrivileged function, which is licensed under Apache-2.0. This function was
-	// changed so that it doesn't use Docker's CLI and gives up immediately if the operation is
-	// unauthorized.
-	encodedAuth, err := dtr.EncodeAuthConfig(*imgRefAndAuth.AuthConfig())
+	parsedPlatform, err := platforms.Parse(platform)
 	if err != nil {
 		return err
 	}
+
 	responseBody, err := c.Client.ImagePull(
-		ctx, reference.FamiliarString(imgRefAndAuth.Reference()), dti.PullOptions{
-			RegistryAuth: encodedAuth,
-			Platform:     platform,
+		ctx, reference.FamiliarString(distributionRef), client.ImagePullOptions{
+			Platforms: []ocispec.Platform{parsedPlatform},
 		},
 	)
 	if err != nil {
@@ -202,5 +164,9 @@ func (c *Client) pullImage(
 		}
 	}()
 
-	return jsonmessage.DisplayJSONMessagesToStream(responseBody, out, nil)
+	return jsonmessage.DisplayJSONMessagesToStream(responseBody, outStream, nil)
+}
+
+func NewOutStream(out io.Writer) *streams.Out {
+	return streams.NewOut(out)
 }
