@@ -13,8 +13,8 @@ require (
 	github.com/docker/compose/v5 v5.0.2
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-units v0.5.0
-	github.com/go-git/go-git/v5 v5.16.4
-	github.com/google/go-containerregistry v0.20.7
+	github.com/go-git/go-git/v5 v5.16.5
+	github.com/google/go-containerregistry v0.20.6
 	github.com/h2non/filetype v1.1.3
 	github.com/moby/moby/client v0.2.1
 	github.com/muesli/reflow v0.3.0
